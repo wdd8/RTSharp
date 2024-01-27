@@ -1,0 +1,14 @@
+<Project>
+    <Target Name="PluginPostBuild" AfterTargets="PostBuildEvent">
+        <PropertyGroup>
+            <MainAppExeDir>$(OutputPath)../../</MainAppExeDir>
+            <PluginName>$(ProjectName.TrimStart("RTSharp.").TrimEnd(".Plugin"))</PluginName>
+            <ScriptsDir Condition="'$(ScriptsDir)' == ''">$(SolutionDir)scripts/</ScriptsDir>
+        </PropertyGroup>
+        <Message Text="Removing redundant files..." />
+        <Exec
+            LogStandardErrorAsError="true"
+            Command="pwsh -NonInteractive -ExecutionPolicy Unrestricted -File &quot;$(ScriptsDir)clean-plugin-dir.ps1&quot; &quot;$(MainAppExeDir.TrimEnd('\'))&quot; &quot;$(OutputPath.TrimEnd('\'))&quot;"
+        />
+    </Target>
+</Project>

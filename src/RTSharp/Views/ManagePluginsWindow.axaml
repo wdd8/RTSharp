@@ -1,0 +1,40 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
+        Width="400"
+        Height="300"
+        x:Class="RTSharp.ManagePluginsWindow"
+        Title="RT# - Manage Plugins">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+    </Window.Styles>
+    
+    <Grid ColumnDefinitions="8*,32,8*" Margin="8">
+        <views:GroupBox Grid.Column="0" Label="Active">
+            <ListBox ItemsSource="{Binding ActivePlugins}" SelectedItem="{Binding SelectedActivePlugin}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding PluginInstanceConfig.Name}" />
+                            <TextBlock>  (</TextBlock>
+                            <TextBlock Text="{Binding InstanceId}" />
+                            <TextBlock>)</TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </views:GroupBox>
+        <GridSplitter Grid.Column="1" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Button Margin="0,0,0,8" Content="&lt;" Command="{Binding LoadClickCommand}" />
+            <Button Content="&gt;" Command="{Binding UnloadClickCommand}" />
+        </StackPanel>
+        <views:GroupBox Grid.Column="2" Label="Unloaded">
+            <ListBox ItemsSource="{Binding UnloadedPluginDirs}" SelectedItem="{Binding SelectedUnloadedDir}" />
+        </views:GroupBox>
+    </Grid>
+</Window>

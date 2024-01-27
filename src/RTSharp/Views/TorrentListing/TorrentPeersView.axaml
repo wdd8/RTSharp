@@ -1,0 +1,87 @@
+<UserControl x:Class="RTSharp.Views.TorrentListing.TorrentPeersView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
+             xmlns:models="clr-namespace:RTSharp.Models"
+             xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
+             d:DesignWidth="1100" d:DesignHeight="450">
+
+	<Control.Resources>
+		<converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
+		<converters:SIDataSpeedConverter x:Key="SIDataSpeedConverter"/>
+	</Control.Resources>
+	<Design.DataContext>
+		<torrentListing:TorrentPeersViewModel />
+	</Design.DataContext>
+
+	<DataGrid Name="grid"
+			      ItemsSource="{Binding Peers}"
+				  CanUserReorderColumns="True"
+				  CanUserResizeColumns="True"
+				  CanUserSortColumns="True"
+				  GridLinesVisibility="Horizontal"
+				  IsReadOnly="True"
+				  SelectionMode="Extended"
+			      VerticalAlignment="Stretch">
+		<DataGrid.ContextMenu>
+			<ContextMenu>
+				<MenuItem Header="Add peers..."
+						  Command="{Binding AddPeersCommand}"
+						  CommandParameter="{Binding #grid.SelectedItems}"
+						  IsEnabled="{Binding Owner.Instance.Capabilities.AddPeers}"
+					/>
+				<Separator />
+				<MenuItem Header="Ban peer"
+						  Command="{Binding BanPeerCommand}"
+						  CommandParameter="{Binding #grid.SelectedItems}"
+						  IsEnabled="{Binding Owner.Instance.Capabilities.BanPeer}"
+					/>
+				<MenuItem Header="Kick peer"
+						  Command="{Binding KickPeerCommand}"
+						  CommandParameter="{Binding #grid.SelectedItems}"
+						  IsEnabled="{Binding Owner.Instance.Capabilities.KickPeer}"
+					/>
+				<Separator />
+				<MenuItem Header="Snub peer"
+						  Command="{Binding SnubPeerCommand}"
+						  CommandParameter="{Binding #grid.SelectedItems}"
+						  IsEnabled="{Binding Owner.Instance.Capabilities.SnubPeer}"
+					/>
+				<MenuItem Header="Unsnub peer"
+						  Command="{Binding UnsnubPeerCommand}"
+						  CommandParameter="{Binding #grid.SelectedItems}"
+						  IsEnabled="{Binding Owner.Instance.Capabilities.UnsnubPeer}"
+					/>
+			</ContextMenu>
+		</DataGrid.ContextMenu>
+		<DataGrid.Columns>
+			<DataGridTemplateColumn Header="Icon">
+				<DataGridTemplateColumn.CellTemplate>
+					<DataTemplate x:DataType="models:Peer">
+						<Image Source="{Binding Icon}" Width="16" Height="16" Stretch="Uniform" />
+					</DataTemplate>
+				</DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+			<DataGridTextColumn Header="Origin" Binding="{Binding Origin, Mode=OneWay}" />
+			
+			<DataGridTextColumn Header="IP:Port" Binding="{Binding IPPort, Mode=OneWay}" />
+			<DataGridTextColumn Header="Client" Binding="{Binding Client, Mode=OneWay}" />
+			<DataGridTextColumn Header="Flags" Binding="{Binding Flags, Mode=OneWay}" />
+			<DataGridTemplateColumn Header="Done">
+				<DataGridTemplateColumn.CellTemplate>
+					<DataTemplate x:DataType="models:Peer">
+						<Grid>
+							<ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" VerticalAlignment="Stretch" DockPanel.Dock="Left" Name="TorrentProgressBar" />
+							<TextBlock Text="{Binding Done, Mode=OneWay, StringFormat=\{0:0.00\} %}" HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left" />
+						</Grid>
+					</DataTemplate>
+				</DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+			<DataGridTextColumn Header="DL Speed" Binding="{Binding DLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+			<DataGridTextColumn Header="UP Speed" Binding="{Binding UPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+			<DataGridTextColumn Header="Downloaded" Binding="{Binding Downloaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
+			<DataGridTextColumn Header="Uploaded" Binding="{Binding Uploaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
+		</DataGrid.Columns>
+	</DataGrid>
+</UserControl>

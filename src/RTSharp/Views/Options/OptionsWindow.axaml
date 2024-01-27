@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:options="clr-namespace:RTSharp.ViewModels.Options"
+        xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+		Width="600" Height="500"
+        x:Class="RTSharp.Views.Options.OptionsWindow"
+        Title="Options">
+
+	<Design.DataContext>
+		<options:OptionsViewModel />
+	</Design.DataContext>
+	
+	<Window.Styles>
+		<Style Selector="TextBlock,TextBox">
+			<Setter Property="VerticalAlignment" Value="Center" />
+		</Style>
+		<Style Selector="Panel > Grid">
+			<Setter Property="VerticalAlignment" Value="Top" />
+		</Style>
+	</Window.Styles>
+
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto" MinWidth="100" />
+			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition Width="*"/>
+		</Grid.ColumnDefinitions>
+		<TreeView Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" ItemsSource="{Binding Items,Mode=OneWay}" SelectedItem="{Binding CurrentlySelectedItem}">
+			<TreeView.ItemTemplate>
+				<TreeDataTemplate DataType="options:OptionsItem" ItemsSource="{Binding Children}">
+					<StackPanel Orientation="Horizontal" MinWidth="150">
+						<i:Icon FontSize="16" Value="{Binding Icon}" Margin="0 0 20 0" />
+						<TextBlock TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding Text}"/>
+					</StackPanel>
+				</TreeDataTemplate>
+			</TreeView.ItemTemplate>
+		</TreeView>
+		<GridSplitter Grid.Column="1" ResizeDirection="Columns" Margin="0,0,4,0" MinWidth="4" />
+		<Grid Grid.Column="2" RowDefinitions="*,*">
+			<ScrollViewer Grid.Row="0" VerticalAlignment="Top">
+				<ContentControl Content="{Binding SettingsContent}" />
+			</ScrollViewer>
+		</Grid>
+	</Grid>
+</Window>

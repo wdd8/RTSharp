@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="600"
+			 xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
+             x:Class="RTSharp.Views.DataProvidersView">
+
+	<Control.Resources>
+		<converters:SIDataSpeedConverter x:Key="SIDataSpeedConverter" />
+	</Control.Resources>
+	
+	<ListBox ItemsSource="{Binding Items}">
+		<ListBox.ItemTemplate>
+			<DataTemplate>
+				<StackPanel Orientation="Vertical">
+					<TextBlock Text="{Binding}" />
+					<StackPanel Orientation="Horizontal">
+						<TextBlock Text="{Binding Instance.State.Value}" />
+						<TextBlock Padding="4 0 0 0" Text="(" />
+						<TextBlock Text="{Binding Instance.LatencyMs.Value}" />
+						<TextBlock Text=" ms)" />
+					</StackPanel>
+					<StackPanel Orientation="Horizontal">
+						<i:Icon Margin="0 0 4 0" Value="fa-solid fa-download" />
+						<TextBlock Padding="0 0 8 0" Text="{Binding Instance.TotalDLSpeed.Value, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+
+						<i:Icon Margin="0 0 4 0" Value="fa-solid fa-upload" />
+						<TextBlock Text="{Binding Instance.TotalUPSpeed.Value, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+					</StackPanel>
+					<StackPanel Orientation="Horizontal">
+						<TextBlock Text="{Binding Instance.ActiveTorrentCount.Value}" />
+						<TextBlock Text=" active torrents" />
+					</StackPanel>
+				</StackPanel>
+			</DataTemplate>
+		</ListBox.ItemTemplate>
+	</ListBox>
+</UserControl>

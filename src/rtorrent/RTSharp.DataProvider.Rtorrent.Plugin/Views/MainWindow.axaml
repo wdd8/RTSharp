@@ -1,0 +1,107 @@
+<Window x:Class="RTSharp.DataProvider.Rtorrent.Plugin.Views.MainWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:RTSharp.DataProvider.Rtorrent.Plugin.ViewModels"
+        xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        mc:Ignorable="d"
+        Width="650" Height="360"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+
+	<Window.Styles>
+		<Style Selector="TextBlock,TextBox">
+			<Setter Property="VerticalAlignment" Value="Center" />
+		</Style>
+		<Style Selector="Panel > Grid">
+			<Setter Property="VerticalAlignment" Value="Top" />
+		</Style>
+	</Window.Styles>
+
+	<StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+        <ListBox ItemsSource="{Binding Categories,Mode=OneWay}" SelectedItem="{Binding CurrentlySelectedCategory}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" MinWidth="150">
+                        <i:Icon Value="{Binding Icon}" Margin="0,0,20,0" />
+                        <TextBlock TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding Name}" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+		<Grid RowDefinitions="*,*" Height="360">
+			<ScrollViewer Height="320" Width="468" Grid.Row="0" VerticalAlignment="Top">
+		        <Panel Margin="4,4,4,4">
+		            <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*" IsVisible="{Binding GeneralSelected}">
+		                <TextBlock Grid.Column="0" Grid.Row="0">Maximum memory usage:</TextBlock>
+		                <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Settings.General.MaximumMemoryUsage}" />
+		                <TextBlock Grid.Column="0" Grid.Row="1">Check hash after download:</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Settings.General.CheckHashAfterDownload}" />
+						<TextBlock Grid.Column="0" Grid.Row="2" Padding="0,0,4,0">Default directory for downloads:</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Settings.General.DefaultDirectoryForDownloads}" />
+		            </Grid>
+					<Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*,*,*" IsVisible="{Binding PeersSelected}">
+						<TextBlock Grid.Column="0" Grid.Row="0">Number of Upload Slots:</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Settings.Peers.NumberOfUploadSlots}" />
+						<TextBlock Grid.Column="0" Grid.Row="1">Minimum Number of Peers:</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Settings.Peers.MinimumNumberOfPeers}" />
+						<TextBlock Grid.Column="0" Grid.Row="2">Maximum number of Peers:</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Settings.Peers.MaximumNumberOfPeers}" />
+						<TextBlock Grid.Column="0" Grid.Row="3">Minimum Number of Peers for Seeding:</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Settings.Peers.MinimumNumberOfPeersForSeeding}" />
+						<TextBlock Grid.Column="0" Grid.Row="4" Padding="0,0,4,0">Maximum Number of Peers for Seeding:</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="4" Text="{Binding Settings.Peers.MaximumNumberOfPeersForSeeding}" />
+						<TextBlock Grid.Column="0" Grid.Row="5">Wished Number of Peers:</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Settings.Peers.WishedNumberOfPeers}" />
+					</Grid>
+					<Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*,*,*,*,*,*,*,*,*" IsVisible="{Binding ConnectionSelected}">
+						<TextBlock Grid.Column="0" Grid.Row="0">Maximum Download Rate</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Settings.Connection.MaximumDownloadRate}" />
+						<TextBlock Grid.Column="0" Grid.Row="1">Maximum Upload Rate</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Settings.Connection.MaximumUploadRate}" />
+						<TextBlock Grid.Column="0" Grid.Row="2">Open Listening Port</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Settings.Connection.OpenListeningPort}" />
+						<TextBlock Grid.Column="0" Grid.Row="3">Randomize Port</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Settings.Connection.RandomizePort}" />
+						<TextBlock Grid.Column="0" Grid.Row="4">Port Used for Incoming Connections</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="4" Text="{Binding Settings.Connection.PortUsedForIncomingConnections}" />
+						<TextBlock Grid.Column="0" Grid.Row="5">Global Number of Upload Slots</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Settings.Connection.GlobalNumberOfUploadSlots}" />
+						<TextBlock Grid.Column="0" Grid.Row="6">Global Number of Download Slots</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Settings.Connection.GlobalNumberOfDownloadSlots}" />
+						<TextBlock Grid.Column="0" Grid.Row="7">Maximum Number of Open Files</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="7" Text="{Binding Settings.Connection.MaximumNumberOfOpenFiles}" />
+						<TextBlock Grid.Column="0" Grid.Row="8" Padding="0,0,4,0">Maximum Number of Open HTTP Connections</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="8" Text="{Binding Settings.Connection.MaximumNumberOfOpenHttpConnections}" />
+						<TextBlock Grid.Column="0" Grid.Row="9">DHT Port</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="9" Text="{Binding Settings.Connection.DhtPort}" />
+						<TextBlock Grid.Column="0" Grid.Row="10">Enable PeX</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="10" Text="{Binding Settings.Connection.EnablePeerExchange}" />
+						<TextBlock Grid.Column="0" Grid.Row="11">IP to Report to Tracker</TextBlock>
+						<TextBox Grid.Column="1" Grid.Row="11" Text="{Binding Settings.Connection.IpToReportToTracker}" />
+					</Grid>
+					<DataGrid ItemsSource="{Binding Settings.Advanced}"
+					 CanUserSortColumns="True"
+					 CanUserResizeColumns="True"
+					 GridLinesVisibility="Horizontal"
+					 SelectionMode="Extended"
+					 IsVisible="{Binding AdvancedSelected}"
+					 Height="310">
+						<DataGrid.Columns>
+							<DataGridTextColumn Header="Setting" IsReadOnly="True" Binding="{Binding Key, Mode=OneWay}" />
+							<DataGridTextColumn Header="Value" Binding="{Binding Value, Mode=TwoWay}" />
+						</DataGrid.Columns>
+					</DataGrid>
+		        </Panel>
+			</ScrollViewer>
+			<Panel Margin="4,4,4,4" VerticalAlignment="Bottom" Grid.Row="1">
+				<Button HorizontalAlignment="Right" Margin="8,0,0,0" Command="{Binding SaveSettingsClickCommand}" IsEnabled="{Binding SaveSettingsEnabled}">Save settings</Button>
+			</Panel>
+		</Grid>
+    </StackPanel>
+</Window>

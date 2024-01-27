@@ -1,0 +1,46 @@
+﻿<Window x:Class="RTSharp.Shared.Controls.Views.WaitingBox"
+		xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views"
+        mc:Ignorable="d" d:DesignWidth="350" d:DesignHeight="140"
+        Width="350" Height="140"
+        MinWidth="350" MinHeight="140"
+        MaxWidth="350" MaxHeight="140"
+        Title="Processing...">
+  <Panel>
+    <StackPanel Orientation="Horizontal">
+      <Image
+        Width="30" Height="30" Margin="11,11,11,0" VerticalAlignment="Top"
+        Source="{Binding Image}" />
+      <StackPanel Margin="0,11,0,0" Orientation="Vertical">
+        <TextBlock
+          Foreground="Blue" FontSize="16"
+          Text="{Binding Text, Mode=OneWay}" />
+        <TextBlock
+          Margin="0,13,0,0"
+          Text="{Binding Description, Mode=OneWay}" />
+        <ProgressBar
+          Margin="0,13,0,0"
+          Background="#E3E3E3"
+          BorderBrush="#BCBCBC"
+          BorderThickness="1"
+          Width="286"
+          IsIndeterminate="{Binding !Progress, Mode=OneWay}"
+          Value="{Binding Progress, Mode=OneWay}"
+         />
+        <Button
+          Margin="220,33,0,0"
+          Padding="0"
+          Width="66" Height="21"
+          Content="Close"
+          IsEnabled="False"
+		  VerticalContentAlignment="Center"
+		  HorizontalContentAlignment="Center"
+        />
+      </StackPanel>
+    </StackPanel>
+    <Line StartPoint="0,100" EndPoint="350,100" Stroke="#DFDFDF" />
+  </Panel>
+</Window>

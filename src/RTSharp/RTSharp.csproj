@@ -1,0 +1,349 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>default</LangVersion>
+	<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <Compile Update="**\*.xaml.cs">
+      <DependentUpon>%(Filename)</DependentUpon>
+    </Compile>
+    <AvaloniaResource Include="**\*.xaml">
+      <SubType>Designer</SubType>
+    </AvaloniaResource>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Remove="Assets\rtsharp.ico" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="Assets\Icons\Flags\ad.png" />
+    <Content Include="Assets\Icons\Flags\ae.png" />
+    <Content Include="Assets\Icons\Flags\af.png" />
+    <Content Include="Assets\Icons\Flags\ag.png" />
+    <Content Include="Assets\Icons\Flags\ai.png" />
+    <Content Include="Assets\Icons\Flags\al.png" />
+    <Content Include="Assets\Icons\Flags\am.png" />
+    <Content Include="Assets\Icons\Flags\an.png" />
+    <Content Include="Assets\Icons\Flags\ao.png" />
+    <Content Include="Assets\Icons\Flags\ar.png" />
+    <Content Include="Assets\Icons\Flags\as.png" />
+    <Content Include="Assets\Icons\Flags\at.png" />
+    <Content Include="Assets\Icons\Flags\au.png" />
+    <Content Include="Assets\Icons\Flags\aw.png" />
+    <Content Include="Assets\Icons\Flags\ax.png" />
+    <Content Include="Assets\Icons\Flags\az.png" />
+    <Content Include="Assets\Icons\Flags\ba.png" />
+    <Content Include="Assets\Icons\Flags\bb.png" />
+    <Content Include="Assets\Icons\Flags\bd.png" />
+    <Content Include="Assets\Icons\Flags\be.png" />
+    <Content Include="Assets\Icons\Flags\bf.png" />
+    <Content Include="Assets\Icons\Flags\bg.png" />
+    <Content Include="Assets\Icons\Flags\bh.png" />
+    <Content Include="Assets\Icons\Flags\bi.png" />
+    <Content Include="Assets\Icons\Flags\bj.png" />
+    <Content Include="Assets\Icons\Flags\bm.png" />
+    <Content Include="Assets\Icons\Flags\bn.png" />
+    <Content Include="Assets\Icons\Flags\bo.png" />
+    <Content Include="Assets\Icons\Flags\br.png" />
+    <Content Include="Assets\Icons\Flags\bs.png" />
+    <Content Include="Assets\Icons\Flags\bt.png" />
+    <Content Include="Assets\Icons\Flags\bv.png" />
+    <Content Include="Assets\Icons\Flags\bw.png" />
+    <Content Include="Assets\Icons\Flags\by.png" />
+    <Content Include="Assets\Icons\Flags\bz.png" />
+    <Content Include="Assets\Icons\Flags\ca.png" />
+    <Content Include="Assets\Icons\Flags\cc.png" />
+    <Content Include="Assets\Icons\Flags\cd.png" />
+    <Content Include="Assets\Icons\Flags\cf.png" />
+    <Content Include="Assets\Icons\Flags\cg.png" />
+    <Content Include="Assets\Icons\Flags\ch.png" />
+    <Content Include="Assets\Icons\Flags\ci.png" />
+    <Content Include="Assets\Icons\Flags\ck.png" />
+    <Content Include="Assets\Icons\Flags\cl.png" />
+    <Content Include="Assets\Icons\Flags\cm.png" />
+    <Content Include="Assets\Icons\Flags\cn.png" />
+    <Content Include="Assets\Icons\Flags\co.png" />
+    <Content Include="Assets\Icons\Flags\cr.png" />
+    <Content Include="Assets\Icons\Flags\cs.png" />
+    <Content Include="Assets\Icons\Flags\cu.png" />
+    <Content Include="Assets\Icons\Flags\cv.png" />
+    <Content Include="Assets\Icons\Flags\cx.png" />
+    <Content Include="Assets\Icons\Flags\cy.png" />
+    <Content Include="Assets\Icons\Flags\cz.png" />
+    <Content Include="Assets\Icons\Flags\de.png" />
+    <Content Include="Assets\Icons\Flags\dj.png" />
+    <Content Include="Assets\Icons\Flags\dk.png" />
+    <Content Include="Assets\Icons\Flags\dm.png" />
+    <Content Include="Assets\Icons\Flags\do.png" />
+    <Content Include="Assets\Icons\Flags\dz.png" />
+    <Content Include="Assets\Icons\Flags\ec.png" />
+    <Content Include="Assets\Icons\Flags\ee.png" />
+    <Content Include="Assets\Icons\Flags\eg.png" />
+    <Content Include="Assets\Icons\Flags\eh.png" />
+    <Content Include="Assets\Icons\Flags\er.png" />
+    <Content Include="Assets\Icons\Flags\es.png" />
+    <Content Include="Assets\Icons\Flags\et.png" />
+    <Content Include="Assets\Icons\Flags\eu.png" />
+    <Content Include="Assets\Icons\Flags\fi.png" />
+    <Content Include="Assets\Icons\Flags\fj.png" />
+    <Content Include="Assets\Icons\Flags\fk.png" />
+    <Content Include="Assets\Icons\Flags\fm.png" />
+    <Content Include="Assets\Icons\Flags\fo.png" />
+    <Content Include="Assets\Icons\Flags\fr.png" />
+    <Content Include="Assets\Icons\Flags\ga.png" />
+    <Content Include="Assets\Icons\Flags\gb.png" />
+    <Content Include="Assets\Icons\Flags\gd.png" />
+    <Content Include="Assets\Icons\Flags\ge.png" />
+    <Content Include="Assets\Icons\Flags\gf.png" />
+    <Content Include="Assets\Icons\Flags\gh.png" />
+    <Content Include="Assets\Icons\Flags\gi.png" />
+    <Content Include="Assets\Icons\Flags\gl.png" />
+    <Content Include="Assets\Icons\Flags\gm.png" />
+    <Content Include="Assets\Icons\Flags\gn.png" />
+    <Content Include="Assets\Icons\Flags\gp.png" />
+    <Content Include="Assets\Icons\Flags\gq.png" />
+    <Content Include="Assets\Icons\Flags\gr.png" />
+    <Content Include="Assets\Icons\Flags\gs.png" />
+    <Content Include="Assets\Icons\Flags\gt.png" />
+    <Content Include="Assets\Icons\Flags\gu.png" />
+    <Content Include="Assets\Icons\Flags\gw.png" />
+    <Content Include="Assets\Icons\Flags\gy.png" />
+    <Content Include="Assets\Icons\Flags\hk.png" />
+    <Content Include="Assets\Icons\Flags\hm.png" />
+    <Content Include="Assets\Icons\Flags\hn.png" />
+    <Content Include="Assets\Icons\Flags\hr.png" />
+    <Content Include="Assets\Icons\Flags\ht.png" />
+    <Content Include="Assets\Icons\Flags\hu.png" />
+    <Content Include="Assets\Icons\Flags\id.png" />
+    <Content Include="Assets\Icons\Flags\ie.png" />
+    <Content Include="Assets\Icons\Flags\il.png" />
+    <Content Include="Assets\Icons\Flags\in.png" />
+    <Content Include="Assets\Icons\Flags\io.png" />
+    <Content Include="Assets\Icons\Flags\iq.png" />
+    <Content Include="Assets\Icons\Flags\ir.png" />
+    <Content Include="Assets\Icons\Flags\is.png" />
+    <Content Include="Assets\Icons\Flags\it.png" />
+    <Content Include="Assets\Icons\Flags\jm.png" />
+    <Content Include="Assets\Icons\Flags\jo.png" />
+    <Content Include="Assets\Icons\Flags\jp.png" />
+    <Content Include="Assets\Icons\Flags\ke.png" />
+    <Content Include="Assets\Icons\Flags\kg.png" />
+    <Content Include="Assets\Icons\Flags\kh.png" />
+    <Content Include="Assets\Icons\Flags\ki.png" />
+    <Content Include="Assets\Icons\Flags\km.png" />
+    <Content Include="Assets\Icons\Flags\kn.png" />
+    <Content Include="Assets\Icons\Flags\kp.png" />
+    <Content Include="Assets\Icons\Flags\kr.png" />
+    <Content Include="Assets\Icons\Flags\kw.png" />
+    <Content Include="Assets\Icons\Flags\ky.png" />
+    <Content Include="Assets\Icons\Flags\kz.png" />
+    <Content Include="Assets\Icons\Flags\la.png" />
+    <Content Include="Assets\Icons\Flags\lb.png" />
+    <Content Include="Assets\Icons\Flags\lc.png" />
+    <Content Include="Assets\Icons\Flags\li.png" />
+    <Content Include="Assets\Icons\Flags\lk.png" />
+    <Content Include="Assets\Icons\Flags\lr.png" />
+    <Content Include="Assets\Icons\Flags\ls.png" />
+    <Content Include="Assets\Icons\Flags\lt.png" />
+    <Content Include="Assets\Icons\Flags\lu.png" />
+    <Content Include="Assets\Icons\Flags\lv.png" />
+    <Content Include="Assets\Icons\Flags\ly.png" />
+    <Content Include="Assets\Icons\Flags\ma.png" />
+    <Content Include="Assets\Icons\Flags\mc.png" />
+    <Content Include="Assets\Icons\Flags\md.png" />
+    <Content Include="Assets\Icons\Flags\me.png" />
+    <Content Include="Assets\Icons\Flags\mg.png" />
+    <Content Include="Assets\Icons\Flags\mh.png" />
+    <Content Include="Assets\Icons\Flags\mk.png" />
+    <Content Include="Assets\Icons\Flags\ml.png" />
+    <Content Include="Assets\Icons\Flags\mm.png" />
+    <Content Include="Assets\Icons\Flags\mn.png" />
+    <Content Include="Assets\Icons\Flags\mo.png" />
+    <Content Include="Assets\Icons\Flags\mp.png" />
+    <Content Include="Assets\Icons\Flags\mq.png" />
+    <Content Include="Assets\Icons\Flags\mr.png" />
+    <Content Include="Assets\Icons\Flags\ms.png" />
+    <Content Include="Assets\Icons\Flags\mt.png" />
+    <Content Include="Assets\Icons\Flags\mu.png" />
+    <Content Include="Assets\Icons\Flags\mv.png" />
+    <Content Include="Assets\Icons\Flags\mw.png" />
+    <Content Include="Assets\Icons\Flags\mx.png" />
+    <Content Include="Assets\Icons\Flags\my.png" />
+    <Content Include="Assets\Icons\Flags\mz.png" />
+    <Content Include="Assets\Icons\Flags\na.png" />
+    <Content Include="Assets\Icons\Flags\nc.png" />
+    <Content Include="Assets\Icons\Flags\ne.png" />
+    <Content Include="Assets\Icons\Flags\nf.png" />
+    <Content Include="Assets\Icons\Flags\ng.png" />
+    <Content Include="Assets\Icons\Flags\ni.png" />
+    <Content Include="Assets\Icons\Flags\nl.png" />
+    <Content Include="Assets\Icons\Flags\no.png" />
+    <Content Include="Assets\Icons\Flags\np.png" />
+    <Content Include="Assets\Icons\Flags\nr.png" />
+    <Content Include="Assets\Icons\Flags\nu.png" />
+    <Content Include="Assets\Icons\Flags\nz.png" />
+    <Content Include="Assets\Icons\Flags\om.png" />
+    <Content Include="Assets\Icons\Flags\pa.png" />
+    <Content Include="Assets\Icons\Flags\pe.png" />
+    <Content Include="Assets\Icons\Flags\pf.png" />
+    <Content Include="Assets\Icons\Flags\pg.png" />
+    <Content Include="Assets\Icons\Flags\ph.png" />
+    <Content Include="Assets\Icons\Flags\pk.png" />
+    <Content Include="Assets\Icons\Flags\pl.png" />
+    <Content Include="Assets\Icons\Flags\pm.png" />
+    <Content Include="Assets\Icons\Flags\pn.png" />
+    <Content Include="Assets\Icons\Flags\pr.png" />
+    <Content Include="Assets\Icons\Flags\ps.png" />
+    <Content Include="Assets\Icons\Flags\pt.png" />
+    <Content Include="Assets\Icons\Flags\pw.png" />
+    <Content Include="Assets\Icons\Flags\py.png" />
+    <Content Include="Assets\Icons\Flags\qa.png" />
+    <Content Include="Assets\Icons\Flags\qq.png" />
+    <Content Include="Assets\Icons\Flags\re.png" />
+    <Content Include="Assets\Icons\Flags\ro.png" />
+    <Content Include="Assets\Icons\Flags\rs.png" />
+    <Content Include="Assets\Icons\Flags\ru.png" />
+    <Content Include="Assets\Icons\Flags\rw.png" />
+    <Content Include="Assets\Icons\Flags\sa.png" />
+    <Content Include="Assets\Icons\Flags\sb.png" />
+    <Content Include="Assets\Icons\Flags\sc.png" />
+    <Content Include="Assets\Icons\Flags\sd.png" />
+    <Content Include="Assets\Icons\Flags\se.png" />
+    <Content Include="Assets\Icons\Flags\sg.png" />
+    <Content Include="Assets\Icons\Flags\sh.png" />
+    <Content Include="Assets\Icons\Flags\si.png" />
+    <Content Include="Assets\Icons\Flags\sj.png" />
+    <Content Include="Assets\Icons\Flags\sk.png" />
+    <Content Include="Assets\Icons\Flags\sl.png" />
+    <Content Include="Assets\Icons\Flags\sm.png" />
+    <Content Include="Assets\Icons\Flags\sn.png" />
+    <Content Include="Assets\Icons\Flags\so.png" />
+    <Content Include="Assets\Icons\Flags\sr.png" />
+    <Content Include="Assets\Icons\Flags\st.png" />
+    <Content Include="Assets\Icons\Flags\sv.png" />
+    <Content Include="Assets\Icons\Flags\sy.png" />
+    <Content Include="Assets\Icons\Flags\sz.png" />
+    <Content Include="Assets\Icons\Flags\tc.png" />
+    <Content Include="Assets\Icons\Flags\td.png" />
+    <Content Include="Assets\Icons\Flags\tf.png" />
+    <Content Include="Assets\Icons\Flags\tg.png" />
+    <Content Include="Assets\Icons\Flags\th.png" />
+    <Content Include="Assets\Icons\Flags\tj.png" />
+    <Content Include="Assets\Icons\Flags\tk.png" />
+    <Content Include="Assets\Icons\Flags\tl.png" />
+    <Content Include="Assets\Icons\Flags\tm.png" />
+    <Content Include="Assets\Icons\Flags\tn.png" />
+    <Content Include="Assets\Icons\Flags\to.png" />
+    <Content Include="Assets\Icons\Flags\tr.png" />
+    <Content Include="Assets\Icons\Flags\tt.png" />
+    <Content Include="Assets\Icons\Flags\tv.png" />
+    <Content Include="Assets\Icons\Flags\tw.png" />
+    <Content Include="Assets\Icons\Flags\tz.png" />
+    <Content Include="Assets\Icons\Flags\ua.png" />
+    <Content Include="Assets\Icons\Flags\ug.png" />
+    <Content Include="Assets\Icons\Flags\um.png" />
+    <Content Include="Assets\Icons\Flags\us.png" />
+    <Content Include="Assets\Icons\Flags\uy.png" />
+    <Content Include="Assets\Icons\Flags\uz.png" />
+    <Content Include="Assets\Icons\Flags\va.png" />
+    <Content Include="Assets\Icons\Flags\vc.png" />
+    <Content Include="Assets\Icons\Flags\ve.png" />
+    <Content Include="Assets\Icons\Flags\vg.png" />
+    <Content Include="Assets\Icons\Flags\vi.png" />
+    <Content Include="Assets\Icons\Flags\vn.png" />
+    <Content Include="Assets\Icons\Flags\vu.png" />
+    <Content Include="Assets\Icons\Flags\wf.png" />
+    <Content Include="Assets\Icons\Flags\ws.png" />
+    <Content Include="Assets\Icons\Flags\ye.png" />
+    <Content Include="Assets\Icons\Flags\yt.png" />
+    <Content Include="Assets\Icons\Flags\za.png" />
+    <Content Include="Assets\Icons\Flags\zm.png" />
+    <Content Include="Assets\Icons\Flags\zw.png" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="..\.editorconfig" Link=".editorconfig" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <!--This helps with theme dll-s trimming.
+	If you will publish your application in self-contained mode with p:PublishTrimmed=true and it will use Fluent theme Default theme will be trimmed from the output and vice versa.
+	https://github.com/AvaloniaUI/Avalonia/issues/5593 -->
+    <TrimmableAssembly Include="Avalonia.Themes.Fluent" />
+    <TrimmableAssembly Include="Avalonia.Themes.Default" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.0.7" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.7" />
+    <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="11.0.7" />
+    <PackageReference Include="Avalonia.Controls.TreeDataGrid" Version="11.0.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.0.7" />
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.0.7" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.7" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="ConcurrentHashSet" Version="1.3.0" />
+    <PackageReference Include="Dapper" Version="2.1.28" />
+    <PackageReference Include="DialogHost.Avalonia" Version="0.7.7" />
+    <PackageReference Include="Dock.Avalonia" Version="11.0.0.5" />
+    <PackageReference Include="Dock.Model.Mvvm" Version="11.0.0.5" />
+    <PackageReference Include="DynamicData" Version="8.3.27" />
+    <PackageReference Include="FluentMigrator" Version="5.0.0" />
+    <PackageReference Include="FluentMigrator.Runner" Version="5.0.0" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.59.0" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.57" />
+    <PackageReference Include="IPAddressRange" Version="6.0.0" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-beta.802-11.0.0-rc1.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageReference Include="Nager.PublicSuffix" Version="2.4.0" />
+    <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
+    <PackageReference Include="Nito.Disposables" Version="2.5.0" />
+    <PackageReference Include="Polly" Version="8.2.1" />
+    <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.0.1" />
+    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog.Sinks.Debug" Version="2.0.0" />
+    <PackageReference Include="Splat.Microsoft.Extensions.DependencyInjection" Version="14.8.12" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+    <PackageReference Include="Whois.No.Logging" Version="3.0.3" />
+    <PackageReference Include="WhoisClient.NET" Version="5.0.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\RTSharp.Auxiliary.Protocols\RTSharp.Auxiliary.Protocols.csproj" />
+    <ProjectReference Include="..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj" />
+    <ProjectReference Include="..\RTSharp.Shared.Controls\RTSharp.Shared.Controls.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Update="Views\DirectorySelectorWindow.axaml.cs">
+      <DependentUpon>DirectorySelectorWindow.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Options\OptionsWindow.axaml.cs">
+      <DependentUpon>OptionsWindow.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Options\Pages\BehaviorPageView.axaml.cs">
+      <DependentUpon>BehaviorPageView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Options\Pages\CachingPageView.axaml.cs">
+      <DependentUpon>CachingPageView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\TorrentListing\TorrentPeersView.axaml.cs">
+      <DependentUpon>TorrentPeersView.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="ViewModels\Statistics\" />
+    <Folder Include="Views\Behaviors\" />
+    <Folder Include="Views\Statistics\" />
+  </ItemGroup>
+</Project>

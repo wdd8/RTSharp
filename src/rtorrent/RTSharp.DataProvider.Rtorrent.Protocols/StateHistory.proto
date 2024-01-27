@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option csharp_namespace = "RTSharp.DataProvider.Rtorrent.Protocols";
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
+import "Types/CommandReply.proto";
+import "Torrents.proto";
+
+service GRPCStateHistoryService {
+}

@@ -1,0 +1,129 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32210.238
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp", "src\RTSharp\RTSharp.csproj", "{DE2FEDDC-1146-4618-B76E-E069E9E0E005}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "rtorrent", "rtorrent", "{7D5F6923-7585-4284-8DA0-843386E1E52A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.DataProvider.Rtorrent.Server", "src\rtorrent\RTSharp.DataProvider.Rtorrent.Server\RTSharp.DataProvider.Rtorrent.Server.csproj", "{A29AA953-9515-4869-85C2-A29D0CBAC5AD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.DataProvider.Rtorrent.Plugin", "src\rtorrent\RTSharp.DataProvider.Rtorrent.Plugin\RTSharp.DataProvider.Rtorrent.Plugin.csproj", "{CDB51649-357E-4D40-97CF-955783E71C07}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.DataProvider.Rtorrent.Protocols", "src\rtorrent\RTSharp.DataProvider.Rtorrent.Protocols\RTSharp.DataProvider.Rtorrent.Protocols.csproj", "{74161D2A-6996-43D5-8C4F-03F5A113E673}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A74FD161-5CAA-4815-92A1-3D7C7101A77E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.Shared.Abstractions", "src\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj", "{2A6E8AE5-ABA9-4C0A-A31F-695F62114DE9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.Shared.Controls", "src\RTSharp.Shared.Controls\RTSharp.Shared.Controls.csproj", "{CBD16E73-40E1-49DE-9F65-69DD80054E80}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.Shared.Utils", "src\RTSharp.Shared.Utils\RTSharp.Shared.Utils.csproj", "{8F8972EF-D5D8-41DD-A94F-67007511C996}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "qbittorrent", "qbittorrent", "{AFA01836-885C-4905-A8AF-24CCB10367D7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.DataProvider.Qbittorrent.Plugin", "src\qbittorrent\RTSharp.DataProvider.Qbittorrent.Plugin\RTSharp.DataProvider.Qbittorrent.Plugin.csproj", "{BA2F19EA-FA54-43BC-A3E2-76938F5E4277}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "transmission", "transmission", "{EE674381-1E48-4AAF-BB2D-D45B16C5414B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.DataProvider.Transmission.Plugin", "src\transmission\RTSharp.DataProvider.Transmission.Plugin\RTSharp.DataProvider.Transmission.Plugin.csproj", "{10FC56F7-361B-4175-B7A8-94AEC3FA9ADA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{6C30B506-87F4-4EDF-9720-E257B4DCD71D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.ColoredRatio.Plugin", "src\plugins\RTSharp.ColoredRatio\RTSharp.ColoredRatio.Plugin.csproj", "{95F1F10D-775E-4973-B797-371BD5472089}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub Actions", "GitHub Actions", "{D82FDB81-88A8-43DE-A791-217A555E22E7}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\build.yml = .github\workflows\build.yml
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.DataProvider.Rtorrent.Common", "src\rtorrent\RTSharp.DataProvider.Rtorrent.Common\RTSharp.DataProvider.Rtorrent.Common.csproj", "{9AB14ECF-81BD-4EDA-A2B4-708942E5FC70}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.Auxiliary", "src\RTSharp.Auxiliary\RTSharp.Auxiliary.csproj", "{1EDE5264-03F7-4972-8465-68A9D29E51C8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.Auxiliary.Protocols", "src\RTSharp.Auxiliary.Protocols\RTSharp.Auxiliary.Protocols.csproj", "{B3260EA6-C16C-4D8D-9D83-5AF2BD0D5C0C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Transmission.Net", "src\transmission\Transmission.Net\Transmission.Net\Transmission.Net.csproj", "{380B7C39-9028-4A6F-A1C6-0401211DAB50}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DE2FEDDC-1146-4618-B76E-E069E9E0E005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE2FEDDC-1146-4618-B76E-E069E9E0E005}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE2FEDDC-1146-4618-B76E-E069E9E0E005}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE2FEDDC-1146-4618-B76E-E069E9E0E005}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A29AA953-9515-4869-85C2-A29D0CBAC5AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A29AA953-9515-4869-85C2-A29D0CBAC5AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A29AA953-9515-4869-85C2-A29D0CBAC5AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A29AA953-9515-4869-85C2-A29D0CBAC5AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDB51649-357E-4D40-97CF-955783E71C07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDB51649-357E-4D40-97CF-955783E71C07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDB51649-357E-4D40-97CF-955783E71C07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDB51649-357E-4D40-97CF-955783E71C07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74161D2A-6996-43D5-8C4F-03F5A113E673}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74161D2A-6996-43D5-8C4F-03F5A113E673}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74161D2A-6996-43D5-8C4F-03F5A113E673}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74161D2A-6996-43D5-8C4F-03F5A113E673}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A6E8AE5-ABA9-4C0A-A31F-695F62114DE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A6E8AE5-ABA9-4C0A-A31F-695F62114DE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A6E8AE5-ABA9-4C0A-A31F-695F62114DE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A6E8AE5-ABA9-4C0A-A31F-695F62114DE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBD16E73-40E1-49DE-9F65-69DD80054E80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBD16E73-40E1-49DE-9F65-69DD80054E80}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBD16E73-40E1-49DE-9F65-69DD80054E80}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBD16E73-40E1-49DE-9F65-69DD80054E80}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F8972EF-D5D8-41DD-A94F-67007511C996}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F8972EF-D5D8-41DD-A94F-67007511C996}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F8972EF-D5D8-41DD-A94F-67007511C996}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F8972EF-D5D8-41DD-A94F-67007511C996}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA2F19EA-FA54-43BC-A3E2-76938F5E4277}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA2F19EA-FA54-43BC-A3E2-76938F5E4277}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA2F19EA-FA54-43BC-A3E2-76938F5E4277}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA2F19EA-FA54-43BC-A3E2-76938F5E4277}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10FC56F7-361B-4175-B7A8-94AEC3FA9ADA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10FC56F7-361B-4175-B7A8-94AEC3FA9ADA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10FC56F7-361B-4175-B7A8-94AEC3FA9ADA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10FC56F7-361B-4175-B7A8-94AEC3FA9ADA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95F1F10D-775E-4973-B797-371BD5472089}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95F1F10D-775E-4973-B797-371BD5472089}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95F1F10D-775E-4973-B797-371BD5472089}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95F1F10D-775E-4973-B797-371BD5472089}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9AB14ECF-81BD-4EDA-A2B4-708942E5FC70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9AB14ECF-81BD-4EDA-A2B4-708942E5FC70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9AB14ECF-81BD-4EDA-A2B4-708942E5FC70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9AB14ECF-81BD-4EDA-A2B4-708942E5FC70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1EDE5264-03F7-4972-8465-68A9D29E51C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EDE5264-03F7-4972-8465-68A9D29E51C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EDE5264-03F7-4972-8465-68A9D29E51C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EDE5264-03F7-4972-8465-68A9D29E51C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3260EA6-C16C-4D8D-9D83-5AF2BD0D5C0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3260EA6-C16C-4D8D-9D83-5AF2BD0D5C0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3260EA6-C16C-4D8D-9D83-5AF2BD0D5C0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3260EA6-C16C-4D8D-9D83-5AF2BD0D5C0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{380B7C39-9028-4A6F-A1C6-0401211DAB50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{380B7C39-9028-4A6F-A1C6-0401211DAB50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{380B7C39-9028-4A6F-A1C6-0401211DAB50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{380B7C39-9028-4A6F-A1C6-0401211DAB50}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A29AA953-9515-4869-85C2-A29D0CBAC5AD} = {7D5F6923-7585-4284-8DA0-843386E1E52A}
+		{CDB51649-357E-4D40-97CF-955783E71C07} = {7D5F6923-7585-4284-8DA0-843386E1E52A}
+		{74161D2A-6996-43D5-8C4F-03F5A113E673} = {7D5F6923-7585-4284-8DA0-843386E1E52A}
+		{BA2F19EA-FA54-43BC-A3E2-76938F5E4277} = {AFA01836-885C-4905-A8AF-24CCB10367D7}
+		{10FC56F7-361B-4175-B7A8-94AEC3FA9ADA} = {EE674381-1E48-4AAF-BB2D-D45B16C5414B}
+		{95F1F10D-775E-4973-B797-371BD5472089} = {6C30B506-87F4-4EDF-9720-E257B4DCD71D}
+		{D82FDB81-88A8-43DE-A791-217A555E22E7} = {A74FD161-5CAA-4815-92A1-3D7C7101A77E}
+		{9AB14ECF-81BD-4EDA-A2B4-708942E5FC70} = {7D5F6923-7585-4284-8DA0-843386E1E52A}
+		{380B7C39-9028-4A6F-A1C6-0401211DAB50} = {EE674381-1E48-4AAF-BB2D-D45B16C5414B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9640371B-9CC9-49B3-8CC4-E93D150021C0}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,47 @@
+<UserControl x:Class="RTSharp.Views.LogEntriesView"
+         xmlns="https://github.com/avaloniaui"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+         xmlns:vm="clr-namespace:RTSharp.ViewModels;assembly=RTSharp"
+         d:DataContext="{x:Static vm:ExampleLogEntriesViewModel.ViewModel}"
+         x:DataType="vm:LogEntriesViewModel"
+         d:DesignWidth="800" d:DesignHeight="400">
+
+	<UserControl.Styles>
+		<Style Selector="ScrollBar">
+			<Setter Property="AllowAutoHide" Value="True" />
+		</Style>
+	</UserControl.Styles>
+
+	<DataGrid Name="MainGrid"
+			  ItemsSource="{Binding LogEntries}"
+			  CanUserReorderColumns="True"
+			  CanUserResizeColumns="True"
+			  CanUserSortColumns="False"
+			  VerticalAlignment="Stretch"
+			  GridLinesVisibility="Horizontal"
+			  SelectionMode="Extended"
+			  GotFocus="EvGotFocus"
+			  LostFocus="EvLostFocus"
+			  LoadingRow="EvLoadingRow">
+		<DataGrid.ContextMenu>
+			<ContextMenu>
+				<MenuItem Header="Copy exception"
+					Command="{Binding CmdCopyException}"
+					CommandParameter="{Binding #MainGrid.SelectedItems}"
+					IsEnabled="{Binding #MainGrid.SelectedItem.HasException}"
+			/>
+			</ContextMenu>
+		</DataGrid.ContextMenu>
+		<DataGrid.Styles>
+			<Style Selector="DataGridRow">
+				<Setter Property="Height" Value="NaN" />
+			</Style>
+		</DataGrid.Styles>
+		<DataGrid.Columns>
+			<DataGridTextColumn Header="Date/Time" IsReadOnly="True" Binding="{Binding When, Mode=OneWay}" />
+			<DataGridTextColumn Header="Level" IsReadOnly="True" Binding="{Binding LogLevel, Mode=OneWay}" />
+			<DataGridTextColumn Header="Message" IsReadOnly="True" Binding="{Binding Message, Mode=OneWay}" />
+		</DataGrid.Columns>
+	</DataGrid>
+</UserControl>

@@ -1,0 +1,27 @@
+name: dotnet package
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish linux x64
+        run: pwsh scripts/publish.ps1 linux-x64
+      - name: Publish windows x64
+        run: pwsh scripts/publish.ps1 win-x64
+      - name: Upload build linux-x64
+        uses: actions/upload-artifact@v3
+        with:
+          name: Linux x64
+          path: linux-x64
+      - name: Upload build win-x64
+        uses: actions/upload-artifact@v3
+        with:
+          name: Windows x64
+          path: win-x64

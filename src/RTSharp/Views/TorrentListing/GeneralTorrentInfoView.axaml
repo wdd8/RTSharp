@@ -1,0 +1,58 @@
+﻿<UserControl x:Class="RTSharp.Views.TorrentListing.GeneralTorrentInfoView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
+             xmlns:models="clr-namespace:RTSharp.Models"
+             xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+             xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
+             d:DesignWidth="1500" d:DesignHeight="450">
+
+	<Control.Resources>
+		<converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
+		<converters:SIDataSpeedConverter x:Key="SIDataSpeedConverter"/>
+		<converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter"/>
+		<converters:ByteArrayToHexStringConverter x:Key="ByteArrayToHexStringConverter"/>
+	</Control.Resources>
+	<Design.DataContext>
+		<torrentListing:GeneralTorrentInfoViewModel />
+	</Design.DataContext>
+	<UserControl.Styles>
+		<StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+	</UserControl.Styles>
+
+	<StackPanel Margin="8">
+		<views:GroupBox Label="Transfer">
+			<Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*">
+				<views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Time elapsed:" Text="{Binding Torrent.TimeElapsed, Converter={StaticResource ETATimeSpanConverter}}" />
+				<views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Downloaded:" Text="{Binding Torrent.Downloaded, Converter={StaticResource SIDataSizeConverter}}" />
+				<views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Uploaded:" Text="{Binding Torrent.Uploaded, Converter={StaticResource SIDataSizeConverter}}" />
+				<views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Seeders:" Text="{Binding Torrent.Seeders, Mode=OneWay, StringFormat=\{0\}}" />
+
+				<views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Remaining:" Text="{Binding Torrent.ETA, Converter={StaticResource ETATimeSpanConverter}}" />
+				<views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="DL Speed:" Text="{Binding Torrent.DLSpeed, Converter={StaticResource SIDataSpeedConverter}}" />
+				<views:TextBlockWithLabel Grid.Row="2" Grid.Column="1" Label="UP Speed:" Text="{Binding Torrent.UPSpeed, Converter={StaticResource SIDataSpeedConverter}}" />
+				<views:TextBlockWithLabel Grid.Row="3" Grid.Column="1" Label="Peers:" Text="{Binding Torrent.Peers, Mode=OneWay, StringFormat=\{0\}}" />
+
+				<views:TextBlockWithLabel Grid.Row="0" Grid.Column="2" Label="Ratio:" Text="{Binding Torrent.Ratio, StringFormat=\{0:0.000\}}" />
+				<views:TextBlockWithLabel Grid.Row="1" Grid.Column="2" Label="Wasted:" Text="{Binding Torrent.Wasted, Converter={StaticResource SIDataSizeConverter}}" />
+			</Grid>
+		</views:GroupBox>
+		<views:GroupBox Label="Torrent info">
+			<Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
+				<views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Remote path:" Text="{Binding Torrent.RemotePath}" />
+				<views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Created on:" Text="{Binding Torrent.CreatedOnDate}" />
+				<views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Added on:" Text="{Binding Torrent.AddedOnDate}" />
+				<views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Info hash:" Text="{Binding Torrent.Hash, Converter={StaticResource ByteArrayToHexStringConverter}}">
+					<views:TextBlockWithLabel.ContextMenu>
+						<ContextMenu>
+							<MenuItem Header="_Copy" Command="{Binding CopyInfoHashCommand}" />
+						</ContextMenu>
+					</views:TextBlockWithLabel.ContextMenu>
+				</views:TextBlockWithLabel>
+				<views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Comment:" Text="{Binding Torrent.Comment}" />
+				<views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="Status:" Text="{Binding Torrent.StatusMsg}" />
+			</Grid>
+		</views:GroupBox>
+	</StackPanel>
+</UserControl>

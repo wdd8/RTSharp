@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="RTSharp.Shared.Controls.Views.GroupBox">
+	<UserControl.Styles>
+		<Style Selector="views|GroupBox">
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate>
+						<Grid RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
+							<Border ZIndex="1" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" Padding="5,0,5,0" Margin="5,0,0,0">
+								<StackPanel Orientation="Horizontal">
+									<RadioButton IsVisible="{TemplateBinding RadioButtonEnabled,Mode=OneWay}"
+										GroupName="{TemplateBinding RadioButtonGroup}"
+										Margin="-4 -6 0 0"
+										IsChecked="{TemplateBinding IsRadioButtonChecked,Mode=TwoWay}">
+										<RadioButton.RenderTransform>
+											<ScaleTransform ScaleX="0.5" ScaleY="0.5"/>
+										</RadioButton.RenderTransform>
+									</RadioButton>
+									<CheckBox IsVisible="{TemplateBinding CheckBoxEnabled,Mode=OneWay}"
+										Margin="-4 -6 0 0"
+										IsChecked="{TemplateBinding IsCheckBoxChecked,Mode=TwoWay}">
+										<CheckBox.RenderTransform>
+											<ScaleTransform ScaleX="0.67" ScaleY="0.67"/>
+										</CheckBox.RenderTransform>
+									</CheckBox>
+									<TextBlock Tapped="EvTextBlockTapped" FontWeight="Bold" Text="{TemplateBinding Label}" />
+								</StackPanel>
+							</Border>
+							<Border Grid.RowSpan="2" Grid.ColumnSpan="2" Margin="0,8,0,0"
+								BorderBrush="{TemplateBinding BorderBackground}"
+								BorderThickness="1"
+								CornerRadius="3">
+								<Panel Margin="5,10,5,5">
+									<ContentPresenter Content="{TemplateBinding Content}" />
+								</Panel>
+							</Border>
+						</Grid>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</UserControl.Styles>
+</UserControl>

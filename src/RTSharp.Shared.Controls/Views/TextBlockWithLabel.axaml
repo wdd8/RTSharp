@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+             mc:Ignorable="d" d:DesignWidth="70" d:DesignHeight="23"
+             x:Class="RTSharp.Shared.Controls.Views.TextBlockWithLabel">
+	<UserControl.Styles>
+		<Style Selector="views|TextBlockWithLabel">
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate>
+						<StackPanel Orientation="Horizontal">
+							<TextBlock Text="{TemplateBinding Label, Mode=OneWay}" Margin="0 0 4 0" />
+							<TextBlock Text="{TemplateBinding Text}" />
+						</StackPanel>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</UserControl.Styles>
+</UserControl>

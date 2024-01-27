@@ -1,0 +1,3 @@
+[submodule "src/transmission/Transmission.Net"]
+	path = src/transmission/Transmission.Net
+	url = https://github.com/wdd8/Transmission.Net.git

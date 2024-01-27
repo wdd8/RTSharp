@@ -1,0 +1,52 @@
+﻿<Window x:Class="RTSharp.Views.MainWindow"
+	    xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RTSharp.ViewModels"
+		xmlns:vmTorrentListing="using:RTSharp.ViewModels.TorrentListing"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:torrentListing="using:RTSharp.Views.TorrentListing"
+        xmlns:root="using:RTSharp"
+		xmlns:views="using:RTSharp.Views"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:DataType="vm:MainWindowViewModel"
+        x:CompileBindings="False"
+        Width="800" Height="450" WindowState="Normal"
+        Icon="/Assets/rtsharp.ico"
+        Title="RT#"
+		DragDrop.AllowDrop="True">
+    
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+	
+	<Window.Resources>
+		<MenuItem x:Key="FileMenu" Header="_File">
+			<MenuItem Header="_Add torrent..." Command="{Binding AddTorrentClickCommand}" />
+			<Separator />
+			<MenuItem Header="About" Command="{Binding AboutClickCommand}" />
+			<MenuItem Header="About framework" Command="{Binding AboutFrameworkClickCommand}" />
+			<MenuItem Header="_Exit" />
+		</MenuItem>
+		<MenuItem x:Key="EditMenu" Header="_Edit">
+			<MenuItem Header="uhhh" />
+		</MenuItem>
+		<MenuItem x:Key="ViewMenu" Header="_View">
+			<MenuItem Header="Statistics">
+			</MenuItem>
+		</MenuItem>
+		<MenuItem x:Key="ToolsMenu" Header="_Tools">
+			<MenuItem Header="Torrent _Creator" Command="{Binding TorrentCreatorClickCommand}" />
+			<Separator />
+			<MenuItem Header="_Options..." Command="{Binding OptionsClickCommand}" />
+		</MenuItem>
+        <MenuItem x:Key="ServersMenu" Header="_Servers" Command="{Binding ServersClickCommand}" />
+		<MenuItem x:Key="PluginsMenu" Header="_Plugins" Command="{Binding PluginsClickCommand}" />
+	</Window.Resources>
+
+	<Grid RowDefinitions="Auto,*">
+		<Menu Grid.Row="0" Name="RootMenu" DockPanel.Dock="Top" ItemsSource="{Binding MenuItems}" />
+		<DockControl Grid.Row="1" x:Name="DockControl" Layout="{Binding Layout}" />
+	</Grid>
+    
+</Window>

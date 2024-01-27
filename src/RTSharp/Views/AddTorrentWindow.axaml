@@ -1,0 +1,92 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+        xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+        xmlns:vm="clr-namespace:RTSharp.ViewModels"
+        mc:Ignorable="d"
+        x:Class="RTSharp.Views.AddTorrentWindow"
+        Title="RT# - Add torrent"
+		MinWidth="453"
+		Width="453"
+		Height="390"
+		MinHeight="390"
+		MaxHeight="390"
+		Name="window"
+        Icon="/Assets/rtsharp.ico"
+		SizeToContent="WidthAndHeight">
+	<Design.DataContext>
+		<vm:AddTorrentViewModel />
+	</Design.DataContext>
+	<Window.Styles>
+		<StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+	</Window.Styles>
+	<Window.Resources>
+		<converters:MathConverter x:Key="MathConverter"/>
+	</Window.Resources>
+	<TabControl>
+		<TabItem>
+			<TabItem.Header>
+				<TextBlock>Source</TextBlock>
+			</TabItem.Header>
+			<StackPanel Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE-24)}">
+				<views:GroupBox Label="Plugin">
+					<ComboBox ItemsSource="{Binding DataProviders}" SelectedItem="{Binding SelectedProvider}" DropDownClosed="EvDropDownClosed" HorizontalAlignment="Stretch" x:Name="dataProviderCmb" />
+				</views:GroupBox>
+				<views:GroupBox Label="Remote directory">
+					<DockPanel>
+						<Button DockPanel.Dock="Right" Margin="5,0,0,0" Command="{Binding BrowseRemoteDirectoryClickCommand}">Browse...</Button>
+						<TextBox Text="{Binding RemoteTargetPath}" />
+					</DockPanel>
+				</views:GroupBox>
+				<views:GroupBox Label="From file" RadioButtonGroup="main" IsRadioButtonChecked="{Binding FromFileSelected}">
+					<DockPanel>
+						<Button IsEnabled="{Binding FromFileSelected}"
+								Margin="5,0,0,0"
+								DockPanel.Dock="Right"
+								Command="{Binding BrowseLocalFileClickCommand}">Browse...</Button>
+						<TextBox IsEnabled="{Binding FromFileSelected}"
+								 Text="{Binding SelectedFileTextBox}" />
+					</DockPanel>
+				</views:GroupBox>
+				<views:GroupBox Label="From URI" RadioButtonGroup="main" IsRadioButtonChecked="{Binding FromUriSelected}">
+					<TextBox IsEnabled="{Binding FromUriSelected}"
+							 ClipToBounds="True"
+							 Text="{Binding Uri}" />
+				</views:GroupBox>
+				<views:GroupBox Label="From clipboard (URI's)" RadioButtonGroup="main" IsRadioButtonChecked="{Binding FromClipboardSelected}">
+					<Button IsEnabled="{Binding FromClipboardSelected}"
+							HorizontalAlignment="Stretch"
+							HorizontalContentAlignment="Center"
+							Command="{Binding PreviewClipboardClickCommand}">Preview</Button>
+				</views:GroupBox>
+				<Grid ColumnDefinitions="*,Auto" Margin="0,15,0,15">
+					<StackPanel Grid.Column="0">
+						<CheckBox IsChecked="{Binding StartTorrent}" IsEnabled="{Binding !ForceStartTorrentOnAdd}">Start torrent</CheckBox>
+					</StackPanel>
+					<StackPanel Grid.Column="1" Orientation="Horizontal">
+						<Button HorizontalContentAlignment="Center" Width="73" Command="{Binding AddClickCommand}">Add</Button>
+						<Button HorizontalContentAlignment="Center" Width="73" Command="{Binding CancelClickCommand}">Cancel</Button>
+					</StackPanel>
+				</Grid>
+			</StackPanel>
+		</TabItem>
+		<TabItem>
+			<TabItem.Header>
+				<TextBlock>Data provider options</TextBlock>
+			</TabItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock Text=":)" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+			</StackPanel>
+		</TabItem>
+		<TabItem>
+			<TabItem.Header>
+				<TextBlock>Duplication</TextBlock>
+			</TabItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock Text=":)" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+			</StackPanel>
+		</TabItem>
+	</TabControl>
+</Window>

@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+option csharp_namespace = "RTSharp.DataProvider.Rtorrent.Protocols";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+
+service GRPCTorrentsService {
+	rpc GetTorrentListUpdates (GetTorrentListUpdatesRequest) returns (stream DeltaTorrentsListResponse);
+	rpc GetTorrentList (google.protobuf.Empty) returns (TorrentsListResponse);
+}
+
+message GetTorrentListUpdatesRequest {
+	google.protobuf.Duration Interval = 1;
+}
+
+message DeltaTorrentsListResponse {
+	repeated IncompleteDeltaTorrentResponse Incomplete = 1;
+	repeated CompleteDeltaTorrentResponse Complete = 2;
+	repeated Torrent FullUpdate = 3;
+	repeated bytes Removed = 4;
+}
+
+message IncompleteDeltaTorrentResponse {
+	bytes Hash = 1;
+	TorrentState State = 2;
+	uint64 Downloaded = 3;
+	uint64 Uploaded = 4;
+	uint64 DLSpeed = 5;
+	uint64 UPSpeed = 6;
+	google.protobuf.Duration ETA = 7;
+	google.protobuf.Timestamp FinishedOn = 8;
+	repeated string Labels = 9;
+	string RemotePath = 10;
+	uint32 SeedersConnected = 11;
+	uint32 SeedersTotal = 12;
+	uint32 PeersConnected = 13;
+	uint32 PeersTotal = 14;
+	TorrentPriority Priority = 15;
+	uint64 Wasted = 16;
+	repeated TorrentTracker Trackers = 17;
+	string StatusMessage = 18;
+}
+
+message CompleteDeltaTorrentResponse {
+	bytes Hash = 1;
+	TorrentState State = 2;
+	uint64 Uploaded = 3;
+	uint64 UPSpeed = 4;
+	repeated string Labels = 5;
+	string RemotePath = 6;
+	uint32 SeedersTotal = 7;
+	uint32 PeersConnected = 8;
+	uint32 PeersTotal = 9;
+	TorrentPriority Priority = 10;
+	repeated TorrentTracker Trackers = 11;
+	string StatusMessage = 12;
+}
+
+/*
+ *
+ */
+
+message TorrentsListResponse {
+	repeated Torrent List = 1;
+}
+
+message Torrent {
+	bytes Hash = 1;
+	string Name = 2;
+	TorrentState State = 3;
+	bool IsPrivate = 4;
+	uint64 Size = 5;
+	uint64 Downloaded = 6;
+	uint64 Uploaded = 7;
+	uint64 DLSpeed = 8;
+	uint64 UPSpeed = 9;
+	google.protobuf.Duration ETA = 10;
+	google.protobuf.Timestamp CreatedOn = 11;
+	google.protobuf.Timestamp AddedOn = 12;
+	google.protobuf.Timestamp FinishedOn = 13;
+	repeated string Labels = 14;
+	string Comment = 15;
+	string RemotePath = 16;
+	uint32 SeedersConnected = 17;
+	uint32 SeedersTotal = 18;
+	uint32 PeersConnected = 19;
+	uint32 PeersTotal = 20;
+	TorrentPriority Priority = 21;
+	uint32 ChunkSize = 22;
+	uint64 Wasted = 23;
+	repeated TorrentTracker Trackers = 24;
+	string StatusMessage = 25;
+}
+
+message TorrentTracker {
+	string Uri = 1;
+	TorrentTrackerStatus Status = 2;
+	uint32 Seeders = 3;
+	uint32 Peers = 4;
+	uint32 Downloaded = 5;
+	google.protobuf.Timestamp LastUpdated = 6;
+	google.protobuf.Duration ScrapeInterval = 7;
+	TorrentTrackerStatusMessage StatusMessage = 8;
+}
+
+enum TorrentTrackerStatusMessage {
+	TorrentTrackerStatusMessage_NA = 0;
+	TorrentTrackerStatusMessage_Completed = 1;
+	TorrentTrackerStatusMessage_Started = 2;
+	TorrentTrackerStatusMessage_Stopped = 3;
+	TorrentTrackerStatusMessage_Scrape = 4;
+}
+
+enum TorrentTrackerStatus {
+	option allow_alias = true;
+	TorrentTrackerStatus_PLACEHOLDER = 0x00;
+	TorrentTrackerStatus_ACTIVE = 0x01;
+	TorrentTrackerStatus_NOT_ACTIVE = 0x02;
+	TorrentTrackerStatus_NOT_CONTACTED_YET = 0x04;
+	TorrentTrackerStatus_DISABLED = 0x08;
+	TorrentTrackerStatus_ENABLED = 0x10;
+	TorrentTrackerStatus_MAX = 0x10;
+}
+
+enum TorrentState {
+	option allow_alias = true;
+	TorrentState_PLACEHOLDER = 0x00;
+	TorrentState_NONE = 0x01;
+	TorrentState_DOWNLOADING = 0x02;
+	TorrentState_SEEDING = 0x04;
+	TorrentState_HASHING = 0x08;
+	TorrentState_PAUSED = 0x10;
+	TorrentState_STOPPED = 0x20;
+	TorrentState_COMPLETE = 0x40;
+	TorrentState_ACTIVE = 0x80;
+	TorrentState_INACTIVE = 0x100;
+	TorrentState_ERRORED = 0x200;
+	TorrentState_MAX = 0x200;
+}
+
+enum TorrentPriority {
+	// No priority
+	TorrentPriority_OFF = 0;
+	// Unable to determine
+	TorrentPriority_NA = -1;
+	// Low priority
+	TorrentPriority_LOW = 1;
+	// Default torrent priorty
+	TorrentPriority_NORMAL = 2;
+	// High priority
+	TorrentPriority_HIGH = 3;
+}

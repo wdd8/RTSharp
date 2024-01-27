@@ -1,0 +1,140 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:i="https://github.com/projektanker/icons.avalonia"
+        xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+        xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+        xmlns:vm="using:RTSharp.ViewModels.Tools"
+        mc:Ignorable="d" d:DesignWidth="592" d:DesignHeight="750"
+		Name="window"
+		MinWidth="592"
+        x:Class="RTSharp.Views.Tools.TorrentCreatorWindow"
+        Title="RT# - Torrent Creator"
+		SizeToContent="WidthAndHeight">
+
+	<Design.DataContext>
+		<vm:TorrentCreatorWindowViewModel />
+	</Design.DataContext>
+
+	<Window.Resources>
+		<converters:MathConverter x:Key="MathConverter"/>
+	</Window.Resources>
+
+	<Window.Styles>
+		<StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+	</Window.Styles>
+
+	<dialogHost:DialogHost Name="ProgressDialog" DisableOpeningAnimation="True" IsOpen="{Binding ProgressInfoInstance.Shown}">
+		<dialogHost:DialogHost.DialogContent>
+			<StackPanel Margin="8 8 8 8" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.75)}">
+				<StackPanel.Styles>
+					<Style Selector="TextBlock">
+						<Setter Property="VerticalAlignment" Value="Center"/>
+						<Setter Property="Margin" Value="0 0 8 4"/>
+					</Style>
+					<Style Selector="ProgressBar">
+						<Setter Property="Height" Value="15"/>
+					</Style>
+				</StackPanel.Styles>
+				
+				<TextBlock FontWeight="Bold" Text="{Binding ProgressInfoInstance.CurrentFile}" TextTrimming="WordEllipsis" />
+				<Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*">
+					<TextBlock Grid.Column="0" Grid.Row="0">File:</TextBlock>
+					<ProgressBar Grid.Column="1" Grid.Row="0" Value="{Binding ProgressInfoInstance.FileProgress}" ShowProgressText="True" Minimum="0" Maximum="100" />
+
+					<TextBlock Grid.Column="0" Grid.Row="1">Buffer:</TextBlock>
+					<ProgressBar Grid.Column="1" Grid.Row="1" Value="{Binding ProgressInfoInstance.FileBuffer}" ShowProgressText="True" Minimum="0" Maximum="100" />
+
+					<TextBlock Grid.Column="0" Grid.Row="2">Hash:</TextBlock>
+					<ProgressBar Grid.Column="1" Grid.Row="2" Value="{Binding ProgressInfoInstance.HashProgress}" ShowProgressText="True" Minimum="0" Maximum="100" />
+				</Grid>
+				<TextBlock Text="{Binding ProgressInfoInstance.HashExcerpt}" />
+				<Button HorizontalAlignment="Center" Command="{Binding CancelHashingClick}">Cancel</Button>
+			</StackPanel>
+		</dialogHost:DialogHost.DialogContent>
+		<StackPanel Margin="8 8 8 8">
+			<views:GroupBox Label="Select file/folder">
+				<StackPanel>
+					<TextBox Text="{Binding SourcePath}" />
+					<Grid ColumnDefinitions="*,Auto,Auto" Margin="0 8 0 0">
+						<Panel Grid.Column="0" DragDrop.AllowDrop="True" Name="DragDropPanel">
+							<TextBlock
+								VerticalAlignment="Center"
+								HorizontalAlignment="Center"
+								Foreground="Gray"
+								Text="[Drag and drop area]" />
+						</Panel>
+						<Button Grid.Column="1" Command="{Binding SelectFileClick}" Margin="0 0 4 0">
+							Select file
+						</Button>
+						<Button Grid.Column="2" Command="{Binding SelectFolderClick}">
+							Select folder
+						</Button>
+					</Grid>
+				</StackPanel>
+			</views:GroupBox>
+			<views:GroupBox Label="Settings">
+				<StackPanel Orientation="Vertical">
+					<StackPanel Orientation="Horizontal">
+						<TextBlock VerticalAlignment="Center" Margin="0 0 4 0">Piece size:</TextBlock>
+						<ComboBox Name="CmbPieceLength" VerticalAlignment="Center" Width="125" SelectedItem="{Binding StrPieceLength}">
+							<ComboBoxItem>Auto</ComboBoxItem>
+							<ComboBoxItem>16 KiB</ComboBoxItem>
+							<ComboBoxItem>32 KiB</ComboBoxItem>
+							<ComboBoxItem>64 KiB</ComboBoxItem>
+							<ComboBoxItem>128 KiB</ComboBoxItem>
+							<ComboBoxItem>256 KiB</ComboBoxItem>
+							<ComboBoxItem>512 KiB</ComboBoxItem>
+							<ComboBoxItem>1 MiB</ComboBoxItem>
+							<ComboBoxItem>2 MiB</ComboBoxItem>
+							<ComboBoxItem>4 MiB</ComboBoxItem>
+							<ComboBoxItem>8 MiB</ComboBoxItem>
+							<ComboBoxItem>16 MiB</ComboBoxItem>
+							<ComboBoxItem>32 MiB</ComboBoxItem>
+						</ComboBox>
+						<Button Margin="4 0 4 0" Command="{Binding CalculateNumberOfPiecesClickCommand}">Calculate number of pieces:</Button>
+						<TextBlock VerticalAlignment="Center" Text="{Binding NumberOfPieces}" />
+					</StackPanel>
+					<CheckBox IsChecked="{Binding PrivateTorrent}">Private torrent (Won't distribute on DHT network)</CheckBox>
+					<CheckBox IsChecked="{Binding Entropy}">Add entropy (Makes torrent unique)</CheckBox>
+					<CheckBox IsChecked="{Binding EmitCreationDate}">Emit creation date</CheckBox>
+					<views:GroupBox CheckBoxEnabled="True" IsCheckBoxChecked="{Binding OptimiseAlignment}" Label="Optimise alignment">
+						<StackPanel Orientation="Horizontal" Margin="4" IsEnabled="{Binding OptimiseAlginment}">
+							<TextBlock VerticalAlignment="Center">Align to piece boundary for files larger than:</TextBlock>
+							<NumericUpDown Margin="4 0 0 0" Value="0" Increment="1" />
+						</StackPanel>
+					</views:GroupBox>
+				</StackPanel>
+			</views:GroupBox>
+			<views:GroupBox Label="Fields">
+				<Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*">
+					<Grid.Styles>
+						<Style Selector="TextBlock">
+							<Setter Property="VerticalAlignment" Value="Center"/>
+						</Style>
+						<Style Selector="TextBox">
+							<Setter Property="Margin" Value="0 0 0 4"/>
+						</Style>
+					</Grid.Styles>
+					<TextBlock Grid.Column="0" Grid.Row="0">Tracker URLs:</TextBlock>
+					<TextBox Grid.Column="1" Grid.Row="0" AcceptsReturn="True" Height="125" Text="{Binding TrackerUrls}" />
+
+					<TextBlock Grid.Column="0" Grid.Row="1">Web seed URLs:</TextBlock>
+					<TextBox Grid.Column="1" Grid.Row="1" AcceptsReturn="True" Height="125" Text="{Binding WebSeedUrls}" />
+
+					<TextBlock Grid.Column="0" Grid.Row="2">Comments:</TextBlock>
+					<TextBox Grid.Column="1" Grid.Row="2" AcceptsReturn="True" Height="125" Text="{Binding Comments}" />
+
+					<TextBlock Grid.Column="0" Grid.Row="3">Source:</TextBlock>
+					<TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Source}" />
+				</Grid>
+			</views:GroupBox>
+			<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 8 0 0">
+				<Button Margin="0 0 4 0" Command="{Binding CreateTorrentClickCommand}">Create Torrent</Button>
+				<Button Command="{Binding CancelClickCommand}">Cancel</Button>
+			</StackPanel>
+		</StackPanel>
+	</dialogHost:DialogHost>
+</Window>

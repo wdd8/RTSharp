@@ -1,0 +1,62 @@
+<Application x:Class="RTSharp.App"
+	         xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:RTSharp" 
+             xmlns:core="clr-namespace:Dock.Model.Core;assembly=Dock.Model">
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <FluentTheme />
+		<StyleInclude Source="avares://Dock.Avalonia/Themes/DockFluentTheme.axaml" />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <StyleInclude Source="avares://Avalonia.Controls.TreeDataGrid/Themes/Fluent.axaml"/>
+		<StyleInclude Source="avares://DialogHost.Avalonia/Styles.xaml"/>
+
+		<Style Selector="TextBlock">
+			<Setter Property="FontSize" Value="12" />
+		</Style>
+
+		<Style Selector="AccessText">
+			<Setter Property="FontSize" Value="12" />
+		</Style>
+
+		<Style Selector="DataGridCell">
+			<Setter Property="MinHeight" Value="0" />
+		</Style>
+
+		<Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
+			<Setter Property="IsVisible" Value="False" />
+		</Style>
+
+		<Style Selector="ScrollBar">
+			<Setter Property="AllowAutoHide" Value="False" />
+		</Style>
+
+		<Style Selector="DocumentControl">
+			<Setter Property="HeaderTemplate">
+				<local:DocumentWithIconDataTemplate x:DataType="core:IDockable">
+					<DataTemplate x:Key="WithoutIcon">
+						<TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+					</DataTemplate>
+					<DataTemplate x:Key="WithIcon">
+						<StackPanel Orientation="Horizontal">
+							<PathIcon
+							  Data="{Binding Icon}"
+							  Width="16"
+							  Height="16"
+							  Margin="0" />
+							<TextBlock Text="{Binding Title}" VerticalAlignment="Center" Padding="4,0,0,0" />
+						</StackPanel>
+					</DataTemplate>
+				</local:DocumentWithIconDataTemplate>
+			</Setter>
+		</Style>
+    </Application.Styles>
+
+	<Application.Resources>
+		<x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
+	</Application.Resources>
+    
+</Application>
