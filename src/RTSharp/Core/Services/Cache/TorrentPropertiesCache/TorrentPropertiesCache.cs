@@ -61,8 +61,8 @@ namespace RTSharp.Core.Services.Cache.TorrentPropertiesCache
             await conn.ExecuteAsync("insert into TorrentPropertiesCache (TorrentHash, IsMultiFile) values (@TorrentHash, @IsMultiFile)", new
             {
                 TorrentHash,
-				IsMultiFile
-			});
+                IsMultiFile
+            });
         }
     }
 }

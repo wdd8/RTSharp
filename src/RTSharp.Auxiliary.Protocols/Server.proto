@@ -5,5 +5,5 @@ option csharp_namespace = "RTSharp.Auxiliary.Protocols";
 import "google/protobuf/empty.proto";
 
 service GRPCServerService {
-	rpc Test (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Test (google.protobuf.Empty) returns (google.protobuf.Empty);
 }

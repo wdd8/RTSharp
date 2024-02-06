@@ -7,8 +7,8 @@ using Avalonia.Media;
 
 namespace RTSharp.Core
 {
-	public interface IDocumentWithIcon
-	{
-		public Geometry Icon { get; }
-	}
+    public interface IDocumentWithIcon
+    {
+        public Geometry Icon { get; }
+    }
 }

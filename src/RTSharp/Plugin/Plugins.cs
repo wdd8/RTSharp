@@ -33,7 +33,7 @@ namespace RTSharp.Plugin
         public enum HookType
         {
             TorrentListing_EvLoadingRow,
-			AddTorrent_EvDragDrop,
+            AddTorrent_EvDragDrop,
         }
 
         private static ConcurrentDictionary<HookType, object> Hooks = new();
@@ -41,53 +41,53 @@ namespace RTSharp.Plugin
         static Plugins()
         {
             Hooks.TryAdd(HookType.TorrentListing_EvLoadingRow, new ThreadSafeList<Action<object, DataGridRowEventArgs>>());
-			Hooks.TryAdd(HookType.AddTorrent_EvDragDrop, new ThreadSafeList<Func<object, ValueTask>>());
-		}
+            Hooks.TryAdd(HookType.AddTorrent_EvDragDrop, new ThreadSafeList<Func<object, ValueTask>>());
+        }
 
-		public static IDisposable Hook<T>(HookType type, Func<T, ValueTask> fx)
-		{
-			var list = (ThreadSafeList<Func<T, ValueTask>>)Hooks[type];
-			list.Add(fx);
-
-			return Disposable.Create(() => {
-				list.Remove(fx);
-			});
-		}
-
-		public static IDisposable Hook<T, T2>(HookType type, Action<T, T2> fx)
-		{
-			var list = (ThreadSafeList<Action<T, T2>>)Hooks[type];
-			list.Add(fx);
-
-			return Disposable.Create(() => {
-				list.Remove(fx);
-			});
-		}
-
-		public static IDisposable Hook<T>(HookType type, Action<T> fx)
+        public static IDisposable Hook<T>(HookType type, Func<T, ValueTask> fx)
         {
-            var list = (ThreadSafeList<Action<T>>)Hooks[type];
-			list.Add(fx);
+            var list = (ThreadSafeList<Func<T, ValueTask>>)Hooks[type];
+            list.Add(fx);
 
             return Disposable.Create(() => {
                 list.Remove(fx);
             });
-		}
+        }
+
+        public static IDisposable Hook<T, T2>(HookType type, Action<T, T2> fx)
+        {
+            var list = (ThreadSafeList<Action<T, T2>>)Hooks[type];
+            list.Add(fx);
+
+            return Disposable.Create(() => {
+                list.Remove(fx);
+            });
+        }
+
+        public static IDisposable Hook<T>(HookType type, Action<T> fx)
+        {
+            var list = (ThreadSafeList<Action<T>>)Hooks[type];
+            list.Add(fx);
+
+            return Disposable.Create(() => {
+                list.Remove(fx);
+            });
+        }
 
         internal static IEnumerable<Action<T>> GetHook<T>(HookType type)
         {
             return (ThreadSafeList<Action<T>>)Hooks[type];
         }
 
-		internal static IEnumerable<Action<T, T2>> GetHook<T, T2>(HookType type)
-		{
-			return (ThreadSafeList<Action<T, T2>>)Hooks[type];
-		}
+        internal static IEnumerable<Action<T, T2>> GetHook<T, T2>(HookType type)
+        {
+            return (ThreadSafeList<Action<T, T2>>)Hooks[type];
+        }
 
-		internal static IEnumerable<Func<T, ValueTask>> GetHookAsync<T>(HookType type)
-		{
-			return (ThreadSafeList<Func<T, ValueTask>>)Hooks[type];
-		}
+        internal static IEnumerable<Func<T, ValueTask>> GetHookAsync<T>(HookType type)
+        {
+            return (ThreadSafeList<Func<T, ValueTask>>)Hooks[type];
+        }
 
         public static string GetFirstPluginConfigOrDefault(string FullModuleContentsPath)
         {
@@ -279,7 +279,7 @@ namespace RTSharp.Plugin
             Progress.Report(($"Loaded plugin {pluginName}", 100f));
         }
 
-		public static async Task LoadPlugins(WaitingBox Progress)
+        public static async Task LoadPlugins(WaitingBox Progress)
         {
             if (!Directory.Exists(Shared.Abstractions.Consts.PLUGINS_PATH)) {
                 Log.Logger.Information("No plugins loaded");

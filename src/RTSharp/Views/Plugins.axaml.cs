@@ -5,11 +5,11 @@ using RTSharp.ViewModels;
 
 namespace RTSharp.Views
 {
-	public partial class Plugins : VmWindow<PluginsViewModel>
-	{
+    public partial class Plugins : VmWindow<PluginsViewModel>
+    {
         public Plugins()
         {
-			InitializeComponent();
-		}
+            InitializeComponent();
+        }
     }
 }

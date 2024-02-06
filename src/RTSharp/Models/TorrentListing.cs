@@ -5,9 +5,9 @@ namespace RTSharp.Models;
 
 public class TorrentListing
 {
-	public ObservableCollection<Torrent> Torrents { get; set; }
-	
-	public TorrentListing()
+    public ObservableCollection<Torrent> Torrents { get; set; }
+    
+    public TorrentListing()
     {
         Torrents = new ObservableCollection<Torrent>() {
             new Torrent(new[] { (byte)0 }, null) {

@@ -10,12 +10,12 @@ using RTSharp.Models;
 
 namespace RTSharp.ViewModels
 {
-	public class ActionQueueViewModel : Document, IDocumentWithIcon
-	{
-		public ObservableCollection<ActionQueueEntry> ActionQueue => (ObservableCollection<ActionQueueEntry>)Context!;
+    public class ActionQueueViewModel : Document, IDocumentWithIcon
+    {
+        public ObservableCollection<ActionQueueEntry> ActionQueue => (ObservableCollection<ActionQueueEntry>)Context!;
 
-		public ObservableCollection<StyledElement> QueueDisplay => new ObservableCollection<StyledElement>(ActionQueue.Select(x => x.Queue.Display));
+        public ObservableCollection<StyledElement> QueueDisplay => new ObservableCollection<StyledElement>(ActionQueue.Select(x => x.Queue.Display));
 
-		public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-bolt");
-	}
+        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-bolt");
+    }
 }

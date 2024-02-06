@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace RTSharp.Shared.Utils
 {
-	public static class UriUtils
-	{
-		public static string GetDomainForTracker(Uri In)
-		{
-			if (In == null)
-				return "";
+    public static class UriUtils
+    {
+        public static string GetDomainForTracker(Uri In)
+        {
+            if (In == null)
+                return "";
 
-			return String.IsNullOrEmpty(In.Host) ? In.AbsoluteUri : In.Host;
-		}
-	}
+            return String.IsNullOrEmpty(In.Host) ? In.AbsoluteUri : In.Host;
+        }
+    }
 }

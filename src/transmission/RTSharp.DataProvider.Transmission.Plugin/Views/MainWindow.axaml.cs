@@ -7,7 +7,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin.Views
     {
         public MainWindow()
         {
-			InitializeComponent();
-		}
+            InitializeComponent();
+        }
     }
 }

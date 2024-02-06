@@ -17,44 +17,44 @@ using RTSharp.Models;
 
 namespace RTSharp.ViewModels
 {
-	public partial class LogEntriesViewModel : Document, IContextPopulatedNotifyable, IDocumentWithIcon
-	{
-		public ObservableCollection<LogEntry> LogEntries => (ObservableCollection<LogEntry>)Context!;
+    public partial class LogEntriesViewModel : Document, IContextPopulatedNotifyable, IDocumentWithIcon
+    {
+        public ObservableCollection<LogEntry> LogEntries => (ObservableCollection<LogEntry>)Context!;
 
-		public Action? ScrollToBottom;
+        public Action? ScrollToBottom;
 
-		public Func<string, Task>? SetClipboardAsync;
+        public Func<string, Task>? SetClipboardAsync;
 
 
-		[RelayCommand]
-		public async Task CopyException(IList In)
-		{
-			var logEntries = In.Cast<LogEntry>().ToArray();
+        [RelayCommand]
+        public async Task CopyException(IList In)
+        {
+            var logEntries = In.Cast<LogEntry>().ToArray();
 
-			if (logEntries.Length != 1 || SetClipboardAsync == null)
-				return;
+            if (logEntries.Length != 1 || SetClipboardAsync == null)
+                return;
 
-			await SetClipboardAsync(logEntries.First().Exception!.ToString());
-		}
+            await SetClipboardAsync(logEntries.First().Exception!.ToString());
+        }
 
-		private void EvLogEntriesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-		{
-			if (ScrollToBottom != null)
-				ScrollToBottom();
-		}
+        private void EvLogEntriesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (ScrollToBottom != null)
+                ScrollToBottom();
+        }
 
-		public void OnContextPopulated()
-		{
-			LogEntries.CollectionChanged += EvLogEntriesChanged;
-		}
+        public void OnContextPopulated()
+        {
+            LogEntries.CollectionChanged += EvLogEntriesChanged;
+        }
 
-		public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-calendar-days");
-	}
+        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-calendar-days");
+    }
 
-	public static class ExampleLogEntriesViewModel
-	{
-		public static LogEntriesViewModel ViewModel { get; } = new LogEntriesViewModel() {
-			Context = new Models.ExampleLogEntries()
-		};
-	}
+    public static class ExampleLogEntriesViewModel
+    {
+        public static LogEntriesViewModel ViewModel { get; } = new LogEntriesViewModel() {
+            Context = new Models.ExampleLogEntries()
+        };
+    }
 }

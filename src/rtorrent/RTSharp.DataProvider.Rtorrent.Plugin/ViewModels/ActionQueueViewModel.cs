@@ -2,17 +2,17 @@
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels
 {
-	public partial class ActionQueueViewModel : ObservableObject
-	{
-		public string DisplayName { get; set; }
+    public partial class ActionQueueViewModel : ObservableObject
+    {
+        public string DisplayName { get; set; }
 
-		[ObservableProperty]
-		public uint actionsInQueue;
+        [ObservableProperty]
+        public uint actionsInQueue;
 
-		[ObservableProperty]
-		public uint erroredActions;
+        [ObservableProperty]
+        public uint erroredActions;
 
-		[ObservableProperty]
-		public string actionQueueString;
-	}
+        [ObservableProperty]
+        public string actionQueueString;
+    }
 }

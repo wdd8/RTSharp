@@ -13,38 +13,38 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels
 {
-	public record Category(string Name, string Icon);
+    public record Category(string Name, string Icon);
 
     public partial class MainWindowViewModel : ObservableObject
     {
-	    public MainWindowViewModel()
-	    {
-		    currentlySelectedCategory = Categories[0];
-		}
+        public MainWindowViewModel()
+        {
+            currentlySelectedCategory = Categories[0];
+        }
 
         [RelayCommand]
         public async Task SaveSettingsClick()
         {
-			SavingSettings = true;
-			var client = Clients.Settings();
+            SavingSettings = true;
+            var client = Clients.Settings();
 
-			Func<Task<CommandReply>> setSettingsTask = async () => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings));
+            Func<Task<CommandReply>> setSettingsTask = async () => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings));
 
-			var action = ActionQueueAction.New("Set settings", setSettingsTask);
-			_ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async parent => {
-				SavingSettings = false;
-			});
-			await ((IActionQueue)ThisPlugin.ActionQueue).RunAction(action);
-		}
+            var action = ActionQueueAction.New("Set settings", setSettingsTask);
+            _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async parent => {
+                SavingSettings = false;
+            });
+            await ((IActionQueue)ThisPlugin.ActionQueue).RunAction(action);
+        }
 
-		async partial void OnSavingSettingsChanged(bool value)
+        async partial void OnSavingSettingsChanged(bool value)
         {
             if (!value) {
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-			SaveSettingsEnabled = !value;
-		}
+            SaveSettingsEnabled = !value;
+        }
 
         [ObservableProperty]
         public bool savingSettings;
@@ -64,10 +64,10 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(GeneralSelected))]
-		[NotifyPropertyChangedFor(nameof(PeersSelected))]
-		[NotifyPropertyChangedFor(nameof(ConnectionSelected))]
-		[NotifyPropertyChangedFor(nameof(AdvancedSelected))]
-		public Category currentlySelectedCategory;
+        [NotifyPropertyChangedFor(nameof(PeersSelected))]
+        [NotifyPropertyChangedFor(nameof(ConnectionSelected))]
+        [NotifyPropertyChangedFor(nameof(AdvancedSelected))]
+        public Category currentlySelectedCategory;
 
         public bool GeneralSelected => CurrentlySelectedCategory?.Name == "General";
         public bool PeersSelected => CurrentlySelectedCategory?.Name == "Peers";
@@ -76,9 +76,9 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels
 
         public Category[] Categories { get; set; } = new Category[] {
             new Category("General", "fas fa-wrench"),
-			new Category("Peers", "fas fa-download"),
-			new Category("Connection", "fas fa-signal"),
-			new Category("Advanced", "fas fa-tools")
+            new Category("Peers", "fas fa-download"),
+            new Category("Connection", "fas fa-signal"),
+            new Category("Advanced", "fas fa-tools")
         };
     }
 }

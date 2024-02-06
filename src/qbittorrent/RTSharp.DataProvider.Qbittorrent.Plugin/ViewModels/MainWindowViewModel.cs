@@ -5,28 +5,28 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace RTSharp.DataProvider.Qbittorrent.Plugin.ViewModels
 {
-	public record Category(string Name, string Icon);
+    public record Category(string Name, string Icon);
 
     public partial class MainWindowViewModel : ObservableObject
     {
-	    public MainWindowViewModel()
-	    {
-		    currentlySelectedCategory = Categories[0];
-		}
+        public MainWindowViewModel()
+        {
+            currentlySelectedCategory = Categories[0];
+        }
 
         [RelayCommand]
         public async Task SaveSettingsClick()
         {
-		}
+        }
 
-		async partial void OnSavingSettingsChanged(bool value)
+        async partial void OnSavingSettingsChanged(bool value)
         {
             if (!value) {
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-			SaveSettingsEnabled = !value;
-		}
+            SaveSettingsEnabled = !value;
+        }
 
         [ObservableProperty]
         public bool savingSettings;
@@ -43,10 +43,10 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin.ViewModels
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(GeneralSelected))]
-		[NotifyPropertyChangedFor(nameof(PeersSelected))]
-		[NotifyPropertyChangedFor(nameof(ConnectionSelected))]
-		[NotifyPropertyChangedFor(nameof(AdvancedSelected))]
-		public Category currentlySelectedCategory;
+        [NotifyPropertyChangedFor(nameof(PeersSelected))]
+        [NotifyPropertyChangedFor(nameof(ConnectionSelected))]
+        [NotifyPropertyChangedFor(nameof(AdvancedSelected))]
+        public Category currentlySelectedCategory;
 
         public bool GeneralSelected => CurrentlySelectedCategory?.Name == "General";
         public bool PeersSelected => CurrentlySelectedCategory?.Name == "Peers";
@@ -55,9 +55,9 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin.ViewModels
 
         public Category[] Categories { get; set; } = new Category[] {
             new Category("General", "fas fa-wrench"),
-			new Category("Peers", "fas fa-download"),
-			new Category("Connection", "fas fa-signal"),
-			new Category("Advanced", "fas fa-tools")
+            new Category("Peers", "fas fa-download"),
+            new Category("Connection", "fas fa-signal"),
+            new Category("Advanced", "fas fa-tools")
         };
     }
 }

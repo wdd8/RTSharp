@@ -5,13 +5,13 @@
          xmlns:vm="clr-namespace:RTSharp.ViewModels;assembly=RTSharp"
          d:DesignWidth="800" d:DesignHeight="400">
 
-	<!--<ListBox Items="{Binding ActionQueue}" VirtualizationMode="None">
-		<ListBox.ItemTemplate>
-			<DataTemplate>
-				<ContentControl Content="{Binding Queue.Display}" />
-			</DataTemplate>
-		</ListBox.ItemTemplate>
-	</ListBox>-->
-	<ItemsRepeater ItemsSource="{Binding QueueDisplay}">
-	</ItemsRepeater>
+    <!--<ListBox Items="{Binding ActionQueue}" VirtualizationMode="None">
+        <ListBox.ItemTemplate>
+            <DataTemplate>
+                <ContentControl Content="{Binding Queue.Display}" />
+            </DataTemplate>
+        </ListBox.ItemTemplate>
+    </ListBox>-->
+    <ItemsRepeater ItemsSource="{Binding QueueDisplay}">
+    </ItemsRepeater>
 </UserControl>

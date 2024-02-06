@@ -1,7 +1,7 @@
 ﻿namespace RTSharp.Core
 {
-	public interface IOnUnselectedNotifyable
-	{
-		public void OnUnselected();
-	}
+    public interface IOnUnselectedNotifyable
+    {
+        public void OnUnselected();
+    }
 }

@@ -14,16 +14,16 @@
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
-	<Window.Styles>
-		<Style Selector="TextBlock,TextBox">
-			<Setter Property="VerticalAlignment" Value="Center" />
-		</Style>
-		<Style Selector="Panel > Grid">
-			<Setter Property="VerticalAlignment" Value="Top" />
-		</Style>
-	</Window.Styles>
+    <Window.Styles>
+        <Style Selector="TextBlock,TextBox">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Panel > Grid">
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+    </Window.Styles>
 
-	<StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
         
     </StackPanel>
 </Window>

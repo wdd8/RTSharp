@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace RTSharp.Shared.Abstractions
 {
-	public record ListingChanges<TChanged, TRemoved>(IEnumerable<TChanged> Changes, IEnumerable<TRemoved> Removed);
+    public record ListingChanges<TChanged, TRemoved>(IEnumerable<TChanged> Changes, IEnumerable<TRemoved> Removed);
 }

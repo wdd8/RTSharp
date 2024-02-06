@@ -35,250 +35,250 @@ using RTSharp.Views.TorrentListing;
 namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel : Document, IContextPopulatedNotifyable
-	{
+    {
         private ObservableCollectionEx<Torrent> Torrents => (ObservableCollectionEx<Torrent>)Context!;
 
-		private ObservableCollectionEx<Torrent> FilteredTorrents { get; set; } = new();
+        private ObservableCollectionEx<Torrent> FilteredTorrents { get; set; } = new();
 
-		public DataGridEx DataGrid { get; set; }
+        public DataGridEx DataGrid { get; set; }
 
-		ObservableCollectionEx<object>? CurrentlySelectedItems => DataGrid?.SelectedItems;
+        ObservableCollectionEx<object>? CurrentlySelectedItems => DataGrid?.SelectedItems;
 
-		private CancellationTokenSource? SelectionChange { get; set; }
+        private CancellationTokenSource? SelectionChange { get; set; }
 
-		[ObservableProperty]
-		private string stringFilter;
+        [ObservableProperty]
+        private string stringFilter;
 
-		[ObservableProperty]
-		private TemplatedControl[] labelsWithAdd;
+        [ObservableProperty]
+        private TemplatedControl[] labelsWithAdd;
 
-		private GeneralTorrentInfoViewModel GeneralInfoViewModel { get; } = new();
+        private GeneralTorrentInfoViewModel GeneralInfoViewModel { get; } = new();
 
-		private TorrentFilesViewModel FilesViewModel { get; } = new();
+        private TorrentFilesViewModel FilesViewModel { get; } = new();
 
-		private TorrentPeersViewModel PeersViewModel { get; } = new();
+        private TorrentPeersViewModel PeersViewModel { get; } = new();
 
-		private TorrentTrackersViewModel TrackersViewModel { get; }
+        private TorrentTrackersViewModel TrackersViewModel { get; }
 
-		private static readonly DrawingImage DefaultImage;
+        private static readonly DrawingImage DefaultImage;
 
-		private bool StartTorrentAllowed => CurrentlySelectedItems.Any() && ((Torrent)CurrentlySelectedItems[0]).InternalState != TORRENT_STATE.SEEDING;
+        private bool StartTorrentAllowed => CurrentlySelectedItems.Any() && ((Torrent)CurrentlySelectedItems[0]).InternalState != TORRENT_STATE.SEEDING;
 
-		public Action ResortList { get; set; }
+        public Action ResortList { get; set; }
 
-		static TorrentListingViewModel()
-		{
-			DefaultImage = new DrawingImage() {
-				Drawing = new GeometryDrawing() {
-					Geometry = FontAwesomeIcons.Get("fa-solid fa-globe"),
-					Brush = Brushes.White
-				}
-			};
-		}
-
-		private List<IDisposable> Disposables = new();
-
-		public TorrentListingViewModel()
+        static TorrentListingViewModel()
         {
-			this.TrackersViewModel = new(this);
-		}
+            DefaultImage = new DrawingImage() {
+                Drawing = new GeometryDrawing() {
+                    Geometry = FontAwesomeIcons.Get("fa-solid fa-globe"),
+                    Brush = Brushes.White
+                }
+            };
+        }
 
-		~TorrentListingViewModel()
-		{
-			foreach (var item in Disposables)
-				item.Dispose();
+        private List<IDisposable> Disposables = new();
 
-			Torrents.CollectionChanged -= OnTorrentsCollectionChanged;
-			CurrentlySelectedItems.CollectionChanged -= CurrentlySelectedTorrents_CollectionChanged;
-		}
+        public TorrentListingViewModel()
+        {
+            this.TrackersViewModel = new(this);
+        }
 
-		public void OnViewModelAttached(TorrentListingView View)
-		{
-			this.DataGrid = View.grid;
+        ~TorrentListingViewModel()
+        {
+            foreach (var item in Disposables)
+                item.Dispose();
 
-			CurrentlySelectedItems.CollectionChanged -= CurrentlySelectedTorrents_CollectionChanged;
-			CurrentlySelectedItems.CollectionChanged += CurrentlySelectedTorrents_CollectionChanged;
-		}
+            Torrents.CollectionChanged -= OnTorrentsCollectionChanged;
+            CurrentlySelectedItems.CollectionChanged -= CurrentlySelectedTorrents_CollectionChanged;
+        }
 
-		public void OnTorrentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => EvaluateFilters();
+        public void OnViewModelAttached(TorrentListingView View)
+        {
+            this.DataGrid = View.grid;
 
-		partial void OnStringFilterChanged(string value) => EvaluateFilters();
+            CurrentlySelectedItems.CollectionChanged -= CurrentlySelectedTorrents_CollectionChanged;
+            CurrentlySelectedItems.CollectionChanged += CurrentlySelectedTorrents_CollectionChanged;
+        }
 
-		[RelayCommand]
-		public void ShowAddLabel()
-		{
-			ShowAddLabelDialog();
-		}
+        public void OnTorrentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => EvaluateFilters();
 
-		[RelayCommand]
-		public void ShowOptions()
-		{
-			var optionsWindow = new OptionsWindow() {
-				DataContext = new OptionsViewModel()
-			};
-			optionsWindow.Show();
-		}
+        partial void OnStringFilterChanged(string value) => EvaluateFilters();
 
-		public override bool OnClose()
-		{
-			return true;
-		}
+        [RelayCommand]
+        public void ShowAddLabel()
+        {
+            ShowAddLabelDialog();
+        }
 
-		private TemplatedControl[] LabelsControlCached;
+        [RelayCommand]
+        public void ShowOptions()
+        {
+            var optionsWindow = new OptionsWindow() {
+                DataContext = new OptionsViewModel()
+            };
+            optionsWindow.Show();
+        }
 
-		private TemplatedControl[] GetLabelsWithAdd(string[] AllLabels)
-		{
-			var ret = new List<TemplatedControl>();
+        public override bool OnClose()
+        {
+            return true;
+        }
 
-			if (CurrentlySelectedItems == null)
-				return Array.Empty<TemplatedControl>();
+        private TemplatedControl[] LabelsControlCached;
 
-			var current = CurrentlySelectedItems.Cast<Torrent>().ToArray();
+        private TemplatedControl[] GetLabelsWithAdd(string[] AllLabels)
+        {
+            var ret = new List<TemplatedControl>();
 
-			foreach (var label in AllLabels) {
-				bool checkedAll = current.All(x => x.Labels.Contains(label));
+            if (CurrentlySelectedItems == null)
+                return Array.Empty<TemplatedControl>();
 
-				ret.Add(new MenuItem {
-					Icon = new CheckBox() {
-						BorderThickness = new Avalonia.Thickness(0),
-						IsHitTestVisible = true,
-						Command = ToggleLabelCommand,
-						CommandParameter = (current, label, checkedAll),
-						IsChecked = checkedAll
-					},
-					Header = label
-				});
-			}
+            var current = CurrentlySelectedItems.Cast<Torrent>().ToArray();
 
-			if (ret.Count > 0)
-				ret.Add(new Separator());
+            foreach (var label in AllLabels) {
+                bool checkedAll = current.All(x => x.Labels.Contains(label));
 
-			ret.Add(new MenuItem {
-				Command = ShowAddLabelCommand,
-				Header = "Add..."
-			});
+                ret.Add(new MenuItem {
+                    Icon = new CheckBox() {
+                        BorderThickness = new Avalonia.Thickness(0),
+                        IsHitTestVisible = true,
+                        Command = ToggleLabelCommand,
+                        CommandParameter = (current, label, checkedAll),
+                        IsChecked = checkedAll
+                    },
+                    Header = label
+                });
+            }
 
-			return LabelsControlCached = ret.ToArray();
-		}
+            if (ret.Count > 0)
+                ret.Add(new Separator());
 
-		private void UpdateTorrentInChildViewModels(ObservableCollectionEx<object>? NewTorrents)
-		{
-			if (NewTorrents?.Count != 1) {
-				GeneralInfoViewModel.Torrent = null;
-				FilesViewModel.Torrent = null;
-				FilesViewModel.Files.Clear();
-				PeersViewModel.Peers.Clear();
-				TrackersViewModel.Trackers.Clear();
-				return;
-			}
+            ret.Add(new MenuItem {
+                Command = ShowAddLabelCommand,
+                Header = "Add..."
+            });
 
-			var newTorrent = (Torrent)NewTorrents[0];
+            return LabelsControlCached = ret.ToArray();
+        }
 
-			GeneralInfoViewModel.Torrent = newTorrent;
-			FilesViewModel.Torrent = newTorrent;
-		}
+        private void UpdateTorrentInChildViewModels(ObservableCollectionEx<object>? NewTorrents)
+        {
+            if (NewTorrents?.Count != 1) {
+                GeneralInfoViewModel.Torrent = null;
+                FilesViewModel.Torrent = null;
+                FilesViewModel.Files.Clear();
+                PeersViewModel.Peers.Clear();
+                TrackersViewModel.Trackers.Clear();
+                return;
+            }
 
-		private Task? TorrentTabsTasks;
-		private SemaphoreSlim TorrentTabsSwitch = new(1, 1);
-		private async Task PollTorrentInfo(ObservableCollectionEx<object>? NewTorrents)
-		{
-			await TorrentTabsSwitch.WaitAsync(); {
-				var newTorrent = NewTorrents?.Count != 1 ? null : (Torrent)NewTorrents[0];
+            var newTorrent = (Torrent)NewTorrents[0];
 
-				if (SelectionChange == null)
-					SelectionChange = new CancellationTokenSource();
-				else {
-					SelectionChange.Cancel();
+            GeneralInfoViewModel.Torrent = newTorrent;
+            FilesViewModel.Torrent = newTorrent;
+        }
 
-					var sw = Stopwatch.StartNew();
-					try {
-						if (TorrentTabsTasks != null) {
-							await TorrentTabsTasks;
-						}
-					} catch (TaskCanceledException) {
-					} catch (Exception ex) {
-						Log.Logger.Error(ex, "One of torrent tasks failed");
-					} finally {
+        private Task? TorrentTabsTasks;
+        private SemaphoreSlim TorrentTabsSwitch = new(1, 1);
+        private async Task PollTorrentInfo(ObservableCollectionEx<object>? NewTorrents)
+        {
+            await TorrentTabsSwitch.WaitAsync(); {
+                var newTorrent = NewTorrents?.Count != 1 ? null : (Torrent)NewTorrents[0];
+
+                if (SelectionChange == null)
+                    SelectionChange = new CancellationTokenSource();
+                else {
+                    SelectionChange.Cancel();
+
+                    var sw = Stopwatch.StartNew();
+                    try {
+                        if (TorrentTabsTasks != null) {
+                            await TorrentTabsTasks;
+                        }
+                    } catch (TaskCanceledException) {
+                    } catch (Exception ex) {
+                        Log.Logger.Error(ex, "One of torrent tasks failed");
+                    } finally {
                         TorrentTabsTasks = null;
                     }
-					if (sw.Elapsed > TimeSpan.FromMilliseconds(100))
-						Log.Logger.Warning($"Torrent tasks are taking too long to complete ({Shared.Utils.Converters.ToAgoString(sw.Elapsed)})");
-				}
+                    if (sw.Elapsed > TimeSpan.FromMilliseconds(100))
+                        Log.Logger.Warning($"Torrent tasks are taking too long to complete ({Shared.Utils.Converters.ToAgoString(sw.Elapsed)})");
+                }
 
-				if (newTorrent != null) {
-					SelectionChange = new CancellationTokenSource();
+                if (newTorrent != null) {
+                    SelectionChange = new CancellationTokenSource();
 
-					Debug.Assert(TorrentTabsTasks == null);
+                    Debug.Assert(TorrentTabsTasks == null);
 
-					Log.Logger.Information("Starting tasks for: " + newTorrent.Name);
-					TorrentTabsTasks = Task.WhenAll(
-						FilesTasks(newTorrent, SelectionChange.Token),
-						PeersTasks(newTorrent, SelectionChange.Token),
-						TrackersTasks(newTorrent, SelectionChange.Token)
-					);
-				}
-			} TorrentTabsSwitch.Release();
-		}
+                    Log.Logger.Information("Starting tasks for: " + newTorrent.Name);
+                    TorrentTabsTasks = Task.WhenAll(
+                        FilesTasks(newTorrent, SelectionChange.Token),
+                        PeersTasks(newTorrent, SelectionChange.Token),
+                        TrackersTasks(newTorrent, SelectionChange.Token)
+                    );
+                }
+            } TorrentTabsSwitch.Release();
+        }
 
-		private void EvaluateFilters()
-		{
-			if (Torrents == null)
-				return;
+        private void EvaluateFilters()
+        {
+            if (Torrents == null)
+                return;
 
-			this.OnPropertyChanging(nameof(FilteredTorrents));
+            this.OnPropertyChanging(nameof(FilteredTorrents));
 
-			if (String.IsNullOrEmpty(StringFilter)) {
-				FilteredTorrents.Replace(Torrents);
-			} else {
-				var newTorrents = new ConcurrentBag<Torrent>();
-				Parallel.ForEach(Torrents, x => {
-					if (x.Name.Contains(StringFilter, StringComparison.OrdinalIgnoreCase)) {
-						newTorrents.Add(x);
-					} else if (x.TrackerDisplayName != null && x.TrackerDisplayName.Contains(StringFilter, StringComparison.OrdinalIgnoreCase)) {
-						newTorrents.Add(x);
-					}
-				});
-				FilteredTorrents.Replace(newTorrents);
-			}
+            if (String.IsNullOrEmpty(StringFilter)) {
+                FilteredTorrents.Replace(Torrents);
+            } else {
+                var newTorrents = new ConcurrentBag<Torrent>();
+                Parallel.ForEach(Torrents, x => {
+                    if (x.Name.Contains(StringFilter, StringComparison.OrdinalIgnoreCase)) {
+                        newTorrents.Add(x);
+                    } else if (x.TrackerDisplayName != null && x.TrackerDisplayName.Contains(StringFilter, StringComparison.OrdinalIgnoreCase)) {
+                        newTorrents.Add(x);
+                    }
+                });
+                FilteredTorrents.Replace(newTorrents);
+            }
 
-			this.OnPropertyChanged(nameof(FilteredTorrents));
+            this.OnPropertyChanged(nameof(FilteredTorrents));
 
-			ResortList?.Invoke();
-		}
+            ResortList?.Invoke();
+        }
 
-		public void OnContextPopulated()
-		{
-			Torrents.CollectionChanged -= OnTorrentsCollectionChanged;
-			Torrents.CollectionChanged += OnTorrentsCollectionChanged;
+        public void OnContextPopulated()
+        {
+            Torrents.CollectionChanged -= OnTorrentsCollectionChanged;
+            Torrents.CollectionChanged += OnTorrentsCollectionChanged;
 
             Disposables.Add(TorrentPolling.AllLabelReferencesObservable.Subscribe(x => LabelsWithAdd = GetLabelsWithAdd(x)));
 
-			EvaluateFilters();
-		}
+            EvaluateFilters();
+        }
 
-		private void CurrentlySelectedTorrents_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-		{
-			UpdateTorrentInChildViewModels(this.CurrentlySelectedItems);
-			_ = PollTorrentInfo(this.CurrentlySelectedItems);
-			this.OnPropertyChanged(nameof(StartTorrentAllowed));
-			this.OnPropertyChanged(nameof(CurrentlySelectedItems));
-			StartTorrentsCommand.NotifyCanExecuteChanged();
-			StopTorrentsCommand.NotifyCanExecuteChanged();
-			PauseTorrentsCommand.NotifyCanExecuteChanged();
-			ForceRecheckTorrentsCommand.NotifyCanExecuteChanged();
-			ReannounceToAllTrackersCommand.NotifyCanExecuteChanged();
-			MoveDownloadDirectoryCommand.NotifyCanExecuteChanged();
-			RemoveTorrentsCommand.NotifyCanExecuteChanged();
-			RemoveTorrentsAndDataCommand.NotifyCanExecuteChanged();
-			GetDotTorrentsCommand.NotifyCanExecuteChanged();
-			AddLabelCommand.NotifyCanExecuteChanged();
+        private void CurrentlySelectedTorrents_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            UpdateTorrentInChildViewModels(this.CurrentlySelectedItems);
+            _ = PollTorrentInfo(this.CurrentlySelectedItems);
+            this.OnPropertyChanged(nameof(StartTorrentAllowed));
+            this.OnPropertyChanged(nameof(CurrentlySelectedItems));
+            StartTorrentsCommand.NotifyCanExecuteChanged();
+            StopTorrentsCommand.NotifyCanExecuteChanged();
+            PauseTorrentsCommand.NotifyCanExecuteChanged();
+            ForceRecheckTorrentsCommand.NotifyCanExecuteChanged();
+            ReannounceToAllTrackersCommand.NotifyCanExecuteChanged();
+            MoveDownloadDirectoryCommand.NotifyCanExecuteChanged();
+            RemoveTorrentsCommand.NotifyCanExecuteChanged();
+            RemoveTorrentsAndDataCommand.NotifyCanExecuteChanged();
+            GetDotTorrentsCommand.NotifyCanExecuteChanged();
+            AddLabelCommand.NotifyCanExecuteChanged();
 
             LabelsWithAdd = GetLabelsWithAdd(TorrentPolling.AllLabelReferences.Keys.ToArray());
         }
-	}
+    }
 
-	public static class ExampleTorrentListingViewModel
-	{
+    public static class ExampleTorrentListingViewModel
+    {
         public static TorrentListingViewModel ViewModel { get; } = new TorrentListingViewModel();
     }
 }

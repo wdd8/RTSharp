@@ -7,33 +7,33 @@ namespace RTSharp.Plugin
 {
     public class PluginAssemblyLoadContext : AssemblyLoadContext
     {
-	    private AssemblyDependencyResolver Resolver;
+        private AssemblyDependencyResolver Resolver;
 
-		public PluginAssemblyLoadContext(string assemblyPath) : base(isCollectible: true)
-		{
-			Resolver = new AssemblyDependencyResolver(assemblyPath);
-		}
-
-		protected override Assembly? Load(AssemblyName name)
+        public PluginAssemblyLoadContext(string assemblyPath) : base(isCollectible: true)
         {
-			if (AssemblyLoadContext.Default.Assemblies.Any(a => a.FullName == name.FullName))
-				return null;
+            Resolver = new AssemblyDependencyResolver(assemblyPath);
+        }
 
-			var assemblyPath = Resolver.ResolveAssemblyToPath(name);
+        protected override Assembly? Load(AssemblyName name)
+        {
+            if (AssemblyLoadContext.Default.Assemblies.Any(a => a.FullName == name.FullName))
+                return null;
+
+            var assemblyPath = Resolver.ResolveAssemblyToPath(name);
             if (assemblyPath != null)
                 return LoadFromAssemblyPath(assemblyPath);
 
-			return null;
+            return null;
         }
 
-		protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
-		{
-			var libraryPath = Resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
-			if (libraryPath != null) {
-				return LoadUnmanagedDllFromPath(libraryPath);
-			}
+        protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
+        {
+            var libraryPath = Resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
+            if (libraryPath != null) {
+                return LoadUnmanagedDllFromPath(libraryPath);
+            }
 
-			return IntPtr.Zero;
-		}
-	}
+            return IntPtr.Zero;
+        }
+    }
 }

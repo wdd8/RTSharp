@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:RTSharp.Shared.Controls.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-			 x:DataType="vm:DockableDocumentWrapperViewModel"
+             x:DataType="vm:DockableDocumentWrapperViewModel"
              x:Class="RTSharp.Shared.Controls.Views.DockableDocumentWrapperView">
-	<DockControl Layout="{Binding Dockable}" InitializeLayout="true" />
+    <DockControl Layout="{Binding Dockable}" InitializeLayout="true" />
 </UserControl>

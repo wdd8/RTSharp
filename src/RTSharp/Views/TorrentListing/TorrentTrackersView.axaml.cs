@@ -9,39 +9,39 @@ using RTSharp.ViewModels.TorrentListing;
 
 namespace RTSharp.Views.TorrentListing
 {
-	public partial class TorrentTrackersView : VmUserControl<TorrentTrackersViewModel>
-	{
-		public TorrentTrackersView()
-		{
-			InitializeComponent();
+    public partial class TorrentTrackersView : VmUserControl<TorrentTrackersViewModel>
+    {
+        public TorrentTrackersView()
+        {
+            InitializeComponent();
 
-			BindViewModelActions(vm => {
-				vm!.BrowseForIconDialog = ShowBrowserForIconDialog;
-			});
-		}
+            BindViewModelActions(vm => {
+                vm!.BrowseForIconDialog = ShowBrowserForIconDialog;
+            });
+        }
 
-		private async Task<string?> ShowBrowserForIconDialog(Window Input)
-		{
-			var dialog = await Input.StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions() {
-				Title = "RT# - Browse for icon...",
-				AllowMultiple = false,
-				FileTypeFilter = new List<FilePickerFileType> {
-					new("Image files") {
-						Patterns = new List<string> {
-							"*.bmp",
-							"*.gif",
-							"*.ico",
-							"*.jpg",
-							"*.jpeg",
-							"*.png",
-							"*.tiff",
-							"*.wdp"
-						}
-					}
-				}
-			});
+        private async Task<string?> ShowBrowserForIconDialog(Window Input)
+        {
+            var dialog = await Input.StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions() {
+                Title = "RT# - Browse for icon...",
+                AllowMultiple = false,
+                FileTypeFilter = new List<FilePickerFileType> {
+                    new("Image files") {
+                        Patterns = new List<string> {
+                            "*.bmp",
+                            "*.gif",
+                            "*.ico",
+                            "*.jpg",
+                            "*.jpeg",
+                            "*.png",
+                            "*.tiff",
+                            "*.wdp"
+                        }
+                    }
+                }
+            });
 
-			return dialog.FirstOrDefault()?.Path?.LocalPath;
-		}
-	}
+            return dialog.FirstOrDefault()?.Path?.LocalPath;
+        }
+    }
 }

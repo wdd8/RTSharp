@@ -17,180 +17,180 @@ using Serilog;
 
 namespace RTSharp.ViewModels
 {
-	public partial class AddTorrentViewModel : ObservableObject
-	{
-		public List<DataProvider> DataProviders => Plugin.Plugins.DataProviders.Where(x => x.Instance.Capabilities.AddTorrent).ToList();
+    public partial class AddTorrentViewModel : ObservableObject
+    {
+        public List<DataProvider> DataProviders => Plugin.Plugins.DataProviders.Where(x => x.Instance.Capabilities.AddTorrent).ToList();
 
-		[ObservableProperty]
-		[NotifyPropertyChangedFor(nameof(ForceStartTorrentOnAdd))]
-		[NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
-		public DataProvider? selectedProvider;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ForceStartTorrentOnAdd))]
+        [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
+        public DataProvider? selectedProvider;
 
-		[ObservableProperty]
-		public bool fromFileSelected;
+        [ObservableProperty]
+        public bool fromFileSelected;
 
-		private List<string>? _selectedFiles = null;
-		public string? SelectedFileTextBox {
-			get {
-				return _selectedFiles switch {
-					null => "",
-					{ Count: 1 } => _selectedFiles.First(),
-					_ => "<multiple files>"
-				};
-			}
-			set {
-				if (value == null)
-					throw new ArgumentNullException(nameof(value));
+        private List<string>? _selectedFiles = null;
+        public string? SelectedFileTextBox {
+            get {
+                return _selectedFiles switch {
+                    null => "",
+                    { Count: 1 } => _selectedFiles.First(),
+                    _ => "<multiple files>"
+                };
+            }
+            set {
+                if (value == null)
+                    throw new ArgumentNullException(nameof(value));
 
-				this.SetProperty(ref _selectedFiles, new List<string>() { value }, nameof(SelectedFileTextBox));
-			}
-		}
+                this.SetProperty(ref _selectedFiles, new List<string>() { value }, nameof(SelectedFileTextBox));
+            }
+        }
 
-		[ObservableProperty]
-		public bool fromUriSelected;
+        [ObservableProperty]
+        public bool fromUriSelected;
 
-		private string? _uri = null;
-		public string? Uri {
-			get {
-				return _uri;
-			}
-			set {
-				if (value == null)
-					throw new ArgumentNullException(nameof(value));
+        private string? _uri = null;
+        public string? Uri {
+            get {
+                return _uri;
+            }
+            set {
+                if (value == null)
+                    throw new ArgumentNullException(nameof(value));
 
-				if (!System.Uri.TryCreate(value, UriKind.Absolute, out _))
-					throw new DataValidationException("Uri is not valid");
+                if (!System.Uri.TryCreate(value, UriKind.Absolute, out _))
+                    throw new DataValidationException("Uri is not valid");
 
-				this.SetProperty(ref _uri, value, nameof(Uri));
-			}
-		}
+                this.SetProperty(ref _uri, value, nameof(Uri));
+            }
+        }
 
-		[ObservableProperty]
-		public bool fromClipboardSelected;
+        [ObservableProperty]
+        public bool fromClipboardSelected;
 
-		[ObservableProperty]
-		[NotifyCanExecuteChangedFor(nameof(AddClickCommand))]
-		public string remoteTargetPath;
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(AddClickCommand))]
+        public string remoteTargetPath;
 
-		[ObservableProperty]
-		public object dataProviderOptions;
+        [ObservableProperty]
+        public object dataProviderOptions;
 
-		[ObservableProperty]
-		public List<DataProvider> duplicationTargets;
+        [ObservableProperty]
+        public List<DataProvider> duplicationTargets;
 
-		private bool _startTorrent;
-		public bool StartTorrent {
-			get {
-				if (SelectedProvider == null)
-					return false;
+        private bool _startTorrent;
+        public bool StartTorrent {
+            get {
+                if (SelectedProvider == null)
+                    return false;
 
-				if (SelectedProvider.Instance.Capabilities.ForceStartTorrentOnAdd != null)
-					return SelectedProvider.Instance.Capabilities.ForceStartTorrentOnAdd.Value;
+                if (SelectedProvider.Instance.Capabilities.ForceStartTorrentOnAdd != null)
+                    return SelectedProvider.Instance.Capabilities.ForceStartTorrentOnAdd.Value;
 
-				return _startTorrent;
-			}
-			set {
-				this.SetProperty(ref _startTorrent, value, nameof(StartTorrent));
-			}
-		}
+                return _startTorrent;
+            }
+            set {
+                this.SetProperty(ref _startTorrent, value, nameof(StartTorrent));
+            }
+        }
 
-		public bool ForceStartTorrentOnAdd => SelectedProvider?.Instance.Capabilities.ForceStartTorrentOnAdd != null;
+        public bool ForceStartTorrentOnAdd => SelectedProvider?.Instance.Capabilities.ForceStartTorrentOnAdd != null;
 
-		public Action CancelWindow { get; set; }
+        public Action CancelWindow { get; set; }
 
-		public Func<string?, Task<IEnumerable<IStorageFile>>> OpenLocalFileDialog { get; set; }
+        public Func<string?, Task<IEnumerable<IStorageFile>>> OpenLocalFileDialog { get; set; }
 
-		public Func<string?, Task<string?>> SelectRemoteDirectoryDialog { get; set; }
+        public Func<string?, Task<string?>> SelectRemoteDirectoryDialog { get; set; }
 
-		public Func<Task> PreviewClipboard { get; set; }
+        public Func<Task> PreviewClipboard { get; set; }
 
-		public Func<Task<string?>> GetClipboard { get; set; }
+        public Func<Task<string?>> GetClipboard { get; set; }
 
-		[RelayCommand]
-		public async Task BrowseRemoteDirectoryClick()
-		{
-			var directory = await SelectRemoteDirectoryDialog(RemoteTargetPath);
+        [RelayCommand]
+        public async Task BrowseRemoteDirectoryClick()
+        {
+            var directory = await SelectRemoteDirectoryDialog(RemoteTargetPath);
 
-			if (directory != null)
-				RemoteTargetPath = directory;
-		}
+            if (directory != null)
+                RemoteTargetPath = directory;
+        }
 
-		[RelayCommand]
-		public async Task PreviewClipboardClick()
-		{
-			await PreviewClipboard();
-		}
+        [RelayCommand]
+        public async Task PreviewClipboardClick()
+        {
+            await PreviewClipboard();
+        }
 
-		[RelayCommand]
-		public async Task BrowseLocalFileClick()
-		{
-			var files = await OpenLocalFileDialog(SelectedFileTextBox);
-			if (!files.Any())
-				return;
-			_selectedFiles = files.Select(x => x.Path.AbsolutePath).ToList();
-			this.OnPropertyChanged(nameof(SelectedFileTextBox));
-		}
+        [RelayCommand]
+        public async Task BrowseLocalFileClick()
+        {
+            var files = await OpenLocalFileDialog(SelectedFileTextBox);
+            if (!files.Any())
+                return;
+            _selectedFiles = files.Select(x => x.Path.AbsolutePath).ToList();
+            this.OnPropertyChanged(nameof(SelectedFileTextBox));
+        }
 
-		[RelayCommand]
-		public void CancelClick()
-		{
-			CancelWindow();
-		}
+        [RelayCommand]
+        public void CancelClick()
+        {
+            CancelWindow();
+        }
 
-		public bool CanExecuteAddClick() => !String.IsNullOrEmpty(this.RemoteTargetPath);
+        public bool CanExecuteAddClick() => !String.IsNullOrEmpty(this.RemoteTargetPath);
 
-		[RelayCommand(CanExecute = nameof(CanExecuteAddClick))]
-		public async Task AddClick()
-		{
-			var input = new Core.TorrentAdd.TorrentAddInput();
-			IClipboard? clipboardObj;
-			IList<string> sources;
+        [RelayCommand(CanExecute = nameof(CanExecuteAddClick))]
+        public async Task AddClick()
+        {
+            var input = new Core.TorrentAdd.TorrentAddInput();
+            IClipboard? clipboardObj;
+            IList<string> sources;
 
-			if (SelectedProvider == null)
-				return;
+            if (SelectedProvider == null)
+                return;
 
-			if (FromFileSelected) {
-				if (_selectedFiles == null)
-					return;
+            if (FromFileSelected) {
+                if (_selectedFiles == null)
+                    return;
 
-				sources = _selectedFiles;
-			} else if (FromUriSelected) {
-				if (_uri == null)
-					return;
+                sources = _selectedFiles;
+            } else if (FromUriSelected) {
+                if (_uri == null)
+                    return;
 
-				sources = new[] { _uri };
-			} else if (FromClipboardSelected) {
-				var clipboard = await GetClipboard();
+                sources = new[] { _uri };
+            } else if (FromClipboardSelected) {
+                var clipboard = await GetClipboard();
 
-				if (String.IsNullOrEmpty(clipboard))
-					return;
+                if (String.IsNullOrEmpty(clipboard))
+                    return;
 
-				sources = clipboard.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-			} else
-				return;
+                sources = clipboard.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            } else
+                return;
 
-			input.Sources = sources.Select(x => (x, new Shared.Abstractions.AddTorrentsOptions(null, RemoteTargetPath))).ToList();
-			input.StartMode = StartTorrent ? Core.TorrentAdd.START_MODE.START : Core.TorrentAdd.START_MODE.DO_NOTHING;
-			input.DuplicationTargets = DuplicationTargets;
+            input.Sources = sources.Select(x => (x, new Shared.Abstractions.AddTorrentsOptions(null, RemoteTargetPath))).ToList();
+            input.StartMode = StartTorrent ? Core.TorrentAdd.START_MODE.START : Core.TorrentAdd.START_MODE.DO_NOTHING;
+            input.DuplicationTargets = DuplicationTargets;
 
-			try {
-				await Core.TorrentAdd.AddTorrents(SelectedProvider, input);
-			} catch { }
-		}
+            try {
+                await Core.TorrentAdd.AddTorrents(SelectedProvider, input);
+            } catch { }
+        }
 
-		[RelayCommand]
-		public async Task ProviderChanged(DataProvider SelectedProvider)
-		{
-			try {
-				if (SelectedProvider == null)
-					return;
+        [RelayCommand]
+        public async Task ProviderChanged(DataProvider SelectedProvider)
+        {
+            try {
+                if (SelectedProvider == null)
+                    return;
 
-				var savePath = await SelectedProvider.Instance.Files.GetDefaultSavePath();
-				RemoteTargetPath = savePath;
-			} catch (Exception ex) {
-				Log.Logger.Error(ex, $"Failed to get default save path");
-				throw;
-			}
-		}
-	}
+                var savePath = await SelectedProvider.Instance.Files.GetDefaultSavePath();
+                RemoteTargetPath = savePath;
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, $"Failed to get default save path");
+                throw;
+            }
+        }
+    }
 }

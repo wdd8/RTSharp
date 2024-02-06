@@ -11,15 +11,15 @@ namespace RTSharp.Shared.Controls.Views
         public WaitingBox()
             : this("Operation in progress...", "Please wait while the operation is in progress.", WAITING_BOX_ICON.WIN10_INFO)
         {
-		}
+        }
 
         public WaitingBox(string Text, string Description, WAITING_BOX_ICON Icon)
         {
             DataContext = new WaitingBoxViewModel(Text, Description, Icon);
 
-			InitializeComponent();
-			Closing += EvClosing;
-		}
+            InitializeComponent();
+            Closing += EvClosing;
+        }
 
         public void Report((int Progress, string Description) In)
         {

@@ -10,10 +10,10 @@ namespace RTSharp.ViewModels.Converters
         {
             switch (value) {
                 case ulong u64:
-					return Shared.Utils.Converters.GetSIDataSize(u64) + "/s";
-				case long i64:
-					return Shared.Utils.Converters.GetSIDataSize((ulong)i64) + "/s";
-			}
+                    return Shared.Utils.Converters.GetSIDataSize(u64) + "/s";
+                case long i64:
+                    return Shared.Utils.Converters.GetSIDataSize((ulong)i64) + "/s";
+            }
             return null;
         }
 

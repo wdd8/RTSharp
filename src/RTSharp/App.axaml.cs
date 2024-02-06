@@ -46,8 +46,8 @@ namespace RTSharp
 
     public static class Services
     {
-		public static async Task RegisterServices()
-		{
+        public static async Task RegisterServices()
+        {
             await Core.Config.WriteDefaultConfig();
 
             var cfgBuilder = new ConfigurationBuilder();
@@ -57,29 +57,29 @@ namespace RTSharp
             await RTSharp.Core.Services.Auxiliary.ConfigureServices.GenerateCertificatesIfNeeded();
 
             var host = Host.CreateDefaultBuilder()
-				.ConfigureServices((_, services) => {
-					services.UseMicrosoftDependencyResolver();
-					var resolver = Locator.CurrentMutable;
-					resolver.InitializeSplat();
+                .ConfigureServices((_, services) => {
+                    services.UseMicrosoftDependencyResolver();
+                    var resolver = Locator.CurrentMutable;
+                    resolver.InitializeSplat();
 
                     services.AddSingleton<IConfiguration>(config);
                     Core.Config.AddConfig(config, services);
 
                     services.AddAuxiliaryServices(config.GetSection("Servers").Get<Dictionary<string, Server>>());
 
-					services.AddTransient<Core.Services.Cache.TorrentFileCache.TorrentFileCache>();
-					services.AddTransient<Core.Services.Cache.TorrentPropertiesCache.TorrentPropertiesCache>();
-					services.AddTransient<Core.Services.Cache.ASCache.ASCache>();
-					services.AddTransient<Core.Services.Cache.Images.ImageCache>();
-					services.AddTransient<Core.Services.Cache.TrackerDb.TrackerDb>();
-					services.AddHttpClient<Core.Services.Favicon>();
-				})
-				.Build();
+                    services.AddTransient<Core.Services.Cache.TorrentFileCache.TorrentFileCache>();
+                    services.AddTransient<Core.Services.Cache.TorrentPropertiesCache.TorrentPropertiesCache>();
+                    services.AddTransient<Core.Services.Cache.ASCache.ASCache>();
+                    services.AddTransient<Core.Services.Cache.Images.ImageCache>();
+                    services.AddTransient<Core.Services.Cache.TrackerDb.TrackerDb>();
+                    services.AddHttpClient<Core.Services.Favicon>();
+                })
+                .Build();
 
-			Core.ServiceProvider._provider = host.Services;
-			Core.ServiceProvider._provider.UseMicrosoftDependencyResolver();
+            Core.ServiceProvider._provider = host.Services;
+            Core.ServiceProvider._provider.UseMicrosoftDependencyResolver();
         }
-	}
+    }
 
     public class App : Application
     {
@@ -93,10 +93,10 @@ namespace RTSharp
                 .CreateLogger();
             Log.Logger = log;
 
-			IconProvider.Current.Register<FontAwesomeIconProvider>();
+            IconProvider.Current.Register<FontAwesomeIconProvider>();
 
             try {
-			    BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
+                BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
             } catch (Exception ex) {
                 var msgbox = MessageBoxManager.GetMessageBoxStandard("RTSharp has crashed", $"RTSharp has crashed.\n{ex}", MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error, WindowStartupLocation.CenterOwner);
                 var task = msgbox.ShowAsync();
@@ -109,8 +109,8 @@ namespace RTSharp
 
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<App>()
-						 .UsePlatformDetect()
-						 .LogToTrace(LogEventLevel.Information);
+                         .UsePlatformDetect()
+                         .LogToTrace(LogEventLevel.Information);
 
         public override void Initialize()
         {
@@ -121,14 +121,14 @@ namespace RTSharp
 
         public static void RegisterOnExit(string Key, Action Fx)
         {
-			FxOnExit[Key] = Fx;
-		}
+            FxOnExit[Key] = Fx;
+        }
 
         public static MainWindow MainWindow { get; private set; }
 
-		public static MainWindowViewModel MainWindowViewModel { get; private set; }
+        public static MainWindowViewModel MainWindowViewModel { get; private set; }
 
-		public override void OnFrameworkInitializationCompleted()
+        public override void OnFrameworkInitializationCompleted()
         {
             var tcs = new TaskCompletionSource();
             var thread = new Thread(() => {

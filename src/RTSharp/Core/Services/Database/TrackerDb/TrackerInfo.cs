@@ -21,7 +21,7 @@ namespace RTSharp.Core.Services.Cache.TrackerDb
 
         public void Deconstruct(out string Domain, out string? Name, out byte[]? ImageHash)
         {
-			Domain = this.Domain;
+            Domain = this.Domain;
             Name = this.Name;
             ImageHash = this.ImageHash;
         }

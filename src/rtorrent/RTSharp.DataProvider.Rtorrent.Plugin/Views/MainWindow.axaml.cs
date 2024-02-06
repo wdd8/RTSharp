@@ -7,7 +7,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.Views
     {
         public MainWindow()
         {
-			InitializeComponent();
-		}
+            InitializeComponent();
+        }
     }
 }

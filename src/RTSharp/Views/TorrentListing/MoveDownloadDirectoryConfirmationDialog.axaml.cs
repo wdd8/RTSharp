@@ -3,20 +3,20 @@ using RTSharp.ViewModels.TorrentListing;
 
 namespace RTSharp.Views.TorrentListing
 {
-	public partial class MoveDownloadDirectoryConfirmationDialog : VmWindow<MoveDownloadDirectoryConfirmationDialogViewModel>
-	{
-		public MoveDownloadDirectoryConfirmationDialog()
-		{
-			InitializeComponent();
+    public partial class MoveDownloadDirectoryConfirmationDialog : VmWindow<MoveDownloadDirectoryConfirmationDialogViewModel>
+    {
+        public MoveDownloadDirectoryConfirmationDialog()
+        {
+            InitializeComponent();
 
-			BindViewModelActions(vm => {
-				vm!.CloseWithResult = CloseWithResult;
-			});
-		}
+            BindViewModelActions(vm => {
+                vm!.CloseWithResult = CloseWithResult;
+            });
+        }
 
-		public void CloseWithResult(bool Input)
-		{
-			this.Close(Input);
-		}
-	}
+        public void CloseWithResult(bool Input)
+        {
+            this.Close(Input);
+        }
+    }
 }

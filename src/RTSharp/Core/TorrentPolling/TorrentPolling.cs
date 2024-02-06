@@ -26,7 +26,7 @@ namespace RTSharp.Core.TorrentPolling
             SingleWriter = true
         });
 
-		public static ObservableCollectionEx<Models.Torrent> Torrents { get; } = new();
+        public static ObservableCollectionEx<Models.Torrent> Torrents { get; } = new();
 
         public static Dictionary<string, int> AllLabelReferences { get; } = new();
         public static IObservable<string[]> AllLabelReferencesObservable { get; private set; }
@@ -34,13 +34,13 @@ namespace RTSharp.Core.TorrentPolling
 
         static TorrentPolling()
         {
-			AllLabelReferencesSubject = new Subject<string[]>();
-			AllLabelReferencesObservable = AllLabelReferencesSubject.AsObservable();
-		}
+            AllLabelReferencesSubject = new Subject<string[]>();
+            AllLabelReferencesObservable = AllLabelReferencesSubject.AsObservable();
+        }
 
         public static void Start()
         {
-			TorrentUpdateTask = Task.Factory.StartNew(TorrentModelUpdates, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.FromCurrentSynchronizationContext());
+            TorrentUpdateTask = Task.Factory.StartNew(TorrentModelUpdates, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.FromCurrentSynchronizationContext());
             TorrentChangesTask = Task.Factory.StartNew(GetTorrentChanges, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
@@ -77,19 +77,19 @@ namespace RTSharp.Core.TorrentPolling
                         AllLabelReferences[label] = 1;
                         labelsChanged = true;
                     }
-				}
+                }
 
                 void subtract(string label)
                 {
-					if (AllLabelReferences.TryGetValue(label, out var val)) {
+                    if (AllLabelReferences.TryGetValue(label, out var val)) {
                         if (val == 1) {
-							AllLabelReferences.Remove(label);
+                            AllLabelReferences.Remove(label);
                             labelsChanged = true;
                         } else
-    						AllLabelReferences[label]--;
+                            AllLabelReferences[label]--;
                     } else
-						Log.Logger.Warning($"Tried to subtract ref count from label {label}, but it didn't exist");
-				}
+                        Log.Logger.Warning($"Tried to subtract ref count from label {label}, but it didn't exist");
+                }
 
                 foreach (var torrent in Torrents)
                 {
@@ -102,12 +102,12 @@ namespace RTSharp.Core.TorrentPolling
                     {
                         if (i.Hash.SequenceEqual(torrent.Hash))
                         {
-							foreach (var label in torrent.Labels)
-								subtract(label);
-							await torrent.UpdateFromPluginModel(i);
-							foreach (var label in torrent.Labels)
-								add(label);
-							changedTorrent = i;
+                            foreach (var label in torrent.Labels)
+                                subtract(label);
+                            await torrent.UpdateFromPluginModel(i);
+                            foreach (var label in torrent.Labels)
+                                add(label);
+                            changedTorrent = i;
                             break;
                         }
                     }
@@ -119,17 +119,17 @@ namespace RTSharp.Core.TorrentPolling
 
                 // For new torrents
                 var newVMTorrents = await Task.WhenAll(changes.Select(async x => {
-					var newVMTorrent = new Models.Torrent(x.Hash, dp);
-					await newVMTorrent.UpdateFromPluginModel(x);
+                    var newVMTorrent = new Models.Torrent(x.Hash, dp);
+                    await newVMTorrent.UpdateFromPluginModel(x);
                     return newVMTorrent;
-				}));
+                }));
                 if (newVMTorrents.Count() > 0) {
-				    Torrents.AddRange(newVMTorrents);
-				    foreach (var x in newVMTorrents)
+                    Torrents.AddRange(newVMTorrents);
+                    foreach (var x in newVMTorrents)
                     {
                         foreach (var label in x.Labels)
-						    add(label);
-				    }
+                            add(label);
+                    }
                 }
 
                 if (labelsChanged)
@@ -155,12 +155,12 @@ namespace RTSharp.Core.TorrentPolling
 
         private static async Task GetTorrentChanges()
         {
-			AsyncAutoResetEvent dataProvidersChanged = new();
-			Plugins.DataProviders.CollectionChanged += (sender, e) => {
+            AsyncAutoResetEvent dataProvidersChanged = new();
+            Plugins.DataProviders.CollectionChanged += (sender, e) => {
                 dataProvidersChanged.Set();
             };
 
-			try
+            try
             {
                 while (true)
                 {
@@ -198,7 +198,7 @@ namespace RTSharp.Core.TorrentPolling
                     // Wait for any changes in tasks or data providers
                     var dataProvidersChangedTask = dataProvidersChanged.WaitAsync();
 
-					var task = await Task.WhenAny(tasks.Concat(new[] { dataProvidersChangedTask }).ToArray()!);
+                    var task = await Task.WhenAny(tasks.Concat(new[] { dataProvidersChangedTask }).ToArray()!);
 
                     if (task != dataProvidersChangedTask)
                     {

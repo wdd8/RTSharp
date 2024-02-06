@@ -47,16 +47,16 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
                 throw new InvalidOperationException("Failed to load, missing required config values");
             }
 
-			Progress.Report(("Registering queue...", 0f));
+            Progress.Report(("Registering queue...", 0f));
 
-			ActionQueue = new ActionQueue(Host.PluginInstanceConfig.Name, Host.InstanceId);
-			Host.RegisterActionQueue(ActionQueue);
+            ActionQueue = new ActionQueue(Host.PluginInstanceConfig.Name, Host.InstanceId);
+            Host.RegisterActionQueue(ActionQueue);
 
-			Progress.Report(("Registering data provider...", 50f));
+            Progress.Report(("Registering data provider...", 50f));
 
             var dp = new DataProvider(this);
 
-			_ = Server.Clients.Initialize(Host).ContinueWith(task => {
+            _ = Server.Clients.Initialize(Host).ContinueWith(task => {
                 _ = dp.UpdateLatency();
                 DataProvider = Host.RegisterDataProvider(dp);
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
@@ -70,12 +70,12 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             var settings = await client.GetSettingsAsync(new Google.Protobuf.WellKnownTypes.Empty());
 
             var settingsWindow = new MainWindow {
-	            ViewModel = new MainWindowViewModel() {
+                ViewModel = new MainWindowViewModel() {
                     PluginHost = Host,
                     ThisPlugin = this,
-		            Title = Host.PluginInstanceConfig.Name + " rtorrent settings",
+                    Title = Host.PluginInstanceConfig.Name + " rtorrent settings",
                     Settings = SettingsMapper.MapFromProto(settings)
-	            }
+                }
             };
             ((MainWindowViewModel)settingsWindow.DataContext).ThisWindow = settingsWindow;
             await settingsWindow.ShowDialog((Window)ParentWindow);
@@ -84,8 +84,8 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
         public Task Unload()
         {
             Host?.UnregisterDataProvider(DataProvider);
-			Host?.UnregisterActionQueue();
-			return Task.CompletedTask;
+            Host?.UnregisterActionQueue();
+            return Task.CompletedTask;
         }
     }
 }

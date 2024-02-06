@@ -26,5 +26,5 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             await Copy(Convert.ToHexString(Torrent!.Hash));
         }
-	}
+    }
 }

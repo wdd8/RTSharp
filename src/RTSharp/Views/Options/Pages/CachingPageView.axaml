@@ -4,5 +4,5 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="RTSharp.Views.Options.Pages.CachingPageView">
-	<TextBlock FontSize="72">bbbbbbbbbbb</TextBlock>
+    <TextBlock FontSize="72">bbbbbbbbbbb</TextBlock>
 </UserControl>

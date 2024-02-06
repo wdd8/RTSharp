@@ -13,13 +13,13 @@ namespace RTSharp.DataProvider.Rtorrent.Server
     public class SCGICommunication
     {
         private IConfiguration Config { get; }
-		public ILogger<SCGICommunication> Logger { get; }
+        public ILogger<SCGICommunication> Logger { get; }
 
-		public SCGICommunication(IConfiguration Config, ILogger<SCGICommunication> Logger)
+        public SCGICommunication(IConfiguration Config, ILogger<SCGICommunication> Logger)
         {
             this.Config = Config;
-			this.Logger = Logger;
-		}
+            this.Logger = Logger;
+        }
 
 #if DEBUG
         private static string WslAddress;
@@ -45,11 +45,11 @@ namespace RTSharp.DataProvider.Rtorrent.Server
                     await proc.WaitForExitAsync();
                     var output = await proc.StandardOutput.ReadToEndAsync();
 
-					WslAddress = output[(output.IndexOf("inet ")+4)..output.IndexOf('/')].Trim();
+                    WslAddress = output[(output.IndexOf("inet ")+4)..output.IndexOf('/')].Trim();
                 }
 
-				listenPath = WslAddress + ":5000";
-			}
+                listenPath = WslAddress + ":5000";
+            }
 #endif
 
             if (listenPath.StartsWith('/')) {

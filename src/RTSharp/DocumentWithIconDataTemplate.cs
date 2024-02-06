@@ -8,22 +8,22 @@ using Dock.Model.Mvvm.Controls;
 
 namespace RTSharp
 {
-	public class DocumentWithIconDataTemplate : IDataTemplate
-	{
-		[Content]
-		public Dictionary<string, IDataTemplate> AvailableTemplates { get; } = new Dictionary<string, IDataTemplate>();
+    public class DocumentWithIconDataTemplate : IDataTemplate
+    {
+        [Content]
+        public Dictionary<string, IDataTemplate> AvailableTemplates { get; } = new Dictionary<string, IDataTemplate>();
 
-		public Control Build(object param)
-		{
-			if (param is IDocumentWithIcon)
-				return AvailableTemplates["WithIcon"].Build(param);
+        public Control Build(object param)
+        {
+            if (param is IDocumentWithIcon)
+                return AvailableTemplates["WithIcon"].Build(param);
 
-			return AvailableTemplates["WithoutIcon"].Build(param);
-		}
+            return AvailableTemplates["WithoutIcon"].Build(param);
+        }
 
-		public bool Match(object data)
-		{
-			return data is Document;
-		}
-	}
+        public bool Match(object data)
+        {
+            return data is Document;
+        }
+    }
 }

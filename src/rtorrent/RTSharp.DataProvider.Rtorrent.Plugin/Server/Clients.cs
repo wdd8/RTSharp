@@ -21,119 +21,119 @@ using MsBox.Avalonia.Models;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin.Server
 {
-	public static class Clients
-	{
-		private static ServiceProvider Provider;
+    public static class Clients
+    {
+        private static ServiceProvider Provider;
 
-		private static (string Public, string Private) GenerateCert()
-		{
-			using ECDsa ecdsa = ECDsa.Create();
-			ecdsa.KeySize = 256;
+        private static (string Public, string Private) GenerateCert()
+        {
+            using ECDsa ecdsa = ECDsa.Create();
+            ecdsa.KeySize = 256;
 
-			var request = new CertificateRequest(new X500DistinguishedName($"CN={Environment.UserName}"), ecdsa, HashAlgorithmName.SHA256);
+            var request = new CertificateRequest(new X500DistinguishedName($"CN={Environment.UserName}"), ecdsa, HashAlgorithmName.SHA256);
 
-			var x509 = request.CreateSelfSigned(
-				DateTimeOffset.Now,
-				DateTimeOffset.Now.AddDays(36500));
+            var x509 = request.CreateSelfSigned(
+                DateTimeOffset.Now,
+                DateTimeOffset.Now.AddDays(36500));
 
-			var exportData = x509.Export(X509ContentType.Cert);
-			var publicKey = new string(PemEncoding.Write("CERTIFICATE", exportData));
-			var privateKey = ecdsa.ExportECPrivateKeyPem();
+            var exportData = x509.Export(X509ContentType.Cert);
+            var publicKey = new string(PemEncoding.Write("CERTIFICATE", exportData));
+            var privateKey = ecdsa.ExportECPrivateKeyPem();
 
-			return (publicKey, privateKey);
-		}
+            return (publicKey, privateKey);
+        }
 
-		private static List<string> UntrustedServers = new();
+        private static List<string> UntrustedServers = new();
 
-		public static async Task Initialize(IPluginHost Host)
-		{
-			var pluginConfig = Host.PluginConfig;
+        public static async Task Initialize(IPluginHost Host)
+        {
+            var pluginConfig = Host.PluginConfig;
 
-			var uri = pluginConfig.GetServerUri();
+            var uri = pluginConfig.GetServerUri();
 
-			var certPath = Path.Combine(Path.GetDirectoryName(Host.FullModulePath), "client.pem");
-			var keyPath = Path.Combine(Path.GetDirectoryName(Host.FullModulePath), "client.key");
+            var certPath = Path.Combine(Path.GetDirectoryName(Host.FullModulePath), "client.pem");
+            var keyPath = Path.Combine(Path.GetDirectoryName(Host.FullModulePath), "client.key");
 
-			if (!Path.Exists(certPath) || !Path.Exists(keyPath)) {
-				var wnd = MessageBoxManager.GetMessageBoxStandard(
-					"rtorrent - " + Host.PluginInstanceConfig.Name + " (" + Host.InstanceId + ")",
-					"No client certificate exists, do you wish to generate a new one?",
-					ButtonEnum.YesNo,
-					Icon.Question,
-					Avalonia.Controls.WindowStartupLocation.CenterOwner);
+            if (!Path.Exists(certPath) || !Path.Exists(keyPath)) {
+                var wnd = MessageBoxManager.GetMessageBoxStandard(
+                    "rtorrent - " + Host.PluginInstanceConfig.Name + " (" + Host.InstanceId + ")",
+                    "No client certificate exists, do you wish to generate a new one?",
+                    ButtonEnum.YesNo,
+                    Icon.Question,
+                    Avalonia.Controls.WindowStartupLocation.CenterOwner);
 
-				var res = await wnd.ShowWindowDialogAsync((Window)Host.MainWindow);
-				if (res == ButtonResult.Yes) {
-					var (publicKey, privateKey) = GenerateCert();
+                var res = await wnd.ShowWindowDialogAsync((Window)Host.MainWindow);
+                if (res == ButtonResult.Yes) {
+                    var (publicKey, privateKey) = GenerateCert();
 
-					await System.IO.File.WriteAllTextAsync(certPath, publicKey);
-					await System.IO.File.WriteAllTextAsync(keyPath, privateKey);
-				} else {
-					throw new InvalidOperationException("Cannot authenticate with server without certificate");
-				}
-			}
+                    await System.IO.File.WriteAllTextAsync(certPath, publicKey);
+                    await System.IO.File.WriteAllTextAsync(keyPath, privateKey);
+                } else {
+                    throw new InvalidOperationException("Cannot authenticate with server without certificate");
+                }
+            }
 
-			var publicPem = await System.IO.File.ReadAllTextAsync(certPath);
-			var privatePem = await System.IO.File.ReadAllTextAsync(keyPath);
-			var x509 = X509Certificate2.CreateFromPem(publicPem, privatePem);
+            var publicPem = await System.IO.File.ReadAllTextAsync(certPath);
+            var privatePem = await System.IO.File.ReadAllTextAsync(keyPath);
+            var x509 = X509Certificate2.CreateFromPem(publicPem, privatePem);
 
-			var services = new ServiceCollection();
-			services.AddSingleton<ILoggerFactory, LoggerFactory>();
+            var services = new ServiceCollection();
+            services.AddSingleton<ILoggerFactory, LoggerFactory>();
 
-			void register<T>()
-				where T : class
-			{
-				services
-					.AddGrpcClient<T>(o => {
-						o.Address = new Uri(uri);
-						o.ChannelOptionsActions.Add(opts => {
-							opts.MaxReceiveMessageSize = int.MaxValue;
-						});
-					})
-					.ConfigurePrimaryHttpMessageHandler(() => {
-						var handler = new HttpClientHandler();
-						handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-						handler.ClientCertificates.Add(new X509Certificate2(x509.Export(X509ContentType.Pkcs12)));
-						handler.ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, certChain, policyErrors) => {
-							if (UntrustedServers.Contains(cert.GetCertHashString()))
-								return false;
+            void register<T>()
+                where T : class
+            {
+                services
+                    .AddGrpcClient<T>(o => {
+                        o.Address = new Uri(uri);
+                        o.ChannelOptionsActions.Add(opts => {
+                            opts.MaxReceiveMessageSize = int.MaxValue;
+                        });
+                    })
+                    .ConfigurePrimaryHttpMessageHandler(() => {
+                        var handler = new HttpClientHandler();
+                        handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                        handler.ClientCertificates.Add(new X509Certificate2(x509.Export(X509ContentType.Pkcs12)));
+                        handler.ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, certChain, policyErrors) => {
+                            if (UntrustedServers.Contains(cert.GetCertHashString()))
+                                return false;
 
-							if (pluginConfig.VerifyNative()) {
-								if (policyErrors != System.Net.Security.SslPolicyErrors.None) {
-									UntrustedServers.Add(cert.GetCertHashString());
+                            if (pluginConfig.VerifyNative()) {
+                                if (policyErrors != System.Net.Security.SslPolicyErrors.None) {
+                                    UntrustedServers.Add(cert.GetCertHashString());
 
-									var mre = new ManualResetEventSlim(false);
+                                    var mre = new ManualResetEventSlim(false);
 
-									Dispatcher.UIThread.Post(async () => {
-										var wnd = MessageBoxManager.GetMessageBoxStandard(
-										"rtorrent - " + Host.PluginInstanceConfig.Name + " (" + Host.InstanceId + ")",
-										"Certificate " + cert.Thumbprint + " is untrusted (" + policyErrors + ")",
-										ButtonEnum.Ok,
-										Icon.Error,
-										WindowStartupLocation.CenterScreen);
+                                    Dispatcher.UIThread.Post(async () => {
+                                        var wnd = MessageBoxManager.GetMessageBoxStandard(
+                                        "rtorrent - " + Host.PluginInstanceConfig.Name + " (" + Host.InstanceId + ")",
+                                        "Certificate " + cert.Thumbprint + " is untrusted (" + policyErrors + ")",
+                                        ButtonEnum.Ok,
+                                        Icon.Error,
+                                        WindowStartupLocation.CenterScreen);
 
-										await wnd.ShowWindowDialogAsync((Window)Host.MainWindow);
-										mre.Set();
-									});
+                                        await wnd.ShowWindowDialogAsync((Window)Host.MainWindow);
+                                        mre.Set();
+                                    });
 
-									mre.Wait();
-									return false;
-								}
+                                    mre.Wait();
+                                    return false;
+                                }
 
-								return true;
-							}
+                                return true;
+                            }
 
-							var thumbprint = pluginConfig.GetTrustedServerThumbprint();
+                            var thumbprint = pluginConfig.GetTrustedServerThumbprint();
 
-							if (thumbprint != cert.GetCertHashString()) {
-								var mre = new ManualResetEventSlim(false);
-								bool result = false;
+                            if (thumbprint != cert.GetCertHashString()) {
+                                var mre = new ManualResetEventSlim(false);
+                                bool result = false;
 
-								Dispatcher.UIThread.Post(async () => {
-									var wnd = MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
-										Icon = Icon.Warning,
-										ContentTitle = "rtorrent - " + Host.PluginInstanceConfig.Name + " (" + Host.InstanceId + ")",
-										ContentMessage = (!String.IsNullOrEmpty(thumbprint) ?
+                                Dispatcher.UIThread.Post(async () => {
+                                    var wnd = MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                                        Icon = Icon.Warning,
+                                        ContentTitle = "rtorrent - " + Host.PluginInstanceConfig.Name + " (" + Host.InstanceId + ")",
+                                        ContentMessage = (!String.IsNullOrEmpty(thumbprint) ?
 @"```
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
@@ -149,62 +149,62 @@ It is also possible that a host key has just been changed.
 ```
 {cert.ToString(true)}
 ```",
-										Markdown = true,
-										ButtonDefinitions = new[] {
-											new ButtonDefinition() {
-												IsDefault = false,
-												Name = "Yes"
-											},
-											new ButtonDefinition() {
-												IsDefault = true,
-												Name = "No"
-											},
-										},
-										WindowStartupLocation = WindowStartupLocation.CenterOwner
-									});
+                                        Markdown = true,
+                                        ButtonDefinitions = new[] {
+                                            new ButtonDefinition() {
+                                                IsDefault = false,
+                                                Name = "Yes"
+                                            },
+                                            new ButtonDefinition() {
+                                                IsDefault = true,
+                                                Name = "No"
+                                            },
+                                        },
+                                        WindowStartupLocation = WindowStartupLocation.CenterOwner
+                                    });
 
-									var res = await wnd.ShowWindowAsync();
-									mre.Set();
-									result = res == "Yes";
-								});
+                                    var res = await wnd.ShowWindowAsync();
+                                    mre.Set();
+                                    result = res == "Yes";
+                                });
 
-								mre.Wait();
+                                mre.Wait();
 
-								if (result) {
-									var el = JsonSerializer.Deserialize<JsonObject>(System.IO.File.ReadAllText(Host.PluginConfigPath));
-									el["Server"]["TrustedThumbprint"] = cert.GetCertHashString();
-									var outp = el.ToJsonString(new JsonSerializerOptions() {
-										WriteIndented = true
-									});
-									System.IO.File.WriteAllText(Host.PluginConfigPath, outp);
-								} else
-									UntrustedServers.Add(cert.GetCertHashString());
+                                if (result) {
+                                    var el = JsonSerializer.Deserialize<JsonObject>(System.IO.File.ReadAllText(Host.PluginConfigPath));
+                                    el["Server"]["TrustedThumbprint"] = cert.GetCertHashString();
+                                    var outp = el.ToJsonString(new JsonSerializerOptions() {
+                                        WriteIndented = true
+                                    });
+                                    System.IO.File.WriteAllText(Host.PluginConfigPath, outp);
+                                } else
+                                    UntrustedServers.Add(cert.GetCertHashString());
 
-								return result;
-							}
+                                return result;
+                            }
 
-							return true;
-						};
-						return handler;
-					});
-			}
+                            return true;
+                        };
+                        return handler;
+                    });
+            }
 
-			register<GRPCSettingsService.GRPCSettingsServiceClient>();
-			register<GRPCTorrentsService.GRPCTorrentsServiceClient>();
-			register<GRPCTorrentService.GRPCTorrentServiceClient>();
-			register<GRPCStateHistoryService.GRPCStateHistoryServiceClient>();
+            register<GRPCSettingsService.GRPCSettingsServiceClient>();
+            register<GRPCTorrentsService.GRPCTorrentsServiceClient>();
+            register<GRPCTorrentService.GRPCTorrentServiceClient>();
+            register<GRPCStateHistoryService.GRPCStateHistoryServiceClient>();
 
-			Provider = services.BuildServiceProvider();
-		}
+            Provider = services.BuildServiceProvider();
+        }
 
-		public static GRPCSettingsService.GRPCSettingsServiceClient Settings() => Provider.GetRequiredService<GRPCSettingsService.GRPCSettingsServiceClient>();
+        public static GRPCSettingsService.GRPCSettingsServiceClient Settings() => Provider.GetRequiredService<GRPCSettingsService.GRPCSettingsServiceClient>();
 
-		public static GRPCTorrentsService.GRPCTorrentsServiceClient Torrents() => Provider.GetRequiredService<GRPCTorrentsService.GRPCTorrentsServiceClient>();
+        public static GRPCTorrentsService.GRPCTorrentsServiceClient Torrents() => Provider.GetRequiredService<GRPCTorrentsService.GRPCTorrentsServiceClient>();
 
-		public static GRPCTorrentService.GRPCTorrentServiceClient Torrent() => Provider.GetRequiredService<GRPCTorrentService.GRPCTorrentServiceClient>();
+        public static GRPCTorrentService.GRPCTorrentServiceClient Torrent() => Provider.GetRequiredService<GRPCTorrentService.GRPCTorrentServiceClient>();
 
-		public static GRPCTrackerService.GRPCTrackerServiceClient Tracker() => Provider.GetRequiredService<GRPCTrackerService.GRPCTrackerServiceClient>();
+        public static GRPCTrackerService.GRPCTrackerServiceClient Tracker() => Provider.GetRequiredService<GRPCTrackerService.GRPCTrackerServiceClient>();
 
-		public static GRPCStateHistoryService.GRPCStateHistoryServiceClient StateHistory() => Provider.GetRequiredService<GRPCStateHistoryService.GRPCStateHistoryServiceClient>();
-	}
+        public static GRPCStateHistoryService.GRPCStateHistoryServiceClient StateHistory() => Provider.GetRequiredService<GRPCStateHistoryService.GRPCStateHistoryServiceClient>();
+    }
 }

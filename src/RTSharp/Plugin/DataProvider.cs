@@ -21,11 +21,11 @@ namespace RTSharp.Plugin
             this.Instance = DataProvider;
         }
 
-		public override bool Equals(object? obj) => obj is DataProvider dp && PluginInstance.InstanceId == dp.PluginInstance.InstanceId;
+        public override bool Equals(object? obj) => obj is DataProvider dp && PluginInstance.InstanceId == dp.PluginInstance.InstanceId;
 
-		public override int GetHashCode() => PluginInstance.InstanceId.GetHashCode();
+        public override int GetHashCode() => PluginInstance.InstanceId.GetHashCode();
 
-		public static bool operator ==(DataProvider? dp1, DataProvider? dp2)
+        public static bool operator ==(DataProvider? dp1, DataProvider? dp2)
         {
             if (dp1 is null) {
                 if (dp2 is null)
@@ -43,8 +43,8 @@ namespace RTSharp.Plugin
             return dp1.Equals(dp2);
         }
 
-		public static bool operator !=(DataProvider? dp1, DataProvider? dp2) => !(dp1 == dp2);
+        public static bool operator !=(DataProvider? dp1, DataProvider? dp2) => !(dp1 == dp2);
 
-		public override string ToString() => $"{PluginInstance.PluginInstanceConfig.Name} ({PluginInstance.InstanceId})";
-	}
+        public override string ToString() => $"{PluginInstance.PluginInstanceConfig.Name} ({PluginInstance.InstanceId})";
+    }
 }

@@ -3,43 +3,43 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="300"
-		Width="600" Height="300"
+        Width="600" Height="300"
         x:Class="RTSharp.Views.AboutWindow"
         Icon="/Assets/rtsharp.ico"
         Title="RT#">
 
-	<Window.Styles>
-		<Style Selector="TextBlock.Main">
-			<Style.Animations>
-				<Animation Duration="0:0:10" IterationCount="Infinite">
-					<KeyFrame Cue="0%">
-						<Setter Property="Foreground" Value="Red"/>
-					</KeyFrame>
-					<KeyFrame Cue="25%">
-						<Setter Property="Foreground" Value="Green"/>
-					</KeyFrame>
-					<KeyFrame Cue="50%">
-						<Setter Property="Foreground" Value="Blue"/>
-					</KeyFrame>
-					<KeyFrame Cue="75%">
-						<Setter Property="Foreground" Value="Green"/>
-					</KeyFrame>
-					<KeyFrame Cue="100%">
-						<Setter Property="Foreground" Value="Red"/>
-					</KeyFrame>
-				</Animation>
-			</Style.Animations>
-		</Style>
-	</Window.Styles>
+    <Window.Styles>
+        <Style Selector="TextBlock.Main">
+            <Style.Animations>
+                <Animation Duration="0:0:10" IterationCount="Infinite">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Foreground" Value="Red"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="25%">
+                        <Setter Property="Foreground" Value="Green"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="50%">
+                        <Setter Property="Foreground" Value="Blue"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="75%">
+                        <Setter Property="Foreground" Value="Green"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Foreground" Value="Red"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+    </Window.Styles>
 
-	<StackPanel>
-		<TextBlock Classes="Main" HorizontalAlignment="Center" Padding="0,32,0,0" FontSize="20">RT#</TextBlock>
-		<Panel Height="50" />
-		<TextBlock Padding="11,0,0,0">Libraries:</TextBlock>
-		<TextBox FontFamily="Consolas" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True">
+    <StackPanel>
+        <TextBlock Classes="Main" HorizontalAlignment="Center" Padding="0,32,0,0" FontSize="20">RT#</TextBlock>
+        <Panel Height="50" />
+        <TextBlock Padding="11,0,0,0">Libraries:</TextBlock>
+        <TextBox FontFamily="Consolas" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True">
 Avalonia              by AvaloniaUI team &amp; contributors ... TODO
 npolyak/NP.Avalonia.Visuals
 ... and .NET contributors
-		</TextBox>
-	</StackPanel>
+        </TextBox>
+    </StackPanel>
 </Window>

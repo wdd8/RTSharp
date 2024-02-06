@@ -136,7 +136,7 @@ namespace RTSharp.Core.Services.Cache.Images
             return CacheInMemory(ImageHash, d.Image);
         }
 
-		public Task<(byte[] Hash, Bitmap Image)> AddImage(Stream Image)
+        public Task<(byte[] Hash, Bitmap Image)> AddImage(Stream Image)
         {
             if (Image is MemoryStream memStream) {
                 return AddImage(memStream.ToArray());
@@ -148,7 +148,7 @@ namespace RTSharp.Core.Services.Cache.Images
         }
 
 
-		public async Task<(byte[] Hash, Bitmap Image)> AddImage(byte[] Image)
+        public async Task<(byte[] Hash, Bitmap Image)> AddImage(byte[] Image)
         {
             await using var conn = await New();
 

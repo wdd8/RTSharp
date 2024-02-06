@@ -6,29 +6,29 @@ using System.Linq;
 
 namespace RTSharp.Views.TorrentListing
 {
-	public partial class TorrentPeersView : VmUserControl<TorrentPeersViewModel>
-	{
+    public partial class TorrentPeersView : VmUserControl<TorrentPeersViewModel>
+    {
         public TorrentPeersView()
         {
-			InitializeComponent();
+            InitializeComponent();
 
-			BindViewModelActions(vm => {
-				vm!.ResortList = ResortList;
-			});
-		}
+            BindViewModelActions(vm => {
+                vm!.ResortList = ResortList;
+            });
+        }
 
-		private void ResortList()
-		{
-			if (!grid.IsLoaded)
-				return;
+        private void ResortList()
+        {
+            if (!grid.IsLoaded)
+                return;
 
-			foreach (var col in grid.Columns) {
-				var sortDirection = col.GetSortDirection();
-				if (sortDirection == null)
-					continue;
+            foreach (var col in grid.Columns) {
+                var sortDirection = col.GetSortDirection();
+                if (sortDirection == null)
+                    continue;
 
-				col.Sort(sortDirection.Value);
-			}
-		}
+                col.Sort(sortDirection.Value);
+            }
+        }
     }
 }

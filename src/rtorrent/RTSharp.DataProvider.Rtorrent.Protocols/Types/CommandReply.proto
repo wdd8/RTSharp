@@ -3,11 +3,11 @@
 option csharp_namespace = "RTSharp.DataProvider.Rtorrent.Protocols.Types";
 
 message Status {
-	string Command = 1;
-	string FaultCode = 2;
-	string FaultString = 3;
+    string Command = 1;
+    string FaultCode = 2;
+    string FaultString = 3;
 }
 
 message CommandReply {
-	repeated Status Response = 1;
+    repeated Status Response = 1;
 }

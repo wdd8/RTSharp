@@ -3,15 +3,15 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
-		Width="400" Height="300"
-		xmlns:vm="clr-namespace:RTSharp.Shared.Controls.ViewModels"
+        Width="400" Height="300"
+        xmlns:vm="clr-namespace:RTSharp.Shared.Controls.ViewModels"
         x:Class="RTSharp.Shared.Controls.Views.TextPreviewWindow"
         Title="TextPreviewWindow"
-		x:DataType="vm:TextPreviewWindowViewModel"
-		x:CompileBindings="True">
-	<TextBox IsReadOnly="True"
-			 TextWrapping="Wrap"
-			 FontFamily="Consolas"
-			 Text="{Binding Text}"
-			 Margin="5,5,5,5" />
+        x:DataType="vm:TextPreviewWindowViewModel"
+        x:CompileBindings="True">
+    <TextBox IsReadOnly="True"
+             TextWrapping="Wrap"
+             FontFamily="Consolas"
+             Text="{Binding Text}"
+             Margin="5,5,5,5" />
 </Window>

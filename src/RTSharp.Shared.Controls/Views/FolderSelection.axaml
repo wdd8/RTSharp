@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="32"
-			 x:Name="folderSelection"
+             x:Name="folderSelection"
              x:Class="RTSharp.Shared.Controls.Views.FolderSelection">
     <DockPanel DataContext="{Binding ElementName=folderSelection}">
         <Button VerticalAlignment="Center" Margin="8,0,0,0" DockPanel.Dock="Right" Click="EvBrowse">Browse...</Button>

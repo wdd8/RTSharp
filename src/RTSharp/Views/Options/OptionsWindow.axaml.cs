@@ -9,6 +9,6 @@ namespace RTSharp.Views.Options
         public OptionsWindow()
         {
             InitializeComponent();
-		}
+        }
     }
 }

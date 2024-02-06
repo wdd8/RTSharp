@@ -19,108 +19,108 @@ namespace RTSharp.DataProvider.Rtorrent.Server;
 
 class Program
 {
-	public static string InstanceName;
+    public static string InstanceName;
 
-	public static async Task Main(string[] args)
-	{
-		var builder = WebApplication.CreateBuilder(args);
-		builder.Logging.ClearProviders();
-		builder.Logging.AddConsole();
+    public static async Task Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
 
-		builder.Services.AddAuthentication(CertificateAuthenticationDefaults.AuthenticationScheme)
-			.AddCertificate(options => {
-				options.AllowedCertificateTypes = CertificateTypes.SelfSigned;
-				options.RevocationMode = X509RevocationMode.Offline;
+        builder.Services.AddAuthentication(CertificateAuthenticationDefaults.AuthenticationScheme)
+            .AddCertificate(options => {
+                options.AllowedCertificateTypes = CertificateTypes.SelfSigned;
+                options.RevocationMode = X509RevocationMode.Offline;
 
-				/*options.Events = new CertificateAuthenticationEvents {
-					OnCertificateValidated = DevelopmentModeCertificateHelper.Validate
-				};*/
-			});
-		builder.Services.AddAuthorization();
-		builder.Services.AddGrpc();
-		builder.Services.AddSingleton<Services.TorrentPolling>();
-		builder.Services.AddScoped<SCGICommunication>();
-		builder.Services.AddScoped<Services.SettingsService>();
-		builder.Services.AddScoped<Services.TorrentService>();
-		builder.Services.AddScoped<Services.TorrentsService>();
-		builder.Services.AddSingleton<Services.StateHistoryService>();
-		builder.Services.AddHostedService(services => services.GetRequiredService<Services.StateHistoryService>());
-		builder.Services.AddHostedService<Services.RtorrentMonitor>();
+                /*options.Events = new CertificateAuthenticationEvents {
+                    OnCertificateValidated = DevelopmentModeCertificateHelper.Validate
+                };*/
+            });
+        builder.Services.AddAuthorization();
+        builder.Services.AddGrpc();
+        builder.Services.AddSingleton<Services.TorrentPolling>();
+        builder.Services.AddScoped<SCGICommunication>();
+        builder.Services.AddScoped<Services.SettingsService>();
+        builder.Services.AddScoped<Services.TorrentService>();
+        builder.Services.AddScoped<Services.TorrentsService>();
+        builder.Services.AddSingleton<Services.StateHistoryService>();
+        builder.Services.AddHostedService(services => services.GetRequiredService<Services.StateHistoryService>());
+        builder.Services.AddHostedService<Services.RtorrentMonitor>();
 
-		InstanceName = builder.Configuration.GetSection("InstanceName").Get<string>();
-		var listenAddresses = builder.Configuration.GetSection("ListenAddress").Get<string[]>();
-		var allowedClients = builder.Configuration.GetSection("AllowedClients").Get<string[]>();
+        InstanceName = builder.Configuration.GetSection("InstanceName").Get<string>();
+        var listenAddresses = builder.Configuration.GetSection("ListenAddress").Get<string[]>();
+        var allowedClients = builder.Configuration.GetSection("AllowedClients").Get<string[]>();
 
-		var publicPem = await System.IO.File.ReadAllTextAsync(builder.Configuration.GetSection("Certificate").GetValue<string>("PublicPem"));
-		var privatePem = await System.IO.File.ReadAllTextAsync(builder.Configuration.GetSection("Certificate").GetValue<string>("PrivatePem"));
-		var x509 = X509Certificate2.CreateFromPem(publicPem, privatePem);
-		var cert = new X509Certificate2(x509.Export(X509ContentType.Pkcs12));
+        var publicPem = await System.IO.File.ReadAllTextAsync(builder.Configuration.GetSection("Certificate").GetValue<string>("PublicPem"));
+        var privatePem = await System.IO.File.ReadAllTextAsync(builder.Configuration.GetSection("Certificate").GetValue<string>("PrivatePem"));
+        var x509 = X509Certificate2.CreateFromPem(publicPem, privatePem);
+        var cert = new X509Certificate2(x509.Export(X509ContentType.Pkcs12));
 
-		builder.WebHost.ConfigureKestrel(kestrelServerOptions => {
-			foreach (var address in listenAddresses) {
-				kestrelServerOptions.Listen(IPEndPoint.Parse(address), cfg => {
-					cfg.UseHttps(async (SslStream stream, SslClientHelloInfo clientHelloInfo, object state, CancellationToken cancellationToken) =>
-					{
-						var ops = new SslServerAuthenticationOptions {
-							ClientCertificateRequired = true,
-							CertificateChainPolicy = null,
-							EncryptionPolicy = EncryptionPolicy.RequireEncryption,
-							ServerCertificate = cert,
-							RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => {
-								if (certificate == null)
-									return true;
+        builder.WebHost.ConfigureKestrel(kestrelServerOptions => {
+            foreach (var address in listenAddresses) {
+                kestrelServerOptions.Listen(IPEndPoint.Parse(address), cfg => {
+                    cfg.UseHttps(async (SslStream stream, SslClientHelloInfo clientHelloInfo, object state, CancellationToken cancellationToken) =>
+                    {
+                        var ops = new SslServerAuthenticationOptions {
+                            ClientCertificateRequired = true,
+                            CertificateChainPolicy = null,
+                            EncryptionPolicy = EncryptionPolicy.RequireEncryption,
+                            ServerCertificate = cert,
+                            RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => {
+                                if (certificate == null)
+                                    return true;
 
-								var clientThumbprint = certificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256);
+                                var clientThumbprint = certificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256);
 
-								if (allowedClients?.Any() != true) {
-									Console.WriteLine();
-									Console.WriteLine("You have no allowed clients set up, but a client is attempting to connect to");
-									Console.WriteLine("the server.");
-									Console.WriteLine();
-									Console.WriteLine("Client thumbprint: ");
-									Console.WriteLine(clientThumbprint);
-									Console.WriteLine();
-									Console.Write("Allow client? [Y/N]: ");
-									var key = Console.ReadKey();
-									if (key.KeyChar != 'Y' && key.KeyChar != 'y')
-										return false;
+                                if (allowedClients?.Any() != true) {
+                                    Console.WriteLine();
+                                    Console.WriteLine("You have no allowed clients set up, but a client is attempting to connect to");
+                                    Console.WriteLine("the server.");
+                                    Console.WriteLine();
+                                    Console.WriteLine("Client thumbprint: ");
+                                    Console.WriteLine(clientThumbprint);
+                                    Console.WriteLine();
+                                    Console.Write("Allow client? [Y/N]: ");
+                                    var key = Console.ReadKey();
+                                    if (key.KeyChar != 'Y' && key.KeyChar != 'y')
+                                        return false;
 
-									return true;
-								}
+                                    return true;
+                                }
 
-								if (allowedClients?.Contains(clientThumbprint) != true)
-									return false;
+                                if (allowedClients?.Contains(clientThumbprint) != true)
+                                    return false;
 
-								return true;
-							}
-						};
+                                return true;
+                            }
+                        };
 
-						return ops;
-					}, null);
-				});
-			}
-		});
+                        return ops;
+                    }, null);
+                });
+            }
+        });
 
-		var app = builder.Build();
+        var app = builder.Build();
 
-		if (app.Environment.IsDevelopment()) {
-			app.UseDeveloperExceptionPage();
-		}
+        if (app.Environment.IsDevelopment()) {
+            app.UseDeveloperExceptionPage();
+        }
 
-		var torrentPolling = app.Services.GetRequiredService<Services.TorrentPolling>();
-		torrentPolling.Initialize();
+        var torrentPolling = app.Services.GetRequiredService<Services.TorrentPolling>();
+        torrentPolling.Initialize();
 
-		app.UseRouting();
+        app.UseRouting();
 
-		app.MapGrpcService<GRPCServices.TorrentsService>();
-		app.MapGrpcService<GRPCServices.TorrentService>();
-		app.MapGrpcService<GRPCServices.SettingsService>();
-		app.MapGrpcService<GRPCServices.StateHistoryService>();
-		app.MapGet("/", async context =>
-		{
-			await context.Response.WriteAsync("Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
-		});
+        app.MapGrpcService<GRPCServices.TorrentsService>();
+        app.MapGrpcService<GRPCServices.TorrentService>();
+        app.MapGrpcService<GRPCServices.SettingsService>();
+        app.MapGrpcService<GRPCServices.StateHistoryService>();
+        app.MapGet("/", async context =>
+        {
+            await context.Response.WriteAsync("Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+        });
 
-		await app.RunAsync();
-	}
+        await app.RunAsync();
+    }
 }

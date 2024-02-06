@@ -5,55 +5,55 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace RTSharp.ViewModels.Options
 {
-	public record OptionsItem(string Icon, string Path, string Text, IList<OptionsItem> Children);
+    public record OptionsItem(string Icon, string Path, string Text, IList<OptionsItem> Children);
 
-	public partial class OptionsViewModel : ObservableObject
-	{
-		public List<OptionsItem> Items { get; }
+    public partial class OptionsViewModel : ObservableObject
+    {
+        public List<OptionsItem> Items { get; }
 
-		public Dictionary<string, Type> PageMap { get; }
+        public Dictionary<string, Type> PageMap { get; }
 
-		public Dictionary<Type, object> Pages { get; } = new();
+        public Dictionary<Type, object> Pages { get; } = new();
 
-		[ObservableProperty]
-		public OptionsItem currentlySelectedItem;
+        [ObservableProperty]
+        public OptionsItem currentlySelectedItem;
 
-		[ObservableProperty]
-		public object? settingsContent;
+        [ObservableProperty]
+        public object? settingsContent;
 
-		public OptionsViewModel()
-		{
-			Items = new List<OptionsItem> {
-				new OptionsItem("fa-solid fa-gears", "Behavior", "Behavior", new[] {
-					new OptionsItem("fa-solid fa-gears", "Behavior > Behavior", "Behavior", Array.Empty<OptionsItem>())
-				}),
-				new OptionsItem("fa-solid fa-book-bookmark", "Caching", "Caching", Array.Empty<OptionsItem>())
-			};
+        public OptionsViewModel()
+        {
+            Items = new List<OptionsItem> {
+                new OptionsItem("fa-solid fa-gears", "Behavior", "Behavior", new[] {
+                    new OptionsItem("fa-solid fa-gears", "Behavior > Behavior", "Behavior", Array.Empty<OptionsItem>())
+                }),
+                new OptionsItem("fa-solid fa-book-bookmark", "Caching", "Caching", Array.Empty<OptionsItem>())
+            };
 
-			PageMap = new Dictionary<string, Type>() {
-				{ "Behavior", typeof(BehaviorPageViewModel) },
-				{ "Caching", typeof(CachingPageViewModel) }
-			};
+            PageMap = new Dictionary<string, Type>() {
+                { "Behavior", typeof(BehaviorPageViewModel) },
+                { "Caching", typeof(CachingPageViewModel) }
+            };
 
-			CurrentlySelectedItem = Items[1];
-		}
+            CurrentlySelectedItem = Items[1];
+        }
 
-		partial void OnCurrentlySelectedItemChanged(OptionsItem item)
-		{
-			this.SettingsContent = GetPage(item.Path);
-		}
+        partial void OnCurrentlySelectedItemChanged(OptionsItem item)
+        {
+            this.SettingsContent = GetPage(item.Path);
+        }
 
-		public object? GetPage(string Path)
-		{
-			if (!PageMap.TryGetValue(Path, out var page)) {
-				return null;
-			}
+        public object? GetPage(string Path)
+        {
+            if (!PageMap.TryGetValue(Path, out var page)) {
+                return null;
+            }
 
-			if (!Pages.TryGetValue(page, out var vm)) {
-				vm = Activator.CreateInstance(page);
-			}
+            if (!Pages.TryGetValue(page, out var vm)) {
+                vm = Activator.CreateInstance(page);
+            }
 
-			return vm;
-		}
-	}
+            return vm;
+        }
+    }
 }

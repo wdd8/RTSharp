@@ -21,40 +21,40 @@ namespace RTSharp.Views;
 
 public partial class MainWindow : VmWindow<MainWindowViewModel>
 {
-	public MainWindow()
-	{
-		InitializeComponent();
-	}
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
 
-	public MainWindow(MainWindowViewModel DataContext)
-	{
-		InitializeComponent();
+    public MainWindow(MainWindowViewModel DataContext)
+    {
+        InitializeComponent();
 
-		ViewModel = DataContext;
-		ShowInTaskbar = true;
-		ViewModel!.ShowPluginsDialog = ShowPluginsDialogAsync;
+        ViewModel = DataContext;
+        ShowInTaskbar = true;
+        ViewModel!.ShowPluginsDialog = ShowPluginsDialogAsync;
         ViewModel!.ShowServersDialog = ShowServersDialogAsync;
         Opened += EvOpened;
-		
-		this.AddHandler(DragDrop.DropEvent, EvDragDrop);
+        
+        this.AddHandler(DragDrop.DropEvent, EvDragDrop);
 
-		var fileMenu = (MenuItem)Resources["FileMenu"]!;
-		var editMenu = (MenuItem)Resources["EditMenu"]!;
-		var viewMenu = (MenuItem)Resources["ViewMenu"]!;
-		var toolsMenu = (MenuItem)Resources["ToolsMenu"]!;
-		var pluginsMenu = (MenuItem)Resources["PluginsMenu"]!;
+        var fileMenu = (MenuItem)Resources["FileMenu"]!;
+        var editMenu = (MenuItem)Resources["EditMenu"]!;
+        var viewMenu = (MenuItem)Resources["ViewMenu"]!;
+        var toolsMenu = (MenuItem)Resources["ToolsMenu"]!;
+        var pluginsMenu = (MenuItem)Resources["PluginsMenu"]!;
         var serversMenu = (MenuItem)Resources["ServersMenu"]!;
 
         this.ViewModel!.MenuItems.Add(fileMenu);
-		this.ViewModel!.MenuItems.Add(editMenu);
-		this.ViewModel!.MenuItems.Add(viewMenu);
-		this.ViewModel!.MenuItems.Add(toolsMenu);
-		this.ViewModel!.MenuItems.Add(pluginsMenu);
+        this.ViewModel!.MenuItems.Add(editMenu);
+        this.ViewModel!.MenuItems.Add(viewMenu);
+        this.ViewModel!.MenuItems.Add(toolsMenu);
+        this.ViewModel!.MenuItems.Add(pluginsMenu);
         this.ViewModel!.MenuItems.Add(serversMenu);
     }
 
 
-	private async void EvOpened(object? sender, System.EventArgs e)
+    private async void EvOpened(object? sender, System.EventArgs e)
     {
         using var scope = Core.ServiceProvider.CreateScope();
         var cacheTasks = Task.WhenAll(
@@ -66,34 +66,34 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         );
 
         var waitingBox = new WaitingBox("Loading...", "Initializing and loading data providers and plugins...", WAITING_BOX_ICON.VISTA_WAIT);
-		Log.Logger.Debug("Loading plugins...");
+        Log.Logger.Debug("Loading plugins...");
 
         _ = waitingBox.ShowDialog(this);
         await Plugin.Plugins.LoadPlugins(waitingBox);
 
-		waitingBox.Report((33, "Loading caches..."));
-		Log.Logger.Debug("Loading caches...");
+        waitingBox.Report((33, "Loading caches..."));
+        Log.Logger.Debug("Loading caches...");
 
-		await cacheTasks;
+        await cacheTasks;
 
         waitingBox.Report((66, "Starting..."));
-		Log.Logger.Debug("Starting...");
+        Log.Logger.Debug("Starting...");
 
-		TorrentPolling.Start();
+        TorrentPolling.Start();
 
-		waitingBox.Close();
+        waitingBox.Close();
 
-		Log.Logger.Information("Ready");
-	}
+        Log.Logger.Information("Ready");
+    }
 
-	private async Task ShowPluginsDialogAsync(PluginsViewModel Input)
-	{
-		var dialog = new Plugins();
-		Input.ThisWindow = dialog;
-		dialog.ViewModel = Input;
+    private async Task ShowPluginsDialogAsync(PluginsViewModel Input)
+    {
+        var dialog = new Plugins();
+        Input.ThisWindow = dialog;
+        dialog.ViewModel = Input;
 
-		await dialog.ShowDialog(this);
-	}
+        await dialog.ShowDialog(this);
+    }
 
     private async Task ShowServersDialogAsync(ServersWindowViewModel Input)
     {
@@ -104,31 +104,31 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
     }
 
     private async void EvDragDrop(object sender, DragEventArgs e)
-	{
-		var files = e.Data.GetFileNames();
-		var uri = e.Data.GetText();
+    {
+        var files = e.Data.GetFileNames();
+        var uri = e.Data.GetText();
 
-		AddTorrentViewModel vm;
-		var addTorrentWindow = new AddTorrentWindow() {
-			DataContext = vm = new AddTorrentViewModel()
-		};
-		if (String.IsNullOrEmpty(uri) && files?.Any() == true) {
-			vm.FromFileSelected = true;
-			vm.SelectedFileTextBox = files.First();
-		}
-		if (files?.Any() != true && !String.IsNullOrEmpty(uri) && Uri.TryCreate(uri, UriKind.Absolute, out var _)) {
-			vm.FromUriSelected = true;
-			vm.Uri = uri;
-		}
+        AddTorrentViewModel vm;
+        var addTorrentWindow = new AddTorrentWindow() {
+            DataContext = vm = new AddTorrentViewModel()
+        };
+        if (String.IsNullOrEmpty(uri) && files?.Any() == true) {
+            vm.FromFileSelected = true;
+            vm.SelectedFileTextBox = files.First();
+        }
+        if (files?.Any() != true && !String.IsNullOrEmpty(uri) && Uri.TryCreate(uri, UriKind.Absolute, out var _)) {
+            vm.FromUriSelected = true;
+            vm.Uri = uri;
+        }
 
-		foreach (var hook in Plugin.Plugins.GetHookAsync<object>(Plugin.Plugins.HookType.AddTorrent_EvDragDrop)) {
-			try {
-				await hook(vm);
-			} catch (Exception ex) {
-				Log.Logger.Error(ex, "EvDragDrop hook error");
-			}
-		}
+        foreach (var hook in Plugin.Plugins.GetHookAsync<object>(Plugin.Plugins.HookType.AddTorrent_EvDragDrop)) {
+            try {
+                await hook(vm);
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, "EvDragDrop hook error");
+            }
+        }
 
-		addTorrentWindow.Show();
-	}
+        addTorrentWindow.Show();
+    }
 }

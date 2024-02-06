@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 namespace RTSharp.Shared.Abstractions
 {
 
-	public record AddTorrentsOptions(
-		object? DataProviderOptions,
-		string RemoteTargetPath
-	);
+    public record AddTorrentsOptions(
+        object? DataProviderOptions,
+        string RemoteTargetPath
+    );
 }

@@ -5,5 +5,5 @@
 namespace RTSharp.Shared.Abstractions;
 
 internal static class Consts {
-	internal static string PLUGINS_PATH = "plugins";
+    internal static string PLUGINS_PATH = "plugins";
 }

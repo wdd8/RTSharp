@@ -3,95 +3,95 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RTSharp.ViewModels;assembly=RTSharp"
-		xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
-		xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters"
-		d:DataContext="{x:Static vm:ExampleDirectorySelectorWindowViewModel.ViewModel}"
+        xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters"
+        d:DataContext="{x:Static vm:ExampleDirectorySelectorWindowViewModel.ViewModel}"
         x:DataType="vm:DirectorySelectorWindowViewModel"
         mc:Ignorable="d"
-		MinWidth="450"
-		MinHeight="200"
-		Height="400"
-		SizeToContent="WidthAndHeight"
+        MinWidth="450"
+        MinHeight="200"
+        Height="400"
+        SizeToContent="WidthAndHeight"
         x:Class="RTSharp.Views.DirectorySelectorWindow"
         Icon="/Assets/rtsharp.ico"
         Title="{Binding WindowTitle}">
 
-	<Control.Resources>
-		<converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
-	</Control.Resources>
+    <Control.Resources>
+        <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
+    </Control.Resources>
 
-	<Grid ColumnDefinitions="*" RowDefinitions="Auto,*,Auto" Margin="8">
-		<Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" RowDefinitions="*">
-			<TextBox Name="PathTextBox" Text="{Binding Selected.Path, Mode=OneWay}" Grid.Column="0" Margin="0 0 8 0" />
-			<Button Grid.Column="2" Command="{Binding SetCurrentFolderCommand}" CommandParameter="{Binding #PathTextBox.Text}" IsDefault="True" i:Attached.Icon="fa-solid fa-right-long" />
-		</Grid>
+    <Grid ColumnDefinitions="*" RowDefinitions="Auto,*,Auto" Margin="8">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" RowDefinitions="*">
+            <TextBox Name="PathTextBox" Text="{Binding Selected.Path, Mode=OneWay}" Grid.Column="0" Margin="0 0 8 0" />
+            <Button Grid.Column="2" Command="{Binding SetCurrentFolderCommand}" CommandParameter="{Binding #PathTextBox.Text}" IsDefault="True" i:Attached.Icon="fa-solid fa-right-long" />
+        </Grid>
 
-		<DataGrid
-			Name="MainGrid"
-			Grid.Row="1"
-			Margin="0 8 0 8"
-			BorderBrush="Gray"
-			BorderThickness="1"
-			AutoGenerateColumns="False"
-			CanUserReorderColumns="True"
-			CanUserResizeColumns="True"
-			CanUserSortColumns="True"
-			GridLinesVisibility="Horizontal"
-			SelectionMode="Extended"
-			ItemsSource="{Binding Items}"
-			DoubleTapped="EvDoubleTapped"
-			SelectionChanged="EvSelectionChanged"
-		>
+        <DataGrid
+            Name="MainGrid"
+            Grid.Row="1"
+            Margin="0 8 0 8"
+            BorderBrush="Gray"
+            BorderThickness="1"
+            AutoGenerateColumns="False"
+            CanUserReorderColumns="True"
+            CanUserResizeColumns="True"
+            CanUserSortColumns="True"
+            GridLinesVisibility="Horizontal"
+            SelectionMode="Extended"
+            ItemsSource="{Binding Items}"
+            DoubleTapped="EvDoubleTapped"
+            SelectionChanged="EvSelectionChanged"
+        >
 
-			<DataGrid.ContextMenu>
-				<ContextMenu>
-					<MenuItem Header="Remove directory"
-							  Command="{Binding RemoveEmptyDirectoryCommand}"
-							  CommandParameter="{Binding #MainGrid.SelectedItems}"
-							  IsEnabled="{Binding RemoveDirectoryAllowed}"
-					/>
-				</ContextMenu>
-			</DataGrid.ContextMenu>
-			<DataGrid.Columns>
-				<DataGridTemplateColumn Header="Name" IsReadOnly="True">
-					<DataGridTemplateColumn.CellTemplate>
-						<DataTemplate>
-							<StackPanel Orientation="Horizontal" Spacing="4">
-								<PathIcon Data="{Binding Display.Icon}" Width="16" Height="16" />
-								<TextBlock Text="{Binding Display.Name}" VerticalAlignment="Center" />
-							</StackPanel>
-						</DataTemplate>
-					</DataGridTemplateColumn.CellTemplate>
-					<DataGridTemplateColumn.CellEditingTemplate>
-						<DataTemplate>
-							<TextBox Text="{Binding Display.Name}" />
-						</DataTemplate>
-					</DataGridTemplateColumn.CellEditingTemplate>
-				</DataGridTemplateColumn>
-				<DataGridTextColumn Header="Permissions" IsReadOnly="True" Binding="{Binding Permissions, Mode=OneWay}" />
-				<DataGridTextColumn Header="Size" IsReadOnly="True" Binding="{Binding Size, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}, TargetNullValue=''}" />
-				<DataGridTextColumn Header="Last modified" IsReadOnly="True" Binding="{Binding LastModified, Mode=OneWay}" />
-			</DataGrid.Columns>
-		</DataGrid>
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Remove directory"
+                              Command="{Binding RemoveEmptyDirectoryCommand}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
+                              IsEnabled="{Binding RemoveDirectoryAllowed}"
+                    />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Name" IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <PathIcon Data="{Binding Display.Icon}" Width="16" Height="16" />
+                                <TextBlock Text="{Binding Display.Name}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding Display.Name}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Permissions" IsReadOnly="True" Binding="{Binding Permissions, Mode=OneWay}" />
+                <DataGridTextColumn Header="Size" IsReadOnly="True" Binding="{Binding Size, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}, TargetNullValue=''}" />
+                <DataGridTextColumn Header="Last modified" IsReadOnly="True" Binding="{Binding LastModified, Mode=OneWay}" />
+            </DataGrid.Columns>
+        </DataGrid>
 
-		<Grid Grid.Row="2" ColumnDefinitions="*,Auto">
-			<Grid Grid.Column="0">
-				<Button
-					Command="{Binding CreateDirectoryCommand}"
-					IsEnabled="{Binding DataProvider.Instance.Capabilities.CreateDirectory}">
-					<StackPanel Orientation="Horizontal">
-						<i:Icon Value="fa-solid fa-folder-plus" Margin="0 0 4 0" />
-						<TextBlock>Create directory</TextBlock>
-					</StackPanel>
-				</Button>
-			</Grid>
-			
-			<Grid Grid.Column="1">
-				<StackPanel Orientation="Horizontal">
-					<Button Margin="0 0 4 0" Command="{Binding SelectCommand}">Select</Button>
-					<Button Command="{Binding CancelCommand}">Cancel</Button>
-				</StackPanel>
-			</Grid>
-		</Grid>
-	</Grid>
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+            <Grid Grid.Column="0">
+                <Button
+                    Command="{Binding CreateDirectoryCommand}"
+                    IsEnabled="{Binding DataProvider.Instance.Capabilities.CreateDirectory}">
+                    <StackPanel Orientation="Horizontal">
+                        <i:Icon Value="fa-solid fa-folder-plus" Margin="0 0 4 0" />
+                        <TextBlock>Create directory</TextBlock>
+                    </StackPanel>
+                </Button>
+            </Grid>
+            
+            <Grid Grid.Column="1">
+                <StackPanel Orientation="Horizontal">
+                    <Button Margin="0 0 4 0" Command="{Binding SelectCommand}">Select</Button>
+                    <Button Command="{Binding CancelCommand}">Cancel</Button>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
 </Window>

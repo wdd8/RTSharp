@@ -7,167 +7,167 @@ import "google/protobuf/duration.proto";
 import "Types/CommandReply.proto";
 
 service GRPCTorrentService {
-	rpc StartTorrents (Torrents) returns (TorrentsReply);
-	rpc PauseTorrents (Torrents) returns (TorrentsReply);
-	rpc StopTorrents (Torrents) returns (TorrentsReply);
-	rpc ForceRecheckTorrents (Torrents) returns (TorrentsReply);
-	rpc ReannounceToAllTrackers (Torrents) returns (TorrentsReply);
-	rpc AddTorrents (stream NewTorrentsData) returns (TorrentsReply);
-	rpc GetTorrentsFiles (Torrents) returns (TorrentsFilesReply);
-	rpc GetTorrentsPeers (Torrents) returns (TorrentsPeersReply);
-	rpc RemoveTorrents (Torrents) returns (TorrentsReply);
-	rpc RemoveTorrentsAndData (Torrents) returns (TorrentsReply);
-	rpc GetDotTorrents (Torrents) returns (stream DotTorrentsData);
-	rpc MoveDownloadDirectory (MoveDownloadDirectoryArgs) returns (stream MoveDownloadDirectoryProgress);
-	rpc SetLabels (SetLabelsArgs) returns (TorrentsReply);
+    rpc StartTorrents (Torrents) returns (TorrentsReply);
+    rpc PauseTorrents (Torrents) returns (TorrentsReply);
+    rpc StopTorrents (Torrents) returns (TorrentsReply);
+    rpc ForceRecheckTorrents (Torrents) returns (TorrentsReply);
+    rpc ReannounceToAllTrackers (Torrents) returns (TorrentsReply);
+    rpc AddTorrents (stream NewTorrentsData) returns (TorrentsReply);
+    rpc GetTorrentsFiles (Torrents) returns (TorrentsFilesReply);
+    rpc GetTorrentsPeers (Torrents) returns (TorrentsPeersReply);
+    rpc RemoveTorrents (Torrents) returns (TorrentsReply);
+    rpc RemoveTorrentsAndData (Torrents) returns (TorrentsReply);
+    rpc GetDotTorrents (Torrents) returns (stream DotTorrentsData);
+    rpc MoveDownloadDirectory (MoveDownloadDirectoryArgs) returns (stream MoveDownloadDirectoryProgress);
+    rpc SetLabels (SetLabelsArgs) returns (TorrentsReply);
 }
 
 message SetLabelsArgs {
-	message TorrentLabelsPair {
-		bytes InfoHash = 1;
-		repeated string Labels = 2;
-	}
-	repeated TorrentLabelsPair In = 1;
+    message TorrentLabelsPair {
+        bytes InfoHash = 1;
+        repeated string Labels = 2;
+    }
+    repeated TorrentLabelsPair In = 1;
 }
 
 message MoveDownloadDirectoryProgress {
-	bytes InfoHash = 1;
-	string File = 2;
-	uint64 Moved = 3;
-	uint64 Speed = 4;
-	google.protobuf.Duration ETA = 5;
-	uint32 CurrentFileIndex = 6;
-	Status Exception = 7;
+    bytes InfoHash = 1;
+    string File = 2;
+    uint64 Moved = 3;
+    uint64 Speed = 4;
+    google.protobuf.Duration ETA = 5;
+    uint32 CurrentFileIndex = 6;
+    Status Exception = 7;
 }
 
 message MoveDownloadDirectoryArgs {
-	message TorrentMoveDownloadDirectory {
-		bytes InfoHash = 1;
-		string TargetDirectory = 2;
-	}
+    message TorrentMoveDownloadDirectory {
+        bytes InfoHash = 1;
+        string TargetDirectory = 2;
+    }
 
-	message SourceTargetCheck {
-		string SourceFile = 1;
-		string TargetFile = 2;
-	}
+    message SourceTargetCheck {
+        string SourceFile = 1;
+        string TargetFile = 2;
+    }
 
-	repeated TorrentMoveDownloadDirectory Torrents = 1;
-	repeated SourceTargetCheck Check = 2;
-	bool Move = 3;
+    repeated TorrentMoveDownloadDirectory Torrents = 1;
+    repeated SourceTargetCheck Check = 2;
+    bool Move = 3;
 }
 
 message TorrentsPeersReply {
-	enum PeerFlags {
-		option allow_alias = true;
-		PeerFlags_NA = 0x00;
-		PeerFlags_I_INCOMING = 0x01;
-		PeerFlags_E_ENCRYPTED = 0x02;
-		PeerFlags_S_SNUBBED = 0x04;
-		PeerFlags_O_OBFUSCATED = 0x08;
-		PeerFlags_P_PREFERRED = 0x10;
-		PeerFlags_U_UNWANTED = 0x20;
-		PeerFlags_MAX = 0x20;
-	}
+    enum PeerFlags {
+        option allow_alias = true;
+        PeerFlags_NA = 0x00;
+        PeerFlags_I_INCOMING = 0x01;
+        PeerFlags_E_ENCRYPTED = 0x02;
+        PeerFlags_S_SNUBBED = 0x04;
+        PeerFlags_O_OBFUSCATED = 0x08;
+        PeerFlags_P_PREFERRED = 0x10;
+        PeerFlags_U_UNWANTED = 0x20;
+        PeerFlags_MAX = 0x20;
+    }
 
-	message Peer {
-		bytes PeerID = 1;
-		bytes IPAddress = 2;
-		uint32 Port = 3;
-		string Client = 4;
-		PeerFlags Flags = 5;
-		float Done = 6;
-		uint64 Downloaded = 7;
-		uint64 Uploaded = 8;
-		uint64 DLSpeed = 9;
-		uint64 UPSpeed = 10;
-	}
+    message Peer {
+        bytes PeerID = 1;
+        bytes IPAddress = 2;
+        uint32 Port = 3;
+        string Client = 4;
+        PeerFlags Flags = 5;
+        float Done = 6;
+        uint64 Downloaded = 7;
+        uint64 Uploaded = 8;
+        uint64 DLSpeed = 9;
+        uint64 UPSpeed = 10;
+    }
 
-	message TorrentsPeers {
-		bytes InfoHash = 1;
-		repeated Peer Peers = 2;
-	}
+    message TorrentsPeers {
+        bytes InfoHash = 1;
+        repeated Peer Peers = 2;
+    }
 
-	repeated TorrentsPeers Reply = 1;
+    repeated TorrentsPeers Reply = 1;
 }
 
 message DotTorrentsData {
-	message Metadata {
-		string Id = 1;
-		bytes Hash = 2;
-	}
-	message TorrentData {
-		string Id = 1;
-		bytes Chunk = 2;
-	}
+    message Metadata {
+        string Id = 1;
+        bytes Hash = 2;
+    }
+    message TorrentData {
+        string Id = 1;
+        bytes Chunk = 2;
+    }
 
-	oneof Data {
-		Metadata TMetadata = 1;
+    oneof Data {
+        Metadata TMetadata = 1;
         TorrentData TData = 2;
-	}
+    }
 }
 
 message NewTorrentsData {
-	message Metadata {
-		string Id = 1;
-		string Path = 2;
-		string Filename = 3;
-	}
-	message TorrentData {
-		string Id = 1;
-		bytes Chunk = 2;
-	}
+    message Metadata {
+        string Id = 1;
+        string Path = 2;
+        string Filename = 3;
+    }
+    message TorrentData {
+        string Id = 1;
+        bytes Chunk = 2;
+    }
 
-	oneof Data {
+    oneof Data {
         Metadata TMetadata = 1;
         TorrentData TData = 2;
     }
 }
 
 message Torrents {
-	repeated bytes Hashes = 1;
+    repeated bytes Hashes = 1;
 }
 
 message TorrentsReply {
-	message TorrentReply {
-		bytes InfoHash = 1;
-		repeated Status Status = 2;
-	}
+    message TorrentReply {
+        bytes InfoHash = 1;
+        repeated Status Status = 2;
+    }
 
-	repeated TorrentReply Torrents = 1;
+    repeated TorrentReply Torrents = 1;
 }
 
 message TorrentsFilesReply {
-	enum FilePriority {
-		// Don't download the file
-		FilePriority_DONT_DOWNLOAD = 0;
-		// Default
-		FilePriority_NORMAL = -1;
-		// High priority
-		FilePriority_HIGH = 1;
-	}
+    enum FilePriority {
+        // Don't download the file
+        FilePriority_DONT_DOWNLOAD = 0;
+        // Default
+        FilePriority_NORMAL = -1;
+        // High priority
+        FilePriority_HIGH = 1;
+    }
 
-	enum FileDownloadStrategy {
-		option allow_alias = true;
-		FileDownloadStrategy_NORMAL = 0x00;
-		FileDownloadStrategy_PRIORITIZE_FIRST = 0x01;
-		FileDownloadStrategy_PRIORITIZE_LAST = 0x02;
-		FileDownloadStrategy_MAX = 0x02;
-	}
+    enum FileDownloadStrategy {
+        option allow_alias = true;
+        FileDownloadStrategy_NORMAL = 0x00;
+        FileDownloadStrategy_PRIORITIZE_FIRST = 0x01;
+        FileDownloadStrategy_PRIORITIZE_LAST = 0x02;
+        FileDownloadStrategy_MAX = 0x02;
+    }
 
-	message File {
-		// Not a full path hosted in machine, but the one specified in .torrent
-		string Path = 1;
-		uint64 Size = 2;
-		uint64 CompletedChunks = 4;
-		FilePriority Priority = 5;
-		FileDownloadStrategy DownloadStrategy = 6;
-	}
+    message File {
+        // Not a full path hosted in machine, but the one specified in .torrent
+        string Path = 1;
+        uint64 Size = 2;
+        uint64 CompletedChunks = 4;
+        FilePriority Priority = 5;
+        FileDownloadStrategy DownloadStrategy = 6;
+    }
 
-	message TorrentsFiles {
-		bytes InfoHash = 1;
-		bool MultiFile = 2;
-		repeated File Files = 3;
-	}
+    message TorrentsFiles {
+        bytes InfoHash = 1;
+        bool MultiFile = 2;
+        repeated File Files = 3;
+    }
 
-	repeated TorrentsFiles Reply = 1;
+    repeated TorrentsFiles Reply = 1;
 }

@@ -44,71 +44,71 @@ public class MainDockFactory : Factory
     private IRootDock _rootDock;
 
 
-	public override IRootDock CreateLayout()
+    public override IRootDock CreateLayout()
     {
         // TODO: Save layout
 
-		Document createTorrentListing(int visualId)
+        Document createTorrentListing(int visualId)
         {
-			var listing = new TorrentListingViewModel() {
+            var listing = new TorrentListingViewModel() {
                 Id = "TorrentListing",
                 Title = $"Torrent Listing {(visualId > 1 ? visualId : "")}"
             };
 
-			return listing;
-		}
+            return listing;
+        }
 
-		var logEntries = new LogEntriesViewModel() {
-			Id = "LogEntries",
-			Title = "Log"
-		};
+        var logEntries = new LogEntriesViewModel() {
+            Id = "LogEntries",
+            Title = "Log"
+        };
 
-		var actionQueue = new ActionQueueViewModel() {
-			Id = "ActionQueue",
-			Title = "Actions"
-		};
+        var actionQueue = new ActionQueueViewModel() {
+            Id = "ActionQueue",
+            Title = "Actions"
+        };
 
         var dataProviders = new DataProvidersViewModel() {
             Id = "DataProviders",
             Title = "Data providers"
         };
 
-		_mainDocuments = new DocumentDock {
-			Id = "MainPane",
-			Title = "MainPane",
-			Proportion = 1,
-			VisibleDockables = CreateList<IDockable>
-			(
-				createTorrentListing(1),
-				actionQueue,
-				logEntries
-			)
-		};
+        _mainDocuments = new DocumentDock {
+            Id = "MainPane",
+            Title = "MainPane",
+            Proportion = 1,
+            VisibleDockables = CreateList<IDockable>
+            (
+                createTorrentListing(1),
+                actionQueue,
+                logEntries
+            )
+        };
 
-		//_mainDocuments.CanCreateDocument = true;
-		_mainDocuments.CreateDocument = new RelayCommand(() => {
-			var newestVisualIndex = 1;
-			int newestDockableIndex = 0;
-			for (var x = _mainDocuments.VisibleDockables.Count - 1;x >= 0;x--) {
-				if (_mainDocuments.VisibleDockables[x] is DockableDocumentWrapperViewModel dockable && dockable.Id.StartsWith("TorrentListing")) {
-					var curIndex = GetDockableVisualIndex(dockable);
-					if (curIndex > newestVisualIndex) {
-						newestDockableIndex = x;
-						newestVisualIndex = curIndex;
-					}
-				}
-			}
+        //_mainDocuments.CanCreateDocument = true;
+        _mainDocuments.CreateDocument = new RelayCommand(() => {
+            var newestVisualIndex = 1;
+            int newestDockableIndex = 0;
+            for (var x = _mainDocuments.VisibleDockables.Count - 1;x >= 0;x--) {
+                if (_mainDocuments.VisibleDockables[x] is DockableDocumentWrapperViewModel dockable && dockable.Id.StartsWith("TorrentListing")) {
+                    var curIndex = GetDockableVisualIndex(dockable);
+                    if (curIndex > newestVisualIndex) {
+                        newestDockableIndex = x;
+                        newestVisualIndex = curIndex;
+                    }
+                }
+            }
 
-			var document = createTorrentListing(newestVisualIndex + 1);
-			this.InsertDockable(_mainDocuments, document, newestDockableIndex + 1);
-			if (document is IContextPopulatedNotifyable notifiable)
-				notifiable.OnContextPopulated();
+            var document = createTorrentListing(newestVisualIndex + 1);
+            this.InsertDockable(_mainDocuments, document, newestDockableIndex + 1);
+            if (document is IContextPopulatedNotifyable notifiable)
+                notifiable.OnContextPopulated();
 
-			this.SetActiveDockable(document);
-			this.SetFocusedDockable(_mainDocuments, document);
-		});
+            this.SetActiveDockable(document);
+            this.SetFocusedDockable(_mainDocuments, document);
+        });
 
-		var mainView = new MainViewModel
+        var mainView = new MainViewModel
         {
             Id = "Main",
             Title = "Main",
@@ -124,37 +124,37 @@ public class MainDockFactory : Factory
         root.ActiveDockable = mainView;
         root.DefaultDockable = mainView;
         root.VisibleDockables = CreateList<IDockable>(mainView);
-		_rootDock = root;
+        _rootDock = root;
 
-		return root;
+        return root;
     }
 
     class ContextLocatorEqualityComparer : IEqualityComparer<string>
     {
-	    public bool Equals(string? x, string? y)
-	    {
+        public bool Equals(string? x, string? y)
+        {
             if (x == null || y == null)
                 return false;
 
-		    var xIndex = x.IndexOf("//");
+            var xIndex = x.IndexOf("//");
             if (xIndex != -1)
                 x = x[..xIndex];
 
-			var yIndex = y.IndexOf("//");
-			if (yIndex != -1)
-				y = y[..yIndex];
+            var yIndex = y.IndexOf("//");
+            if (yIndex != -1)
+                y = y[..yIndex];
 
             return x == y;
-		}
+        }
 
-	    public int GetHashCode(string obj)
-	    {
-			var index = obj.IndexOf("//");
-			if (index != -1)
-				return obj[..index].GetHashCode();
+        public int GetHashCode(string obj)
+        {
+            var index = obj.IndexOf("//");
+            if (index != -1)
+                return obj[..index].GetHashCode();
 
             return obj.GetHashCode();
-		}
+        }
     }
 
     public override void InitLayout(IDockable layout)
@@ -184,40 +184,40 @@ public class MainDockFactory : Factory
             ["MainPane"] = () => _mainDocuments
         };
 
-		this.ActiveDockableChanged += (sender, e) => {
+        this.ActiveDockableChanged += (sender, e) => {
             Log.Logger.Verbose("Dockable changed: " + e.Dockable?.Id);
-		};
+        };
 
         this.HostWindowLocator = new Dictionary<string, Func<IHostWindow?>> {
-			[nameof(IDockWindow)] = () => new HostWindow()
-		};
+            [nameof(IDockWindow)] = () => new HostWindow()
+        };
 
-		base.DockableInit += (sender, e) => {
-			if (e.Dockable is IContextPopulatedNotifyable notifyable)
-				notifyable.OnContextPopulated();
-		};
+        base.DockableInit += (sender, e) => {
+            if (e.Dockable is IContextPopulatedNotifyable notifyable)
+                notifyable.OnContextPopulated();
+        };
 
-		base.InitLayout(layout);
+        base.InitLayout(layout);
 
         void subOnUnselected(IDockable dockable)
         {
-	        if (dockable is not DockBase dock)
-		        return;
+            if (dockable is not DockBase dock)
+                return;
 
-	        /*foreach (var d in dock.VisibleDockables!.Where(x => x is DockBase).Cast<DockBase>()) {
-		        if (d is IOnUnselectedNotifyable) {
-			        d
+            /*foreach (var d in dock.VisibleDockables!.Where(x => x is DockBase).Cast<DockBase>()) {
+                if (d is IOnUnselectedNotifyable) {
+                    d
                         .WhenAnyValue(x => x.ActiveDockable)
-						.Buffer(2, 1)
-						.Select(b => (Previous: b[0], Current: b[1]))
+                        .Buffer(2, 1)
+                        .Select(b => (Previous: b[0], Current: b[1]))
                         .Subscribe(x =>
                         {
-	                        (x.Previous as IOnUnselectedNotifyable)?.OnUnselected();
+                            (x.Previous as IOnUnselectedNotifyable)?.OnUnselected();
                         });
-		        }
+                }
 
-		        subOnUnselected(d);
-	        }*/
+                subOnUnselected(d);
+            }*/
         }
 
         subOnUnselected(layout);

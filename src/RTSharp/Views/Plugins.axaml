@@ -2,72 +2,72 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:vm="clr-namespace:RTSharp.ViewModels"
-		xmlns:models="clr-namespace:RTSharp.Models"
-		mc:Ignorable="d" d:DesignWidth="570" d:DesignHeight="250"
+        xmlns:vm="clr-namespace:RTSharp.ViewModels"
+        xmlns:models="clr-namespace:RTSharp.Models"
+        mc:Ignorable="d" d:DesignWidth="570" d:DesignHeight="250"
         x:DataType="vm:PluginsViewModel"
         x:CompileBindings="True"
-		Width="570" Height="250"
+        Width="570" Height="250"
         x:Class="RTSharp.Views.Plugins"
         Icon="/Assets/rtsharp.ico"
         Title="RT# - Plugins">
 
-	<Design.DataContext>
-		<vm:PluginsViewModel />
-	</Design.DataContext>
+    <Design.DataContext>
+        <vm:PluginsViewModel />
+    </Design.DataContext>
 
-	<Window.Styles>
-		<Style Selector="TextBox">
-			<Setter Property="IsReadOnly" Value="True" />
-		</Style>
-	</Window.Styles>
+    <Window.Styles>
+        <Style Selector="TextBox">
+            <Setter Property="IsReadOnly" Value="True" />
+        </Style>
+    </Window.Styles>
 
-	<Window.Resources>
-		<models:PluginInfo x:Key="PluginInfo"/>
-	</Window.Resources>
+    <Window.Resources>
+        <models:PluginInfo x:Key="PluginInfo"/>
+    </Window.Resources>
 
-	<Grid Margin="12">
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="2*" MinWidth="100" />
-			<ColumnDefinition Width="4" />
-			<ColumnDefinition Width="4*"/>
-		</Grid.ColumnDefinitions>
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" MinWidth="100" />
+            <ColumnDefinition Width="4" />
+            <ColumnDefinition Width="4*"/>
+        </Grid.ColumnDefinitions>
         <Grid RowDefinitions="*,Auto" Grid.Column="0">
-			<ListBox Grid.Row="0" ItemsSource="{Binding Plugins}" SelectedItem="{Binding CurrentlySelectedPlugin}">
-				<ListBox.ItemTemplate>
-					<DataTemplate>
-						<TextBlock Text="{Binding PluginInstanceConfig.Name}"/>
-					</DataTemplate>
-				</ListBox.ItemTemplate>
-			</ListBox>
+            <ListBox Grid.Row="0" ItemsSource="{Binding Plugins}" SelectedItem="{Binding CurrentlySelectedPlugin}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding PluginInstanceConfig.Name}"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
             <Button Grid.Row="1" Margin="0,8,0,0" Content="Manage..." Command="{Binding ManagePluginsClickCommand}" />
         </Grid>
-		<GridSplitter Grid.Column="1" ResizeDirection="Columns" />
-		<Panel Grid.Column="2">
-			<Grid RowDefinitions="*,Auto">
-				<Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*,*,*,*" Grid.Row="0">
-					<TextBlock Grid.Column="0" Grid.Row="0" Padding="0,0,4,0">Instance GUID:</TextBlock>
-					<TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding PluginInfo.InstanceGuid}" />
-					<TextBlock Grid.Column="0" Grid.Row="1">Display name:</TextBlock>
-					<TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding PluginInfo.DisplayName}" />
-					<TextBlock Grid.Column="0" Grid.Row="2">Description:</TextBlock>
-					<TextBlock Grid.Column="1" Grid.Row="2" Text="{Binding PluginInfo.Description}" />
-					<TextBlock Grid.Column="0" Grid.Row="3">Author:</TextBlock>
-					<TextBlock Grid.Column="1" Grid.Row="3" Text="{Binding PluginInfo.Author}" />
-					<TextBlock Grid.Column="0" Grid.Row="4">Version:</TextBlock>
-					<TextBlock Grid.Column="1" Grid.Row="4" Text="{Binding PluginInfo.Version}" />
-					<TextBlock Grid.Column="0" Grid.Row="5">Guid:</TextBlock>
-					<TextBlock Grid.Column="1" Grid.Row="5" Text="{Binding PluginInfo.PluginGuid}" />
-				</Grid>
-				<Button
-					HorizontalContentAlignment="Center"
-					HorizontalAlignment="Stretch"
-					Grid.Row="1"
-					Command="{Binding PluginsSettingsClickCommand}"
-					IsEnabled="{Binding CurrentlySelectedPlugin.Instance.Capabilities.HasSettingsWindow}">
-					Settings
-				</Button>
-			</Grid>
-		</Panel>
-	</Grid>
+        <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
+        <Panel Grid.Column="2">
+            <Grid RowDefinitions="*,Auto">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*,*,*,*" Grid.Row="0">
+                    <TextBlock Grid.Column="0" Grid.Row="0" Padding="0,0,4,0">Instance GUID:</TextBlock>
+                    <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding PluginInfo.InstanceGuid}" />
+                    <TextBlock Grid.Column="0" Grid.Row="1">Display name:</TextBlock>
+                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding PluginInfo.DisplayName}" />
+                    <TextBlock Grid.Column="0" Grid.Row="2">Description:</TextBlock>
+                    <TextBlock Grid.Column="1" Grid.Row="2" Text="{Binding PluginInfo.Description}" />
+                    <TextBlock Grid.Column="0" Grid.Row="3">Author:</TextBlock>
+                    <TextBlock Grid.Column="1" Grid.Row="3" Text="{Binding PluginInfo.Author}" />
+                    <TextBlock Grid.Column="0" Grid.Row="4">Version:</TextBlock>
+                    <TextBlock Grid.Column="1" Grid.Row="4" Text="{Binding PluginInfo.Version}" />
+                    <TextBlock Grid.Column="0" Grid.Row="5">Guid:</TextBlock>
+                    <TextBlock Grid.Column="1" Grid.Row="5" Text="{Binding PluginInfo.PluginGuid}" />
+                </Grid>
+                <Button
+                    HorizontalContentAlignment="Center"
+                    HorizontalAlignment="Stretch"
+                    Grid.Row="1"
+                    Command="{Binding PluginsSettingsClickCommand}"
+                    IsEnabled="{Binding CurrentlySelectedPlugin.Instance.Capabilities.HasSettingsWindow}">
+                    Settings
+                </Button>
+            </Grid>
+        </Panel>
+    </Grid>
 </Window>

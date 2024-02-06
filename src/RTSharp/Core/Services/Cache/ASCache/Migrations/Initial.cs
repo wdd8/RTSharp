@@ -15,8 +15,8 @@ namespace RTSharp.Core.Services.Cache.ASCache.Migrations
                 .WithColumn("IPHighEnd").AsInt64().Indexed()
                 .WithColumn("Domain").AsString().Nullable()
                 .WithColumn("Organization").AsString().Nullable()
-				.WithColumn("Country").AsFixedLengthAnsiString(2).Nullable()
-				.WithColumn("ImageHash").AsBinary().Nullable();
+                .WithColumn("Country").AsFixedLengthAnsiString(2).Nullable()
+                .WithColumn("ImageHash").AsBinary().Nullable();
         }
 
         public override void Down()

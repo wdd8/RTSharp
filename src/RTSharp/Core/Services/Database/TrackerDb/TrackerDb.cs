@@ -49,9 +49,9 @@ namespace RTSharp.Core.Services.Cache.TrackerDb
         {
             await using var conn = await New();
 
-			var d = await conn.QueryFirstOrDefaultAsync<TrackerInfo>("select Name, ImageHash from TrackerDb where Domain = @Domain", new {
-				Domain = Domain
-			});
+            var d = await conn.QueryFirstOrDefaultAsync<TrackerInfo>("select Name, ImageHash from TrackerDb where Domain = @Domain", new {
+                Domain = Domain
+            });
 
             return d;
         }
@@ -60,11 +60,11 @@ namespace RTSharp.Core.Services.Cache.TrackerDb
         {
             await using var conn = await New();
 
-			await conn.ExecuteAsync("insert into TrackerDb (Domain, Name, ImageHash) values (@Domain, @Name, @ImageHash) on conflict(Domain) do update set Name = @Name, ImageHash = @ImageHash", new {
-				Domain = Domain,
-				Name = Info.Name,
-				ImageHash = Info.ImageHash 
-			});
-		}
+            await conn.ExecuteAsync("insert into TrackerDb (Domain, Name, ImageHash) values (@Domain, @Name, @ImageHash) on conflict(Domain) do update set Name = @Name, ImageHash = @ImageHash", new {
+                Domain = Domain,
+                Name = Info.Name,
+                ImageHash = Info.ImageHash 
+            });
+        }
     }
 }

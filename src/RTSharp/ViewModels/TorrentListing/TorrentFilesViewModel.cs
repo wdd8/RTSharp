@@ -19,55 +19,55 @@ using RTSharp.Core.Services.Auxiliary;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
-	public partial class TorrentFilesViewModel : ObservableObject
-	{
-		public HierarchicalTreeDataGridSource<Models.File> Source { get; }
+    public partial class TorrentFilesViewModel : ObservableObject
+    {
+        public HierarchicalTreeDataGridSource<Models.File> Source { get; }
 
-		public ObservableCollection<Models.File> Files = new();
+        public ObservableCollection<Models.File> Files = new();
 
-		[ObservableProperty]
-		public Models.Torrent torrent;
+        [ObservableProperty]
+        public Models.Torrent torrent;
 
-		public Action<string> ShowTextPreviewWindow { get; set; }
+        public Action<string> ShowTextPreviewWindow { get; set; }
 
-		public TorrentFilesViewModel()
-		{
-			Source = new HierarchicalTreeDataGridSource<Models.File>(Files) {
-				Columns =
-				{
-					new HierarchicalExpanderColumn<Models.File>(
-						new TextColumn<Models.File, string>("Name", x => x.Name),
-						x => x.Children,
-						hasChildrenSelector: x => x.IsDirectory,
-						isExpandedSelector: x => x.IsExpanded),
-					new TemplateColumn<Models.File>("Size", "SizeCell"),
-					new TemplateColumn<Models.File>("Downloaded", "DownloadedCell"),
-					new TemplateColumn<Models.File>("Done", "DoneCell"),
-					new TextColumn<Models.File, string>("Priority", x => x.Priority),
-					new TextColumn<Models.File, string>("Download strategy", x => x.DownloadStrategy),
-				},
-			};
-			Source.RowSelection!.SingleSelect = false;
-		}
+        public TorrentFilesViewModel()
+        {
+            Source = new HierarchicalTreeDataGridSource<Models.File>(Files) {
+                Columns =
+                {
+                    new HierarchicalExpanderColumn<Models.File>(
+                        new TextColumn<Models.File, string>("Name", x => x.Name),
+                        x => x.Children,
+                        hasChildrenSelector: x => x.IsDirectory,
+                        isExpandedSelector: x => x.IsExpanded),
+                    new TemplateColumn<Models.File>("Size", "SizeCell"),
+                    new TemplateColumn<Models.File>("Downloaded", "DownloadedCell"),
+                    new TemplateColumn<Models.File>("Done", "DoneCell"),
+                    new TextColumn<Models.File, string>("Priority", x => x.Priority),
+                    new TextColumn<Models.File, string>("Download strategy", x => x.DownloadStrategy),
+                },
+            };
+            Source.RowSelection!.SingleSelect = false;
+        }
 
-		public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-file");
+        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-file");
 
-		[RelayCommand]
-		public async Task MediaInfo(IReadOnlyList<object?> In)
-		{
-			var files = In.Cast<Models.File>();
+        [RelayCommand]
+        public async Task MediaInfo(IReadOnlyList<object?> In)
+        {
+            var files = In.Cast<Models.File>();
 
             var auxiliary = new AuxiliaryService(Torrent.Owner.PluginInstance.PluginInstanceConfig.ServerId);
 
             IList<string> reply;
-			try {
-				reply = await auxiliary.Mediainfo(files.Select(x => x.Path).ToArray());
-			} catch (Exception ex) {
-				Log.Logger.Error(ex, "Mediainfo failed");
-				return;
-			}
+            try {
+                reply = await auxiliary.Mediainfo(files.Select(x => x.Path).ToArray());
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, "Mediainfo failed");
+                return;
+            }
 
-			ShowTextPreviewWindow(string.Join('\n', reply));
-		}
-	}
+            ShowTextPreviewWindow(string.Join('\n', reply));
+        }
+    }
 }

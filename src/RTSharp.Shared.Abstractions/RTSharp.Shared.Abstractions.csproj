@@ -1,23 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-		<Version>1.0.0.0</Version>
-	</PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <Version>1.0.0.0</Version>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Avalonia" Version="11.0.7" />
-		<PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.7" />
-		<PackageReference Include="Avalonia.Desktop" Version="11.0.7" />
-		<PackageReference Include="Avalonia.Diagnostics" Version="11.0.7" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
-		<PackageReference Include="Serilog" Version="3.1.1" />
-	</ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.0.7" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.7" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.0.7" />
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.0.7" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+        <PackageReference Include="Serilog" Version="3.1.1" />
+    </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\RTSharp.Shared.Utils\RTSharp.Shared.Utils.csproj" />
-	</ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\RTSharp.Shared.Utils\RTSharp.Shared.Utils.csproj" />
+    </ItemGroup>
 
 </Project>

@@ -8,37 +8,37 @@
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
              d:DesignWidth="1500" d:DesignHeight="450">
 
-	<Control.Resources>
-		<converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
-	</Control.Resources>
-	<Design.DataContext>
-		<torrentListing:TorrentFilesViewModel />
-	</Design.DataContext>
+    <Control.Resources>
+        <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
+    </Control.Resources>
+    <Design.DataContext>
+        <torrentListing:TorrentFilesViewModel />
+    </Design.DataContext>
 
-	<TreeDataGrid
-		Source="{Binding Source}"
-		CanUserResizeColumns="True"
-		CanUserSortColumns="True"
-	>
-		<TreeDataGrid.Resources>
-			<DataTemplate x:Key="SizeCell" DataType="models:File">
-				<TextBlock Text="{Binding Size, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
-			</DataTemplate>
-			<DataTemplate x:Key="DownloadedCell" DataType="models:File">
-				<TextBlock Text="{Binding Downloaded, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
-			</DataTemplate>
-			<DataTemplate x:Key="DoneCell" DataType="models:File">
-				<ProgressBar Value="{Binding Done, Mode=OneWay}" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" Minimum="0" Maximum="100" VerticalAlignment="Stretch" />
-			</DataTemplate>
-		</TreeDataGrid.Resources>
-		<TreeDataGrid.ContextMenu>
-			<ContextMenu>
-				<MenuItem Header="_Mediainfo"
-						  Command="{Binding MediaInfoCommand}"
-						  CommandParameter="{Binding Source.RowSelection.SelectedItems}"
-						  IsEnabled="{Binding Torrent.Owner.Instance.Files.Capabilities.MediaInfo}"
-						/>
-			</ContextMenu>
-		</TreeDataGrid.ContextMenu>
-	</TreeDataGrid>
+    <TreeDataGrid
+        Source="{Binding Source}"
+        CanUserResizeColumns="True"
+        CanUserSortColumns="True"
+    >
+        <TreeDataGrid.Resources>
+            <DataTemplate x:Key="SizeCell" DataType="models:File">
+                <TextBlock Text="{Binding Size, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
+            </DataTemplate>
+            <DataTemplate x:Key="DownloadedCell" DataType="models:File">
+                <TextBlock Text="{Binding Downloaded, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
+            </DataTemplate>
+            <DataTemplate x:Key="DoneCell" DataType="models:File">
+                <ProgressBar Value="{Binding Done, Mode=OneWay}" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" Minimum="0" Maximum="100" VerticalAlignment="Stretch" />
+            </DataTemplate>
+        </TreeDataGrid.Resources>
+        <TreeDataGrid.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="_Mediainfo"
+                          Command="{Binding MediaInfoCommand}"
+                          CommandParameter="{Binding Source.RowSelection.SelectedItems}"
+                          IsEnabled="{Binding Torrent.Owner.Instance.Files.Capabilities.MediaInfo}"
+                        />
+            </ContextMenu>
+        </TreeDataGrid.ContextMenu>
+    </TreeDataGrid>
 </UserControl>

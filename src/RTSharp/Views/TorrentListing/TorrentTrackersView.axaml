@@ -9,110 +9,110 @@
              xmlns:s="clr-namespace:System;assembly=System.Runtime"
              d:DesignWidth="1100" d:DesignHeight="450">
 
-	<Control.Resources>
-		<converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter"/>
-		<converters:ItemsParamConverter x:Key="ItemsParamConverter"/>
-	</Control.Resources>
-	<Design.DataContext>
-		<torrentListing:TorrentTrackersViewModel />
-	</Design.DataContext>
+    <Control.Resources>
+        <converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter"/>
+        <converters:ItemsParamConverter x:Key="ItemsParamConverter"/>
+    </Control.Resources>
+    <Design.DataContext>
+        <torrentListing:TorrentTrackersViewModel />
+    </Design.DataContext>
 
-	<dialogHost:DialogHost Name="DialogHost" Identifier="SetNameHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
-		<dialogHost:DialogHost.DialogContent>
-			<StackPanel>
-				<StackPanel Orientation="Horizontal" Margin="0 0 0 10">
-					<TextBlock FontWeight="Bold">Set a new name for tracker</TextBlock>
-					<TextBlock FontWeight="Bold" Margin="4 0 0 0" Text="{Binding #grid.SelectedItem.Domain}" />
-				</StackPanel>
-				<TextBox Name="TrackerName" Text="{Binding #grid.SelectedItem.DisplayName, Mode=OneWay}" />
-				<Button
-					Margin="0 -6 0 -7"
-					Width="0"
-					IsDefault="True"
-					Command="{Binding SetNameCommand}"
-				>
-					<Button.CommandParameter>
-						<MultiBinding Converter="{StaticResource ItemsParamConverter}">
-							<Binding Path="#grid.SelectedItems" />
-							<Binding Path="#TrackerName.Text" />
-						</MultiBinding>
-					</Button.CommandParameter>
-				</Button>
-			</StackPanel>
-		</dialogHost:DialogHost.DialogContent>
+    <dialogHost:DialogHost Name="DialogHost" Identifier="SetNameHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
+        <dialogHost:DialogHost.DialogContent>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                    <TextBlock FontWeight="Bold">Set a new name for tracker</TextBlock>
+                    <TextBlock FontWeight="Bold" Margin="4 0 0 0" Text="{Binding #grid.SelectedItem.Domain}" />
+                </StackPanel>
+                <TextBox Name="TrackerName" Text="{Binding #grid.SelectedItem.DisplayName, Mode=OneWay}" />
+                <Button
+                    Margin="0 -6 0 -7"
+                    Width="0"
+                    IsDefault="True"
+                    Command="{Binding SetNameCommand}"
+                >
+                    <Button.CommandParameter>
+                        <MultiBinding Converter="{StaticResource ItemsParamConverter}">
+                            <Binding Path="#grid.SelectedItems" />
+                            <Binding Path="#TrackerName.Text" />
+                        </MultiBinding>
+                    </Button.CommandParameter>
+                </Button>
+            </StackPanel>
+        </dialogHost:DialogHost.DialogContent>
 
-		<DataGrid Name="grid"
-					  ItemsSource="{Binding Trackers}"
-					  CanUserReorderColumns="True"
-					  CanUserResizeColumns="True"
-					  CanUserSortColumns="True"
-					  GridLinesVisibility="Horizontal"
-					  IsReadOnly="True"
-					  SelectionMode="Extended">
-			<DataGrid.ContextMenu>
-				<ContextMenu>
-					<MenuItem Header="Add a new tracker..."
-							  Command="{Binding AddNewTrackerCommand}"
-							  CommandParameter="{Binding #grid.SelectedItems}"
-							  IsEnabled="{Binding Owner.Instance.Capabilities.AddNewTracker}"
-					/>
-					<Separator />
-					<MenuItem Header="Enable"
-							  Command="{Binding EnableCommand}"
-							  CommandParameter="{Binding #grid.SelectedItems}"
-							  IsEnabled="{Binding Owner.Instance.Capabilities.EnableTracker}"
-					/>
-					<MenuItem Header="Disable"
-							  Command="{Binding DisableCommand}"
-							  CommandParameter="{Binding #grid.SelectedItems}"
-							  IsEnabled="{Binding Owner.Instance.Capabilities.DisableTracker}"
-					/>
-					<MenuItem Header="Remove"
-							  Command="{Binding RemoveCommand}"
-							  CommandParameter="{Binding #grid.SelectedItems}"
-							  IsEnabled="{Binding Owner.Instance.Capabilities.RemoveTracker}"
-					/>
-					<Separator />
-					<MenuItem Header="Reannounce"
-							  Command="{Binding ReannounceCommand}"
-							  CommandParameter="{Binding #grid.SelectedItems}"
-							  IsEnabled="{Binding Owner.Instance.Capabilities.ReannounceTracker}"
-					/>
-					<Separator />
-					<MenuItem Header="Set name..."
-							  Command="{Binding #DialogHost.OpenDialogCommand}"
-					/>
-					<MenuItem Header="Set icon..."
-							  Command="{Binding SetIconCommand}"
-							  CommandParameter="{Binding #grid.SelectedItems}"
-					/>
-				</ContextMenu>
-			</DataGrid.ContextMenu>
-			<DataGrid.Columns>
-				<DataGridTemplateColumn Header="Icon">
-					<DataGridTemplateColumn.CellTemplate>
-						<DataTemplate x:DataType="models:Tracker">
-							<Image Source="{Binding Icon}" Width="16" Height="16" Stretch="Uniform" />
-						</DataTemplate>
-					</DataGridTemplateColumn.CellTemplate>
-				</DataGridTemplateColumn>
-				<DataGridTemplateColumn Header="">
-					<DataGridTemplateColumn.CellTemplate>
-						<DataTemplate x:DataType="models:Tracker">
-							<Border ToolTip.Tip="{Binding Uri, Mode=OneWay}">
-								<TextBlock Text="{Binding Display, Mode=OneWay}" />
-							</Border>
-						</DataTemplate>
-					</DataGridTemplateColumn.CellTemplate>
-				</DataGridTemplateColumn>
-				<DataGridTextColumn Header="Status" Binding="{Binding Status, Mode=OneWay}" />
-				<DataGridTextColumn Header="Seeders" Binding="{Binding Seeders, Mode=OneWay}" />
-				<DataGridTextColumn Header="Peers" Binding="{Binding Peers, Mode=OneWay}" />
-				<DataGridTextColumn Header="Downloaded" Binding="{Binding Downloaded, Mode=OneWay}" />
-				<DataGridTextColumn Header="Last updated" Binding="{Binding LastUpdatedDate, Mode=OneWay}" />
-				<DataGridTextColumn Header="Interval" Binding="{Binding Interval, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" />
-				<DataGridTextColumn Header="Message" Binding="{Binding Message, Mode=OneWay}" />
-			</DataGrid.Columns>
-		</DataGrid>
-	</dialogHost:DialogHost>
+        <DataGrid Name="grid"
+                      ItemsSource="{Binding Trackers}"
+                      CanUserReorderColumns="True"
+                      CanUserResizeColumns="True"
+                      CanUserSortColumns="True"
+                      GridLinesVisibility="Horizontal"
+                      IsReadOnly="True"
+                      SelectionMode="Extended">
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Add a new tracker..."
+                              Command="{Binding AddNewTrackerCommand}"
+                              CommandParameter="{Binding #grid.SelectedItems}"
+                              IsEnabled="{Binding Owner.Instance.Capabilities.AddNewTracker}"
+                    />
+                    <Separator />
+                    <MenuItem Header="Enable"
+                              Command="{Binding EnableCommand}"
+                              CommandParameter="{Binding #grid.SelectedItems}"
+                              IsEnabled="{Binding Owner.Instance.Capabilities.EnableTracker}"
+                    />
+                    <MenuItem Header="Disable"
+                              Command="{Binding DisableCommand}"
+                              CommandParameter="{Binding #grid.SelectedItems}"
+                              IsEnabled="{Binding Owner.Instance.Capabilities.DisableTracker}"
+                    />
+                    <MenuItem Header="Remove"
+                              Command="{Binding RemoveCommand}"
+                              CommandParameter="{Binding #grid.SelectedItems}"
+                              IsEnabled="{Binding Owner.Instance.Capabilities.RemoveTracker}"
+                    />
+                    <Separator />
+                    <MenuItem Header="Reannounce"
+                              Command="{Binding ReannounceCommand}"
+                              CommandParameter="{Binding #grid.SelectedItems}"
+                              IsEnabled="{Binding Owner.Instance.Capabilities.ReannounceTracker}"
+                    />
+                    <Separator />
+                    <MenuItem Header="Set name..."
+                              Command="{Binding #DialogHost.OpenDialogCommand}"
+                    />
+                    <MenuItem Header="Set icon..."
+                              Command="{Binding SetIconCommand}"
+                              CommandParameter="{Binding #grid.SelectedItems}"
+                    />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Icon">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="models:Tracker">
+                            <Image Source="{Binding Icon}" Width="16" Height="16" Stretch="Uniform" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="models:Tracker">
+                            <Border ToolTip.Tip="{Binding Uri, Mode=OneWay}">
+                                <TextBlock Text="{Binding Display, Mode=OneWay}" />
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status, Mode=OneWay}" />
+                <DataGridTextColumn Header="Seeders" Binding="{Binding Seeders, Mode=OneWay}" />
+                <DataGridTextColumn Header="Peers" Binding="{Binding Peers, Mode=OneWay}" />
+                <DataGridTextColumn Header="Downloaded" Binding="{Binding Downloaded, Mode=OneWay}" />
+                <DataGridTextColumn Header="Last updated" Binding="{Binding LastUpdatedDate, Mode=OneWay}" />
+                <DataGridTextColumn Header="Interval" Binding="{Binding Interval, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" />
+                <DataGridTextColumn Header="Message" Binding="{Binding Message, Mode=OneWay}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </dialogHost:DialogHost>
 </UserControl>

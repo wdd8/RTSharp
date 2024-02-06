@@ -6,9 +6,9 @@ namespace RTSharp.Models;
 
 public class ExampleLogEntries
 {
-	public ObservableCollection<LogEntry> Entries { get; set; }
-	
-	public ExampleLogEntries()
+    public ObservableCollection<LogEntry> Entries { get; set; }
+    
+    public ExampleLogEntries()
     {
         Entries = new ObservableCollection<LogEntry>() {
             new LogEntry(LogEventLevel.Verbose, DateTime.Parse("2022-03-05 01:01"), "Test"),

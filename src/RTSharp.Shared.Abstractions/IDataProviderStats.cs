@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace RTSharp.Shared.Abstractions
 {
-	public interface IDataProviderStats : IDataProviderBase<DataProviderStatsCapabilities>
-	{
-	}
+    public interface IDataProviderStats : IDataProviderBase<DataProviderStatsCapabilities>
+    {
+    }
 }

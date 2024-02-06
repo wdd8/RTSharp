@@ -9,7 +9,7 @@ namespace RTSharp.Shared.Controls.Views
     public partial class GroupBox : UserControl, IStyleable
     {
 #region Label
-		private string _label;
+        private string _label;
 
         /// <summary>
         /// Defines the <see cref="Label"/> property.
@@ -29,7 +29,7 @@ namespace RTSharp.Shared.Controls.Views
         }
 #endregion Label
 #region RadioButtonGroup
-		private string? _radioButtonGroup;
+        private string? _radioButtonGroup;
 
         /// <summary>
         /// Defines the <see cref="RadioButton"/> property.
@@ -49,20 +49,20 @@ namespace RTSharp.Shared.Controls.Views
                 SetAndRaise(RadioButtonGroupProperty, ref _radioButtonGroup, value);
                 SetAndRaise(RadioButtonEnabledProperty, ref _radioButtonEnabled, _radioButtonGroup != null);
             }
-		}
+        }
 #endregion RadioButtonGroup
 #region RadioButtonEnabled
-		public static readonly DirectProperty<GroupBox, bool> RadioButtonEnabledProperty =
-			AvaloniaProperty.RegisterDirect<GroupBox, bool>(
-				nameof(_radioButtonEnabled),
-				o => o._radioButtonEnabled);
+        public static readonly DirectProperty<GroupBox, bool> RadioButtonEnabledProperty =
+            AvaloniaProperty.RegisterDirect<GroupBox, bool>(
+                nameof(_radioButtonEnabled),
+                o => o._radioButtonEnabled);
 
         private bool _radioButtonEnabled;
 
         public bool RadioButtonEnabled {
             get { return _radioButtonEnabled; }
         }
-		#endregion RadioButtonEnabled
+        #endregion RadioButtonEnabled
 #region IsRadioButtonChecked
         /// <summary>
         /// Defines the <see cref="IsRadioButtonChecked"/> property.
@@ -77,44 +77,44 @@ namespace RTSharp.Shared.Controls.Views
             get { return GetValue(IsRadioButtonCheckedProperty); }
             set { SetValue(IsRadioButtonCheckedProperty, value); }
         }
-		#endregion IsRadioButtonChecked
-		#region CheckBoxEnabled
-		private bool _checkBoxEnabled;
+        #endregion IsRadioButtonChecked
+        #region CheckBoxEnabled
+        private bool _checkBoxEnabled;
 
-		public static readonly DirectProperty<GroupBox, bool> CheckBoxEnabledProperty =
-			AvaloniaProperty.RegisterDirect<GroupBox, bool>(
-				nameof(CheckBoxEnabled),
-				o => o.CheckBoxEnabled,
+        public static readonly DirectProperty<GroupBox, bool> CheckBoxEnabledProperty =
+            AvaloniaProperty.RegisterDirect<GroupBox, bool>(
+                nameof(CheckBoxEnabled),
+                o => o.CheckBoxEnabled,
                 (o, v) => o.CheckBoxEnabled = v);
 
         /// <summary>
         /// Gets or sets visibility of a check box
         /// </summary>
-		public bool CheckBoxEnabled {
-			get { return _checkBoxEnabled; }
-			set { SetAndRaise(CheckBoxEnabledProperty, ref _checkBoxEnabled, value); }
-		}
+        public bool CheckBoxEnabled {
+            get { return _checkBoxEnabled; }
+            set { SetAndRaise(CheckBoxEnabledProperty, ref _checkBoxEnabled, value); }
+        }
 #endregion CheckBoxEnabled
 #region IsCheckBoxChecked
-		/// <summary>
-		/// Defines the <see cref="IsCheckBoxChecked"/> property.
-		/// </summary>
-		public static readonly StyledProperty<bool?> IsCheckBoxCheckedProperty =
-			CheckBox.IsCheckedProperty.AddOwner<GroupBox>();
+        /// <summary>
+        /// Defines the <see cref="IsCheckBoxChecked"/> property.
+        /// </summary>
+        public static readonly StyledProperty<bool?> IsCheckBoxCheckedProperty =
+            CheckBox.IsCheckedProperty.AddOwner<GroupBox>();
 
-		/// <summary>
-		/// Gets or sets checked state of check box
-		/// </summary>
-		public bool? IsCheckBoxChecked {
-			get { return GetValue(IsCheckBoxCheckedProperty); }
-			set { SetValue(IsCheckBoxCheckedProperty, value); }
-		}
+        /// <summary>
+        /// Gets or sets checked state of check box
+        /// </summary>
+        public bool? IsCheckBoxChecked {
+            get { return GetValue(IsCheckBoxCheckedProperty); }
+            set { SetValue(IsCheckBoxCheckedProperty, value); }
+        }
 #endregion IsCheckBoxChecked
 
-		/// <summary>
-		/// Defines the <see cref="Background"/> property.
-		/// </summary>
-		public static readonly StyledProperty<IBrush> BorderBackgroundProperty =
+        /// <summary>
+        /// Defines the <see cref="Background"/> property.
+        /// </summary>
+        public static readonly StyledProperty<IBrush> BorderBackgroundProperty =
             AvaloniaProperty.Register<GroupBox, IBrush>(nameof(BorderBackground));
 
         /// <summary>
@@ -128,7 +128,7 @@ namespace RTSharp.Shared.Controls.Views
         Type IStyleable.StyleKey => typeof(GroupBox);
 
         private void EvTextBlockTapped(object e, TappedEventArgs args)
-		{
+        {
             IsRadioButtonChecked = true;
         }
 

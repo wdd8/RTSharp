@@ -6,19 +6,19 @@ import "google/protobuf/wrappers.proto";
 import "Types/CommandReply.proto";
 
 service GRPCTrackerService {
-	rpc ReannounceTrackers (Trackers) returns (TrackersReply);
+    rpc ReannounceTrackers (Trackers) returns (TrackersReply);
 }
 
 message Trackers {
-	bytes TorrentInfoHash = 1;
-	repeated string Trackers = 2;
+    bytes TorrentInfoHash = 1;
+    repeated string Trackers = 2;
 }
 
 message TrackersReply {
-	message TrackerReply {
-		string Uri = 1;
-		repeated Status Status = 2;
-	}
+    message TrackerReply {
+        string Uri = 1;
+        repeated Status Status = 2;
+    }
 
-	repeated TrackerReply Trackers = 1;
+    repeated TrackerReply Trackers = 1;
 }
