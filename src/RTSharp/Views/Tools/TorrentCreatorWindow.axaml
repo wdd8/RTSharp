@@ -79,7 +79,7 @@
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock VerticalAlignment="Center" Margin="0 0 4 0">Piece size:</TextBlock>
-                        <ComboBox Name="CmbPieceLength" VerticalAlignment="Center" Width="125" SelectedItem="{Binding StrPieceLength}">
+                        <ComboBox Name="CmbPieceLength" VerticalAlignment="Center" Width="125" SelectedIndex="0" SelectedItem="{Binding StrPieceLength}">
                             <ComboBoxItem>Auto</ComboBoxItem>
                             <ComboBoxItem>16 KiB</ComboBoxItem>
                             <ComboBoxItem>32 KiB</ComboBoxItem>
@@ -100,8 +100,8 @@
                     <CheckBox IsChecked="{Binding PrivateTorrent}">Private torrent (Won't distribute on DHT network)</CheckBox>
                     <CheckBox IsChecked="{Binding Entropy}">Add entropy (Makes torrent unique)</CheckBox>
                     <CheckBox IsChecked="{Binding EmitCreationDate}">Emit creation date</CheckBox>
-                    <views:GroupBox CheckBoxEnabled="True" IsCheckBoxChecked="{Binding OptimiseAlignment}" Label="Optimise alignment">
-                        <StackPanel Orientation="Horizontal" Margin="4" IsEnabled="{Binding OptimiseAlginment}">
+                    <views:GroupBox CheckBoxEnabled="True" IsCheckBoxChecked="{Binding OptimiseAlignment}" Label="Optimise alignment" IsEnabled="False">
+                        <StackPanel Orientation="Horizontal" Margin="4" IsEnabled="{Binding OptimiseAlignment}">
                             <TextBlock VerticalAlignment="Center">Align to piece boundary for files larger than:</TextBlock>
                             <NumericUpDown Margin="4 0 0 0" Value="0" Increment="1" />
                         </StackPanel>

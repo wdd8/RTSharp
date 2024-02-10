@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 
@@ -20,6 +21,7 @@ public partial class TorrentCreatorWindow : VmWindow<TorrentCreatorWindowViewMod
         DragDropPanel.AddHandler(DragDrop.DropEvent, EvDragDrop);
 
         BindViewModelActions(vm => {
+            vm!.StrPieceLength = (ComboBoxItem)CmbPieceLength.Items[0];
             vm!.SelectFileDialog = SelectFileDialogAsync;
             vm!.SelectFolderDialog = SelectFolderDialogAsync;
             vm!.SelectFileDestDialog = SelectFileDestDialogAsync;

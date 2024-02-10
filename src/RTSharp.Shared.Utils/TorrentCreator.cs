@@ -41,9 +41,6 @@ namespace RTSharp.Shared.Utils
 
         public async ValueTask<DataInfo> GetDataInfo(string Path)
         {
-            if (!Path.EndsWith(System.IO.Path.DirectorySeparatorChar))
-                Path += System.IO.Path.DirectorySeparatorChar;
-
             var allFiles = new ConcurrentBag<FileInfo>();
 
             bool singleFile = File.Exists(Path);
