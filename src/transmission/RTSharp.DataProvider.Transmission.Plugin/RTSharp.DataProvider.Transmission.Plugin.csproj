@@ -20,11 +20,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.0.7" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.7" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.0.7" />
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.0.7" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.7" />
+        <PackageReference Include="Avalonia" Version="11.0.9" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.9" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.0.9" />
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.0.9" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.9" />
         <PackageReference Include="BencodeNET" Version="5.0.0" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />

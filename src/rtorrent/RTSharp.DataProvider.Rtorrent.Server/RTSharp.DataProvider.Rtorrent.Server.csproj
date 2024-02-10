@@ -17,16 +17,16 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Certificate" Version="8.0.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
-    <PackageReference Include="Microsoft.TestPlatform.TestHost" Version="17.8.0" />
+    <PackageReference Include="Microsoft.TestPlatform.TestHost" Version="17.9.0" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
     <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
-    <PackageReference Include="rm.Trie" Version="1.5.0" />
+    <PackageReference Include="rm.Trie" Version="1.6.0" />
     <PackageReference Include="xunit" Version="2.6.6" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.6">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="ZstdSharp.Port" Version="0.7.4" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.7.5" />
   </ItemGroup>
 
   <ItemGroup>
