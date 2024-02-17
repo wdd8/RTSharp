@@ -16,6 +16,10 @@ using System;
 using Avalonia.Controls;
 using RTSharp.Core.Services.Cache.TorrentPropertiesCache;
 using RTSharp.Shared.Controls;
+using NP.Ava.UniDock;
+using NP.Ava.UniDockService;
+using System.Collections.ObjectModel;
+using RTSharp.ViewModels.TorrentListing;
 
 namespace RTSharp.Views;
 
@@ -26,16 +30,56 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         InitializeComponent();
     }
 
-    public MainWindow(MainWindowViewModel DataContext)
+    public MainWindow(MainWindowViewModel DataContext) : this()
     {
-        InitializeComponent();
-
         ViewModel = DataContext;
         ShowInTaskbar = true;
         ViewModel!.ShowPluginsDialog = ShowPluginsDialogAsync;
         ViewModel!.ShowServersDialog = ShowServersDialogAsync;
         Opened += EvOpened;
-        
+
+        App.DockManager = (DockManager)Resources["MainDockManager"]!;
+
+        var torrentListingVm = new TorrentListingViewModel();
+        App.DockManager.DockItemsViewModels = new ObservableCollection<DockItemViewModelBase>() {
+            // EdgeDock
+            new DockDataProvidersViewModel() {
+                DockId = "DataProviders0",
+                DefaultDockGroupId = "EdgeDock",
+                TheVM = new DataProvidersViewModel(),
+                HeaderContentTemplateResourceKey = "TabHeaderTemplate",
+                ContentTemplateResourceKey = "DataProvidersTemplate",
+                IsPredefined = true
+            },
+
+            // MainGroup
+            new DockLogEntriesViewModel() {
+                DockId = "LogEntries0",
+                DefaultDockGroupId = "MainGroup",
+                TheVM = new LogEntriesViewModel(),
+                HeaderContentTemplateResourceKey = "TabHeaderTemplate",
+                ContentTemplateResourceKey = "LogEntriesTemplate",
+                IsPredefined = true
+            },
+            new DockActionQueueViewModel() {
+                DockId = "ActionQueue0",
+                DefaultDockGroupId = "MainGroup",
+                TheVM = new ActionQueueViewModel(),
+                HeaderContentTemplateResourceKey = "TabHeaderTemplate",
+                ContentTemplateResourceKey = "ActionQueueTemplate",
+                IsPredefined = true
+            },
+            new DockTorrentListingViewModel() {
+                DockId = "TorrentListing0",
+                DefaultDockGroupId = "MainGroup",
+                TheVM = torrentListingVm,
+                HeaderContentTemplateResourceKey = "TabHeaderTemplate",
+                ContentTemplateResourceKey = "TorrentListingTemplate",
+                IsPredefined = true,
+                IsSelected = true
+            }
+        };
+
         this.AddHandler(DragDrop.DropEvent, EvDragDrop);
 
         var fileMenu = (MenuItem)Resources["FileMenu"]!;
@@ -105,7 +149,7 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
 
     private async void EvDragDrop(object sender, DragEventArgs e)
     {
-        var files = e.Data.GetFileNames();
+        var files = e.Data.GetFiles();
         var uri = e.Data.GetText();
 
         AddTorrentViewModel vm;
@@ -114,7 +158,7 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         };
         if (String.IsNullOrEmpty(uri) && files?.Any() == true) {
             vm.FromFileSelected = true;
-            vm.SelectedFileTextBox = files.First();
+            vm.SelectedFileTextBox = files.First().Path.LocalPath;
         }
         if (files?.Any() != true && !String.IsNullOrEmpty(uri) && Uri.TryCreate(uri, UriKind.Absolute, out var _)) {
             vm.FromUriSelected = true;

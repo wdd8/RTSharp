@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections;
 using System;
+using NP.Ava.UniDockService;
 
 namespace RTSharp.ViewModels.TorrentListing
 {

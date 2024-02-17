@@ -1,7 +1,8 @@
 <Application x:Class="RTSharp.App"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:RTSharp" 
+             xmlns:np="https://np.com/visuals"
+             xmlns:local="clr-namespace:RTSharp"
              xmlns:core="clr-namespace:Dock.Model.Core;assembly=Dock.Model">
     <Application.DataTemplates>
         <local:ViewLocator />
@@ -9,7 +10,9 @@
 
     <Application.Styles>
         <FluentTheme />
-        <StyleInclude Source="avares://Dock.Avalonia/Themes/DockFluentTheme.axaml" />
+        <StyleInclude Source="avares://NP.Ava.Visuals/Themes/TextStyles.axaml"/>
+        <StyleInclude Source="avares://NP.Ava.UniDock/Themes/DockStyles.axaml"/>
+        <StyleInclude Source="avares://RTSharp/CustomWindowStyles.axaml"/>
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
         <StyleInclude Source="avares://Avalonia.Controls.TreeDataGrid/Themes/Fluent.axaml"/>
         <StyleInclude Source="avares://DialogHost.Avalonia/Styles.xaml"/>
@@ -34,24 +37,24 @@
             <Setter Property="AllowAutoHide" Value="False" />
         </Style>
 
-        <Style Selector="DocumentControl">
-            <Setter Property="HeaderTemplate">
-                <local:DocumentWithIconDataTemplate x:DataType="core:IDockable">
-                    <DataTemplate x:Key="WithoutIcon">
-                        <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
-                    </DataTemplate>
-                    <DataTemplate x:Key="WithIcon">
-                        <StackPanel Orientation="Horizontal">
-                            <PathIcon
-                              Data="{Binding Icon}"
-                              Width="16"
-                              Height="16"
-                              Margin="0" />
-                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" Padding="4,0,0,0" />
-                        </StackPanel>
-                    </DataTemplate>
-                </local:DocumentWithIconDataTemplate>
-            </Setter>
+        <Style Selector="np|TabbedDockGroup">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="np|DockTabItem.Dock[IsSelected=False]">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <Style Selector="np|DockTabItem.Dock[IsSelected=False]">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <Style Selector="np|DockTabItem.Dock[IsPointerOver=True][IsSelected=False]">
+            <Setter Property="Background" Value="Gray" />
+        </Style>
+
+        <Style Selector="np|DockItemPresenter">
+            <Setter Property="Background" Value="Black" />
         </Style>
     </Application.Styles>
 

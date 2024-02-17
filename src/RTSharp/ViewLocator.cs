@@ -5,8 +5,6 @@ using Avalonia.Controls.Templates;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Dock.Model.Core;
-
 namespace RTSharp
 {
     public class ViewLocator : IDataTemplate
@@ -17,10 +15,6 @@ namespace RTSharp
         {
             var name = data.GetType().FullName!.Replace("ViewModel", "View");
             var type = data.GetType().Assembly.GetType(name);
-
-            if (data is IDockable dockable) {
-                name += "_" + dockable.Id;
-            }
 
             if (type != null)
             {
@@ -37,7 +31,7 @@ namespace RTSharp
 
         public bool Match(object data)
         {
-            return data is ObservableObject || data is IDockable;
+            return data is ObservableObject;
         }
     }
 }

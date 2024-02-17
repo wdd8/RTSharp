@@ -8,18 +8,22 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Media;
 
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Dock.Model.Mvvm.Controls;
+using NP.Ava.UniDockService;
 
 using RTSharp.Core;
 using RTSharp.Models;
+using RTSharp.Shared.Controls;
 
 namespace RTSharp.ViewModels
 {
-    public partial class LogEntriesViewModel : Document, IContextPopulatedNotifyable, IDocumentWithIcon
+    public class DockLogEntriesViewModel : DockItemViewModel<LogEntriesViewModel> { }
+
+    public partial class LogEntriesViewModel : ObservableObject, IDockable, IContextPopulatedNotifyable
     {
-        public ObservableCollection<LogEntry> LogEntries => (ObservableCollection<LogEntry>)Context!;
+        public ObservableCollection<LogEntry> LogEntries => Core.LogWindowSink.LogEntries;
 
         public Action? ScrollToBottom;
 
@@ -49,12 +53,12 @@ namespace RTSharp.ViewModels
         }
 
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-calendar-days");
+
+        public string HeaderName => "Log";
     }
 
     public static class ExampleLogEntriesViewModel
     {
-        public static LogEntriesViewModel ViewModel { get; } = new LogEntriesViewModel() {
-            Context = new Models.ExampleLogEntries()
-        };
+        public static LogEntriesViewModel ViewModel { get; } = new LogEntriesViewModel();
     }
 }

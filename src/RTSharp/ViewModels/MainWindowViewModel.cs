@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -12,9 +10,6 @@ using Avalonia.Dialogs;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Dock.Model.Core;
-
-using RTSharp.ViewModels.Options;
 using RTSharp.ViewModels.TorrentListing;
 using RTSharp.Views;
 using RTSharp.Views.Options;
@@ -24,18 +19,6 @@ namespace RTSharp.ViewModels
 {
     public partial class MainWindowViewModel : ObservableObject
     {
-        [ObservableProperty]
-        public IFactory factory;
-
-        [ObservableProperty]
-        public IDock layout;
-
-        [ObservableProperty]
-        public TorrentListingViewModel torrentListing;
-
-        [ObservableProperty]
-        public string currentView;
-
         public ObservableCollection<MenuItem> MenuItems { get; } = new();
 
         public ObservableCollection<Plugin.PluginInstance> Plugins => Plugin.Plugins.LoadedPlugins;
@@ -51,11 +34,6 @@ namespace RTSharp.ViewModels
 
         public MainWindowViewModel()
         {
-            Factory = new MainDockFactory();
-            Layout = Factory.CreateLayout()!;
-            if (Layout is { }) {
-                Factory?.InitLayout(Layout);
-            }
         }
 
         [RelayCommand]
@@ -113,13 +91,76 @@ namespace RTSharp.ViewModels
             torrentCreatorWindow.Show();
         }
 
-        public void CloseLayout()
+        [RelayCommand]
+        public void AddTorrentListingTabClick()
         {
-            if (Layout is IDock dock) {
-                if (dock.Close.CanExecute(null)) {
-                    dock.Close.Execute(null);
-                }
-            }
+            var curCount = App.DockManager.DockItemsViewModels.Where(x => x.DockId.StartsWith("TorrentListing")).Count();
+
+            var vm = new DockTorrentListingViewModel() {
+                DockId = "TorrentListing" + curCount,
+                DefaultDockGroupId = "MainGroup",
+                TheVM = new TorrentListingViewModel(),
+                HeaderContentTemplateResourceKey = "TabHeaderTemplate",
+                ContentTemplateResourceKey = "TorrentListingTemplate",
+                IsPredefined = false,
+                IsSelected = true
+            };
+
+            App.DockManager.DockItemsViewModels.Add(vm);
+        }
+
+        [RelayCommand]
+        public void AddActionQueueTabClick()
+        {
+            var curCount = App.DockManager.DockItemsViewModels.Where(x => x.DockId.StartsWith("ActionQueue")).Count();
+
+            var vm = new DockActionQueueViewModel() {
+                DockId = "ActionQueue" + curCount,
+                DefaultDockGroupId = "MainGroup",
+                TheVM = new ActionQueueViewModel(),
+                HeaderContentTemplateResourceKey = "TabHeaderTemplate",
+                ContentTemplateResourceKey = "ActionQueueTemplate",
+                IsPredefined = false,
+                IsSelected = true
+            };
+
+            App.DockManager.DockItemsViewModels.Add(vm);
+        }
+
+        [RelayCommand]
+        public void AddLogTabClick()
+        {
+            var curCount = App.DockManager.DockItemsViewModels.Where(x => x.DockId.StartsWith("LogEntries")).Count();
+
+            var vm = new DockLogEntriesViewModel() {
+                DockId = "LogEntries" + curCount,
+                DefaultDockGroupId = "MainGroup",
+                TheVM = new LogEntriesViewModel(),
+                HeaderContentTemplateResourceKey = "TabHeaderTemplate",
+                ContentTemplateResourceKey = "LogEntriesTemplate",
+                IsPredefined = false,
+                IsSelected = true
+            };
+
+            App.DockManager.DockItemsViewModels.Add(vm);
+        }
+
+        [RelayCommand]
+        public void AddDataProvidersTabClick()
+        {
+            var curCount = App.DockManager.DockItemsViewModels.Where(x => x.DockId.StartsWith("DataProviders")).Count();
+
+            var vm = new DockDataProvidersViewModel() {
+                DockId = "DataProviders" + curCount,
+                DefaultDockGroupId = "MainGroup",
+                TheVM = new DataProvidersViewModel(),
+                HeaderContentTemplateResourceKey = "TabHeaderTemplate",
+                ContentTemplateResourceKey = "DataProvidersTemplate",
+                IsPredefined = false,
+                IsSelected = true
+            };
+
+            App.DockManager.DockItemsViewModels.Add(vm);
         }
     }
 }

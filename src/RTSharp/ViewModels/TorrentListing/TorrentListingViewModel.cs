@@ -23,7 +23,6 @@ using RTSharp.Views.Options;
 using Avalonia.Controls.Primitives;
 using RTSharp.Shared.Abstractions;
 using System.Collections.Concurrent;
-using Dock.Model.Mvvm.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DynamicData;
@@ -31,12 +30,16 @@ using System.Collections.Specialized;
 using RTSharp.Core.Util;
 using RTSharp.Views.DataGridEx;
 using RTSharp.Views.TorrentListing;
+using RTSharp.Shared.Controls;
+using NP.Ava.UniDockService;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
-    public partial class TorrentListingViewModel : Document, IContextPopulatedNotifyable
+    public class DockTorrentListingViewModel : DockItemViewModel<TorrentListingViewModel> { }
+
+    public partial class TorrentListingViewModel : ObservableObject, IContextPopulatedNotifyable, IDockable
     {
-        private ObservableCollectionEx<Torrent> Torrents => (ObservableCollectionEx<Torrent>)Context!;
+        public ObservableCollectionEx<Torrent> Torrents { get; } = TorrentPolling.Torrents;
 
         private ObservableCollectionEx<Torrent> FilteredTorrents { get; set; } = new();
 
@@ -65,6 +68,10 @@ namespace RTSharp.ViewModels.TorrentListing
         private bool StartTorrentAllowed => CurrentlySelectedItems.Any() && ((Torrent)CurrentlySelectedItems[0]).InternalState != TORRENT_STATE.SEEDING;
 
         public Action ResortList { get; set; }
+
+        public string HeaderName => "Torrent listing";
+
+        public Geometry? Icon => null;
 
         static TorrentListingViewModel()
         {
@@ -117,11 +124,6 @@ namespace RTSharp.ViewModels.TorrentListing
                 DataContext = new OptionsViewModel()
             };
             optionsWindow.Show();
-        }
-
-        public override bool OnClose()
-        {
-            return true;
         }
 
         private TemplatedControl[] LabelsControlCached;
@@ -279,6 +281,6 @@ namespace RTSharp.ViewModels.TorrentListing
 
     public static class ExampleTorrentListingViewModel
     {
-        public static TorrentListingViewModel ViewModel { get; } = new TorrentListingViewModel();
+        public static TorrentListingViewModel ViewModel { get; }
     }
 }

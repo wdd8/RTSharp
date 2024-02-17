@@ -3,30 +3,27 @@
 using RTSharp.Core;
 using RTSharp.Plugin;
 
-using System.Threading;
 using System.Collections.ObjectModel;
-using Dock.Model.Mvvm.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
+using NP.Ava.UniDockService;
+using RTSharp.Shared.Controls;
 
 namespace RTSharp.ViewModels
 {
-    public class DataProvidersViewModel : Document, IDocumentWithIcon
+    public class DockDataProvidersViewModel : DockItemViewModel<DataProvidersViewModel> { }
+
+    public class DataProvidersViewModel : ObservableObject, IDockable
     {
-        public ObservableCollection<DataProvider> Items => (ObservableCollection<DataProvider>)Context!;
+        public ObservableCollection<DataProvider> Items => Plugin.Plugins.DataProviders;
 
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-network-wired");
 
-        public CancellationTokenSource Cancellation { get; } = new CancellationTokenSource();
+        public string HeaderName => "Data providers";
 
         public DataProvidersViewModel()
         {
         }
 
-        public override bool OnClose()
-        {
-            base.OnClose();
-            Cancellation.Cancel();
-
-            return true;
-        }
+        // TODO: cancel refreshing on close
     }
 }

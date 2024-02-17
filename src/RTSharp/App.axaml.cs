@@ -31,6 +31,7 @@ using LiveChartsCore;
 using System.Threading.Tasks;
 using System.Threading;
 using Avalonia.Threading;
+using NP.Ava.UniDock;
 
 namespace RTSharp
 {
@@ -128,6 +129,8 @@ namespace RTSharp
 
         public static MainWindowViewModel MainWindowViewModel { get; private set; }
 
+        public static DockManager DockManager { get; internal set; }
+
         public override void OnFrameworkInitializationCompleted()
         {
             var tcs = new TaskCompletionSource();
@@ -142,20 +145,15 @@ namespace RTSharp
                     MainWindowViewModel = new MainWindowViewModel();
                     MainWindow = new MainWindow(MainWindowViewModel);
 
-                    if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime) {
-                        MainWindow.Closing += (_, _) =>
-                        {
-                            foreach (var (_, fx) in FxOnExit) {
-                                fx();
-                            }
-                            MainWindowViewModel.CloseLayout();
-                        };
 
+                    if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime) {
                         desktopLifetime.MainWindow = MainWindow;
 
                         desktopLifetime.Exit += (_, _) =>
                         {
-                            MainWindowViewModel.CloseLayout();
+                            foreach (var (_, fx) in FxOnExit) {
+                                fx();
+                            }
                         };
                     }
 

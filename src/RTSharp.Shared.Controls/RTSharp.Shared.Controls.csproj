@@ -12,9 +12,8 @@
         <PackageReference Include="Avalonia.Desktop" Version="11.0.9" />
         <PackageReference Include="Avalonia.Diagnostics" Version="11.0.9" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-        <PackageReference Include="Dock.Avalonia" Version="11.0.0.5" />
-        <PackageReference Include="Dock.Model.Mvvm" Version="11.0.0.5" />
         <PackageReference Include="MessageBox.Avalonia" Version="3.1.5.1" />
+        <PackageReference Include="NP.Ava.UniDock" Version="1.0.6" />
     </ItemGroup>
 
     <ItemGroup>

@@ -289,16 +289,14 @@
     <PackageReference Include="ConcurrentHashSet" Version="1.3.0" />
     <PackageReference Include="Dapper" Version="2.1.28" />
     <PackageReference Include="DialogHost.Avalonia" Version="0.7.7" />
-    <PackageReference Include="Dock.Avalonia" Version="11.0.0.5" />
-    <PackageReference Include="Dock.Model.Mvvm" Version="11.0.0.5" />
     <PackageReference Include="DynamicData" Version="8.3.27" />
     <PackageReference Include="FluentMigrator" Version="5.0.0" />
     <PackageReference Include="FluentMigrator.Runner" Version="5.0.0" />
     <PackageReference Include="Grpc.Net.ClientFactory" Version="2.59.0" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.58" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.59" />
     <PackageReference Include="IPAddressRange" Version="6.0.0" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-beta.802-11.0.0-rc1.1" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
@@ -307,6 +305,7 @@
     <PackageReference Include="Nager.PublicSuffix" Version="2.4.0" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
     <PackageReference Include="Nito.Disposables" Version="2.5.0" />
+    <PackageReference Include="NP.Ava.UniDock" Version="1.0.6" />
     <PackageReference Include="Polly" Version="8.3.0" />
     <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.0.1" />
     <PackageReference Include="Serilog" Version="3.1.1" />
@@ -345,5 +344,11 @@
     <Folder Include="ViewModels\Statistics\" />
     <Folder Include="Views\Behaviors\" />
     <Folder Include="Views\Statistics\" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <AvaloniaXaml Update="CustomWindowStyles.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
   </ItemGroup>
 </Project>

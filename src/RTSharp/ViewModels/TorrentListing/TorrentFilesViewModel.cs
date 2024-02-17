@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RTSharp.Core.Services.Auxiliary;
+using NP.Ava.UniDockService;
 
 namespace RTSharp.ViewModels.TorrentListing
 {

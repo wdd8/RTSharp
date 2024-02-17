@@ -29,6 +29,10 @@ namespace RTSharp.Shared.Controls
                 FxBind(ViewModel);
 
             PreviousViewModel = ViewModel;
+
+            if (ViewModel is IContextPopulatedNotifyable notifyable) {
+                notifyable.OnContextPopulated();
+            }
         }
     }
 }

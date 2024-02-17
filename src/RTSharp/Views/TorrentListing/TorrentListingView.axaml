@@ -6,6 +6,7 @@
              xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:torrentListingVm="clr-namespace:RTSharp.ViewModels.TorrentListing;assembly=RTSharp"
+             xmlns:views="clr-namespace:RTSharp.Views.TorrentListing;assembly=RTSharp"
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:abstractions="clr-namespace:RTSharp.Shared.Abstractions;assembly=RTSharp.Shared.Abstractions"
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
@@ -198,19 +199,19 @@
                 </TabControl.Styles>
                 
                 <TabItem Header="General" VerticalContentAlignment="Center">
-                    <ContentControl Content="{Binding GeneralInfoViewModel}" />
+                    <views:GeneralTorrentInfoView DataContext="{Binding GeneralInfoViewModel}" />
                 </TabItem>
                 
                 <TabItem Header="Files" VerticalContentAlignment="Center">
-                    <ContentControl Content="{Binding FilesViewModel}" />
+                    <views:TorrentFilesView DataContext="{Binding FilesViewModel}" />
                 </TabItem>
                 
                 <TabItem Header="Peers" VerticalContentAlignment="Center">
-                    <ContentControl Content="{Binding PeersViewModel}" />
+                    <views:TorrentPeersView DataContext="{Binding PeersViewModel}" />
                 </TabItem>
                 
                 <TabItem Header="Trackers" VerticalContentAlignment="Center">
-                    <ContentControl Content="{Binding TrackersViewModel}" />
+                    <views:TorrentTrackersView DataContext="{Binding TrackersViewModel}" />
                 </TabItem>
             </TabControl>
         </Grid>
