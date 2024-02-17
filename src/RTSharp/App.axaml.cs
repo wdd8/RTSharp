@@ -104,6 +104,9 @@ namespace RTSharp
                 var cts = new CancellationTokenSource();
                 task.ContinueWith((task) => cts.Cancel());
                 Dispatcher.UIThread.MainLoop(cts.Token);
+#if !DEBUG
+                Environment.Exit(1);
+#endif
                 throw;
             }
         }
