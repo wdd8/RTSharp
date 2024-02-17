@@ -6,7 +6,7 @@ using System.Globalization;
 
 namespace RTSharp.ViewModels.Converters
 {
-    public class EnumToBooleanConverter : IValueConverter
+    public class EqualsConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {

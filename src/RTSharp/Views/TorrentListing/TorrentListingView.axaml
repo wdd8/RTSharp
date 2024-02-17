@@ -21,7 +21,7 @@
         <converters:ItemsParamConverter x:Key="ItemsParamConverter" />
 
         <converters:ValueConverterGroup x:Key="NotEnumValue">
-            <converters:EnumToBooleanConverter />
+            <converters:EqualsConverter />
             <converters:NotConverter />
         </converters:ValueConverterGroup>
         <converters:StringJoiner x:Key="StringJoiner"/>

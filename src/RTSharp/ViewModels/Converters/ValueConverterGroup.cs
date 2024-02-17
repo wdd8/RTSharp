@@ -12,6 +12,8 @@ namespace RTSharp.ViewModels.Converters
         private IList? _parameters;
         private bool _shouldReverse;
 
+        public bool SingleParameter { get; set; }
+
         public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
         {
             ExtractParameters(parameter);
@@ -48,7 +50,7 @@ namespace RTSharp.ViewModels.Converters
             if (_parameters == null)
                 return null;
 
-            var index = IndexOf(converter);
+            var index = SingleParameter ? 0 : IndexOf(converter);
             object? parameter;
 
             if (index > _parameters.Count - 1)
