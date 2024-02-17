@@ -94,7 +94,7 @@
             <np:StackDockGroup InitialSizeCoefficients="* 250">
                 <np:TabbedDockGroup TabStripPlacement="Top" AutoDestroy="False" IsStableGroup="True" DockId="MainGroup">
                 </np:TabbedDockGroup>
-                <np:TabbedDockGroup TabStripPlacement="Left" IsStableGroup="True" AutoInvisible="True" DockId="EdgeDock">
+                <np:TabbedDockGroup TabStripPlacement="Top" IsStableGroup="True" AutoInvisible="True" DockId="EdgeDock">
                 </np:TabbedDockGroup>
             </np:StackDockGroup>
         </np:RootDockGroup>
