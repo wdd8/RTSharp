@@ -47,7 +47,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin.Mappers
                 Uploaded = (ulong)In.UploadedEver!,
                 DLSpeed = (ulong)In.RateDownload!,
                 UPSpeed = (ulong)In.RateUpload!,
-                ETA = In.Eta == null ? TimeSpan.MaxValue : TimeSpan.FromSeconds(In.Eta.Value),
+                ETA = In.Eta == null || In.Eta == -1 ? TimeSpan.MaxValue : TimeSpan.FromSeconds(In.Eta.Value),
                 Labels = In.Labels!.ToHashSet(),
                 Peers = ((uint)In.PeersGettingFromUs!, (uint)(peersTotal == -1 ? 0 : peersTotal)),
                 Seeders = ((uint)In.PeersSendingToUs!, (uint)(seedsTotal == -1 ? 0 : seedsTotal)), // TODO: ???
