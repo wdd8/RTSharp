@@ -55,7 +55,5 @@ namespace RTSharp.Shared.Abstractions
         public IDataProviderTracker Tracker { get; }
 
         public IDataProviderStats Stats { get; }
-
-        public string? FileTransferUrl { get; }
     }
 }

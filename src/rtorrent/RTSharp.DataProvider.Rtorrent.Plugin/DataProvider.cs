@@ -623,7 +623,5 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
         public Notifyable<long> ActiveTorrentCount { get; } = new();
 
         public Notifyable<DataProviderState> State { get; } = new();
-
-        public string? FileTransferUrl => PluginHost.PluginConfig.GetServerFileTransferUri();
     }
 }

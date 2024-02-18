@@ -78,8 +78,6 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
         public Notifyable<DataProviderState> State { get; } = new();
 
-        public string? FileTransferUrl => throw new NotImplementedException();
-
         public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
         {
             var tasks = new List<Task<(byte[] Hash, IList<Exception> Exceptions)>>();

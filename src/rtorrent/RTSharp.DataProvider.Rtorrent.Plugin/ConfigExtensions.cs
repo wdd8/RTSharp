@@ -14,11 +14,6 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             return In.GetSection("Server:Uri").Value;
         }
 
-        public static string GetServerFileTransferUri(this IConfigurationRoot In)
-        {
-            return In.GetSection("Server:FileTransferUri").Value;
-        }
-
         public static TimeSpan GetPollInterval(this IConfigurationRoot In)
         {
             return In.GetSection("Server").GetValue<TimeSpan>("PollInterval");
