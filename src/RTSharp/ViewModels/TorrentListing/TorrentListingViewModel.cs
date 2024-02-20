@@ -1,20 +1,15 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Torrent = RTSharp.Models.Torrent;
 using RTSharp.Core.TorrentPolling;
-using RTSharp.Views;
 using RTSharp.Core;
 using System.Threading;
 using Avalonia.Controls;
-using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Serilog;
 using Avalonia.Data;
@@ -96,7 +91,8 @@ namespace RTSharp.ViewModels.TorrentListing
                 item.Dispose();
 
             Torrents.CollectionChanged -= OnTorrentsCollectionChanged;
-            CurrentlySelectedItems.CollectionChanged -= CurrentlySelectedTorrents_CollectionChanged;
+            if (CurrentlySelectedItems != null)
+                CurrentlySelectedItems.CollectionChanged -= CurrentlySelectedTorrents_CollectionChanged;
         }
 
         public void OnViewModelAttached(TorrentListingView View)

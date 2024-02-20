@@ -28,6 +28,10 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public TorrentListingViewModel Parent { get; init; }
 
+        public TorrentTrackersViewModel()
+        {
+        }
+
         public TorrentTrackersViewModel(TorrentListingViewModel Parent)
         {
             this.Parent = Parent;

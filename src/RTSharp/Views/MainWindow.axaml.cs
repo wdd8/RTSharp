@@ -20,6 +20,14 @@ using NP.Ava.UniDock;
 using NP.Ava.UniDockService;
 using System.Collections.ObjectModel;
 using RTSharp.ViewModels.TorrentListing;
+using RTSharp.Views.TorrentListing;
+using RTSharp.Core;
+using System.IO;
+using System.Text;
+using NP.Ava.UniDock.Serialization;
+using NP.Utilities;
+using SkiaSharp;
+using Avalonia.Threading;
 
 namespace RTSharp.Views;
 
@@ -40,45 +48,73 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
 
         App.DockManager = (DockManager)Resources["MainDockManager"]!;
 
-        var torrentListingVm = new TorrentListingViewModel();
+        using var scope = Core.ServiceProvider.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<Config>();
         App.DockManager.DockItemsViewModels = new ObservableCollection<DockItemViewModelBase>() {
             // EdgeDock
             new DockDataProvidersViewModel() {
                 DockId = "DataProviders0",
                 DefaultDockGroupId = "EdgeDock",
+                Header = null,
                 TheVM = new DataProvidersViewModel(),
                 HeaderContentTemplateResourceKey = "TabHeaderTemplate",
                 ContentTemplateResourceKey = "DataProvidersTemplate",
-                IsPredefined = true
+                IsPredefined = false
             },
 
             // MainGroup
             new DockLogEntriesViewModel() {
                 DockId = "LogEntries0",
                 DefaultDockGroupId = "MainGroup",
+                Header = null,
                 TheVM = new LogEntriesViewModel(),
                 HeaderContentTemplateResourceKey = "TabHeaderTemplate",
                 ContentTemplateResourceKey = "LogEntriesTemplate",
-                IsPredefined = true
+                IsPredefined = false
             },
             new DockActionQueueViewModel() {
                 DockId = "ActionQueue0",
                 DefaultDockGroupId = "MainGroup",
+                Header = null,
                 TheVM = new ActionQueueViewModel(),
                 HeaderContentTemplateResourceKey = "TabHeaderTemplate",
                 ContentTemplateResourceKey = "ActionQueueTemplate",
-                IsPredefined = true
+                IsPredefined = false
             },
             new DockTorrentListingViewModel() {
                 DockId = "TorrentListing0",
                 DefaultDockGroupId = "MainGroup",
-                TheVM = torrentListingVm,
+                Header = null,
+                TheVM = new TorrentListingViewModel(),
                 HeaderContentTemplateResourceKey = "TabHeaderTemplate",
                 ContentTemplateResourceKey = "TorrentListingTemplate",
-                IsPredefined = true,
+                IsPredefined = false,
                 IsSelected = true
             }
         };
+        if (!String.IsNullOrEmpty(config.UIState.Value.DockState) && !String.IsNullOrEmpty(config.UIState.Value.DockVMState)) {
+            // Doesn't really work, too much things to hack around
+            /*using (var mem = new MemoryStream()) {
+                var utf8 = Encoding.UTF8.GetBytes(config.UIState.Value.DockVMState);
+                mem.Write(utf8);
+                mem.Position = 0;
+
+                App.DockManager.RestoreViewModelsFromStream(mem, [
+                    typeof(DockTorrentListingViewModel),
+                    typeof(DockActionQueueViewModel),
+                    typeof(DockLogEntriesViewModel),
+                    typeof(DockDataProvidersViewModel)
+                ]);
+            }
+
+            using (var mem = new MemoryStream()) {
+                var utf8 = Encoding.UTF8.GetBytes(config.UIState.Value.DockState);
+                mem.Write(utf8);
+                mem.Position = 0;
+
+                App.DockManager.RestoreDockManagerParamsFromStream(mem, true);
+            }*/
+        }
 
         this.AddHandler(DragDrop.DropEvent, EvDragDrop);
 
@@ -95,8 +131,37 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         this.ViewModel!.MenuItems.Add(toolsMenu);
         this.ViewModel!.MenuItems.Add(pluginsMenu);
         this.ViewModel!.MenuItems.Add(serversMenu);
+
+        App.RegisterOnExit($"{nameof(MainWindow)}_{nameof(DockManager)}_{nameof(SaveDockState)}", () => SaveDockState());
     }
 
+    public async ValueTask SaveDockState()
+    {
+        // Doesn't really work, too much things to hack around
+        /*string dockState, vmState;
+        using (var mem = new MemoryStream()) {
+            Dispatcher.UIThread.Invoke(() => {
+
+                App.DockManager.SaveDockManagerParamsToStream(mem);
+            });
+            dockState = Encoding.UTF8.GetString(mem.ToArray());
+        }
+
+        using (var mem = new MemoryStream()) {
+            Dispatcher.UIThread.Invoke(() => {
+                App.DockManager.SaveViewModelsToStream(mem);
+            });
+            vmState = Encoding.UTF8.GetString(mem.ToArray());
+        }
+
+        using var scope = Core.ServiceProvider.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<Config>();
+
+        config.UIState.Value.DockState = dockState;
+        config.UIState.Value.DockVMState = vmState;
+
+        await config.Rewrite();*/
+    }
 
     private async void EvOpened(object? sender, System.EventArgs e)
     {

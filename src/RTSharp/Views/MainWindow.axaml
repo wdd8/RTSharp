@@ -14,7 +14,7 @@
         x:DataType="vm:MainWindowViewModel"
         x:CompileBindings="False"
         Width="800" Height="450" WindowState="Normal"
-        np:DockAttachedProperties.TheDockManager="{DynamicResource TheDockManager}"
+        np:DockAttachedProperties.TheDockManager="{DynamicResource MainDockManager}"
         np:DockAttachedProperties.DockChildWindowOwner="{Binding RelativeSource={RelativeSource Mode=Self}}"
         np:DockAttachedProperties.WindowId="MainWindow"
         Icon="/Assets/rtsharp.ico"
@@ -90,9 +90,9 @@
 
     <Grid RowDefinitions="Auto, *">
         <Menu Grid.Row="0" Name="RootMenu" ItemsSource="{Binding MenuItems}" />
-        <np:RootDockGroup Grid.Row="1" np:DockAttachedProperties.TheDockManager="{StaticResource MainDockManager}" DockId="RootDock">
+        <np:RootDockGroup Grid.Row="1" TheDockManager="{StaticResource MainDockManager}" DockId="RootDock">
             <np:StackDockGroup InitialSizeCoefficients="* 250">
-                <np:TabbedDockGroup TabStripPlacement="Top" AutoDestroy="False" IsStableGroup="True" DockId="MainGroup">
+                <np:TabbedDockGroup TabStripPlacement="Top" IsStableGroup="True" DockId="MainGroup">
                 </np:TabbedDockGroup>
                 <np:TabbedDockGroup TabStripPlacement="Top" IsStableGroup="True" AutoInvisible="True" DockId="EdgeDock">
                 </np:TabbedDockGroup>

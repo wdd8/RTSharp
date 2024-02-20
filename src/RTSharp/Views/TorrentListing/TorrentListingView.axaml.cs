@@ -16,6 +16,7 @@ using Serilog;
 using RTSharp.Core.Util;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
+using Avalonia.Threading;
 
 namespace RTSharp.Views.TorrentListing;
 
@@ -44,7 +45,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
         grid.Sorting += async (sender, e) => {
             await Task.Delay(3000); // HACKHACK: Extreme hack! Sorting doesn't provide any information about the sort action itself and current sorting state of columns is not updated, so sort action did not happen yet. Hope that it completes in 3 seconds
-            SaveGridState();
+            await SaveGridState();
         };
 
         this.Loaded += (sender, e) => {
@@ -71,12 +72,17 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         }
     }
 
-    public async void SaveGridState()
+    public async ValueTask SaveGridState()
     {
         try {
-            if (grid.StateChanged()) {
-                var state = grid.SaveState();
+            string? state = null;
 
+            Dispatcher.UIThread.Invoke(() => {
+                if (grid.StateChanged())
+                    state = grid.SaveState();
+            });
+
+            if (state != null) {
                 using var scope = Core.ServiceProvider.CreateScope();
                 var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
                 config.UIState.Value.TorrentGridState = state;

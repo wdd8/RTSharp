@@ -20,14 +20,9 @@ using Splat.Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Hosting.Internal;
-using System.IO;
 using MsBox.Avalonia;
-using Tmds.DBus.Protocol;
 using System.Collections.Generic;
-using System.Net;
 using RTSharp.Core.Services.Auxiliary;
-using LiveChartsCore;
 using System.Threading.Tasks;
 using System.Threading;
 using Avalonia.Threading;
@@ -121,9 +116,9 @@ namespace RTSharp
             AvaloniaXamlLoader.Load(this);
         }
 
-        private static ConcurrentDictionary<string, Action> FxOnExit = new();
+        private static ConcurrentDictionary<string, Func<ValueTask>> FxOnExit = new();
 
-        public static void RegisterOnExit(string Key, Action Fx)
+        public static void RegisterOnExit(string Key, Func<ValueTask> Fx)
         {
             FxOnExit[Key] = Fx;
         }
@@ -152,11 +147,25 @@ namespace RTSharp
                     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime) {
                         desktopLifetime.MainWindow = MainWindow;
 
-                        desktopLifetime.Exit += (_, _) =>
-                        {
-                            foreach (var (_, fx) in FxOnExit) {
-                                fx();
+                        bool firstExit = true;
+
+                        desktopLifetime.ShutdownRequested += (sender, e) => {
+                            if (firstExit) {
+                                e.Cancel = true;
                             }
+
+                            var tcs = new TaskCompletionSource();
+                            var thread = new Thread(() => {
+                                foreach (var (_, fx) in FxOnExit) {
+                                    fx().GetAwaiter().GetResult();
+                                }
+
+                                firstExit = false;
+                                Dispatcher.UIThread.Post(() => {
+                                    desktopLifetime.Shutdown();
+                                });
+                            });
+                            thread.Start();
                         };
                     }
 

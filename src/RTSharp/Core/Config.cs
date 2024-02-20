@@ -37,6 +37,10 @@ namespace RTSharp.Core
     public class UIState
     {
         public string TorrentGridState { get; set; }
+
+        public string DockState { get; set; }
+
+        public string DockVMState { get; set; }
     }
 
     public class Server
