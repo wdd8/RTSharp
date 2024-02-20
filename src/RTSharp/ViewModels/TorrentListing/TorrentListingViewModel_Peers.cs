@@ -215,7 +215,9 @@ namespace RTSharp.ViewModels.TorrentListing
 
                                 if (prevPeer.Flags != newPeer.Flags ||
                                     prevPeer.Downloaded != newPeer.Downloaded ||
-                                    prevPeer.Uploaded != newPeer.Uploaded) {
+                                    prevPeer.Uploaded != newPeer.Uploaded ||
+                                    prevPeer.DLSpeed != newPeer.DLSpeed ||
+                                    prevPeer.UPSpeed != newPeer.UPSpeed) {
                                     // Changed
                                     changedPeers.Add(newPeer);
                                 }
