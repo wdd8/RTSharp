@@ -1,6 +1,7 @@
 ﻿using BencodeNET.Parsing;
 
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 using Newtonsoft.Json.Linq;
 
@@ -235,15 +236,31 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
         {
             await Init();
 
-            var tasks = In.Select(x => (x.Hash, Peers: Client.GetPeerPartialDataAsync(Convert.ToHexString(x.Hash), 0, cancellationToken))).ToArray();
+            var tasks = In.Select(x => (Torrent: x, Peers: Client.GetPeerPartialDataAsync(Convert.ToHexString(x.Hash), 0, cancellationToken))).ToArray();
             await Task.WhenAll(tasks.Select(x => x.Peers));
 
             return tasks.Select(x => {
                 Debug.Assert(x.Peers.Result.FullUpdate);
 
+                using var scope = PluginHost.CreateScope();
+                var smas = scope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
+
                 return (
-                    Hash: x.Hash,
-                    Peers: (IList<Peer>)x.Peers.Result.PeersChanged.Select(i => TorrentMapper.MapFromExternal(i.Key, i.Value)).ToList()
+                    Hash: x.Torrent.Hash,
+                    Peers: (IList<Peer>)x.Peers.Result.PeersChanged.Select(i => {
+                        ulong peerDLSpeed = 0;
+
+                        if (i.Value.Progress != 1) {
+                            var sma = smas.Get(Plugin, $"PeerDLSpeed_{i.Key}");
+
+                            if (i.Value.Progress != null)
+                                sma.ValueIfChanged((long)(x.Torrent.Size * i.Value.Progress.Value));
+
+                            peerDLSpeed = (ulong)sma.CalculateSpeed();
+                        }
+
+                        return TorrentMapper.MapFromExternal(i.Key, i.Value, peerDLSpeed);
+                    }).ToList()
                 );
             }).ToInfoHashDictionary(x => x.Hash, x => x.Peers);
         }

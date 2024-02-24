@@ -68,6 +68,7 @@ namespace RTSharp
                     services.AddTransient<Core.Services.Cache.ASCache.ASCache>();
                     services.AddTransient<Core.Services.Cache.Images.ImageCache>();
                     services.AddTransient<Core.Services.Cache.TrackerDb.TrackerDb>();
+                    services.AddSingleton<Shared.Abstractions.ISpeedMovingAverageService, Core.Services.SpeedMovingAverageService>();
                     services.AddHttpClient<Core.Services.Favicon>();
                 })
                 .Build();

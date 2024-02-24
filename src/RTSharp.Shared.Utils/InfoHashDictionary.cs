@@ -1,11 +1,19 @@
-﻿namespace RTSharp.Shared.Utils
+﻿using System.Collections.Concurrent;
+
+namespace RTSharp.Shared.Utils
 {
     public class InfoHashDictionary<T> : Dictionary<byte[], T>
     {
         public InfoHashDictionary() : base(ByteArrayComparer.Default)
         {
         }
+    }
 
+    public class ConcurrentInfoHashDictionary<T> : ConcurrentDictionary<byte[], T>
+    {
+        public ConcurrentInfoHashDictionary() : base(ByteArrayComparer.Default)
+        {
+        }
     }
 
     public static class InfoHashDictionaryExtensions

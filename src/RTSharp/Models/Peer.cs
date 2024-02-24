@@ -69,6 +69,12 @@ namespace RTSharp.Models
         [ObservableProperty]
         public ulong uPSpeed;
 
+        /// <summary>
+        /// Estimated peers' download speed
+        /// </summary>
+        [ObservableProperty]
+        public ulong peerDLSpeed;
+
         public void UpdateFromPluginModel(Shared.Abstractions.Peer In)
         {
             this.Flags = FlagsMapper.MapConcat(In.Flags, x => x switch {
@@ -87,6 +93,7 @@ namespace RTSharp.Models
             this.Uploaded = In.Uploaded;
             this.DLSpeed = In.DLSpeed;
             this.UPSpeed = In.UPSpeed;
+            this.PeerDLSpeed = In.PeerDLSpeed;
         }
 
         public static Peer FromPluginModel(Shared.Abstractions.Peer In)

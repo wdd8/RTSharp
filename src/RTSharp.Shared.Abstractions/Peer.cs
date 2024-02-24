@@ -60,5 +60,10 @@ namespace RTSharp.Shared.Abstractions
         /// Upload speed to peer
         /// </summary>
         public ulong UPSpeed { get; set; }
+
+        /// <summary>
+        /// Estimated peers' download speed
+        /// </summary>
+        public ulong PeerDLSpeed { get; set; }
     }
 }

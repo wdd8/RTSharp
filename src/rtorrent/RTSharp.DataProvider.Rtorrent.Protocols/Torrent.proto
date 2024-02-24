@@ -80,6 +80,7 @@ message TorrentsPeersReply {
         uint64 Uploaded = 8;
         uint64 DLSpeed = 9;
         uint64 UPSpeed = 10;
+        uint64 PeerDLSpeed = 11;
     }
 
     message TorrentsPeers {

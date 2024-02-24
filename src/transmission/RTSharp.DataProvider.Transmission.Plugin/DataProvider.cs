@@ -9,6 +9,7 @@ using RTSharp.DataProvider.Transmission.Plugin.Mappers;
 using System.Diagnostics;
 using System.Collections.Immutable;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RTSharp.DataProvider.Transmission.Plugin
 {
@@ -268,9 +269,24 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
             var peers = await Client.TorrentGetAsync(Translate(In.Select(x => x.Hash).ToArray()))!;
 
+            using var scope = PluginHost.CreateScope();
+            var smas = scope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
+
             return peers!.Torrents.Select(x => (
                 Hash: Convert.FromHexString(x.HashString!),
-                Peers: (IList<Peer>)x.Peers!.Select(x => TorrentMapper.MapFromExternal(x)).ToList()
+                Peers: (IList<Peer>)x.Peers!.Select(p => {
+                    ulong peerDLSpeed = 0;
+
+                    if (p.Progress != 1) {
+                        var sma = smas.Get(Plugin, $"PeerDLSpeed_{p.Address}:{p.Port}");
+
+                        sma.ValueIfChanged((long)(x.TotalSize.Value * p.Progress.Value));
+
+                        peerDLSpeed = (ulong)sma.CalculateSpeed();
+                    }
+
+                    return TorrentMapper.MapFromExternal(p, peerDLSpeed);
+                }).ToList()
             )).ToInfoHashDictionary(x => x.Hash, x => x.Peers);
         }
 

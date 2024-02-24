@@ -180,7 +180,7 @@
             };
         }
 
-        public static Shared.Abstractions.Peer MapFromExternal(string PeerId, QBittorrent.Client.PeerPartialInfo In)
+        public static Shared.Abstractions.Peer MapFromExternal(string PeerId, QBittorrent.Client.PeerPartialInfo In, ulong PeerDLSpeed)
         {
             Shared.Abstractions.Peer.PEER_FLAGS mapFlag(char Flag)
             {
@@ -213,7 +213,8 @@
                 Downloaded = (ulong)(In.Downloaded ?? 0),
                 Uploaded = (ulong)(In.Uploaded ?? 0),
                 DLSpeed = (ulong)(In.DownloadSpeed ?? 0),
-                UPSpeed = (ulong)(In.UploadSpeed ?? 0)
+                UPSpeed = (ulong)(In.UploadSpeed ?? 0),
+                PeerDLSpeed = PeerDLSpeed
             };
         }
 

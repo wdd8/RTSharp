@@ -103,7 +103,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin.Mappers
             };
         }
 
-        public static Shared.Abstractions.Peer MapFromExternal(global::Transmission.Net.Core.Entity.Torrent.ITorrentPeers In)
+        public static Shared.Abstractions.Peer MapFromExternal(global::Transmission.Net.Core.Entity.Torrent.ITorrentPeers In, ulong PeerDLSpeed)
         {
             Shared.Abstractions.Peer.PEER_FLAGS flag(char In)
             {
@@ -158,7 +158,8 @@ namespace RTSharp.DataProvider.Transmission.Plugin.Mappers
                 Flags = In.FlagStr!.Select(flag).Aggregate((a, b) => a | b),
                 UPSpeed = (ulong)In.RateToPeer!,
                 Downloaded = 0,
-                Uploaded = 0
+                Uploaded = 0,
+                PeerDLSpeed = PeerDLSpeed
             };
         }
 

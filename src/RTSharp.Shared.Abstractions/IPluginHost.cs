@@ -1,6 +1,8 @@
 ﻿using Avalonia.Controls;
 
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
 using Serilog;
 
 namespace RTSharp.Shared.Abstractions
@@ -114,5 +116,7 @@ namespace RTSharp.Shared.Abstractions
         HttpClient HttpClient { get; }
 
         IAuxiliaryService GetAuxiliaryService(string serverId);
+
+        IServiceScope CreateScope();
     }
 }

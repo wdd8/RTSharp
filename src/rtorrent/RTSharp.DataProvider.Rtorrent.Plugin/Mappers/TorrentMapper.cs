@@ -165,7 +165,8 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.Mappers
                 Downloaded = In.Downloaded,
                 Uploaded = In.Uploaded,
                 DLSpeed = In.DLSpeed, 
-                UPSpeed = In.UPSpeed
+                UPSpeed = In.UPSpeed,
+                PeerDLSpeed = In.PeerDLSpeed
             };
         }
     }

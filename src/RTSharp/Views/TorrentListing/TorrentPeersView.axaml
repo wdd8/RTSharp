@@ -82,6 +82,7 @@
             <DataGridTextColumn Header="UP Speed" Binding="{Binding UPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
             <DataGridTextColumn Header="Downloaded" Binding="{Binding Downloaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
             <DataGridTextColumn Header="Uploaded" Binding="{Binding Uploaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
+            <DataGridTextColumn Header="Peer DL Speed" Binding="{Binding PeerDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
         </DataGrid.Columns>
     </DataGrid>
 </UserControl>

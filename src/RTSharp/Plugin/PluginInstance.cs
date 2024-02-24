@@ -11,6 +11,7 @@ using Avalonia.Collections;
 using Avalonia.Controls;
 
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Core.Services.Auxiliary;
 using RTSharp.Core.Util;
@@ -132,5 +133,7 @@ namespace RTSharp.Plugin
         {
             return new AuxiliaryService(serverId);
         }
+
+        public IServiceScope CreateScope() => Core.ServiceProvider.CreateScope();
     }
 }

@@ -498,7 +498,7 @@ namespace RTSharp.DataProvider.Rtorrent.Server.GRPCServices
             foreach (var hash in Req.Hashes) {
                 var sHash = Convert.ToHexString(hash.ToByteArray());
 
-                xml.Append("<value><struct><member><name>methodName</name><value><string>p.multicall</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value><value><string></string></value><value><string>p.id=</string></value><value><string>p.client_version=</string></value><value><string>p.down_total=</string></value><value><string>p.up_total=</string></value><value><string>p.down_rate=</string></value><value><string>p.up_rate=</string></value><value><string>p.completed_percent=</string></value><value><string>p.is_incoming=</string></value><value><string>p.is_encrypted=</string></value><value><string>p.snubbed=</string></value><value><string>p.is_obfuscated=</string></value><value><string>p.is_preferred=</string></value><value><string>p.is_unwanted=</string></value><value><string>p.address=</string></value><value><string>p.port=</string></value></data></array></value></member></struct></value>");
+                xml.Append("<value><struct><member><name>methodName</name><value><string>p.multicall</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value><value><string></string></value><value><string>p.id=</string></value><value><string>p.client_version=</string></value><value><string>p.down_total=</string></value><value><string>p.up_total=</string></value><value><string>p.down_rate=</string></value><value><string>p.up_rate=</string></value><value><string>p.completed_percent=</string></value><value><string>p.peer_rate=</string></value><value><string>p.is_incoming=</string></value><value><string>p.is_encrypted=</string></value><value><string>p.snubbed=</string></value><value><string>p.is_obfuscated=</string></value><value><string>p.is_preferred=</string></value><value><string>p.is_unwanted=</string></value><value><string>p.address=</string></value><value><string>p.port=</string></value></data></array></value></member></struct></value>");
             }
             xml.Append("</data></array></value></param></params></methodCall>");
 
@@ -531,7 +531,8 @@ namespace RTSharp.DataProvider.Rtorrent.Server.GRPCServices
                         Uploaded = XMLUtils.GetValue<ulong>(ref result),
                         DLSpeed = XMLUtils.GetValue<ulong>(ref result),
                         UPSpeed = XMLUtils.GetValue<ulong>(ref result),
-                        Done = XMLUtils.GetValue<long>(ref result) // ??????
+                        Done = XMLUtils.GetValue<long>(ref result), // ??????
+                        PeerDLSpeed = XMLUtils.GetValue<ulong>(ref result)
                     };
 
                     peer.Flags |= XMLUtils.GetValue<bool>(ref result) ? TorrentsPeersReply.Types.PeerFlags.IIncoming : 0;
