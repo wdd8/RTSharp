@@ -869,6 +869,47 @@ namespace RTSharp.DataProvider.Rtorrent.Server.GRPCServices
             return await XmlActionTorrentsParam(input, "d.custom1.set", (action, hash, reply) => reply == labels[hash]);
         }
 
+        public override async Task<TorrentsPiecesReply> GetTorrentsPieces(Torrents Req, ServerCallContext Ctx)
+        {
+            var ret = new TorrentsPiecesReply();
 
+            var xml = new StringBuilder();
+            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
+            foreach (var hash in Req.Hashes) {
+                var sHash = Convert.ToHexString(hash.ToByteArray());
+
+                xml.Append("<value><struct><member><name>methodName</name><value><string>d.bitfield</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value></data></array></value></member></struct></value>");
+            }
+
+            xml.Append("</data></array></value></param></params></methodCall>");
+
+            var result = await Scgi.Get(xml.ToString());
+
+            XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
+            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
+
+            foreach (var hash in Req.Hashes) {
+                if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
+                    var status = XMLUtils.GetFaultStruct(ref result, "d.bitfield");
+
+                    // TODO: handle? maybe not?
+
+                    continue;
+                }
+
+                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+
+                var bitfield = XMLUtils.Decode(XMLUtils.GetValue<string>(ref result));
+
+                ret.Reply.Add(new TorrentsPiecesReply.Types.TorrentsPieces {
+                    InfoHash = hash,
+                    Bitfield = Convert.FromHexString(bitfield).ToByteString()
+                });
+
+                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+            }
+
+            return ret;
+        }
     }
 }

@@ -56,9 +56,9 @@ namespace RTSharp.Shared.Abstractions
         public ulong Size { get; set; }
 
         /// <summary>
-        /// Downloaded chunks
+        /// Downloaded pieces
         /// </summary>
-        public ulong DownloadedChunks { get; set; }
+        public ulong DownloadedPieces { get; set; }
 
         /// <summary>
         /// Percent done

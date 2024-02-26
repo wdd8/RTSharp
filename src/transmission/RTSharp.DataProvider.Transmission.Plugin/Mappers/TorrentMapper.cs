@@ -40,7 +40,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin.Mappers
                 IsPrivate = In.IsPrivate,
                 Size = (ulong)In.TotalSize!,
                 WantedSize = (ulong)In.SizeWhenDone!,
-                ChunkSize = (ulong)In.PieceSize!,
+                PieceSize = (ulong)In.PieceSize!,
                 Wasted = (ulong)In.CorruptEver!,
                 Done = (float)In.PercentDone! * 100,
                 Downloaded = (ulong)In.DownloadedEver!,
@@ -65,13 +65,13 @@ namespace RTSharp.DataProvider.Transmission.Plugin.Mappers
             };
         }
 
-        public static Shared.Abstractions.File MapFromExternal(global::Transmission.Net.Core.Entity.Torrent.ITorrentFile In, int ChunkSize)
+        public static Shared.Abstractions.File MapFromExternal(global::Transmission.Net.Core.Entity.Torrent.ITorrentFile In, int PieceSize)
         {
             return new Shared.Abstractions.File {
                 Path = In.Name!,
                 Size = (ulong)In.Length!.Value,
                 Downloaded = (ulong)In.BytesCompleted!.Value,
-                DownloadedChunks = (ulong)(In.BytesCompleted!.Value / ChunkSize),
+                DownloadedPieces = (ulong)(In.BytesCompleted!.Value / PieceSize),
                 DownloadStrategy = Shared.Abstractions.File.DOWNLOAD_STRATEGY.NA,
                 Priority = Shared.Abstractions.File.PRIORITY.NA
             };

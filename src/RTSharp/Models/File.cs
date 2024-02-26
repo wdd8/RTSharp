@@ -29,10 +29,10 @@ namespace RTSharp.Models
         public ulong Size { get; set; }
 
         /// <summary>
-        /// Downloaded chunks
+        /// Downloaded pieces
         /// </summary>
         [ObservableProperty]
-        public ulong downloadedChunks;
+        public ulong downloadedPieces;
 
         /// <summary>
         /// Percent done
@@ -71,7 +71,7 @@ namespace RTSharp.Models
 
         public void Update(Models.File file)
         {
-            this.DownloadedChunks = file.DownloadedChunks;
+            this.DownloadedPieces = file.DownloadedPieces;
             this.Done = file.Done;
             this.Downloaded = file.Downloaded;
             this.Priority = file.Priority;
@@ -125,7 +125,7 @@ namespace RTSharp.Models
                 void sum(File dst, File src)
                 {
                     dst.Size += src.Size;
-                    dst.DownloadedChunks += src.DownloadedChunks;
+                    dst.DownloadedPieces += src.DownloadedPieces;
                     dst.Done += src.Done;
                     dst.Downloaded += src.Downloaded;
                     if (dst.Priority == default) {
@@ -166,7 +166,7 @@ namespace RTSharp.Models
                 var ret = new File();
                 ret.Path = In.Path;
                 ret.Size = In.Size;
-                ret.DownloadedChunks = In.DownloadedChunks;
+                ret.DownloadedPieces = In.DownloadedPieces;
                 ret.Done = In.Done;
                 ret.Downloaded = In.Downloaded;
 
@@ -203,7 +203,7 @@ namespace RTSharp.Models
                 var ret = new File();
                 ret.Path = In.Path;
                 ret.Size = In.Size;
-                ret.DownloadedChunks = FullyDownloaded && torrent.ChunkSize.HasValue ? (ulong)Math.Ceiling((double)In.Size / torrent.ChunkSize.Value) : 0;
+                ret.DownloadedPieces = FullyDownloaded && torrent.PieceSize.HasValue ? (ulong)Math.Ceiling((double)In.Size / torrent.PieceSize.Value) : 0;
                 ret.Done = FullyDownloaded ? 100 : 0;
                 ret.Downloaded = FullyDownloaded ? In.Size : 0;
                 ret.Priority = "N/A";

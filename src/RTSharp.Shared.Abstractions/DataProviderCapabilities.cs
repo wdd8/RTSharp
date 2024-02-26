@@ -4,6 +4,7 @@
         bool GetFiles,
         bool GetPeers,
         bool GetTrackers,
+        bool GetPieces,
         bool StartTorrent,
         bool PauseTorrent,
         bool StopTorrent,

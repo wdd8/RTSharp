@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -42,6 +43,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             GetFiles: true,
             GetPeers: true,
             GetTrackers: true,
+            GetPieces: true,
             StartTorrent: true,
             PauseTorrent: true,
             StopTorrent: true,
@@ -132,9 +134,9 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
                 var files = new List<File>();
                 files.AddRange(torrent.Files.Select(TorrentMapper.MapFromProto));
 
-                // Needs to be set outside mapping because of chunk size access
+                // Needs to be set outside mapping because of piece size access
                 foreach (var file in files) {
-                    file.Downloaded = file.DownloadedChunks * In.Single(x => torrent.InfoHash.SequenceEqual(x.Hash)).ChunkSize!.Value;
+                    file.Downloaded = file.DownloadedPieces * In.Single(x => torrent.InfoHash.SequenceEqual(x.Hash)).PieceSize!.Value;
                 }
 
                 ret[torrent.InfoHash.ToByteArray()] = (torrent.MultiFile, files);
@@ -607,6 +609,36 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
                 res = reply.ToExceptions();
             } catch (RpcException ex) {
                 res = In.Select(x => (x.Hash, (IList<Exception>)new[] { ex })).ToList();
+            }
+
+            return res;
+        }
+
+        public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
+        {
+            var client = Clients.Torrent();
+
+            var res = new InfoHashDictionary<IList<PieceState>>();
+
+            var reply = await client.GetTorrentsPiecesAsync(new Protocols.Torrents {
+                Hashes = { In.Select(x => x.Hash.ToByteString()) }
+            }, cancellationToken: cancellationToken);
+
+            foreach (var torrent in reply.Reply) {
+                var totalBits = torrent.Bitfield.Length * 8;
+                var pieces = new PieceState[totalBits];
+                for (var x = 0;x < totalBits;x += 8) {
+                    var bitset = torrent.Bitfield[x >> 3];
+                    for (var i = 0;i < 8;i++) {
+                        if ((bitset & 0x80) == 0)
+                            pieces[x+i] = PieceState.NotDownloaded;
+                        else
+                            pieces[x+i] = PieceState.Downloaded;
+                        bitset <<= 1;
+                    }
+                }
+
+                res[torrent.InfoHash.ToByteArray()] = pieces;
             }
 
             return res;

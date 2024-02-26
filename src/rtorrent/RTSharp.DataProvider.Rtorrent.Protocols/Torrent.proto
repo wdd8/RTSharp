@@ -15,6 +15,7 @@ service GRPCTorrentService {
     rpc AddTorrents (stream NewTorrentsData) returns (TorrentsReply);
     rpc GetTorrentsFiles (Torrents) returns (TorrentsFilesReply);
     rpc GetTorrentsPeers (Torrents) returns (TorrentsPeersReply);
+    rpc GetTorrentsPieces (Torrents) returns (TorrentsPiecesReply);
     rpc RemoveTorrents (Torrents) returns (TorrentsReply);
     rpc RemoveTorrentsAndData (Torrents) returns (TorrentsReply);
     rpc GetDotTorrents (Torrents) returns (stream DotTorrentsData);
@@ -171,4 +172,13 @@ message TorrentsFilesReply {
     }
 
     repeated TorrentsFiles Reply = 1;
+}
+
+message TorrentsPiecesReply {
+    message TorrentsPieces {
+        bytes InfoHash = 1;
+        bytes Bitfield = 2;
+    }
+
+    repeated TorrentsPieces Reply = 1;
 }

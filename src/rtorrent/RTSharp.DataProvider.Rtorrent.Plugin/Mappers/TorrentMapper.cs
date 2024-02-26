@@ -85,7 +85,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.Mappers
                 IsPrivate = In.IsPrivate,
                 Size = In.Size,
                 WantedSize = In.Size, // ??????????
-                ChunkSize = In.ChunkSize,
+                PieceSize = In.ChunkSize,
                 Wasted = In.Wasted,
                 Done = (float)In.Downloaded / In.Size * 100,
                 Downloaded = In.Downloaded,
@@ -135,7 +135,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.Mappers
             return new Shared.Abstractions.File() {
                 Path = In.Path,
                 Size = In.Size,
-                DownloadedChunks = In.CompletedChunks,
+                DownloadedPieces = In.CompletedChunks,
                 DownloadStrategy = MapFromProto(In.DownloadStrategy),
                 Priority = MapFromProto(In.Priority)
             };

@@ -19,6 +19,8 @@ namespace RTSharp.ViewModels.TorrentListing
     {
         private Channel<(Models.Torrent, IList<Models.File>)> FilesChanges;
 
+        private Channel<(Models.Torrent, IList<PieceState>)> PiecesChanges;
+
         private async Task FilesTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
             FilesChanges = Channel.CreateUnbounded<(Models.Torrent, IList<Models.File>)>(new UnboundedChannelOptions() {
@@ -26,10 +28,28 @@ namespace RTSharp.ViewModels.TorrentListing
                 SingleWriter = true
             });
 
+            PiecesChanges = Channel.CreateUnbounded<(Models.Torrent, IList<PieceState>)>(new UnboundedChannelOptions() {
+                SingleReader = true,
+                SingleWriter = true
+            });
+
             await Task.WhenAll(
                 await Task.Factory.StartNew(FilesModelUpdates, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
-                await Task.Factory.StartNew(() => GetFilesChanges(Torrent, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
+                await Task.Factory.StartNew(PiecesModelUpdates, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
+                await Task.Factory.StartNew(() => GetFilesChanges(Torrent, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default),
+                await Task.Factory.StartNew(() => GetPiecesChanges(Torrent, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
             );
+        }
+
+        private async Task PiecesModelUpdates()
+        {
+            Models.Torrent? lastFetchedFor = null;
+
+            await foreach (var (fetchedFor, pieces) in PiecesChanges.Reader.ReadAllAsync()) {
+                GeneralInfoViewModel.Pieces = pieces;
+
+                lastFetchedFor = fetchedFor;
+            }
         }
 
         private async Task FilesModelUpdates()
@@ -116,6 +136,50 @@ namespace RTSharp.ViewModels.TorrentListing
                 throw;
             } finally {
                 FilesChanges.Writer.Complete();
+            }
+        }
+
+        private async Task GetPiecesChanges(Models.Torrent current, CancellationToken selectionChange)
+        {
+            try {
+                while (!selectionChange.IsCancellationRequested) {
+                    if (!current.Owner.Instance.Capabilities.GetPieces) {
+                        PiecesChanges.Writer.TryWrite((current, []));
+                        await Task.Delay(-1, selectionChange);
+                    }
+
+                    using var scope = Core.ServiceProvider.CreateScope();
+                    var config = scope.ServiceProvider.GetRequiredService<Config>();
+
+                    var delayTask = Task.Delay(config.Behavior.Value.FilesPollingInterval, selectionChange);
+
+                    IList<PieceState> pieces;
+
+                    if (current.Done == 100) {
+                        pieces = [ PieceState.Downloaded ];
+                        PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to Done% change instead?
+                    } else if (current.Done == 0) {
+                        pieces = [ PieceState.NotDownloaded ];
+                        PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to Done% change instead?
+                    } else {
+                        try {
+                            pieces = (await current!.Owner.Instance.GetPieces(new List<Torrent> { current.ToPluginModel() }, selectionChange)).First().Value;
+
+                            PiecesChanges.Writer.TryWrite((current, pieces));
+                        } catch {
+                            return;
+                        }
+                    }
+
+                    try {
+                        await delayTask;
+                    } catch { }
+                }
+            } catch (Exception ex) {
+                Log.Logger.Fatal(ex, "GetPiecesChanges task has died.");
+                throw;
+            } finally {
+                PiecesChanges.Writer.Complete();
             }
         }
     }

@@ -1,15 +1,13 @@
-﻿using Avalonia.Controls;
-using Avalonia.Media;
+﻿using Avalonia.Media;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-
-using NP.Ava.UniDockService;
 
 using RTSharp.Core;
 using RTSharp.Models;
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace RTSharp.ViewModels.TorrentListing
@@ -18,6 +16,9 @@ namespace RTSharp.ViewModels.TorrentListing
     {
         [ObservableProperty]
         public Torrent? torrent;
+
+        [ObservableProperty]
+        public IList<Shared.Abstractions.PieceState> pieces;
 
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-circle-info");
 

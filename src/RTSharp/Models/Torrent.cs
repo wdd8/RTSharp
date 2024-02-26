@@ -51,9 +51,9 @@ namespace RTSharp.Models
         public ulong wantedSize;
 
         /// <summary>
-        /// Chunk size
+        /// Piece size
         /// </summary>
-        public ulong? ChunkSize { get; set; }
+        public ulong? PieceSize { get; set; }
 
         /// <summary>
         /// Wasted bytes
@@ -228,7 +228,7 @@ namespace RTSharp.Models
 
             this.Size = In.Size;
             this.WantedSize = In.WantedSize;
-            this.ChunkSize = In.ChunkSize;
+            this.PieceSize = In.PieceSize;
             this.Wasted = In.Wasted;
             this.Done = In.Done;
             this.Downloaded = In.Downloaded;
@@ -291,7 +291,7 @@ namespace RTSharp.Models
                 State = InternalState,
                 Size = Size,
                 WantedSize = Size, // ??????????
-                ChunkSize = ChunkSize,
+                PieceSize = PieceSize,
                 Wasted = Wasted,
                 Done = (float)Downloaded / Size * 100, // Maybe get from server?
                 Downloaded = Downloaded,

@@ -36,6 +36,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
             GetFiles: true,
             GetPeers: true,
             GetTrackers: true,
+            GetPieces: true,
             StartTorrent: true,
             PauseTorrent: true,
             StopTorrent: false,
@@ -500,5 +501,27 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
         public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> StartTorrents(IList<byte[]> In) => PerformVoidAction(In, x => Client.ResumeAsync(x));
 
         public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> StopTorrents(IList<byte[]> In) => throw new NotSupportedException();
+
+        public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
+        {
+            await Init();
+
+            var tasks = In.Select(x => (Torrent: x, Pieces: Client.GetTorrentPiecesStatesAsync(Convert.ToHexString(x.Hash), cancellationToken))).ToArray();
+            await Task.WhenAll(tasks.Select(x => x.Pieces));
+
+            return tasks.Select(x => {
+                return (
+                    Hash: x.Torrent.Hash,
+                    Pieces: x.Pieces.Result.Count == 0 ? [PieceState.NotDownloaded ] : (IList<PieceState>)x.Pieces.Result.Select(i => {
+                        return i switch {
+                            TorrentPieceState.NotDownloaded => PieceState.NotDownloaded,
+                            TorrentPieceState.Downloading => PieceState.Downloading,
+                            TorrentPieceState.Downloaded => PieceState.Downloaded,
+                            _ => throw new ArgumentOutOfRangeException()
+                        };
+                    }).ToList()
+                );
+            }).ToInfoHashDictionary(x => x.Hash, x => x.Pieces);
+        }
     }
 }

@@ -4,7 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:models="clr-namespace:RTSharp.Models"
-             xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+             xmlns:views="using:RTSharp.Shared.Controls.Views"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
              d:DesignWidth="1500" d:DesignHeight="450">
 
@@ -21,7 +21,13 @@
         <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
     </UserControl.Styles>
 
-    <StackPanel Margin="8">
+    <StackPanel Margin="8 16 8 8">
+        <Grid ColumnDefinitions="*, Auto" Margin="0 0 0 16">
+            <Border Grid.Column="0" BorderBrush="DarkGray" BorderThickness="1">
+                <views:PieceProgressBar Pieces="{Binding Pieces}" Height="20" />
+            </Border>
+            <TextBlock Grid.Column="1" Text="{Binding Torrent.Done, StringFormat=\{0:0.00\} %}" Padding="8 0 0 0" VerticalAlignment="Center" />
+        </Grid>
         <views:GroupBox Label="Transfer">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*">
                 <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Time elapsed:" Text="{Binding Torrent.TimeElapsed, Converter={StaticResource ETATimeSpanConverter}}" />

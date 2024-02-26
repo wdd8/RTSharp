@@ -43,9 +43,9 @@ namespace RTSharp.Shared.Abstractions
         public ulong WantedSize { get; set; }
 
         /// <summary>
-        /// Chunk size
+        /// Piece size
         /// </summary>
-        public ulong? ChunkSize { get; set; }
+        public ulong? PieceSize { get; set; }
 
         /// <summary>
         /// Wasted bytes

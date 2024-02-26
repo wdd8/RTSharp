@@ -48,7 +48,7 @@
                 IsPrivate = null, // fetch later
                 Size = (ulong)In.TotalSize!,
                 WantedSize = (ulong)In.Size,
-                ChunkSize = null, // fetch later
+                PieceSize = null, // fetch later
                 Wasted = null, // fetch later
                 Done = (float)In.Progress * 100,
                 Downloaded = (ulong)In.Downloaded!,
@@ -76,7 +76,7 @@
         public static void ApplyFromExternal(Shared.Abstractions.Torrent Stored, QBittorrent.Client.TorrentPartialInfo External)
         {
             // IsPrivate = ?
-            // ChunkSize = ?
+            // PieceSize = ?
             // Wasted = ?
             // CreatedOnDate = ?
             // StatusMessage = ?
@@ -173,7 +173,7 @@
             return new Shared.Abstractions.File {
                 Path = In.Name,
                 Size = (ulong)In.Size,
-                DownloadedChunks = (ulong)(In.PieceRange.EndIndex - In.PieceRange.StartIndex),
+                DownloadedPieces = (ulong)(In.PieceRange.EndIndex - In.PieceRange.StartIndex),
                 Downloaded = (ulong)(In.Progress * In.Size), // Pretty bad but should work
                 Priority = MapFromExternal(In.Priority),
                 DownloadStrategy = Shared.Abstractions.File.DOWNLOAD_STRATEGY.NORMAL // TODO: should be available from qbit?

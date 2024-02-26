@@ -26,6 +26,10 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <AvaloniaXaml Update="Themes\GroupBox.axaml">
             <Generator>MSBuild:Compile</Generator>
         </AvaloniaXaml>

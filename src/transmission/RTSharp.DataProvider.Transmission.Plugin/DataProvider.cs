@@ -29,6 +29,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             GetFiles: true,
             GetPeers: true,
             GetTrackers: true,
+            GetPieces: true,
             StartTorrent: true,
             PauseTorrent: false,
             StopTorrent: true,
@@ -503,5 +504,33 @@ namespace RTSharp.DataProvider.Transmission.Plugin
         public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> StartTorrents(IList<byte[]> In) => PerformVoidActionObj(In, Client.TorrentStartAsync);
 
         public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> PauseTorrents(IList<byte[]> In) => throw new NotSupportedException();
+
+        public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
+        {
+            Init();
+
+            var torrents = await Client.TorrentGetAsync(Translate(In.Select(x => x.Hash).ToArray()))!;
+
+            return torrents!.Torrents.Select(x => {
+                var bits = Convert.FromBase64String(x.Pieces!);
+                var totalBits = bits.Length * 8;
+                var pieces = new PieceState[totalBits];
+                for (var i = 0;i < totalBits;i += 8) {
+                    var bitset = bits[i >> 3];
+                    for (var a = 0;a < 8;a++) {
+                        if ((bitset & 0x80) == 0)
+                            pieces[i+a] = PieceState.NotDownloaded;
+                        else
+                            pieces[i+a] = PieceState.Downloaded;
+                        bitset <<= 1;
+                    }
+                }
+
+                return (
+                    Hash: Convert.FromHexString(x.HashString!),
+                    Pieces: (IList<PieceState>)pieces
+                );
+            }).ToInfoHashDictionary(x => x.Hash, x => x.Pieces);
+        }
     }
 }
