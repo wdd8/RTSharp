@@ -51,3 +51,4 @@ See [setting up data providers](setup-dataproviders.md)
 |Unsnub peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Get .torrent|🟢Supported|🔴Supported, not enabled|🔴Unsupported by daemon|
 |Prefill default save path|🟢Supported|🟢Supported|🟢Supported|
+|Pieces progress bar|🟢Supported|🟢Supported|🟢Supported|
