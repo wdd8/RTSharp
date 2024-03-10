@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -32,8 +33,14 @@ namespace RTSharp.ViewModels
         [ObservableProperty]
         public string stringFilter;
 
+        [ObservableProperty]
+        public string title = "RT#";
+
         public MainWindowViewModel()
         {
+            ((AppViewModel)Avalonia.Application.Current.DataContext).PropertyChanged += (sender, e) => {
+                Title = ((AppViewModel)sender).TrayIconText;
+            };
         }
 
         [RelayCommand]

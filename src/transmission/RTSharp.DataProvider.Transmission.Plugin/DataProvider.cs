@@ -25,6 +25,8 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
         public IDataProviderStats Stats { get; }
 
+        public CancellationToken Active { get; set; }
+
         public DataProviderCapabilities Capabilities { get; } = new(
             GetFiles: true,
             GetPeers: true,
@@ -340,7 +342,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
                     await channel.Writer.WriteAsync(ret);
 
-                    while (!TorrentChangesTokenSource.Token.IsCancellationRequested) {
+                    while (!TorrentChangesTokenSource.Token.IsCancellationRequested && !Active.IsCancellationRequested) {
                         State.Change(DataProviderState.ACTIVE);
 
                         var request = new TransmissionRequest("torrent-get", new Dictionary<string, object> {

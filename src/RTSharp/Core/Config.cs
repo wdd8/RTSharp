@@ -41,6 +41,8 @@ namespace RTSharp.Core
         public string DockState { get; set; }
 
         public string DockVMState { get; set; }
+
+        public bool TrayIconVisible { get; set; }
     }
 
     public class Server

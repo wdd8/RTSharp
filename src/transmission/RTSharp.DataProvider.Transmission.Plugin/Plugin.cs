@@ -34,6 +34,8 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
         internal ActionQueue ActionQueue { get; set; }
 
+        private CancellationTokenSource DataProviderActive { get; set; }
+
         public async Task Init(IPluginHost Host, IProgress<(string Status, float Percentage)> Progress)
         {
             this.Host = Host;
@@ -46,7 +48,10 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             Progress.Report(("Registering data provider...", 50f));
 
             DataProvider dp;
-            DataProvider = Host.RegisterDataProvider(dp = new DataProvider(this));
+            DataProviderActive = new();
+            DataProvider = Host.RegisterDataProvider(dp = new DataProvider(this) {
+                Active = DataProviderActive.Token
+            });
 
             Progress.Report(("Loaded", 100f));
         }
@@ -67,6 +72,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
         public Task Unload()
         {
+            DataProviderActive.Cancel();
             Host?.UnregisterDataProvider(DataProvider);
             Host?.UnregisterActionQueue();
             return Task.CompletedTask;

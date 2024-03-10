@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
@@ -39,6 +40,8 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         internal ActionQueue ActionQueue { get; set; }
 
+        private CancellationTokenSource DataProviderActive { get; set; }
+
         public async Task Init(IPluginHost Host, IProgress<(string Status, float Percentage)> Progress)
         {
             this.Host = Host;
@@ -54,7 +57,11 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
             Progress.Report(("Registering data provider...", 50f));
 
-            var dp = new DataProvider(this);
+            DataProviderActive = new();
+            var dp = new DataProvider(this)
+            {
+                Active = DataProviderActive.Token
+            };
 
             _ = Server.Clients.Initialize(Host).ContinueWith(task => {
                 _ = dp.UpdateLatency();
@@ -83,6 +90,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public Task Unload()
         {
+            DataProviderActive.Cancel();
             Host?.UnregisterDataProvider(DataProvider);
             Host?.UnregisterActionQueue();
             return Task.CompletedTask;

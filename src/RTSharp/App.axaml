@@ -61,5 +61,17 @@
     <Application.Resources>
         <x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
     </Application.Resources>
+
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="/Assets/rtsharp.ico" ToolTipText="{Binding TrayIconText}" IsVisible="{Binding TrayIconVisible}">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="Exit" Click="Exit" />
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
     
 </Application>

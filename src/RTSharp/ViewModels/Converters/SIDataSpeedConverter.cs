@@ -8,13 +8,11 @@ namespace RTSharp.ViewModels.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            switch (value) {
-                case ulong u64:
-                    return Shared.Utils.Converters.GetSIDataSize(u64) + "/s";
-                case long i64:
-                    return Shared.Utils.Converters.GetSIDataSize((ulong)i64) + "/s";
-            }
-            return null;
+            return value switch {
+                ulong u64 => Shared.Utils.Converters.GetSIDataSize(u64) + "/s",
+                long i64 => Shared.Utils.Converters.GetSIDataSize((ulong)i64) + "/s",
+                _ => null,
+            };
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

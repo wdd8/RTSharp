@@ -141,9 +141,9 @@ namespace RTSharp
 
             tcs.Task.ContinueWith((task) => {
                 Dispatcher.UIThread.Invoke(() => {
+                    this.DataContext = new AppViewModel();
                     MainWindowViewModel = new MainWindowViewModel();
                     MainWindow = new MainWindow(MainWindowViewModel);
-
 
                     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime) {
                         desktopLifetime.MainWindow = MainWindow;
@@ -175,6 +175,13 @@ namespace RTSharp
             });
 
             base.OnFrameworkInitializationCompleted();
+        }
+
+        public void Exit(object sender, EventArgs e)
+        {
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime) {
+                desktopLifetime.Shutdown();
+            }
         }
     }
 }

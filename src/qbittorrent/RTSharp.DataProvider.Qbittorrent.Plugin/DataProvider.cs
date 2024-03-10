@@ -32,6 +32,8 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
 
         public IDataProviderStats Stats { get; }
 
+        public CancellationToken Active { get; set; }
+
         public DataProviderCapabilities Capabilities { get; } = new(
             GetFiles: true,
             GetPeers: true,
@@ -60,8 +62,6 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
         private CancellationTokenSource TorrentChangesTokenSource;
         private InfoHashDictionary<(Torrent Internal, TorrentInfo External)> LatestTorrents = new();
         private ReaderWriterLockSlim LatestTorrentsLock = new();
-
-        
 
         public DataProvider(Plugin ThisPlugin)
         {
@@ -300,7 +300,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
 
                     var pollInternal = PluginHost.PluginConfig.GetValue<TimeSpan>("Server:PollInterval");
 
-                    while (!TorrentChangesTokenSource.Token.IsCancellationRequested) {
+                    while (!TorrentChangesTokenSource.Token.IsCancellationRequested && !Active.IsCancellationRequested) {
                         State.Change(DataProviderState.ACTIVE);
 
                         var partialData = await Client.GetPartialDataAsync(rid, TorrentChangesTokenSource.Token);

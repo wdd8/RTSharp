@@ -39,6 +39,8 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public IDataProviderStats Stats { get; }
 
+        public CancellationToken Active { get; set; }
+
         public DataProviderCapabilities Capabilities { get; } = new(
             GetFiles: true,
             GetPeers: true,
@@ -82,21 +84,20 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public async Task UpdateLatency()
         {
-            while (true) {
+            while (!Active.IsCancellationRequested) {
                 var client = Clients.Settings();
 
                 try {
                     var sw = Stopwatch.StartNew();
-                    await client.PingAsync(new Empty());
+                    await client.PingAsync(new Empty(), cancellationToken: Active);
                     sw.Stop();
 
                     LatencyMs.Change((int)sw.ElapsedMilliseconds);
                 } catch {
                     LatencyMs.Change(-1);
                 }
-                
 
-                await Task.Delay(TimeSpan.FromSeconds(10));
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken: Active);
             }
         }
 
@@ -184,7 +185,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             var client = Clients.Torrents();
             var updates = client.GetTorrentListUpdates(new Protocols.GetTorrentListUpdatesRequest() {
                 Interval = Duration.FromTimeSpan(PluginHost.PluginConfig.GetPollInterval())
-            });
+            }, cancellationToken: Active);
             var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Torrent, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true

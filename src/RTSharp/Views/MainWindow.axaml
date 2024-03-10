@@ -18,7 +18,7 @@
         np:DockAttachedProperties.DockChildWindowOwner="{Binding RelativeSource={RelativeSource Mode=Self}}"
         np:DockAttachedProperties.WindowId="MainWindow"
         Icon="/Assets/rtsharp.ico"
-        Title="RT#"
+        Title="{Binding Title}"
         DragDrop.AllowDrop="True">
 
     <Design.DataContext>

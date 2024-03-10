@@ -35,6 +35,8 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
 
         internal ActionQueue ActionQueue { get; set; }
 
+        private CancellationTokenSource DataProviderActive { get; set; }
+
         public async Task Init(IPluginHost Host, IProgress<(string Status, float Percentage)> Progress)
         {
             this.Host = Host;
@@ -47,7 +49,10 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
             Progress.Report(("Registering data provider...", 50f));
 
             DataProvider dp;
-            DataProvider = Host.RegisterDataProvider(dp = new DataProvider(this));
+            DataProviderActive = new();
+            DataProvider = Host.RegisterDataProvider(dp = new DataProvider(this) {
+                Active = DataProviderActive.Token
+            });
 
             Progress.Report(("Loaded", 100f));
         }
@@ -68,6 +73,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
 
         public Task Unload()
         {
+            DataProviderActive.Cancel();
             Host?.UnregisterDataProvider(DataProvider);
             Host?.UnregisterActionQueue();
             return Task.CompletedTask;
