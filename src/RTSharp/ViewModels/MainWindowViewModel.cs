@@ -14,6 +14,7 @@ using CommunityToolkit.Mvvm.Input;
 using RTSharp.ViewModels.TorrentListing;
 using RTSharp.Views;
 using RTSharp.Views.Options;
+using RTSharp.Views.Statistics;
 using RTSharp.Views.Tools;
 
 namespace RTSharp.ViewModels
@@ -168,6 +169,16 @@ namespace RTSharp.ViewModels
             };
 
             App.DockManager.DockItemsViewModels.Add(vm);
+        }
+
+        [RelayCommand]
+        public void ShowStatisticsWindow()
+        {
+            var statsWindow = new StatisticsWindow() {
+                ViewModel = new()
+            };
+
+            statsWindow.Show();
         }
     }
 }

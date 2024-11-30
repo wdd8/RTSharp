@@ -45,6 +45,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
             AddTorrent: true,
             ForceRecheckTorrent: true,
             ReannounceToAllTrackers: true,
+            GetDotTorrent: true,
             ForceStartTorrentOnAdd: null,
             MoveDownloadDirectory: true,
             RemoveTorrent: true,
@@ -59,8 +60,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
         );
 
         
-        private CancellationTokenSource TorrentChangesTokenSource;
-        private InfoHashDictionary<(Torrent Internal, TorrentInfo External)> LatestTorrents = new();
+        private InfoHashDictionary<Torrent> LatestTorrents = new();
         private ReaderWriterLockSlim LatestTorrentsLock = new();
 
         public DataProvider(Plugin ThisPlugin)
@@ -70,8 +70,6 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
 
             this.Files = new DataProviderFiles(ThisPlugin, Init);
             this.Stats = new DataProviderStats(ThisPlugin, Init);
-
-            State.Change(DataProviderState.INACTIVE);
         }
 
         public string PathCombineFSlash(string a, string b)
@@ -79,15 +77,11 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
             return Path.Combine(a, b).Replace("\\", "/");
         }
 
-        public Notifyable<long> LatencyMs { get; } = new();
-
         public Notifyable<long> TotalDLSpeed { get; } = new();
 
         public Notifyable<long> TotalUPSpeed { get; } = new();
 
         public Notifyable<long> ActiveTorrentCount { get; } = new();
-
-        public Notifyable<DataProviderState> State { get; } = new();
 
         public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
         {
@@ -143,7 +137,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
                 LatestTorrentsLock.EnterReadLock(); {
                     foreach (var (hash, _) in successfulRechecks) {
                         if (LatestTorrents.TryGetValue(hash, out var torrent)) {
-                            if (torrent.Internal.State.HasFlag(TORRENT_STATE.HASHING)) {
+                            if (torrent.State.HasFlag(TORRENT_STATE.HASHING)) {
                                 stateObserved[hash] = true;
                                 break;
                             }
@@ -157,7 +151,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
                 LatestTorrentsLock.EnterReadLock(); {
                     foreach (var hash in stateObserved.Keys.ToImmutableArray()) {
                         if (LatestTorrents.TryGetValue(hash, out var torrent)) {
-                            if (!torrent.Internal.State.HasFlag(TORRENT_STATE.HASHING)) {
+                            if (!torrent.State.HasFlag(TORRENT_STATE.HASHING)) {
                                 stateObserved.Remove(hash);
                                 break;
                             }
@@ -180,7 +174,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
 
             LatestTorrentsLock.EnterWriteLock(); { 
                 foreach (var torrent in torrents) {
-                    LatestTorrents[torrent.Internal.Hash] = (torrent.Internal, torrent.External);
+                    LatestTorrents[torrent.Internal.Hash] = torrent.Internal;
                 }
             } LatestTorrentsLock.ExitWriteLock();
 
@@ -213,13 +207,6 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
             var files = In.Select(x => (Torrent: x, Files: Client.GetTorrentContentsAsync(Convert.ToHexString(x.Hash), null, cancellationToken))).ToArray();
 
             await Task.WhenAll(files.Select(x => x.Files));
-
-            InfoHashDictionary<TorrentInfo> external;
-            LatestTorrentsLock.EnterReadLock();
-            {
-                external = In.Select(x => LatestTorrents[x.Hash].External).ToInfoHashDictionary(x => Convert.FromHexString(x.Hash), x => x);
-            }
-            LatestTorrentsLock.ExitReadLock();
 
             return files.Select(x => (
                 Torrent: x.Torrent,
@@ -280,30 +267,20 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
             return TorrentMapper.MapFromExternal(torrent.First());
         }
 
-        public async Task<ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges()
+        public async Task<ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken cancellationToken)
         {
-            await Init();
-
-            TorrentChangesTokenSource?.Cancel();
-
             var channel = Channel.CreateUnbounded<ListingChanges<Torrent, byte[]>>(new UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
 
             _ = Task.Run(async () => {
-                TorrentChangesTokenSource = new CancellationTokenSource();
                 try {
-                    Debug.Assert(!TorrentChangesTokenSource.Token.IsCancellationRequested);
-
                     int rid = 1;
 
-                    var pollInternal = PluginHost.PluginConfig.GetValue<TimeSpan>("Server:PollInterval");
-
-                    while (!TorrentChangesTokenSource.Token.IsCancellationRequested && !Active.IsCancellationRequested) {
-                        State.Change(DataProviderState.ACTIVE);
-
-                        var partialData = await Client.GetPartialDataAsync(rid, TorrentChangesTokenSource.Token);
+                    while (!cancellationToken.IsCancellationRequested) {
+                        await Init();
+                        var partialData = await Client.GetPartialDataAsync(rid, cancellationToken);
 
                         rid = partialData.ResponseId;
 
@@ -323,7 +300,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
                                 changes.Add(internalTorrent);
                                 LatestTorrentsLock.EnterWriteLock();
                                 {
-                                    LatestTorrents[hash] = (internalTorrent, externalTorrent);
+                                    LatestTorrents[hash] = internalTorrent;
                                 }
                                 LatestTorrentsLock.ExitWriteLock();
                             }
@@ -331,27 +308,21 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
                             foreach (var (strHash, changedTorrent) in partialData.TorrentsChanged) {
                                 var hash = Convert.FromHexString(strHash);
                                 Torrent internalTorrent;
-                                TorrentInfo externalTorrent;
 
                                 try {
                                     LatestTorrentsLock.EnterWriteLock();
 
                                     if (!LatestTorrents.TryGetValue(hash, out var torrent)) {
                                         internalTorrent = new Torrent(hash);
-                                        externalTorrent = new TorrentInfo() {
-                                            Hash = strHash
-                                        };
                                     } else {
-                                        internalTorrent = torrent.Internal;
-                                        externalTorrent = torrent.External;
+                                        internalTorrent = torrent;
                                     }
 
                                     TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
-                                    TorrentMapper.ApplyFromExternal(externalTorrent, changedTorrent);
 
                                     changes.Add(internalTorrent);
 
-                                    LatestTorrents[hash] = (internalTorrent, externalTorrent);
+                                    LatestTorrents[hash] = internalTorrent;
                                 } finally {
                                     LatestTorrentsLock.ExitWriteLock();
                                 }
@@ -370,9 +341,9 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
                         {
                             long dlSpeed = 0, upSpeed = 0, activeTorrents = 0;
                             foreach (var torrent in LatestTorrents) {
-                                dlSpeed += (long)torrent.Value.Internal.DLSpeed;
-                                upSpeed += (long)torrent.Value.Internal.UPSpeed;
-                                activeTorrents += torrent.Value.Internal.State.HasFlag(TORRENT_STATE.ACTIVE) ? 1 : 0;
+                                dlSpeed += (long)torrent.Value.DLSpeed;
+                                upSpeed += (long)torrent.Value.UPSpeed;
+                                activeTorrents += torrent.Value.State.HasFlag(TORRENT_STATE.ACTIVE) ? 1 : 0;
                             }
                             TotalDLSpeed.Change(dlSpeed);
                             TotalUPSpeed.Change(upSpeed);
@@ -380,7 +351,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
                         }
                         LatestTorrentsLock.ExitReadLock();
 
-                        await Task.Delay(pollInternal);
+                        await Task.Delay(ThisPlugin.DataProvider.DataProviderInstanceConfig.ListUpdateInterval);
                     }
                 } catch (TaskCanceledException) { } catch (Exception ex) {
                     PluginHost.Logger.Error(ex, $"Exception thrown in {nameof(GetTorrentChanges)}");
@@ -388,9 +359,8 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
                     throw;
                 } finally {
                     channel.Writer.Complete();
-                    State.Change(DataProviderState.INACTIVE);
                 }
-            });
+            }, cancellationToken);
 
             return channel.Reader;
         }

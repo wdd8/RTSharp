@@ -30,7 +30,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
         public IPluginHost Host { get; private set; }
 
-        private object DataProvider { get; set; }
+        public IHostedDataProvider DataProvider { get; set; }
 
         internal ActionQueue ActionQueue { get; set; }
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using RTSharp.Shared.Abstractions;
@@ -14,12 +13,16 @@ using System.Threading.Channels;
 using RTSharp.Shared.Utils;
 using RTSharp.Core;
 using Nager.PublicSuffix;
+using Nager.PublicSuffix.RuleProviders;
+using Nager.PublicSuffix.RuleProviders.CacheProviders;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
         private Channel<(Models.Torrent, IList<Tracker>)> TrackersChanges;
+
+        DomainParser DomainParser = new(new CachedHttpRuleProvider(new LocalFileSystemCacheProvider(), Http.Client));
 
         private async Task TrackersTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
@@ -130,9 +133,8 @@ namespace RTSharp.ViewModels.TorrentListing
 
                                     byte[]? favicon = null;
                                     if (!string.IsNullOrEmpty(tracker.Uri.Host)) {
-                                        var domainParser = new DomainParser(new WebTldRuleProvider());
-                                        var domainInfo = domainParser.Parse(tracker.Uri.Host);
-                                        favicon = await favicons.GetFavicon(domainInfo.Domain + "." + domainInfo.TLD);
+                                        var domainInfo = DomainParser.Parse(tracker.Uri.Host);
+                                        favicon = await favicons.GetFavicon(domainInfo.RegistrableDomain);
                                     }
 
                                     try {
@@ -172,7 +174,8 @@ namespace RTSharp.ViewModels.TorrentListing
                     IList<Tracker> trackers;
                     try {
                         trackers = (await current.Owner.Instance.GetTrackers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).First().Value;
-                    } catch {
+                    } catch (Exception ex) {
+                        Log.Logger.Error(ex, "Trackers pool error");
                         return;
                     }
 

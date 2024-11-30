@@ -17,7 +17,7 @@ using RTSharp.Core.TorrentPolling;
 using System.Collections.Immutable;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Models;
-using RTSharp.Core.Services.Auxiliary;
+using RTSharp.Core.Services.Daemon;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
@@ -72,7 +72,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 { "Move download directory", x => x.Capabilities.MoveDownloadDirectory },
                 { "Remove torrent", x => x.Capabilities.RemoveTorrent },
                 { "Remove torrent & data", x => x.Capabilities.RemoveTorrentAndData },
-                { "Get .torrent", x => x.Files.Capabilities.GetDotTorrents },
+                { "Get .torrent", x => x.Capabilities.GetDotTorrent },
                 { "Add label", x => x.Capabilities.AddLabel },
                 { "Duplicate torrent to", x => x.Capabilities.AddTorrent && x.Capabilities.ForceRecheckTorrent && x.Capabilities.StartTorrent }
             };
@@ -243,18 +243,18 @@ namespace RTSharp.ViewModels.TorrentListing
         public async Task RemoveTorrentsAndData(IList In)
         {
             var torrents = In.Cast<Torrent>();
-            var serverIds = torrents.Select(x => x.Owner.PluginInstance.PluginInstanceConfig.ServerId).Distinct();
+            var serverIds = torrents.Select(x => x.Owner.DataProviderInstanceConfig.ServerId).Distinct();
 
             var references = new InfoHashDictionary<Torrent[]>();
             var allTorrents = TorrentPolling.Torrents.Where(x => {
-                var selectedOnly = torrents.Where(i => i.Hash.SequenceEqual(x.Hash)).Select(x => x.Owner.PluginInstance.PluginInstanceConfig.ServerId);
+                var selectedOnly = torrents.Where(i => i.Hash.SequenceEqual(x.Hash)).Select(x => x.Owner.DataProviderInstanceConfig.ServerId);
                 
-                return selectedOnly.Contains(x.Owner.PluginInstance.PluginInstanceConfig.ServerId);
+                return selectedOnly.Contains(x.Owner.DataProviderInstanceConfig.ServerId);
             }).ToImmutableArray();
             bool multiReference = false;
 
             foreach (var torrentGroup in allTorrents.GroupBy(x => x.Hash, new HashEqualityComparer())) {
-                var found = torrentGroup.GroupBy(x => x.Owner.PluginInstance.PluginInstanceConfig.ServerId + "_" + x.RemotePath).Where(x => x.Count() > 1);
+                var found = torrentGroup.GroupBy(x => x.Owner.DataProviderInstanceConfig.ServerId + "_" + x.RemotePath).Where(x => x.Count() > 1);
                 foreach (var torrentsInServer in found) {
 
                     if (torrentsInServer.Select(x => x.Owner.PluginInstance.InstanceId).Except(torrents.Where(x => x.Hash.SequenceEqual(torrentGroup.Key)).Select(x => x.Owner.PluginInstance.InstanceId)).Count() != 0) {
@@ -296,7 +296,7 @@ namespace RTSharp.ViewModels.TorrentListing
             if (multiReference)
                 return;
 
-            var result = await DeleteTorrentsConfirmationDialog((App.MainWindow, (ulong)torrents.DistinctBy(x => x.Owner.PluginInstance.PluginInstanceConfig.ServerId + "_" + Convert.ToHexString(x.Hash)).Sum(x => (decimal)x.WantedSize), In.Count, true));
+            var result = await DeleteTorrentsConfirmationDialog((App.MainWindow, (ulong)torrents.DistinctBy(x => x.Owner.DataProviderInstanceConfig.ServerId + "_" + Convert.ToHexString(x.Hash)).Sum(x => (decimal)x.WantedSize), In.Count, true));
 
             if (result)
                 await ActionForMulti(In, "Remove torrents and data", (dp, torrents) => dp.RemoveTorrentsAndData(torrents.Select(x => x.Hash).ToList()));
@@ -397,7 +397,7 @@ namespace RTSharp.ViewModels.TorrentListing
             var tasks = dests.GroupBy(x => x.Value.Provider).Select(x => (
                 ActionQueue: Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance),
                 Hashes: x.Select(i => i.Key).ToList(),
-                DataProvider: x.Key.Instance
+                DataProvider: x.Key
             ));
 
             var exec = tasks.Select((data) => {
@@ -418,7 +418,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 var addTorrents = getDotTorrentFiles.CreateChild("Add torrents", RUN_MODE.DEPENDS_ON_PARENT, (parent) => {
                     var dotTorrents = parent.GetResult()!.SelectMany(x => x).ToInfoHashDictionary(x => x.Key, x => x.Value);
 
-                    return targetDataProvider.AddTorrents(dotTorrents.Select(x => (
+                    return targetDataProvider.Instance.AddTorrents(dotTorrents.Select(x => (
                         Data: x.Value,
                         Filename: (string?)torrents.First(i => i.Hash.SequenceEqual(x.Key)).Name,
                         Options: new AddTorrentsOptions(null, dests[x.Key].Directory)
@@ -434,8 +434,10 @@ namespace RTSharp.ViewModels.TorrentListing
                     var ret = new InfoHashDictionary<bool>();
 
                     foreach (var (hash, exceptions) in res) {
-                        if (exceptions?.Any() == true)
+                        if (exceptions?.Any() == true) {
+                            Log.Logger.Error($"{Convert.ToHexString(hash)}: {exceptions.First().Message}");
                             continue;
+                        }
 
                         Log.Logger.Information("Torrents: ");
                         foreach (var t in torrents) {
@@ -443,31 +445,29 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
                         var sourceTorrent = torrents.First(x => x.Hash.SequenceEqual(hash));
 
-                        if (sourceTorrent.Owner.PluginInstance.PluginInstanceConfig.ServerId != targetDataProvider.PluginHost.PluginInstanceConfig.ServerId) {
+                        if (sourceTorrent.Owner.DataProviderInstanceConfig.ServerId != targetDataProvider.DataProviderInstanceConfig.ServerId) {
                             await getTorrentFileList.RunningTask;
                             var fileList = getTorrentFileList.GetResult()!.SelectMany(x => x).ToInfoHashDictionary(x => x.Key, x => x.Value);
                             var files = fileList[sourceTorrent.Hash];
                             var dest = dests[sourceTorrent.Hash].Directory;
 
-                            var auxiliarySource = new AuxiliaryService(sourceTorrent.Owner.PluginInstance.PluginInstanceConfig.ServerId);
-                            var auxiliaryTarget = new AuxiliaryService(targetDataProvider.PluginHost.PluginInstanceConfig.ServerId);
+                            var sourceServer = Core.Servers.Value[sourceTorrent.Owner.DataProviderInstanceConfig.ServerId];
+                            var targetServer = Core.Servers.Value[targetDataProvider.DataProviderInstanceConfig.ServerId];
 
                             var progressRaw = new Progress<(float, string)>();
                             IProgress<(float, string)> progress = progressRaw;
                             transferFiles!.BindProgress(progressRaw);
 
                             try {
-                                await auxiliaryTarget.RequestRecieveFiles(
+                                await targetServer.RequestRecieveFiles(
                                     files.Files.Select(x => (
                                         RemoteSource: sourceTorrent.RemotePath + (files.MultiFile ? ("/" + sourceTorrent.Name) : "") + "/" + x.Path,
-                                        StoreTo: dest + (files.MultiFile ? ("/" + sourceTorrent.Name) : "") + "/" + x.Path
+                                        StoreTo: dest + (files.MultiFile ? ("/" + sourceTorrent.Name) : "") + "/" + x.Path,
+                                        TotalSize: x.Size
                                     )),
-                                    sourceTorrent.Owner.PluginInstance.PluginInstanceConfig.ServerId,
-                                    new Progress<(string File, ulong BytesTransferred)>((info) => {
-                                        var torrentFile = files.Files.First(x => info.File.EndsWith(x.Path)); // TODO: match more accurately?
-                                        var pctDone = (float)info.BytesTransferred / torrentFile.Size * 100f;
-
-                                        progress.Report((pctDone, $"{info.File}"));
+                                    sourceTorrent.Owner.DataProviderInstanceConfig.ServerId,
+                                    new Progress<(string File, float Progress)>((info) => {
+                                        progress.Report((info.Progress, $"{info.File}"));
                                     })
                                 );
                             } catch (Exception ex) {
@@ -485,7 +485,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 transferFiles.CreateChild("Force recheck", RUN_MODE.DEPENDS_ON_PARENT, async (parent) => {
                     var res = parent.GetResult()!;
 
-                    return targetDataProvider.ForceRecheck(res.Where(x => x.Value).Select(x => x.Key).ToArray());
+                    return targetDataProvider.Instance.ForceRecheck(res.Where(x => x.Value).Select(x => x.Key).ToArray());
                 });
                 
                 return data.ActionQueue!.Queue.RunAction(getDotTorrentFiles);

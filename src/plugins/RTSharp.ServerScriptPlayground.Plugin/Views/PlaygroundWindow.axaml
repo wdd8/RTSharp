@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:RTSharp.ServerScriptPlayground.Plugin.ViewModels"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        xmlns:views="using:RTSharp.ServerScriptPlayground.Plugin.Views"
+        xmlns:AvaloniaEdit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="RTSharp.ServerScriptPlayground.Plugin.Views.PlaygroundWindow"
+        x:DataType="vm:PlaygroundWindowViewModel"
+        Title="RT# - Script playground">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
+        <ComboBox Grid.Row="0" ItemsSource="{Binding Servers}" SelectedItem="{Binding SelectedServer}" HorizontalAlignment="Stretch" />
+        <AvaloniaEdit:TextEditor Name="Editor" Grid.Row="1"
+                               ShowLineNumbers="True"
+                               FontFamily="Cascadia Code,Consolas,Menlo,Monospace">
+            <i:Interaction.Behaviors>
+                <views:DocumentTextBindingBehavior Text="{Binding Script, Mode=TwoWay}"/>
+            </i:Interaction.Behaviors>
+        </AvaloniaEdit:TextEditor>
+        <Separator Grid.Row="2" />
+        <Grid ColumnDefinitions="*" Grid.Row="3">
+            <Button Grid.Column="0" Content="{Binding RunButtonText}" Command="{Binding RunButtonCommand}" />
+        </Grid>
+    </Grid>
+</Window>

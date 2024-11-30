@@ -38,14 +38,8 @@ class Program
             });
         builder.Services.AddAuthorization();
         builder.Services.AddGrpc();
-        builder.Services.AddSingleton<Services.TorrentPolling>();
         builder.Services.AddScoped<SCGICommunication>();
-        builder.Services.AddScoped<Services.SettingsService>();
         builder.Services.AddScoped<Services.TorrentService>();
-        builder.Services.AddScoped<Services.TorrentsService>();
-        builder.Services.AddSingleton<Services.StateHistoryService>();
-        builder.Services.AddHostedService(services => services.GetRequiredService<Services.StateHistoryService>());
-        builder.Services.AddHostedService<Services.RtorrentMonitor>();
 
         InstanceName = builder.Configuration.GetSection("InstanceName").Get<string>();
         var listenAddresses = builder.Configuration.GetSection("ListenAddress").Get<string[]>();
@@ -107,15 +101,9 @@ class Program
             app.UseDeveloperExceptionPage();
         }
 
-        var torrentPolling = app.Services.GetRequiredService<Services.TorrentPolling>();
-        torrentPolling.Initialize();
-
         app.UseRouting();
 
-        app.MapGrpcService<GRPCServices.TorrentsService>();
         app.MapGrpcService<GRPCServices.TorrentService>();
-        app.MapGrpcService<GRPCServices.SettingsService>();
-        app.MapGrpcService<GRPCServices.StateHistoryService>();
         app.MapGet("/", async context =>
         {
             await context.Response.WriteAsync("Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");

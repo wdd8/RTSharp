@@ -86,13 +86,27 @@ namespace RTSharp.ViewModels.TorrentListing
                         fetchingPeers.Add(peer.IPPort.Address);
                     }
 
+                    Dispatcher.UIThread.Post(() => {
+                        peer.Origin = "Loading...";
+                    }, DispatcherPriority.Background);
+
                     try {
                         var whois = await Core.Services.Whois.GetWhoisInfo(peer.IPPort.Address, config.Behavior.Value.PeerOriginReplacements ?? new());
 
                         if (whois == null)
                             return;
 
+                        (byte[] Hash, Bitmap Image)? realImage = null;
+                        IImage peerIcon;
+
+                        if (whois.Country != null) {
+                            realImage = await imageCache.AddImage(AssetLoader.Open(new Uri($"avares://RTSharp/Assets/Icons/Flags/{whois.Country}.png")));
+                            peerIcon = realImage.Value.Image;
+                        } else
+                            peerIcon = DefaultImage;
+
                         Dispatcher.UIThread.Post(() => {
+                            peer.Icon = peerIcon;
                             peer.Origin = whois.Organization + (whois.Domain != null ? $" [{whois.Domain}]" : "");
                         }, DispatcherPriority.Background);
 
@@ -101,24 +115,14 @@ namespace RTSharp.ViewModels.TorrentListing
                             favicon = await favicons.GetFavicon(whois.Domain);
                         }
 
-                        (byte[] Hash, Bitmap Image)? realImage = null;
-
-                        IImage peerIcon;
-
                         if (favicon != null) {
                             realImage = await imageCache.AddImage(favicon);
                             peerIcon = realImage.Value.Image;
-                        } else {
-                            if (whois.Country != null) {
-                                realImage = await imageCache.AddImage(AssetLoader.Open(new Uri($"avares://RTSharp/Assets/Icons/Flags/{whois.Country}.png")));
-                                peerIcon = realImage.Value.Image;
-                            } else
-                                peerIcon = DefaultImage;
-                        }
 
-                        Dispatcher.UIThread.Post(() => {
-                            peer.Icon = peerIcon;
-                        }, DispatcherPriority.Background);
+                            Dispatcher.UIThread.Post(() => {
+                                peer.Icon = peerIcon;
+                            }, DispatcherPriority.Background);
+                        }
 
                         if (realImage != null) {
                             await asCache.AddCachedAS(whois.Range, new CachedAS {
@@ -163,6 +167,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             PeersViewModel.Peers.Add(Models.Peer.FromPluginModel(changedPeer));
                         }
                     }
+                    PeersViewModel.Peers.NotifyInnerItemsChanged();
 
                     foreach (var peer in PeersViewModel.Peers) {
                         if (peer.Origin == null) {

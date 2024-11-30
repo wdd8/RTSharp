@@ -78,6 +78,8 @@
             <MenuItem Header="Log" Command="{Binding AddLogTabClickCommand}" />
             <Separator />
             <MenuItem Header="Data providers" Command="{Binding AddDataProvidersTabClickCommand}" />
+            <Separator />
+            <MenuItem Header="Statistics" Command="{Binding ShowStatisticsWindowCommand}" />
         </MenuItem>
         <MenuItem x:Key="ToolsMenu" Header="_Tools">
             <MenuItem Header="Torrent _Creator" Command="{Binding TorrentCreatorClickCommand}" />

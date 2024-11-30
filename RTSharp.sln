@@ -40,9 +40,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub Actions", "GitHub Ac
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.DataProvider.Rtorrent.Common", "src\rtorrent\RTSharp.DataProvider.Rtorrent.Common\RTSharp.DataProvider.Rtorrent.Common.csproj", "{9AB14ECF-81BD-4EDA-A2B4-708942E5FC70}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.Auxiliary", "src\RTSharp.Auxiliary\RTSharp.Auxiliary.csproj", "{1EDE5264-03F7-4972-8465-68A9D29E51C8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.Daemon", "src\RTSharp.Daemon\RTSharp.Daemon.csproj", "{1EDE5264-03F7-4972-8465-68A9D29E51C8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.Auxiliary.Protocols", "src\RTSharp.Auxiliary.Protocols\RTSharp.Auxiliary.Protocols.csproj", "{B3260EA6-C16C-4D8D-9D83-5AF2BD0D5C0C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTSharp.Daemon.Protocols", "src\RTSharp.Daemon.Protocols\RTSharp.Daemon.Protocols.csproj", "{B3260EA6-C16C-4D8D-9D83-5AF2BD0D5C0C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Transmission.Net", "src\transmission\Transmission.Net\Transmission.Net\Transmission.Net.csproj", "{380B7C39-9028-4A6F-A1C6-0401211DAB50}"
 EndProject

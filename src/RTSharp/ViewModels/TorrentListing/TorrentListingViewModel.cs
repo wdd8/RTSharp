@@ -62,8 +62,6 @@ namespace RTSharp.ViewModels.TorrentListing
 
         private bool StartTorrentAllowed => CurrentlySelectedItems.Any() && ((Torrent)CurrentlySelectedItems[0]).InternalState != TORRENT_STATE.SEEDING;
 
-        public Action ResortList { get; set; }
-
         public string HeaderName => "Torrent listing";
 
         public Geometry? Icon => null;
@@ -240,8 +238,6 @@ namespace RTSharp.ViewModels.TorrentListing
             }
 
             this.OnPropertyChanged(nameof(FilteredTorrents));
-
-            ResortList?.Invoke();
         }
 
         public void OnContextPopulated()

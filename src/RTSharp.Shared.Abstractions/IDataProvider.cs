@@ -8,7 +8,7 @@ namespace RTSharp.Shared.Abstractions
 
         public Task<Torrent> GetTorrent(byte[] Hash);
 
-        public Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges();
+        public Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken cancellationToken);
 
         public Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken = default);
 
@@ -42,15 +42,11 @@ namespace RTSharp.Shared.Abstractions
 
         public IPlugin Plugin { get; }
 
-        public Notifyable<long> LatencyMs { get; }
-
         public Notifyable<long> TotalDLSpeed { get; }
 
         public Notifyable<long> TotalUPSpeed { get; }
 
         public Notifyable<long> ActiveTorrentCount { get; }
-
-        public Notifyable<DataProviderState> State { get; }
 
         public IDataProviderFiles Files { get; }
 

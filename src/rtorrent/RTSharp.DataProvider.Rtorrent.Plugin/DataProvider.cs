@@ -19,6 +19,7 @@ using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using MsBox.Avalonia.Models;
 
+using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
 using RTSharp.DataProvider.Rtorrent.Plugin.Server;
 using RTSharp.Shared.Abstractions;
@@ -52,6 +53,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             AddTorrent: true,
             ForceRecheckTorrent: true,
             ReannounceToAllTrackers: true,
+            GetDotTorrent: true,
             ForceStartTorrentOnAdd: null,
             MoveDownloadDirectory: true,
             RemoveTorrent: true,
@@ -65,41 +67,21 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             SetLabels: true
         );
 
+        public static readonly Metadata Headers = new Metadata {
+            new Metadata.Entry("data-provider", "rtorrent")
+        };
+
         public DataProvider(Plugin ThisPlugin)
         {
             this.ThisPlugin = ThisPlugin;
             this.PluginHost = ThisPlugin.Host;
 
             this.Files = new DataProviderFiles(ThisPlugin);
-            this.Stats = new DataProviderStats(ThisPlugin);
-
-            State.Change(DataProviderState.INACTIVE);
         }
 
         private CancellationTokenSource TorrentChangesTokenSource;
         private InfoHashDictionary<Torrent> LatestTorrents = new();
         private ReaderWriterLockSlim LatestTorrentsLock = new();
-        private InfoHashDictionary<List<Tracker>> TorrentTrackers = new();
-        private ReaderWriterLockSlim TorrentTrackersLock = new();
-
-        public async Task UpdateLatency()
-        {
-            while (!Active.IsCancellationRequested) {
-                var client = Clients.Settings();
-
-                try {
-                    var sw = Stopwatch.StartNew();
-                    await client.PingAsync(new Empty(), cancellationToken: Active);
-                    sw.Stop();
-
-                    LatencyMs.Change((int)sw.ElapsedMilliseconds);
-                } catch {
-                    LatencyMs.Change(-1);
-                }
-
-                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken: Active);
-            }
-        }
 
         public async Task<IEnumerable<Torrent>> GetAllTorrents()
         {
@@ -165,186 +147,25 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             return ret;
         }
 
-        public Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default)
+        public async Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default)
         {
-            var ret = new InfoHashDictionary<IList<Tracker>>();
-            foreach (var input in In) {
-                if (TorrentTrackers.TryGetValue(input.Hash, out var trackers)) {
-                    ret[input.Hash] = trackers;
-                } else
-                    ret[input.Hash] = Array.Empty<Tracker>();
-            }
-
-            return Task.FromResult(ret);
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
+            var ret = await client.GetTorrentsTrackers(In.Select(x => x.Hash).ToArray());
+            
+            return ret;
         }
 
-        public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges()
+        public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken CancellationToken)
         {
-            TorrentChangesTokenSource?.Cancel();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var client = Clients.Torrents();
-            var updates = client.GetTorrentListUpdates(new Protocols.GetTorrentListUpdatesRequest() {
-                Interval = Duration.FromTimeSpan(PluginHost.PluginConfig.GetPollInterval())
-            }, cancellationToken: Active);
-            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Torrent, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
-                SingleReader = true,
-                SingleWriter = true
-            });
+            var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
 
-            _ = Task.Run(async () => {
-                TorrentChangesTokenSource = new CancellationTokenSource();
-                try {
-                    Debug.Assert(!TorrentChangesTokenSource.Token.IsCancellationRequested);
-                    await foreach (var update in updates.ResponseStream.ReadAllAsync()) {
-                        State.Change(DataProviderState.ACTIVE);
-                        var changes = new List<Torrent>();
-                        var removed = new List<byte[]>();
-                        var ret = new ListingChanges<Torrent, byte[]>(changes, removed);
+            var updates = client.GetTorrentChanges(combined.Token);
 
-                        void updateTrackers(byte[] TorrentHash, IEnumerable<Protocols.TorrentTracker> In)
-                        {
-                            if (!TorrentTrackers.TryGetValue(TorrentHash, out var stored)) {
-                                TorrentTrackers[TorrentHash] = In.Select(TorrentMapper.MapFromProto).ToList();
-                                return;
-                            }
+            return updates;
 
-                            var trackersToRemove = new List<int>();
-                            for (var x = 0;x < stored.Count;x++) {
-                                var storedTracker = stored[x];
-                                bool found = false;
-                                foreach (var tracker in In) {
-                                    if ((string)storedTracker.ID == tracker.Uri) {
-                                        TorrentMapper.UpdateTracker(storedTracker, tracker);
-                                        found = true;
-                                    }
-                                }
-                                if (!found) {
-                                    // Tracker was removed
-                                    trackersToRemove.Add(x);
-                                }
-                            }
-
-                            trackersToRemove.ForEach(x => stored.RemoveAt(x));
-
-                            foreach (var tracker in In) {
-                                bool found = false;
-                                foreach (var storedTracker in stored) {
-                                    if ((string)storedTracker.ID == tracker.Uri) {
-                                        found = true;
-                                    }
-                                }
-
-                                if (!found) {
-                                    // Tracker added
-                                    stored.Add(TorrentMapper.MapFromProto(tracker));
-                                }
-                            }
-                        }
-
-                        foreach (var torrent in update.FullUpdate) {
-                            var hash = torrent.Hash.ToByteArray();
-                            LatestTorrentsLock.EnterWriteLock(); {
-                                LatestTorrents[hash] = TorrentMapper.MapFromProto(torrent);
-                            } LatestTorrentsLock.ExitWriteLock();
-                            changes.Add(TorrentMapper.MapFromProto(torrent));
-                            updateTrackers(hash, torrent.Trackers);
-                        }
-
-                        foreach (var torrent in update.Complete) {
-                            var hash = torrent.Hash.ToByteArray();
-
-                            Torrent? stored;
-                            LatestTorrentsLock.EnterUpgradeableReadLock(); {
-                                if (!LatestTorrents.TryGetValue(hash, out stored)) {
-                                    PluginHost.Logger.Warning($"Detected change in complete torrent {Convert.ToHexString(hash)}, but such torrent wasn't added");
-                                    stored = new Torrent(hash);
-                                    LatestTorrentsLock.EnterWriteLock(); {
-                                        LatestTorrents.Add(hash, stored);
-                                    } LatestTorrentsLock.ExitWriteLock();
-                                }
-                            } LatestTorrentsLock.ExitUpgradeableReadLock();
-
-                            stored.State = TorrentMapper.MapFromProto(torrent.State);
-                            stored.Uploaded = torrent.Uploaded;
-                            stored.UPSpeed = torrent.UPSpeed;
-                            stored.Labels = torrent.Labels.ToHashSet();
-                            stored.RemotePath = torrent.RemotePath;
-                            stored.Seeders = (stored.Seeders.Connected, torrent.SeedersTotal);
-                            stored.Peers = (torrent.PeersConnected, torrent.PeersTotal);
-                            stored.Priority = TorrentMapper.MapFromProto(torrent.Priority);
-                            updateTrackers(hash, torrent.Trackers);
-                            stored.StatusMessage = torrent.StatusMessage;
-
-                            changes.Add(stored);
-                        }
-
-                        foreach (var torrent in update.Incomplete) {
-                            var hash = torrent.Hash.ToByteArray();
-
-                            Torrent? stored;
-                            LatestTorrentsLock.EnterUpgradeableReadLock(); {
-                                if (!LatestTorrents.TryGetValue(hash, out stored)) {
-                                    PluginHost.Logger.Warning($"Detected change in complete torrent {Convert.ToHexString(hash)}, but such torrent wasn't added");
-                                    stored = new Torrent(hash);
-                                    LatestTorrentsLock.EnterWriteLock(); {
-                                        LatestTorrents.Add(hash, stored);
-                                    } LatestTorrentsLock.ExitWriteLock();
-                                }
-                            } LatestTorrentsLock.ExitUpgradeableReadLock();
-
-                            stored.State = TorrentMapper.MapFromProto(torrent.State);
-                            stored.Done = (float)torrent.Downloaded / stored.WantedSize * 100;
-                            stored.Downloaded = torrent.Downloaded;
-                            stored.Uploaded = torrent.Uploaded;
-                            stored.DLSpeed = torrent.DLSpeed;
-                            stored.UPSpeed = torrent.UPSpeed;
-                            stored.ETA = torrent.ETA == null ? TimeSpan.MaxValue : torrent.ETA.ToTimeSpan();
-                            stored.FinishedOnDate = torrent.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : torrent.FinishedOn.ToDateTime();
-                            stored.TimeElapsed = torrent.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? (DateTime.UtcNow - stored.AddedOnDate) : (torrent.FinishedOn.ToDateTime() - stored.AddedOnDate);
-                            stored.Labels = torrent.Labels.ToHashSet();
-                            stored.RemotePath = torrent.RemotePath;
-                            stored.Seeders = (torrent.SeedersConnected, torrent.SeedersTotal);
-                            stored.Peers = (torrent.PeersConnected, torrent.PeersTotal);
-                            stored.Priority = TorrentMapper.MapFromProto(torrent.Priority);
-                            stored.RemainingSize = stored.WantedSize - torrent.Downloaded;
-                            stored.Wasted = torrent.Wasted;
-                            updateTrackers(hash, torrent.Trackers);
-                            stored.StatusMessage = torrent.StatusMessage;
-
-                            changes.Add(stored);
-                        }
-
-                        foreach (var hash in update.Removed) {
-                            removed.Add(hash.ToByteArray());
-                        }
-
-                        await channel.Writer.WriteAsync(ret);
-
-                        LatestTorrentsLock.EnterReadLock(); {
-                            long dlSpeed = 0, upSpeed = 0, activeTorrents = 0;
-                            foreach (var torrent in LatestTorrents) {
-                                dlSpeed += (long)torrent.Value.DLSpeed;
-                                upSpeed += (long)torrent.Value.UPSpeed;
-                                activeTorrents += torrent.Value.State.HasFlag(TORRENT_STATE.ACTIVE) ? 1 : 0;
-                            }
-                            TotalDLSpeed.Change(dlSpeed);
-                            TotalUPSpeed.Change(upSpeed);
-                            ActiveTorrentCount.Change(activeTorrents);
-                        } LatestTorrentsLock.ExitReadLock();
-                    }
-                } catch (TaskCanceledException) { }
-                catch (RpcException ex) when (ex.StatusCode == StatusCode.Aborted || ex.StatusCode == StatusCode.Unavailable) { }
-                catch (Exception ex) {
-                    PluginHost.Logger.Error(ex, $"Exception thrown in {nameof(GetTorrentChanges)}");
-                    await Task.Delay(500); // Hack for offline servers
-                    throw;
-                } finally {
-                    channel.Writer.Complete();
-                    State.Change(DataProviderState.INACTIVE);
-                }
-            });
-
-            return channel.Reader;
         }
 
         private async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> ActionForMulti(IList<byte[]> In, Func<Protocols.GRPCTorrentService.GRPCTorrentServiceClient, Protocols.Torrents, AsyncUnaryCall<Protocols.TorrentsReply>> Fx)
@@ -353,7 +174,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
             IList<(byte[] Hash, IList<Exception> Exceptions)> res;
             try {
-                var reply = await Fx(client, new Protocols.Torrents() { Hashes = { In.Select(x => Common.Extensions.ToByteString(x)) } });
+                var reply = await Fx(client, new Protocols.Torrents() { Hashes = { In.Select(x => x.ToByteString()) } });
                 res = Common.Extensions.ToExceptions(reply);
             } catch (RpcException ex) {
                 res = In.Select(x => (x, (IList<Exception>)new[] { ex })).ToList();
@@ -390,7 +211,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
                         await call.RequestStream.WriteAsync(new Protocols.NewTorrentsData() {
                             TData = new Protocols.NewTorrentsData.Types.TorrentData() {
                                 Id = x.ToString(),
-                                Chunk = Common.Extensions.ToByteString(chunk)
+                                Chunk = chunk.ToByteString()
                             }
                         });
                     }
@@ -455,46 +276,26 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> RemoveTorrents(IList<byte[]> In) => ActionForMulti(In, (client, hashes) => client.RemoveTorrentsAsync(hashes));
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> RemoveTorrentsAndData(IList<byte[]> In) => ActionForMulti(In, (client, hashes) => client.RemoveTorrentsAndDataAsync(hashes));
+        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> RemoveTorrentsAndData(IList<byte[]> In)
+        {
+            var server = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            var result = await server.RemoveTorrentsAndData(In);
+            
+            return result;
+        }
 
         public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<byte[]> In)
         {
-            var client = Clients.Torrent();
+            var server = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            var result = await server.GetDotTorrents(In);
 
-            var res = client.GetDotTorrents(new Protocols.Torrents() { Hashes = { In.Select(x => Common.Extensions.ToByteString(x)) } });
-
-            var meta = new Dictionary<string, byte[]>();
-            var dotTorrents = new Dictionary<string, MemoryStream>();
-
-            await foreach (var data in res.ResponseStream.ReadAllAsync()) {
-                switch (data.DataCase) {
-                    case Protocols.DotTorrentsData.DataOneofCase.TMetadata:
-                        if (meta.ContainsKey(data.TMetadata.Id)) {
-                            throw new InvalidOperationException("Received duplicate metadata on hash");
-                        }
-
-                        dotTorrents[data.TMetadata.Id] = new MemoryStream();
-                        meta[data.TMetadata.Id] = data.TMetadata.Hash.ToByteArray();
-                        break;
-                    case Protocols.DotTorrentsData.DataOneofCase.TData:
-                        dotTorrents[data.TData.Id].Write(data.TData.Chunk.Span);
-                        break;
-                }
-            }
-
-            var ret = new InfoHashDictionary<byte[]>();
-            foreach (var (k, v) in dotTorrents) {
-                ret[meta[k]] = v.ToArray();
-                v.Dispose();
-            }
-
-            return ret;
+            return result;
         }
 
         public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> MoveDownloadDirectory(IList<(byte[] InfoHash, string TargetDirectory)> In, IList<(string SourceFile, string TargetFile)> Check, IProgress<(byte[] InfoHash, string File, ulong Moved, string? AdditionalProgress)> Progress)
         {
             var client = Clients.Torrent();
-            var auxiliary = PluginHost.GetAuxiliaryService(PluginHost.PluginInstanceConfig.ServerId);
+            var server = PluginHost.AttachedDaemonService;
 
             var req = new Protocols.MoveDownloadDirectoryArgs();
             var res = new List<(byte[] Hashes, IList<Exception>)>();
@@ -512,7 +313,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
             req.Move = true;
 
-            var reply = await auxiliary.CheckExists(Check.Select(x => x.TargetFile).ToArray());
+            var reply = await server.CheckExists(Check.Select(x => x.TargetFile).ToArray());
 
             var existsCount = reply.Where(x => x.Value).Count();
 
@@ -647,14 +448,10 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public IPlugin Plugin => ThisPlugin;
 
-        public Notifyable<long> LatencyMs { get; } = new();
-
         public Notifyable<long> TotalDLSpeed { get; } = new();
 
         public Notifyable<long> TotalUPSpeed { get; } = new();
 
         public Notifyable<long> ActiveTorrentCount { get; } = new();
-
-        public Notifyable<DataProviderState> State { get; } = new();
     }
 }

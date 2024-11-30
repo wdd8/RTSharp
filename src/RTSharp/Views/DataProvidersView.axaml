@@ -4,11 +4,17 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="600"
              xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             xmlns:plugin="clr-namespace:RTSharp.Plugin"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
-             x:Class="RTSharp.Views.DataProvidersView">
+             xmlns:vm="clr-namespace:RTSharp.ViewModels"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             x:Class="RTSharp.Views.DataProvidersView"
+             x:DataType="vm:DataProvidersViewModel"
+             x:CompileBindings="True">
 
     <Control.Resources>
         <converters:SIDataSpeedConverter x:Key="SIDataSpeedConverter" />
+        <converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter" />
     </Control.Resources>
     
     <ListBox ItemsSource="{Binding Items}">
@@ -17,10 +23,10 @@
                 <StackPanel Orientation="Vertical">
                     <TextBlock Text="{Binding}" />
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding Instance.State.Value}" />
+                        <TextBlock Text="{Binding State.Value}" />
                         <TextBlock Padding="4 0 0 0" Text="(" />
-                        <TextBlock Text="{Binding Instance.LatencyMs.Value}" />
-                        <TextBlock Text=" ms)" />
+                        <TextBlock Text="{Binding PluginInstance.AttachedDaemonService.Latency.Value, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" />
+                        <TextBlock Text=")" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <i:Icon Margin="0 0 4 0" Value="fa-solid fa-download" />

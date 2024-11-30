@@ -104,7 +104,7 @@ namespace RTSharp.Shared.Utils
             if (In == TimeSpan.MaxValue)
                 return "∞";
             var days = (int)In.TotalDays;
-            return (days != 0 ? (days + "d ") : "") + (In.Hours != 0 ? (In.Hours + "h ") : "") + (In.Minutes != 0 ? (In.Minutes + "m ") : "") + (In.Seconds != 0 ? (In.Seconds + "s") : "");
+            return (days != 0 ? (days + "d ") : "") + (In.Hours != 0 ? (In.Hours + "h ") : "") + (In.Minutes != 0 ? (In.Minutes + "m ") : "") + (In.Seconds != 0 ? (In.Seconds + "s") : "") + (In.Milliseconds != 0 ? (In.Milliseconds + "ms") : "");
         }
 
         /// <summary>

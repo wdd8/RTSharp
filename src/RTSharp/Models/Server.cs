@@ -11,5 +11,5 @@ public partial class Server : ObservableObject
     public string host;
 
     [ObservableProperty]
-    public ushort auxiliaryServicePort;
+    public ushort daemonPort;
 }

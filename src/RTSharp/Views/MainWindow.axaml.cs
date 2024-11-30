@@ -178,6 +178,7 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         Log.Logger.Debug("Loading plugins...");
 
         _ = waitingBox.ShowDialog(this);
+
         await Plugin.Plugins.LoadPlugins(waitingBox);
 
         waitingBox.Report((33, "Loading caches..."));

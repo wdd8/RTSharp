@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Reactive.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using Avalonia.Controls;
-using RTSharp.DataProvider.Rtorrent.Protocols.Types;
 using RTSharp.Shared.Abstractions;
 using Settings = RTSharp.DataProvider.Rtorrent.Plugin.Models.Settings;
-using RTSharp.DataProvider.Rtorrent.Plugin.Server;
 using RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RTSharp.Daemon.Protocols.DataProvider.Settings;
+using RTSharp.Daemon.Protocols.DataProvider;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels
 {
@@ -26,9 +24,10 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels
         public async Task SaveSettingsClick()
         {
             SavingSettings = true;
-            var client = Clients.Settings();
+            var daemon = PluginHost.AttachedDaemonService;
+            var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
-            Func<Task<CommandReply>> setSettingsTask = async () => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings));
+            Func<Task<CommandReply>> setSettingsTask = async () => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: DataProvider.Headers);
 
             var action = ActionQueueAction.New("Set settings", setSettingsTask);
             _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async parent => {

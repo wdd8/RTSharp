@@ -189,22 +189,14 @@ It is also possible that a host key has just been changed.
                     });
             }
 
-            register<GRPCSettingsService.GRPCSettingsServiceClient>();
             register<GRPCTorrentsService.GRPCTorrentsServiceClient>();
             register<GRPCTorrentService.GRPCTorrentServiceClient>();
-            register<GRPCStateHistoryService.GRPCStateHistoryServiceClient>();
 
             Provider = services.BuildServiceProvider();
         }
 
-        public static GRPCSettingsService.GRPCSettingsServiceClient Settings() => Provider.GetRequiredService<GRPCSettingsService.GRPCSettingsServiceClient>();
-
         public static GRPCTorrentsService.GRPCTorrentsServiceClient Torrents() => Provider.GetRequiredService<GRPCTorrentsService.GRPCTorrentsServiceClient>();
 
         public static GRPCTorrentService.GRPCTorrentServiceClient Torrent() => Provider.GetRequiredService<GRPCTorrentService.GRPCTorrentServiceClient>();
-
-        public static GRPCTrackerService.GRPCTrackerServiceClient Tracker() => Provider.GetRequiredService<GRPCTrackerService.GRPCTrackerServiceClient>();
-
-        public static GRPCStateHistoryService.GRPCStateHistoryServiceClient StateHistory() => Provider.GetRequiredService<GRPCStateHistoryService.GRPCStateHistoryServiceClient>();
     }
 }

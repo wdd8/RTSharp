@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+
+using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
 using RTSharp.DataProvider.Rtorrent.Plugin.Server;
 using RTSharp.DataProvider.Rtorrent.Plugin.ViewModels;
@@ -64,7 +66,6 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             };
 
             _ = Server.Clients.Initialize(Host).ContinueWith(task => {
-                _ = dp.UpdateLatency();
                 DataProvider = Host.RegisterDataProvider(dp);
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
 
@@ -73,8 +74,10 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public async Task ShowPluginSettings(object ParentWindow)
         {
-            var client = Clients.Settings();
-            var settings = await client.GetSettingsAsync(new Google.Protobuf.WellKnownTypes.Empty());
+            var daemon = Host.AttachedDaemonService;
+            var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
+
+            var settings = await client.GetSettingsAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: Rtorrent.Plugin.DataProvider.Headers);
 
             var settingsWindow = new MainWindow {
                 ViewModel = new MainWindowViewModel() {

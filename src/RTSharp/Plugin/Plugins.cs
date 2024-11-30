@@ -26,9 +26,9 @@ namespace RTSharp.Plugin
 {
     public static class Plugins
     {
-        public static ObservableCollection<PluginInstance> LoadedPlugins = new ObservableCollection<PluginInstance>();
+        public static ObservableCollection<PluginInstance> LoadedPlugins { get; } = new ObservableCollection<PluginInstance>();
 
-        public static ObservableCollection<DataProvider> DataProviders = new ObservableCollection<DataProvider>();
+        public static ObservableCollection<DataProvider> DataProviders { get; } = new ObservableCollection<DataProvider>();
 
         public enum HookType
         {

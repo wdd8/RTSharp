@@ -58,7 +58,7 @@ namespace RTSharp.ViewModels
 
                 RemoteTargetPathEnabled = true;
 
-                if (SourceTorrent.Owner.PluginInstance.PluginInstanceConfig.ServerId != SelectedProvider.PluginInstance.PluginInstanceConfig.ServerId) {
+                if (SourceTorrent.Owner.DataProviderInstanceConfig.ServerId != SelectedProvider.DataProviderInstanceConfig.ServerId) {
                     var savePath = await SelectedProvider.Instance.Files.GetDefaultSavePath();
                     RemoteTargetPath = savePath;
                 } else {

@@ -116,6 +116,7 @@ namespace RTSharp.Core.TorrentPolling
                         changes.Remove(changedTorrent);
                     }
                 }
+                Torrents.NotifyInnerItemsChanged();
 
                 // For new torrents
                 var newVMTorrents = await Task.WhenAll(changes.Select(async x => {
@@ -172,28 +173,32 @@ namespace RTSharp.Core.TorrentPolling
                         continue;
                     }
 
-                    if (dataProviders.All(x => DateTime.UtcNow - x.TaskStartedAt <= TimeSpan.FromSeconds(1)))
-                        await Task.Delay(dataProviders.Min(x => DateTime.UtcNow - x.TaskStartedAt));
+                    if (dataProviders.All(x => DateTime.UtcNow - x.TorrentChangesTaskStartedAt <= TimeSpan.FromSeconds(5)))
+                        await Task.Delay(dataProviders.Min(x => DateTime.UtcNow - x.TorrentChangesTaskStartedAt));
 
-                    foreach (var dp in dataProviders.Where(x => x.CurrentTask == null))
+                    foreach (var dp in dataProviders.Where(x => x.CurrentTorrentChangesTask == null))
                     {
                         ChannelReader<ListingChanges<Torrent, byte[]>> channel;
+
+                        dp.CurrentTorrentChangesTaskCts?.Cancel();
+                        dp.CurrentTorrentChangesTaskCts = new();
+
                         try
                         {
-                            channel = await dp.Instance.GetTorrentChanges();
+                            channel = await dp.Instance.GetTorrentChanges(dp.CurrentTorrentChangesTaskCts.Token);
                         }
                         catch (Exception ex)
                         {
                             Log.Logger.Error(ex, $"{dp.PluginInstance.PluginInstanceConfig.Name} GetTorrentChanges threw an error");
-                            dp.TaskStartedAt = DateTime.MinValue;
+                            dp.TorrentChangesTaskStartedAt = DateTime.MinValue;
                             continue;
                         }
 
-                        dp.CurrentTask = ReadTorrentChanges(dp, channel);
-                        dp.TaskStartedAt = DateTime.UtcNow;
+                        dp.CurrentTorrentChangesTask = ReadTorrentChanges(dp, channel);
+                        dp.TorrentChangesTaskStartedAt = DateTime.UtcNow;
                     }
 
-                    var tasks = dataProviders.Select(x => x.CurrentTask).Where(x => x != null);
+                    var tasks = dataProviders.Select(x => x.CurrentTorrentChangesTask).Where(x => x != null);
 
                     // Wait for any changes in tasks or data providers
                     var dataProvidersChangedTask = dataProvidersChanged.WaitAsync();
@@ -202,10 +207,11 @@ namespace RTSharp.Core.TorrentPolling
 
                     if (task != dataProvidersChangedTask)
                     {
-                        var dp = dataProviders.Single(x => x.CurrentTask == task);
+                        var dp = dataProviders.Single(x => x.CurrentTorrentChangesTask == task);
 
                         // Changes task was running but died, full reset
-                        dp.CurrentTask = null;
+                        dp.CurrentTorrentChangesTask = null;
+                        dp.CurrentTorrentChangesTaskCts.Cancel();
                     }
                 }
             }

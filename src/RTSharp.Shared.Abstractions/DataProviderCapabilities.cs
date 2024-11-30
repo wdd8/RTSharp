@@ -10,6 +10,7 @@
         bool StopTorrent,
         bool ForceRecheckTorrent,
         bool ReannounceToAllTrackers,
+        bool GetDotTorrent,
         bool AddTorrent,
         bool? ForceStartTorrentOnAdd,
         bool MoveDownloadDirectory,

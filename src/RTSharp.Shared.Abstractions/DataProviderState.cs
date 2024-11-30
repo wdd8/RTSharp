@@ -2,7 +2,7 @@
 {
     public enum DataProviderState
     {
-        ACTIVE,
-        INACTIVE
+        INACTIVE,
+        ACTIVE
     }
 }

@@ -10,7 +10,6 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
         public IPluginHost PluginHost { get; }
 
         public DataProviderFilesCapabilities Capabilities { get; } = new(
-            GetDotTorrents: false,
             GetDefaultSavePath: true
         );
 
@@ -27,7 +26,5 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
 
             return await Client.GetDefaultSavePathAsync();
         }
-
-        public Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<byte[]> In) => throw new NotImplementedException();
     }
 }

@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option csharp_namespace = "RTSharp.Daemon.Protocols.DataProvider";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+
+message TorrentTracker {
+    string ID = 1;
+    string Uri = 2;
+    TorrentTrackerStatus Status = 3;
+    uint32 Seeders = 4;
+    uint32 Peers = 5;
+    uint32 Downloaded = 6;
+    google.protobuf.Timestamp LastUpdated = 7;
+    google.protobuf.Duration ScrapeInterval = 8;
+    string StatusMessage = 9;
+}
+
+enum TorrentTrackerStatus {
+    option allow_alias = true;
+    TorrentTrackerStatus_PLACEHOLDER = 0x00;
+    TorrentTrackerStatus_ACTIVE = 0x01;
+    TorrentTrackerStatus_NOT_ACTIVE = 0x02;
+    TorrentTrackerStatus_NOT_CONTACTED_YET = 0x04;
+    TorrentTrackerStatus_DISABLED = 0x08;
+    TorrentTrackerStatus_ENABLED = 0x10;
+    TorrentTrackerStatus_MAX = 0x10;
+}

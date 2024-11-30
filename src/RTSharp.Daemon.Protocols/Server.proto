@@ -1,0 +1,38 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "RTSharp.Daemon.Protocols";
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
+service GRPCServerService {
+    rpc Test (google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc StartScript (StartScriptInput) returns (ScriptSessionReply);
+    rpc ScriptStatus (google.protobuf.BytesValue) returns (stream ScriptProgressState);
+    rpc ScriptsStatus (google.protobuf.Empty) returns (stream ScriptProgressState);
+    rpc StopScript (google.protobuf.BytesValue) returns (google.protobuf.Empty);
+}
+
+message StartScriptInput {
+    string Script = 1;
+    map<string, string> Variables = 2;
+}
+
+enum TaskState {
+    WAITING = 0;
+    RUNNING = 1;
+    DONE = 3;
+}
+
+message ScriptProgressState {
+    bytes Id = 1;
+    repeated ScriptProgressState Chain = 2;
+    string Text = 3;
+    float Progress = 4;
+    TaskState State = 5;
+}
+
+message ScriptSessionReply {
+    bytes Id = 1;
+}

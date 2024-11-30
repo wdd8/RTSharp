@@ -22,7 +22,7 @@ using Microsoft.Extensions.Hosting;
 using System.Collections.Concurrent;
 using MsBox.Avalonia;
 using System.Collections.Generic;
-using RTSharp.Core.Services.Auxiliary;
+using RTSharp.Core.Services.Daemon;
 using System.Threading.Tasks;
 using System.Threading;
 using Avalonia.Threading;
@@ -50,7 +50,9 @@ namespace RTSharp
             cfgBuilder.AddJsonFile(Core.Config.ConfigPath, false, true);
             var config = cfgBuilder.Build();
 
-            await RTSharp.Core.Services.Auxiliary.ConfigureServices.GenerateCertificatesIfNeeded();
+            await RTSharp.Core.Services.Daemon.ConfigureServices.GenerateCertificatesIfNeeded();
+
+            var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>();
 
             var host = Host.CreateDefaultBuilder()
                 .ConfigureServices((_, services) => {
@@ -61,7 +63,7 @@ namespace RTSharp
                     services.AddSingleton<IConfiguration>(config);
                     Core.Config.AddConfig(config, services);
 
-                    services.AddAuxiliaryServices(config.GetSection("Servers").Get<Dictionary<string, Server>>());
+                    services.AddDaemonServices(servers);
 
                     services.AddTransient<Core.Services.Cache.TorrentFileCache.TorrentFileCache>();
                     services.AddTransient<Core.Services.Cache.TorrentPropertiesCache.TorrentPropertiesCache>();
@@ -75,6 +77,10 @@ namespace RTSharp
 
             Core.ServiceProvider._provider = host.Services;
             Core.ServiceProvider._provider.UseMicrosoftDependencyResolver();
+
+            foreach (var server in servers) {
+                Core.Servers.Value.Add(server.Key, ActivatorUtilities.CreateInstance<DaemonService>(Core.ServiceProvider._provider, server.Key));
+            }
         }
     }
 

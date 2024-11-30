@@ -28,17 +28,13 @@ namespace RTSharp.DataProvider.Rtorrent.Server.GRPCServices
 {
     public partial class TorrentService : GRPCTorrentService.GRPCTorrentServiceBase
     {
-        private readonly Services.SettingsService Settings;
-        private readonly Services.TorrentsService Torrents;
         private readonly Services.TorrentService TorrentOpService;
         private ILogger<TorrentService> Logger { get; }
         private SCGICommunication Scgi { get; }
         private IServiceScopeFactory ScopeFactory { get; }
 
-        public TorrentService(ILogger<TorrentService> Logger, SCGICommunication Scgi, Services.SettingsService Settings, Services.TorrentsService Torrents, Services.TorrentService TorrentOpService, IServiceScopeFactory ScopeFactory)
+        public TorrentService(ILogger<TorrentService> Logger, SCGICommunication Scgi, Services.TorrentService TorrentOpService, IServiceScopeFactory ScopeFactory)
         {
-            this.Settings = Settings;
-            this.Torrents = Torrents;
             this.TorrentOpService = TorrentOpService;
             this.Logger = Logger;
             this.Scgi = Scgi;
@@ -260,236 +256,12 @@ namespace RTSharp.DataProvider.Rtorrent.Server.GRPCServices
 
         public override async Task<TorrentsReply> RemoveTorrentsAndData(Torrents Req, ServerCallContext Ctx)
         {
-            var ret = new TorrentsReply();
-
-            foreach (var hash in Req.Hashes) {
-                var torrentReply = new TorrentsReply.Types.TorrentReply() {
-                    InfoHash = hash
-                };
-                ret.Torrents.Add(torrentReply);
-            }
-
-            var dotTorrentPaths = await Torrents.GetDotTorrentFilePaths(Req.Hashes.Select(x => x.ToByteArray()));
-            var dotTorrents = new InfoHashDictionary<byte[]>();
-
-            foreach (var (hash, path) in dotTorrentPaths) {
-                var torrentReply = ret.Torrents.Single(x => x.InfoHash.SequenceEqual(hash));
-
-                if (!System.IO.File.Exists(path)) {
-                    torrentReply.Status.Add(new Protocols.Types.Status() {
-                        Command = "__file_deletion",
-                        FaultCode = "2",
-                        FaultString = ".torrent file doesn't exist"
-                    });
-                    continue;
-                }
-
-                byte[] torrent;
-                try {
-                    torrent = await File.ReadAllBytesAsync(path);
-                } catch {
-                    torrentReply.Status.Add(new Protocols.Types.Status() {
-                        Command = "__file_deletion",
-                        FaultCode = "3",
-                        FaultString = "Cannot read .torrent file"
-                    });
-                    continue;
-                }
-
-                dotTorrents[hash] = torrent;
-            }
-
-            string[] actions = new[] { "d.base_path", "d.delete_tied", "d.erase" };
-            var xml = new StringBuilder();
-            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
-            foreach (var hash in Req.Hashes) {
-                var sHash = Convert.ToHexString(hash.ToByteArray());
-
-                foreach (var action in actions) {
-                    xml.Append("<value><struct><member><name>methodName</name><value><string>" + action + "</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value></data></array></value></member></struct></value>");
-                }
-            }
-
-            xml.Append("</data></array></value></param></params></methodCall>");
-
-            var result = await Scgi.Get(xml.ToString());
-
-            XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
-            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
-
-            var basePaths = new InfoHashDictionary<string>();
-
-            foreach (var hash in Req.Hashes) {
-                var torrentReply = ret.Torrents.Single(x => x.InfoHash.SequenceEqual(hash));
-
-                foreach (var action in actions) {
-                    if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
-                        // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-506</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Method 'base_path' not defined</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
-                        // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
-
-                        var status = XMLUtils.GetFaultStruct(ref result, action);
-                        torrentReply.Status.Add(status);
-
-                        continue;
-                    }
-
-                    // <value><array><data>\r\n<value><string></string></value>\r\n</data></array></value>\r\n<value><array><data>\r\n<value><i4>0</i4></value>\r\n</data></array></value>\r\n<value><array><data>\r\n<value><i4>0</i4></value>\r\n</data></array></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
-                    XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
-
-                    switch (action) {
-                        case "d.base_path":
-                            var basePath = XMLUtils.Decode(XMLUtils.GetValue<string>(ref result));
-                            basePaths[hash.ToByteArray()] = basePath;
-
-                            torrentReply.Status.Add(new Protocols.Types.Status() {
-                                Command = action,
-                                FaultCode = "0",
-                                FaultString = ""
-                            });
-                            break;
-                        default:
-                            var resp = XMLUtils.GetValue<int>(ref result);
-
-                            if (resp == 0) {
-                                torrentReply.Status.Add(new Protocols.Types.Status() {
-                                    Command = action,
-                                    FaultCode = "0",
-                                    FaultString = ""
-                                });
-                            } else {
-                                torrentReply.Status.Add(new Protocols.Types.Status() {
-                                    Command = action,
-                                    FaultCode = resp.ToString(),
-                                    FaultString = "Response is not 0"
-                                });
-                            }
-                            break;
-                    }
-
-                    XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
-                }
-            }
-            
-            var parser = new TorrentParser();
-
-            foreach (var (hash, torrent) in dotTorrents) {
-                var basePath = basePaths[hash];
-                var torrentReply = ret.Torrents.Single(x => x.InfoHash.SequenceEqual(hash));
-
-                if (String.IsNullOrEmpty(basePath)) {
-                    torrentReply.Status.Add(new Protocols.Types.Status() {
-                        Command = "__file_deletion",
-                        FaultCode = "1",
-                        FaultString = "Base path is empty or null"
-                    });
-                    continue;
-                }
-
-                if (basePath[^1] == '/')
-                    basePath = basePath[..^1];
-
-                BencodeNET.Torrents.Torrent btorrent;
-                try {
-                    btorrent = parser.Parse(torrent);
-                } catch {
-                    torrentReply.Status.Add(new Protocols.Types.Status() {
-                        Command = "__file_deletion",
-                        FaultCode = "4",
-                        FaultString = "Cannot parse .torrent file"
-                    });
-                    continue;
-                }
-
-                if (btorrent.File != null) {
-                    if (!File.Exists(basePath)) {
-                        torrentReply.Status.Add(new Protocols.Types.Status() {
-                            Command = "__file_deletion",
-                            FaultCode = "5",
-                            FaultString = $"File \"{basePath}\" doesn't exist"
-                        });
-                        continue;
-                    }
-                    Logger.LogInformation($"Deleting file \"{basePath}\"");
-                    System.IO.File.Delete(basePath);
-                }
-
-                if (btorrent.Files != null) {
-                    var folders = new HashSet<string>() {
-                        basePath
-                    };
-                    foreach (var file in btorrent.Files) {
-                        var components = file.PathUtf8 ?? file.Path;
-
-                        if (components == null) {
-                            torrentReply.Status.Add(new Protocols.Types.Status() {
-                                Command = "__file_deletion",
-                                FaultCode = "6",
-                                FaultString = "Malformed multi-file torrent"
-                            });
-                            continue;
-                        }
-
-                        var folder = string.Join('/', components.Take(components.Count - 1));
-                        if (!String.IsNullOrEmpty(folder))
-                            folders.Add(basePath + "/" + folder);
-
-                        var fullPath = basePath + "/" + string.Join('/', components);
-                        Logger.LogInformation($"Deleting file \"{fullPath}\"");
-                        System.IO.File.Delete(fullPath);
-                    }
-
-                    foreach (var folder in folders.OrderByDescending(x => x.Length)) {
-                        Logger.LogInformation($"Checking for empty folder: \"{folder}\"");
-                        if (!Directory.EnumerateFileSystemEntries(folder).Any()) {
-                            Logger.LogInformation($"Deleting empty folder \"{folder}\"");
-                            Directory.Delete(folder);
-                        }
-                    }
-                }
-            }
-
-            return ret;
+            throw null;
         }
 
         public override async Task GetDotTorrents(Torrents Req, IServerStreamWriter<DotTorrentsData> Res, ServerCallContext Ctx)
         {
-            var filePaths = await Torrents.GetDotTorrentFilePaths(Req.Hashes.Select(x => x.ToByteArray()));
-
-            int x = 0;
-            foreach (var (hash, path) in filePaths) {
-                var strX = x.ToString();
-
-                await Res.WriteAsync(new DotTorrentsData() {
-                    TMetadata = new DotTorrentsData.Types.Metadata() {
-                        Id = strX,
-                        Hash = hash.ToByteString()
-                    }
-                });
-
-                if (!File.Exists(path)) {
-                     await Res.WriteAsync(new DotTorrentsData() {
-                         TData = new DotTorrentsData.Types.TorrentData() {
-                             Id = strX,
-                             Chunk = Array.Empty<byte>().ToByteString()
-                         }
-                     });
-                } else {
-                    var file = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                    int read = 0;
-                    Memory<byte> buffer = new byte[4096];
-                    while ((read = await file.ReadAsync(buffer, Ctx.CancellationToken)) != 0) {
-                        await Res.WriteAsync(new DotTorrentsData() {
-                            TData = new DotTorrentsData.Types.TorrentData() {
-                                Id = strX,
-                                Chunk = buffer.Span[..read].ToByteString()
-                            }
-                        });
-                    }
-                }
-
-                x++;
-            }
+            throw null;
         }
 
         public override async Task<TorrentsPeersReply> GetTorrentsPeers(Torrents Req, ServerCallContext Ctx)

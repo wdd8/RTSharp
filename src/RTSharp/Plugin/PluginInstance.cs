@@ -7,15 +7,13 @@ using System.Reactive.Disposables;
 using System.Reflection;
 using System.Threading.Tasks;
 
-using Avalonia.Collections;
 using Avalonia.Controls;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-using RTSharp.Core.Services.Auxiliary;
-using RTSharp.Core.Util;
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Daemon;
 using Serilog;
 
 namespace RTSharp.Plugin
@@ -35,6 +33,8 @@ namespace RTSharp.Plugin
 
         public IConfigurationRoot PluginConfig { get; }
         public string PluginConfigPath { get; }
+
+        private string AttachedServerId { get; set; }
 
         /// <inheritdoc />
         public Shared.Abstractions.Version Version => Global.Consts.Version;
@@ -64,15 +64,21 @@ namespace RTSharp.Plugin
 
         private static object DataProviderLock = new();
 
-        public object RegisterDataProvider(IDataProvider In)
+        public IHostedDataProvider RegisterDataProvider(IDataProvider In)
         {
             if (Instance != In.Plugin)
                 throw new InvalidOperationException($"{nameof(IDataProvider.Plugin)} in data provider must be same as caller");
 
-            if (PluginInstanceConfig.ServerId == null)
-                throw new InvalidOperationException($"{InstanceId} tried to register, but {nameof(PluginInstanceConfig.ServerId)} is missing");
-
             var provider = new DataProvider(this, In);
+
+            if (provider.DataProviderInstanceConfig.ServerId == null)
+                throw new InvalidOperationException($"{InstanceId} tried to register, but {nameof(provider.DataProviderInstanceConfig.ServerId)} is missing");
+
+            if (AttachedServerId == null)
+                AttachedServerId = provider.DataProviderInstanceConfig.ServerId;
+            else if (AttachedServerId != provider.DataProviderInstanceConfig.ServerId)
+                AttachedServerId = null;
+
             lock (DataProviderLock) {
                 Plugins.DataProviders.Add(provider);
             }
@@ -82,9 +88,11 @@ namespace RTSharp.Plugin
 
         public void UnregisterDataProvider(object In)
         {
+            var dp = (DataProvider)In;
             lock (DataProviderLock) {
-                Plugins.DataProviders.Remove((DataProvider)In);
+                Plugins.DataProviders.Remove(dp);
             }
+            dp.CurrentTorrentChangesTaskCts.Cancel();
         }
 
         public void RegisterActionQueue(IActionQueue In) => Core.ActionQueue.RegisterActionQueue(this, In);
@@ -129,11 +137,26 @@ namespace RTSharp.Plugin
             Plugins.LoadedPlugins.Remove(this);
         }
 
-        public IAuxiliaryService GetAuxiliaryService(string serverId)
+        public IDaemonService AttachedDaemonService
         {
-            return new AuxiliaryService(serverId);
+            get {
+                if (AttachedServerId == null)
+                    throw new InvalidOperationException("No singular server data providers registered");
+
+                return Core.Servers.Value[AttachedServerId];
+            }
         }
 
         public IServiceScope CreateScope() => Core.ServiceProvider.CreateScope();
+
+        public IReadOnlyList<IDaemonService> GetDaemonServices() => Core.Servers.Value.Cast<IDaemonService>().ToList().AsReadOnly();
+
+        public IDaemonService? GetDaemonService(string ServerId)
+        {
+            if (Core.Servers.Value.TryGetValue(ServerId, out var ret))
+                return ret;
+
+            return null;
+        }
     }
 }

@@ -32,7 +32,6 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
             grid.RestoreState(config.UIState.Value.TorrentGridState);
 
-            vm!.ResortList = ResortList;
             vm!.RecheckTorrentsConfirmationDialog = ShowRecheckTorrentsConfirmationDialog;
             vm!.MoveDownloadDirectoryConfirmationDialog = ShowMoveDownloadDirectoryConfirmationDialog;
             vm!.SelectDirectoryDialog = ShowSelectDirectoryDialog;
@@ -43,7 +42,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             vm!.OnViewModelAttached(this);
         }, null);
 
-        grid.Sorting += async (sender, e) => {
+        grid.Sorted += async (sender, e) => {
             await Task.Delay(3000); // HACKHACK: Extreme hack! Sorting doesn't provide any information about the sort action itself and current sorting state of columns is not updated, so sort action did not happen yet. Hope that it completes in 3 seconds
             await SaveGridState();
         };
@@ -60,17 +59,6 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     public override void EndInit() => base.EndInit();
 
     public TorrentListingViewModel? TypedContext => (TorrentListingViewModel?)DataContext;
-
-    private void ResortList()
-    {
-        foreach (var col in grid.Columns) {
-            var sortDirection = col.GetSortDirection();
-            if (sortDirection == null)
-                continue;
-
-            col.Sort(sortDirection.Value);
-        }
-    }
 
     public async ValueTask SaveGridState()
     {

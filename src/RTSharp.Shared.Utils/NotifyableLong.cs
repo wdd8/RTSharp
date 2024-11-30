@@ -2,9 +2,16 @@
 
 namespace RTSharp.Shared.Utils
 {
-    public class Notifyable<T> : INotifyPropertyChanged
+    public interface INotifyable
+    {
+        public string ValueStr { get; }
+    }
+
+    public class Notifyable<T> : INotifyPropertyChanged, INotifyable
     {
         public T Value { get; private set; }
+
+        public string ValueStr => Value.ToString();
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -16,5 +23,7 @@ namespace RTSharp.Shared.Utils
             this.Value = Value;
             PropertyChanged?.Invoke(null, new PropertyChangedEventArgs(nameof(Value)));
         }
+
+        public override string ToString() => Value.ToString();
     }
 }

@@ -107,6 +107,8 @@
 
             if (Stored.DLSpeed > 0 || Stored.UPSpeed > 0)
                 Stored.State |= Shared.Abstractions.TORRENT_STATE.ACTIVE;
+            else
+                Stored.State &= ~Shared.Abstractions.TORRENT_STATE.ACTIVE;
         }
 
         public static void ApplyFromExternal(QBittorrent.Client.TorrentInfo Stored, QBittorrent.Client.TorrentPartialInfo External)

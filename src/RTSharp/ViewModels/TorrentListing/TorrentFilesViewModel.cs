@@ -15,7 +15,7 @@ using System.Reactive.Linq;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using RTSharp.Core.Services.Auxiliary;
+using RTSharp.Core.Services.Daemon;
 using NP.Ava.UniDockService;
 
 namespace RTSharp.ViewModels.TorrentListing
@@ -58,11 +58,11 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             var files = In.Cast<Models.File>();
 
-            var auxiliary = new AuxiliaryService(Torrent.Owner.PluginInstance.PluginInstanceConfig.ServerId);
+            var server = Torrent.Owner.PluginInstance.AttachedDaemonService;
 
             IList<string> reply;
             try {
-                reply = await auxiliary.Mediainfo(files.Select(x => x.Path).ToArray());
+                reply = await server.Mediainfo(files.Select(x => x.Path).ToArray());
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Mediainfo failed");
                 return;

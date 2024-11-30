@@ -12,7 +12,7 @@ using CommunityToolkit.Mvvm.Input;
 using DynamicData;
 using DynamicData.Binding;
 
-using RTSharp.Core.Services.Auxiliary;
+using RTSharp.Core.Services.Daemon;
 using RTSharp.Models;
 using RTSharp.Plugin;
 using Serilog;
@@ -45,10 +45,14 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
     [ObservableProperty]
     public bool removeDirectoryAllowed;
 
+    private DaemonService Server;
+
     public DirectorySelectorWindowViewModel(DataProvider DataProvider)
     {
         this.DataProvider = DataProvider;
         _itemsSource.Connect().Sort(SortExpressionComparer<FileSystemItem>.Ascending(x => x.Path)).Bind(out _items).Subscribe();
+
+        Server = Core.Servers.Value[DataProvider.DataProviderInstanceConfig.ServerId];
     }
 
     [RelayCommand]
@@ -79,10 +83,8 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
             return;
         }
 
-        var auxiliary = new AuxiliaryService(DataProvider.PluginInstance.PluginInstanceConfig.ServerId);
-
         try {
-            await auxiliary.CreateDirectory(emptyItem.Path);
+            await Server.CreateDirectory(emptyItem.Path);
         } catch (Exception ex) {
             Log.Logger.Error(ex, $"Failed to create directory \"{emptyItem.Path}\"");
             _itemsSource.Remove(emptyItem);
@@ -99,10 +101,8 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
         if (items.Count() > 1)
             return;
 
-        var auxiliary = new AuxiliaryService(DataProvider.PluginInstance.PluginInstanceConfig.ServerId);
-
         try {
-            await auxiliary.RemoveEmptyDirectory(items.First().Path);
+            await Server.RemoveEmptyDirectory(items.First().Path);
         } catch (Exception ex) {
             Log.Logger.Error(ex, $"Failed to remove empty directory \"{items.First().Path}\"");
         }
@@ -120,11 +120,9 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
             value = "/";
         }
 
-        var auxiliary = new AuxiliaryService(DataProvider.PluginInstance.PluginInstanceConfig.ServerId);
-
         Shared.Abstractions.FileSystemItem? dirInfo;
         try {
-            dirInfo = await auxiliary.GetDirectoryInfo(value);
+            dirInfo = await Server.GetDirectoryInfo(value);
         } catch {
             return;
         }

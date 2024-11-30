@@ -39,6 +39,12 @@ namespace RTSharp.Models
         public string state;
 
         /// <summary>
+        /// Is torrent private? (no DHT/PeX/LSD)
+        /// </summary>
+        [ObservableProperty]
+        public bool? isPrivate;
+
+        /// <summary>
         /// Size in bytes
         /// </summary>
         [ObservableProperty]
@@ -206,21 +212,21 @@ namespace RTSharp.Models
             this.Name = In.Name;
 
             string stateStr = "N/A";
-            if (In.State.HasFlag(TORRENT_STATE.SEEDING))
+            if ((In.State & TORRENT_STATE.SEEDING) == TORRENT_STATE.SEEDING)
                 stateStr = "Seeding";
-            if (In.State.HasFlag(TORRENT_STATE.STOPPED))
+            if ((In.State & TORRENT_STATE.STOPPED) == TORRENT_STATE.STOPPED)
                 stateStr = "Stopped";
-            if (In.State.HasFlag(TORRENT_STATE.COMPLETE))
+            if ((In.State & TORRENT_STATE.COMPLETE) == TORRENT_STATE.COMPLETE)
                 stateStr = "Complete";
-            if (In.State.HasFlag(TORRENT_STATE.DOWNLOADING))
+            if ((In.State & TORRENT_STATE.DOWNLOADING) == TORRENT_STATE.DOWNLOADING)
                 stateStr = "Downloading";
-            if (In.State.HasFlag(TORRENT_STATE.PAUSED))
+            if ((In.State & TORRENT_STATE.PAUSED) == TORRENT_STATE.PAUSED)
                 stateStr = "Paused";
-            if (In.State.HasFlag(TORRENT_STATE.HASHING))
+            if ((In.State & TORRENT_STATE.HASHING) == TORRENT_STATE.HASHING)
                 stateStr = "Hashing";
-            if (In.State.HasFlag(TORRENT_STATE.ERRORED))
+            if ((In.State & TORRENT_STATE.ERRORED) == TORRENT_STATE.ERRORED)
                 stateStr = "☠ " + stateStr;
-            if (In.State.HasFlag(TORRENT_STATE.ACTIVE))
+            if ((In.State & TORRENT_STATE.ACTIVE) == TORRENT_STATE.ACTIVE)
                 stateStr = "⚡ " + stateStr;
 
             this.State = stateStr;
@@ -290,7 +296,7 @@ namespace RTSharp.Models
                 Owner = Owner.Instance,
                 State = InternalState,
                 Size = Size,
-                WantedSize = Size, // ??????????
+                WantedSize = Size, // TODO: ??????????
                 PieceSize = PieceSize,
                 Wasted = Wasted,
                 Done = (float)Downloaded / Size * 100, // Maybe get from server?

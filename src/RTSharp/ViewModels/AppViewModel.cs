@@ -32,7 +32,7 @@ namespace RTSharp.ViewModels
         {
             using var scope = Core.ServiceProvider.CreateScope();
 
-            var uiStateMonitor = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<UIState>>();
+            var uiStateMonitor = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<Config.Models.UIState>>();
 
             uiStateMonitor.OnChange(state => {
                 this.TrayIconVisible = state.TrayIconVisible;

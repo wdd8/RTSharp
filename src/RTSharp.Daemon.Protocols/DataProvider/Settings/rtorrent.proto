@@ -1,0 +1,63 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "RTSharp.Daemon.Protocols.DataProvider.Settings";
+
+import "google/protobuf/empty.proto";
+import "DataProvider/CommandReply.proto";
+
+service GRPCRtorrentSettingsService {
+    rpc GetSettings (google.protobuf.Empty) returns (RtorrentSettings);
+    rpc SetSettings (RtorrentSettings) returns (CommandReply);
+}
+
+message RtorrentSettings {
+    int64 NumberOfUploadSlots = 1; // throttle.max_uploads
+    int64 MinimumNumberOfPeers = 2; // throttle.min_peers.normal
+    int64 MaximumNumberOfPeers = 3; // throttle.max_peers.normal
+    int64 MinimumNumberOfPeersForSeeding = 4; // throttle.min_peers.seed
+    int64 MaximumNumberOfPeersForSeeding = 5; // throttle.max_peers.seed
+    int64 WishedNumberOfPeers = 6; // trackers.numwant
+    bool CheckHashAfterDownload = 7; // pieces.hash.on_completion
+    string DefaultDirectoryForDownloads = 8; // directory.default
+
+    bool OpenListeningPort = 9; // network.port_open
+    string PortUsedForIncomingConnections = 10; // network.port_range
+    bool RandomizePort = 11; // network.port_random
+
+    int64 MaximumUploadRate = 12; // throttle.global_up.max_rate
+    int64 MaximumDownloadRate = 13; // throttle.global_down.max_rate
+
+    int64 GlobalNumberOfUploadSlots = 14; // throttle.max_uploads.global
+    int64 GlobalNumberOfDownloadSlots = 15; // throttle.max_downloads.global
+    int64 MaximumMemoryUsage = 16; // pieces.memory.max
+    int64 MaximumNumberOfOpenFiles = 17; // network.max_open_files
+    int64 MaximumNumberOfOpenHttpConnections = 18; // network.http.max_open
+
+    int32 DhtPort = 19; // dht.port
+    bool EnablePeerExchange = 20; // protocol.pex
+    string IpToReportToTracker = 21; // network.local_address
+
+    string network_http_cacert = 22; // network.http.cacert
+    string network_http_capath = 23; // network.http.capath
+    int64 throttle_max_downloads_div = 24; // throttle.max_downloads.div
+    int64 throttle_max_uploads_div = 25; // throttle.max_uploads.div
+    int64 system_file_max_size = 26; // system.file.max_size
+    string pieces_preload_type = 27; // pieces.preload.type
+    int64 pieces_preload_min_size = 28; // pieces.preload.min_size
+    int64 pieces_preload_min_rate = 29; // pieces.preload.min_rate
+    int64 network_receive_buffer_size = 30; // network.receive_buffer.size
+    int64 network_send_buffer_size = 31; // network.send_buffer.size
+    bool pieces_sync_always_safe = 32; // pieces.sync.always_safe
+    int64 pieces_sync_timeout_safe = 33; // pieces.sync.timeout_safe
+    int64 pieces_sync_timeout = 34; // pieces.sync.timeout
+    bool network_scgi_dont_route = 35; // network.scgi.dont_route
+    string session_path = 36; // session.path
+    bool session_use_lock = 37; // session.use_lock
+    bool session_on_completion = 38; // session.on_completion
+    int64 system_file_split_size = 39; // system.file.split_size
+    string system_file_split_suffix = 40; // system.file.split_suffix
+    bool trackers_use_udp = 41; // trackers.use_udp
+    string network_http_proxy_address = 42; // network.http.proxy_address
+    string network_proxy_address = 43; // network.proxy_address
+    string network_bind_address = 44; // network.bind_address
+}

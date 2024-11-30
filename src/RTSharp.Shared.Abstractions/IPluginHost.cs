@@ -1,8 +1,10 @@
-﻿using Avalonia.Controls;
+﻿#nullable enable
+
+using Avalonia.Controls;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using RTSharp.Shared.Abstractions.Daemon;
 using Serilog;
 
 namespace RTSharp.Shared.Abstractions
@@ -63,7 +65,7 @@ namespace RTSharp.Shared.Abstractions
         /// </summary>
         /// <param name="In">Data provider</param>
         /// <returns>Handle</returns>
-        object RegisterDataProvider(IDataProvider In);
+        IHostedDataProvider RegisterDataProvider(IDataProvider In);
 
         /// <summary>
         /// Unregisters a data provider
@@ -115,8 +117,12 @@ namespace RTSharp.Shared.Abstractions
         /// </summary>
         HttpClient HttpClient { get; }
 
-        IAuxiliaryService GetAuxiliaryService(string serverId);
+        IDaemonService? GetDaemonService(string serverId);
+
+        IDaemonService? AttachedDaemonService { get; }
 
         IServiceScope CreateScope();
+
+        IReadOnlyList<IDaemonService> GetDaemonServices();
     }
 }

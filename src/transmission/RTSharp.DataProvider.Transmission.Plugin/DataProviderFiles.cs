@@ -10,7 +10,6 @@ namespace RTSharp.DataProvider.Transmission.Plugin
         public IPluginHost PluginHost { get; }
 
         public DataProviderFilesCapabilities Capabilities { get; } = new(
-            GetDotTorrents: false,
             GetDefaultSavePath: true
         );
 
@@ -28,7 +27,5 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             var info = await Client.GetSessionInformationAsync();
             return info!.DownloadDirectory!;
         }
-
-        public Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<byte[]> In) => throw new NotImplementedException();
     }
 }

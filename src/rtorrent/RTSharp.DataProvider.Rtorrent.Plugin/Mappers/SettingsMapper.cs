@@ -1,4 +1,6 @@
-﻿using System;
+﻿using RTSharp.Daemon.Protocols.DataProvider.Settings;
+
+using System;
 using System.Linq;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
@@ -31,7 +33,7 @@ public static class SettingsMapper
         "network_bind_address"
     };
 
-    public static Models.Settings MapFromProto(Protocols.Settings In)
+    public static Models.Settings MapFromProto(RtorrentSettings In)
     {
         var ret = new Models.Settings() {
             General = new Models.General() {
@@ -74,9 +76,9 @@ public static class SettingsMapper
         return ret;
     }
 
-    public static Protocols.Settings MapToProto(Models.Settings In)
+    public static RtorrentSettings MapToProto(Models.Settings In)
     {
-        var ret = new Protocols.Settings() {
+        var ret = new RtorrentSettings() {
             MaximumMemoryUsage = In.General.MaximumMemoryUsage,
             CheckHashAfterDownload = In.General.CheckHashAfterDownload,
             DefaultDirectoryForDownloads = In.General.DefaultDirectoryForDownloads,

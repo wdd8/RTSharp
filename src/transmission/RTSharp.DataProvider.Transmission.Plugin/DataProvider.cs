@@ -38,6 +38,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             AddTorrent: true,
             ForceRecheckTorrent: true,
             ReannounceToAllTrackers: true,
+            GetDotTorrent: true,
             ForceStartTorrentOnAdd: null,
             MoveDownloadDirectory: true,
             RemoveTorrent: true,
@@ -52,7 +53,6 @@ namespace RTSharp.DataProvider.Transmission.Plugin
         );
 
 
-        private CancellationTokenSource TorrentChangesTokenSource;
         private InfoHashDictionary<(Torrent Internal, TorrentView External)> LatestTorrents = new();
         private ReaderWriterLockSlim LatestTorrentsLock = new();
 
@@ -63,8 +63,6 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
             this.Files = new DataProviderFiles(ThisPlugin, Init);
             this.Stats = new DataProviderStats(ThisPlugin, Init);
-
-            State.Change(DataProviderState.INACTIVE);
         }
 
         public string PathCombineFSlash(string a, string b)
@@ -72,15 +70,11 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             return Path.Combine(a, b).Replace("\\", "/");
         }
 
-        public Notifyable<long> LatencyMs { get; } = new();
-
         public Notifyable<long> TotalDLSpeed { get; } = new();
 
         public Notifyable<long> TotalUPSpeed { get; } = new();
 
         public Notifyable<long> ActiveTorrentCount { get; } = new();
-
-        public Notifyable<DataProviderState> State { get; } = new();
 
         public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
         {
@@ -244,11 +238,18 @@ namespace RTSharp.DataProvider.Transmission.Plugin
         {
             Init();
 
-            /*Client.
-            Client.TorrentGetAsync().Result.Torrents[0].TorrentFile
+            var torrents = (await Client.TorrentGetAsync(Translate(In))).Torrents;
 
-            return ret;*/
-            throw null;
+            var server = PluginHost.AttachedDaemonService;
+
+            var ret = new InfoHashDictionary<byte[]>();
+
+            foreach (var torrent in torrents) {
+                var torrentFile = (await server.ReceiveFilesInline(torrent.TorrentFile)).ToArray();
+                ret[Convert.FromHexString(torrent.HashString)] = torrentFile;
+            }
+
+            return ret;
         }
 
         public async Task<InfoHashDictionary<(bool MultiFile, IList<Shared.Abstractions.File> Files)>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken = default)
@@ -305,11 +306,9 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             return TorrentMapper.MapFromExternal(torrent.Torrents.First());
         }
 
-        public async Task<ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges()
+        public async Task<ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken cancellationToken)
         {
             Init();
-
-            TorrentChangesTokenSource?.Cancel();
 
             var channel = Channel.CreateUnbounded<ListingChanges<Torrent, byte[]>>(new UnboundedChannelOptions() {
                 SingleReader = true,
@@ -317,12 +316,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             });
 
             _ = Task.Run(async () => {
-                TorrentChangesTokenSource = new CancellationTokenSource();
                 try {
-                    Debug.Assert(!TorrentChangesTokenSource.Token.IsCancellationRequested);
-
-                    var pollInternal = PluginHost.PluginConfig.GetValue<TimeSpan>("Server:PollInterval");
-
                     var all = await Client.TorrentGetAsync(null, TorrentFields.ALL_FIELDS);
                     var changes = new List<Torrent>();
                     var removed = new List<byte[]>();
@@ -342,9 +336,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
                     await channel.Writer.WriteAsync(ret);
 
-                    while (!TorrentChangesTokenSource.Token.IsCancellationRequested && !Active.IsCancellationRequested) {
-                        State.Change(DataProviderState.ACTIVE);
-
+                    while (!cancellationToken.IsCancellationRequested) {
                         var request = new TransmissionRequest("torrent-get", new Dictionary<string, object> {
                             { "fields", TorrentFields.ALL_FIELDS },
                             { "ids", "recently-active" }
@@ -396,7 +388,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
                         }
                         LatestTorrentsLock.ExitReadLock();
 
-                        await Task.Delay(pollInternal);
+                        await Task.Delay(ThisPlugin.DataProvider.DataProviderInstanceConfig.ListUpdateInterval);
                     }
                 } catch (TaskCanceledException) { } catch (Exception ex) {
                     PluginHost.Logger.Error(ex, $"Exception thrown in {nameof(GetTorrentChanges)}");
@@ -404,9 +396,8 @@ namespace RTSharp.DataProvider.Transmission.Plugin
                     throw;
                 } finally {
                     channel.Writer.Complete();
-                    State.Change(DataProviderState.INACTIVE);
                 }
-            });
+            }, cancellationToken);
 
             return channel.Reader;
         }

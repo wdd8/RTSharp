@@ -34,7 +34,7 @@
         <DataGrid.Columns>
             <DataGridTextColumn Header="Id" IsReadOnly="True" Binding="{Binding ServerId, Mode=OneWay}" />
             <DataGridTextColumn Header="Host" IsReadOnly="True" Binding="{Binding Host, Mode=OneWay}" />
-            <DataGridTextColumn Header="Auxiliary service port" IsReadOnly="True" Binding="{Binding AuxiliaryServicePort, Mode=OneWay}" />
+            <DataGridTextColumn Header="Daemon port" IsReadOnly="True" Binding="{Binding DaemonPort, Mode=OneWay}" />
         </DataGrid.Columns>
     </DataGrid>
 </Window>

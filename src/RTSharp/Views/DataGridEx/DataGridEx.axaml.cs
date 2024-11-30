@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Text.Json;
@@ -42,7 +43,7 @@ namespace RTSharp.Views.DataGridEx
 
         public void EvSorting(object sender, DataGridColumnEventArgs e)
         {
-            Sorting(sender, e);
+            Sorted(sender, e);
         }
 
         public bool StateChanged()
@@ -76,8 +77,10 @@ namespace RTSharp.Views.DataGridEx
                 var realCol = grid.Columns.First(x => x.Header.ToString()! == col.HeaderId);
 
                 realCol.IsVisible = col.IsVisible;
-                if (col.Sorting != null)
+                if (col.Sorting != null) {
+                    //realCol.SetSortDirection(col.Sorting.Value);
                     realCol.Sort(col.Sorting.Value);
+                }
                 
                 realCol.DisplayIndex = col.DisplayIndex;
                 realCol.Width = (DataGridLength)conv.ConvertFromInvariantString(col.Width)!;
@@ -86,7 +89,7 @@ namespace RTSharp.Views.DataGridEx
 
         public event EventHandler<DataGridRowEventArgs> LoadingRow;
 
-        public event EventHandler<DataGridColumnEventArgs> Sorting;
+        public event EventHandler<DataGridColumnEventArgs> Sorted;
 
         public ObservableCollectionEx<object> SelectedItems { get; } = new();
 

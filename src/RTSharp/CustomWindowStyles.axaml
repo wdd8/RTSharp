@@ -100,9 +100,7 @@
         <Setter Property="TitleMargin"
                 Value="5"/>
         <Setter Property="Title"
-                Value="{Binding Path=TheDockGroup.ActiveDockItem.Header, 
-                            StringFormat='Floating Window - {0}'
-                            RelativeSource={RelativeSource Self}}"/>
+                Value="{Binding Path=TheDockGroup.ActiveDockItem.Header, StringFormat='Floating Window - {0}', RelativeSource={RelativeSource Self}}" />
         <Setter Property="ButtonsAreaTemplate"
                 Value="{StaticResource FloatingWindowButtonsTemplate}"/>
         <Setter Property="HeaderContentTemplate">

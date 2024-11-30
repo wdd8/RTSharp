@@ -1,7 +1,6 @@
 ﻿using Avalonia.Controls;
 
-using DynamicData;
-
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -33,7 +32,30 @@ namespace RTSharp.Core.Util
             if (c != this.Items.Count)
                 this.OnPropertyChanged(new PropertyChangedEventArgs("Count"));
 
-            this.OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+
+        public void Apply(NotifyCollectionChangedEventArgs e)
+        {
+            var c = this.Items.Count;
+
+            if (c == 0)
+                return;
+
+            if (e.OldItems != null) {
+                foreach (var item in e.OldItems) {
+                    this.Items.Remove((T)item);
+                }
+            }
+            if (e.NewItems != null) {
+                foreach (var item in e.NewItems) {
+                    this.Items.Add((T)item);
+                }
+            }
+
+            if (c != this.Items.Count)
+                this.OnPropertyChanged(new PropertyChangedEventArgs("Count"));
+
             this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
@@ -52,6 +74,21 @@ namespace RTSharp.Core.Util
             this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
+        public void Replace(System.Collections.IEnumerable In)
+        {
+            var c = this.Items.Count;
+
+            Items.Clear();
+            foreach (var item in In)
+                Items.Add((T)item);
+
+            if (c != this.Items.Count)
+                this.OnPropertyChanged(new PropertyChangedEventArgs("Count"));
+
+            this.OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+
         public void AddRange(IEnumerable<T> In)
         {
             var c = this.Items.Count;
@@ -62,6 +99,17 @@ namespace RTSharp.Core.Util
             if (c != this.Items.Count)
                 this.OnPropertyChanged(new PropertyChangedEventArgs("Count"));
 
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+
+        public void NotifyInnerItemsChanged()
+        {
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+
+        public void Sort(Comparison<T> comparison)
+        {
+            ((List<T>)Items).Sort(comparison);
             this.OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
             this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
