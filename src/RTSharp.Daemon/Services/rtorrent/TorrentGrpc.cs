@@ -1,4 +1,5 @@
-﻿using BencodeNET.Torrents;
+﻿using System.Collections.Immutable;
+using BencodeNET.Torrents;
 
 using CliWrap;
 using CliWrap.Buffered;
@@ -14,106 +15,123 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using RTSharp.Daemon.Services.rtorrent.TorrentPoll;
+using RTSharp.Shared.Abstractions;
+using File = System.IO.File;
+using Status = Grpc.Core.Status;
+using System.Text.Json;
 
 namespace RTSharp.Daemon.Services.rtorrent
 {
     public partial class Grpc
     {
-        private Task<TorrentsReply> XmlActionTorrents(IList<byte[]> Hashes, params string[] Actions) =>
-            XmlActionTorrentsMulti(Hashes.Select(x => (x, Array.Empty<string>())), Actions, (action, hash, reply) => reply == "0");
-
-        private Task<TorrentsReply> XmlActionTorrentsParam(IList<(byte[] Hash, string Param)> HashParams, string Action, Func<string, byte[], string, bool> FxExpectedReply) =>
-            XmlActionTorrentsMulti(HashParams.Select(x => (x.Hash, new[] { x.Param })), new[] { Action }, FxExpectedReply);
-
-        private async Task<TorrentsReply> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, string[] Params)> HashParams, string[] Actions, Func<string, byte[], string, bool> FxExpectedReply)
+        private TorrentsReply ToTorrentsReply(XMLUtils.TorrentsResult[] In)
         {
-            var xml = new StringBuilder();
-            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
-            foreach (var (hash, @params) in HashParams) {
-                var sHash = Convert.ToHexString(hash);
-
-                foreach (var action in Actions) {
-                    xml.Append("<value><struct><member><name>methodName</name><value><string>" + action + "</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value>" + (@params.Length == 0 ? "" : String.Join("", @params.Select(x => $"<value>{x}</value>"))) + "</data></array></value></member></struct></value>");
+            return new TorrentsReply {
+                Torrents = {
+                    In.Select(x => new TorrentsReply.Types.TorrentReply {
+                        InfoHash = x.InfoHash.ToByteString(),
+                        Status = {
+                            x.Status.Select(GrpcExtensions.ToStatus)
+                        }
+                    })
                 }
-            }
-
-            xml.Append("</data></array></value></param></params></methodCall>");
-
-            var result = await Scgi.Get(xml.ToString());
-
-            XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
-            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
-
-            var ret = new TorrentsReply();
-
-            foreach (var (hash, _) in HashParams) {
-                var torrentReply = new TorrentsReply.Types.TorrentReply() {
-                    InfoHash = hash.ToByteString()
-                };
-                ret.Torrents.Add(torrentReply);
-
-                foreach (var action in Actions) {
-                    if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
-                        // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not find info-hash.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not find info-hash.</string></value></member>\r\n</struct></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
-                        var status = XMLUtils.GetFaultStruct(ref result, action);
-                        torrentReply.Status.Add(status);
-
-                        continue;
-                    }
-
-                    XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
-                    var resp = XMLUtils.GetAnyValue(ref result);
-
-                    if (FxExpectedReply(action, hash, resp)) {
-                        torrentReply.Status.Add(new Protocols.DataProvider.Status() {
-                            Command = action,
-                            FaultCode = "0",
-                            FaultString = ""
-                        });
-                    } else {
-                        torrentReply.Status.Add(new Protocols.DataProvider.Status() {
-                            Command = action,
-                            FaultCode = resp,
-                            FaultString = "Unexpected response"
-                        });
-                    }
-
-                    XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
-                }
-            }
-
-            return ret;
+            };
         }
-
+    
         public async Task<TorrentsReply> StartTorrents(Torrents Req)
         {
             var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
-            return await XmlActionTorrents(hashes, "d.open", "d.start");
+            return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.open", "d.start"));
         }
 
         public async Task<TorrentsReply> PauseTorrents(Torrents Req)
         {
             var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
-            return await XmlActionTorrents(hashes, "d.stop");
+            return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.stop"));
         }
 
         public async Task<TorrentsReply> StopTorrents(Torrents Req)
         {
             var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
-            return await XmlActionTorrents(hashes, "d.stop", "d.close");
+            return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.stop", "d.close"));
         }
 
-        public async Task<TorrentsReply> ForceRecheckTorrents(Torrents Req)
+        public async Task<BytesValue> ForceRecheckTorrents(Torrents Req, CancellationToken CancellationToken)
         {
             var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
-            return await XmlActionTorrents(hashes, "d.check_hash");
+            var res = await Scgi.XmlActionTorrents(hashes, "d.check_hash");
+            
+            var successfulRechecks = res.Where(x => x.Status.All(i => i.FaultCode == "0"));
+
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
+            
+            var session = Sessions.CreateSession(cts, async (session) => {
+                session.Progress.Text = "Observing state...";
+                session.Progress.Progress = 0f;
+                session.Progress.State = TASK_STATE.RUNNING;
+                
+                var sw = Stopwatch.StartNew();
+
+                var stateObserved = new InfoHashDictionary<bool>();
+
+                using var sub = TorrentPolling.Subscribe(TimeSpan.FromSeconds(1));
+                
+                while (true) {
+                    var changes = await sub.GetChanges(false, cts.Token);
+                    
+                    if (cts.IsCancellationRequested)
+                        break;
+                    
+                    if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
+                        foreach (var torrentResult in res) {
+                            var torrentState = changes.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                            torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                            torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                            
+                            if (torrentState == null)
+                                continue;
+                            
+                            if (torrentState.Value.HasFlag(TORRENT_STATE.HASHING)) {
+                                stateObserved[torrentResult.InfoHash] = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (stateObserved.Count != 0) {
+                        foreach (var torrentResult in res) {
+                            var torrentState = changes.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                            torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                            torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                            
+                            if (torrentState == null)
+                                continue;
+                            
+                            if (!torrentState.Value.HasFlag(TORRENT_STATE.HASHING)) {
+                                stateObserved[torrentResult.InfoHash] = false;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (stateObserved.All(x => !x.Value))
+                        break;
+                }
+            });
+            
+            return new BytesValue
+            {
+                Value = session.Id.ToByteArray().ToByteString()
+            };
         }
 
         public async Task<TorrentsReply> ReannounceToAllTrackers(Torrents Req)
         {
             var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
-            return await XmlActionTorrents(hashes, "d.tracker_announce");
+            return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.tracker_announce"));
         }
 
         record Torrent(string Path, string Filename, MemoryStream Data);
@@ -202,12 +220,34 @@ namespace RTSharp.Daemon.Services.rtorrent
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<params>\r\n<param><value><array><data>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<fault>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Call XML not a proper XML-RPC call.  Incorrect Base64 padding</string></value></member>\r\n</struct></value>\r\n</fault>\r\n</methodResponse>\r\n
 
+            var sw = Stopwatch.StartNew();
+            var accountedFor = new InfoHashDictionary<bool>();
+            foreach (var hash in hashes) {
+                accountedFor[Convert.FromHexString(hash)] = false;
+            }
+            
+            using (var sub = TorrentPolling.Subscribe(TimeSpan.FromSeconds(1))) {
+                while (sw.Elapsed < TimeSpan.FromSeconds(30) && accountedFor.Any(x => !x.Value)) {
+                    var changes = await sub.GetChanges(false, default)!;
+                    
+                    foreach (var (hash, _) in accountedFor) {
+                        var torrentHash = changes.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
+                        torrentHash ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
+                        torrentHash ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
+                        
+                        if (torrentHash != null) {
+                            accountedFor[hash] = true;
+                        }
+                    }
+                }
+            }
+
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             if (XMLUtils.MaybeSeekFixed(ref result, XMLUtils.FAULT_TOKEN)) {
                 XMLUtils.MaybeSeekFixed(ref result, XMLUtils.NEWLINE);
                 ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                     InfoHash = Array.Empty<byte>().ToByteString(),
-                    Status = { XMLUtils.GetFaultStruct(ref result, "load_raw") }
+                    Status = { GrpcExtensions.ToStatus(XMLUtils.GetFaultStruct(ref result, "load_raw")) }
                 });
                 return ret;
             } else {
@@ -219,9 +259,18 @@ namespace RTSharp.Daemon.Services.rtorrent
         {
             var basePath = await TorrentOpService.GetTorrentsBasePath(Req.Hashes.Select(x => x.ToByteArray()));
             var ret = await TorrentOpService.GetTorrentsFiles(Req.Hashes.Select(x => x.ToByteArray()));
+            
+            var pieceSizes = Req.Hashes.ToInfoHashDictionary(x => x.ToByteArray(), x => {
+                var entry = PollingSubscription.GetLatestHistoryEntry(x.ToByteArray());
+                return entry.Value.Torrent.ChunkSize;
+            });
 
             foreach (var el in ret.Reply) {
-                el.MultiFile = basePath[el.InfoHash.ToByteArray()].ContainerFolder != null;
+                var hash = el.InfoHash.ToByteArray();
+                el.MultiFile = basePath[hash].ContainerFolder != null;
+                foreach (var file in el.Files) {
+                    file.Downloaded = file.DownloadedPieces * pieceSizes[hash];
+                }
             }
 
             return ret;
@@ -230,7 +279,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         public async Task<TorrentsReply> RemoveTorrents(Torrents Req)
         {
             var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
-            return await XmlActionTorrents(hashes, "d.erase");
+            return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.erase"));
         }
 
         public async Task<TorrentsReply> RemoveTorrentsAndData(Torrents Req)
@@ -303,7 +352,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                         // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
 
                         var status = XMLUtils.GetFaultStruct(ref result, action);
-                        torrentReply.Status.Add(status);
+                        torrentReply.Status.Add(GrpcExtensions.ToStatus(status));
 
                         continue;
                     }
@@ -485,7 +534,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
 
             Protocols.DataProvider.Status? fault;
-            if ((fault = XMLUtils.TryGetFaultStruct(ref result, "p.multicall")) != null) {
+            if ((fault = GrpcExtensions.ToStatus(XMLUtils.TryGetFaultStruct(ref result, "p.multicall"))) != null) {
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.Internal, fault.FaultCode + ": " + fault.FaultString));
             }
 
@@ -548,13 +597,290 @@ namespace RTSharp.Daemon.Services.rtorrent
         [GeneratedRegex(@"^rsync: (sent [\d,]+ bytes +received [\d,]+ bytes +[\d,\.]+ bytes\/sec)|(total size is [\d,]+ +speedup is [\d\.,]+)$")]
         private static partial Regex RsyncEndRegex();
 
-        public async Task MoveDownloadDirectory(MoveDownloadDirectoryArgs Req, IServerStreamWriter<MoveDownloadDirectoryProgress> Res, CancellationToken CancellationToken)
+        public async Task<BytesValue> MoveDownloadDirectory(MoveDownloadDirectoryArgs Req, CancellationToken CancellationToken)
         {
-            await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                File = "Checking for rsync...",
-                InfoHash = Array.Empty<byte>().ToByteString()
-            });
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
 
+            async Task fx(ScriptSession session)
+            {
+                session.Progress.State = TASK_STATE.RUNNING;
+
+                var enumFiles = new ScriptProgressState(session) {
+                    Text = "Enumerating files...",
+                    Progress = 0f,
+                    State = TASK_STATE.WAITING
+                };
+                var consistencyCheck = new ScriptProgressState(session) {
+                    Text = "Consistency check...",
+                    Progress = 0f,
+                    State = TASK_STATE.WAITING
+                };
+                var moveState = new ScriptProgressState(session) {
+                    Text = "Moving...",
+                    Progress = 0f,
+                    State = TASK_STATE.WAITING
+                };
+                var settingPath = new ScriptProgressState(session) {
+                    Text = "Setting paths...",
+                    Progress = 0f,
+                    State = TASK_STATE.WAITING
+                };
+                var deleteOld = new ScriptProgressState(session) {
+                    Text = "Removing old files...",
+                    Progress = 0f,
+                    State = TASK_STATE.WAITING
+                };
+                var setState = new ScriptProgressState(session) {
+                    Text = "Setting state...",
+                    Progress = 0f,
+                    State = TASK_STATE.WAITING
+                };
+                session.Progress.Chain = [enumFiles];
+
+                if (Req.Move) {
+                    enumFiles.Chain = [moveState];
+                    moveState.Chain = [settingPath];
+                } else {
+                    enumFiles.Chain = [settingPath];
+                }
+                if (Req.DeleteSourceFiles) {
+                    settingPath.Chain = [deleteOld];
+                    deleteOld.Chain = [setState];
+                } else {
+                    settingPath.Chain = [setState];
+                }
+
+                enumFiles.State = TASK_STATE.RUNNING;
+
+                InfoHashDictionary<(string Current, string Target, string? ContainerFolder)> basePaths =
+                    (await TorrentOpService.GetTorrentsBasePath(
+                        Req.Torrents.Select(x => x.InfoHash.ToByteArray())
+                    ))
+                    .ToInfoHashDictionary(x => x.Key, x => (
+                        x.Value.BasePath,
+                        Req.Torrents.First(i =>
+                            i.InfoHash.Span.SequenceEqual(x.Key)
+                        ).TargetDirectory,
+                        x.Value.ContainerFolder
+                    ));
+
+                enumFiles.Progress = 50f;
+
+                var files = await TorrentOpService.GetTorrentsFiles(Req.Torrents.Select(x => x.InfoHash.ToByteArray()));
+
+                enumFiles.State = TASK_STATE.DONE;
+                consistencyCheck.State = TASK_STATE.RUNNING;
+
+                foreach (var torrent in files.Reply) {
+                    setState.Progress = 0f;
+                    setState.State = TASK_STATE.WAITING;
+                    deleteOld.State = TASK_STATE.WAITING;
+                    deleteOld.Progress = 0f;
+                    deleteOld.Text = "Removing old files...";
+                    settingPath.State = TASK_STATE.WAITING;
+                    settingPath.Progress = 0f;
+                    settingPath.Text = "Setting paths...";
+                    moveState.State = TASK_STATE.WAITING;
+                    moveState.Progress = 0f;
+                    moveState.Text = "Moving...";
+
+                    if (!basePaths.TryGetValue(torrent.InfoHash.ToByteArray(), out var basePath)) {
+                        session.Progress.State = TASK_STATE.FAILED;
+                        session.Progress.Text = $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.ToByteArray())}, terminating operation";
+                        session.Progress.StateData = JsonSerializer.Serialize(new { Hash = torrent.InfoHash, File = "", Text = "Failed to get base directory", Success = false });
+                        return;
+                    }
+
+                    if (!UnixFileSystemInfo.TryGetFileSystemEntry(basePath.Target, out var futureBasePathInfo)) {
+                        session.Progress.Text = $"Failed to stat directory of {basePath.Target}";
+                        session.Progress.StateData = JsonSerializer.Serialize(new { Hash = torrent.InfoHash, File = basePath.Target, Text = $"Failed to stat directory", Success = false });
+                        continue;
+                    }
+
+                    if (Req.Move) {
+                        if (!UnixFileSystemInfo.TryGetFileSystemEntry(basePath.Current, out var currentBasePathInfo)) {
+                            session.Progress.Text = $"Failed to stat directory of {basePath.Current}";
+                            session.Progress.StateData = JsonSerializer.Serialize(new { Hash = torrent.InfoHash, File = basePath.Current, Text = $"Failed to stat directory", Success = false });
+                            continue;
+                        }
+
+                        if (!Directory.Exists(basePath.Target)) {
+                            Directory.CreateDirectory(basePath.Target, (UnixFileMode)(int)currentBasePathInfo.FileAccessPermissions);
+                        }
+
+                        moveState.State = TASK_STATE.RUNNING;
+                        moveState.Text = "Preparing rsync...";
+
+                        var filesFromPath = Path.GetTempFileName();
+                        var sourceFiles = torrent.Files.Select(x => (basePath.ContainerFolder != null ? (basePath.ContainerFolder + "/") : "") + x.Path).ToArray();
+                        await System.IO.File.WriteAllLinesAsync(filesFromPath, sourceFiles);
+
+                        Command proc;
+                        if (currentBasePathInfo.Device == futureBasePathInfo.Device) {
+                            proc = Cli.Wrap("rsync")
+                                .WithArguments(new[] {
+                            "-av",
+                            "--progress",
+                            "--files-from",
+                                filesFromPath,
+                            "--link-dest",
+                                basePath.Current,
+
+                            basePath.Current,
+                            basePath.Target
+                                }).WithValidation(CommandResultValidation.None);
+
+                            moveState.Text = "Moving (hardlink)...";
+                        } else {
+                            proc = Cli.Wrap("rsync")
+                                .WithArguments(new[] {
+                            "-av",
+                            "--progress",
+                            "--files-from",
+                                filesFromPath,
+
+                            basePath.Current,
+                            basePath.Target
+                                }).WithValidation(CommandResultValidation.None);
+
+                            moveState.Text = "Moving (with copy)...";
+                        }
+
+                        bool startedSending = false, ending = false;
+                        var currentFile = "?";
+
+                        proc = proc.WithStandardOutputPipe(PipeTarget.ToDelegate(async x => {
+                            if (ending)
+                                return;
+
+                            x = x.Trim();
+                            if (!startedSending) {
+                                if (RsyncStartRegex().IsMatch(x)) {
+                                    startedSending = true;
+                                }
+
+                                return;
+                            }
+
+                            var progressMatch = RsyncSpeedRegex().Match(x);
+
+                            if (progressMatch.Success) {
+                                if (!UInt64.TryParse(progressMatch.Groups["bytes"].Value.Replace(",", ""), out var bytesMoved))
+                                    return;
+
+                                if (!Converters.TryParseSISpeed(progressMatch.Groups["speed"].Value, true, out var speed))
+                                    return;
+
+                                if (!Converters.TryParseTimeSpan(progressMatch.Groups["eta"].Value, out var eta))
+                                    return;
+
+                                if (progressMatch.Groups.TryGetValue("completeCurrent", out var sCompleteCurrent) && UInt32.TryParse(sCompleteCurrent.Value, out var completeCurrent)) {
+                                    if (progressMatch.Groups.TryGetValue("completeTotal", out var sCompleteTotal) && UInt32.TryParse(sCompleteTotal.Value, out var completeTotal)) {
+                                        moveState.Text = $"{torrent.InfoHash} ({completeCurrent}/{completeTotal}): {currentFile} {speed} ETA {eta}";
+                                        session.Progress.StateData = JsonSerializer.Serialize(new { Hash = torrent.InfoHash, File = currentFile, Text = $"{bytesMoved}", Success = (bool?)null });
+                                    }
+                                }
+                            } else {
+                                if (RsyncEndRegex().IsMatch(x)) {
+                                    ending = true;
+                                    return;
+                                }
+
+                                if (!x.StartsWith("rsync:"))
+                                    return;
+
+                                x = x[6..];
+                                x = x.TrimStart();
+
+                                if (!String.IsNullOrWhiteSpace(x))
+                                    currentFile = x;
+                            }
+                        }, Encoding.UTF8));
+                        proc = proc.WithStandardErrorPipe(PipeTarget.ToDelegate(x => {
+                            Logger.LogWarning("rsync: " + x);
+                        }));
+
+                        var rsyncResult = await proc.ExecuteAsync();
+
+                        if (rsyncResult.ExitCode != 0) {
+                            moveState.Text = "Rsync exited with non-zero exit code " + rsyncResult.ExitCode;
+                            continue;
+                        }
+                    }
+
+                    settingPath.State = TASK_STATE.RUNNING;
+                    settingPath.Text = "Setting directories...";
+
+                    await Scgi.XmlActionTorrents(new[] { torrent.InfoHash.ToByteArray() }, "d.stop", "d.close");
+
+                    var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>d.directory.set</methodName><params>");
+                    xml.Append("<param><value><string>" + Convert.ToHexString(torrent.InfoHash.ToByteArray()) + "</string></value></param>");
+                    xml.Append("<param><value><string>" + basePath.Target + "</string></value></param>");
+                    xml.Append("</params></methodCall>");
+
+                    var result = await Scgi.Get(xml.ToString());
+
+                    // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<fault>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Wrong object type.</string></value></member>\r\n</struct></value>\r\n</fault>\r\n</methodResponse>\r\n
+
+                    XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
+
+                    if (XMLUtils.MaybeSeekFixed(ref result, XMLUtils.FAULT_TOKEN)) {
+                        XMLUtils.MaybeSeekFixed(ref result, XMLUtils.NEWLINE);
+                        var fault = XMLUtils.GetFaultStruct(ref result, "d.directory.set");
+
+                        settingPath.Text = $"Failed to set directories {fault.FaultCode} ({fault.FaultString})";
+
+                        continue;
+                    }
+
+                    if (Req.DeleteSourceFiles) {
+                        deleteOld.State = TASK_STATE.RUNNING;
+                        deleteOld.Text = "Removing old files...";
+
+                        var sw = Stopwatch.StartNew();
+                        var directories = new HashSet<string>();
+                        foreach (var file in torrent.Files) {
+                            var oldPath = Path.Combine(basePath.Current, basePath.ContainerFolder ?? "", file.Path);
+
+                            try { System.IO.File.Delete(oldPath); } catch { deleteOld.Text = "{torrent.InfoHash}: {oldPath} failed to delete"; }
+                            directories.Add(Path.GetDirectoryName(oldPath));
+
+                            if (sw.ElapsedMilliseconds > 100) {
+                                deleteOld.Text = "{torrent.InfoHash}: {oldPath}";
+                                sw.Restart();
+                            }
+                        }
+
+                        if (basePath.ContainerFolder != null) {
+                            foreach (var dir in directories.Where(dir => !Directory.EnumerateFileSystemEntries(dir).Any())) {
+                                try { Directory.Delete(dir, recursive: false); } catch { deleteOld.Text = "{torrent.InfoHash}: {dir} failed to delete"; }
+
+                                if (sw.ElapsedMilliseconds > 100) {
+                                    deleteOld.Text = "{torrent.InfoHash}: {dir}";
+                                    sw.Restart();
+                                }
+                            }
+                        }
+                    }
+
+                    setState.State = TASK_STATE.RUNNING;
+
+                    await Scgi.XmlActionTorrents(new[] { torrent.InfoHash.ToByteArray() }, "d.stop", "d.open", "d.start");
+
+                    setState.Progress = 100f;
+                    setState.State = TASK_STATE.DONE;
+                }
+
+                session.Progress.State = TASK_STATE.DONE;
+                session.Progress.Text = "Done";
+            }
+            var session = Sessions.CreateSession(cts, fx);
+
+            return session.Id.ToByteArray().ToBytesValue();
+        }
+
+        public async Task MoveDownloadDirectoryPreCheck(MoveDownloadDirectoryPreCheckArgs Req, CancellationToken CancellationToken)
+        {
             try {
                 var proc = await Cli.Wrap("rsync").WithArguments("--version").WithValidation(CommandResultValidation.None).ExecuteBufferedAsync(CancellationToken);
                 if (proc.ExitCode != 0) {
@@ -564,11 +890,6 @@ namespace RTSharp.Daemon.Services.rtorrent
                 Logger.LogError(ex, "Rsync installation check error");
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.FailedPrecondition, "Rsync is not installed"));
             }
-
-            await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                File = "Enumerating files...",
-                InfoHash = Array.Empty<byte>().ToByteString()
-            });
 
             InfoHashDictionary<(string Current, string Target, string? ContainerFolder)> basePaths =
                 (await TorrentOpService.GetTorrentsBasePath(
@@ -589,7 +910,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 var torrentPaths = new List<(string SourceFile, string TargetFile)>();
                 foreach (var torrent in files.Reply) {
                     if (!basePaths.TryGetValue(torrent.InfoHash.ToByteArray(), out var basePath))
-                        throw new RpcException(new global::Grpc.Core.Status(StatusCode.Internal, $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.ToByteArray())}, terminating operation"));
+                        throw new RpcException(new Status(StatusCode.Internal, $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.ToByteArray())}"));
 
                     foreach (var file in torrent.Files) {
                         var current = Path.Combine(basePath.Current, basePath.ContainerFolder ?? "", file.Path);
@@ -603,235 +924,23 @@ namespace RTSharp.Daemon.Services.rtorrent
                 var checkB = Req.Check.Select(x => (x.SourceFile, x.TargetFile)).OrderBy(x => x.SourceFile).ToArray();
 
                 if (!checkA.SequenceEqual(checkB)) {
-                    throw new RpcException(new global::Grpc.Core.Status(StatusCode.Unavailable, "Client-side and server-side did not agree on identical list of files"));
+                    throw new RpcException(new Status(StatusCode.Unavailable, "Client-side and server-side did not agree on identical list of files"));
                 }
             }
 
             foreach (var torrent in files.Reply) {
                 if (!basePaths.TryGetValue(torrent.InfoHash.ToByteArray(), out var basePath))
-                    throw new RpcException(new global::Grpc.Core.Status(StatusCode.Internal, $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.ToByteArray())}, terminating operation"));
+                    throw new RpcException(new Status(StatusCode.FailedPrecondition, $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.ToByteArray())}"));
 
                 if (!UnixFileSystemInfo.TryGetFileSystemEntry(basePath.Target, out var futureBasePathInfo)) {
-                    await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                        File = basePath.Target,
-                        Exception = new Protocols.DataProvider.Status {
-                            Command = "",
-                            FaultCode = "1",
-                            FaultString = "Failed to stat directory"
-                        }
-                    });
-                    continue;
+                    throw new RpcException(new Status(StatusCode.FailedPrecondition, $"Failed to stat directory {basePath.Target}"));
                 }
 
                 if (Req.Move) {
                     if (!UnixFileSystemInfo.TryGetFileSystemEntry(basePath.Current, out var currentBasePathInfo)) {
-                        await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                            File = basePath.Current,
-                            Exception = new Protocols.DataProvider.Status {
-                                Command = "",
-                                FaultCode = "1",
-                                FaultString = "Failed to stat directory"
-                            }
-                        });
-                        continue;
-                    }
-
-                    if (!Directory.Exists(basePath.Target)) {
-                        Directory.CreateDirectory(basePath.Target, (UnixFileMode)(int)currentBasePathInfo.FileAccessPermissions);
-                    }
-
-                    await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                        File = "Preparing rsync...",
-                        InfoHash = torrent.InfoHash
-                    });
-
-                    var filesFromPath = Path.GetTempFileName();
-                    var sourceFiles = torrent.Files.Select(x => (basePath.ContainerFolder != null ? (basePath.ContainerFolder + "/") : "") + x.Path).ToArray();
-                    await File.WriteAllLinesAsync(filesFromPath, sourceFiles);
-
-                    Command proc;
-                    if (currentBasePathInfo.Device == futureBasePathInfo.Device) {
-                        proc = Cli.Wrap("rsync")
-                            .WithArguments(new[] {
-                                "-av",
-                                "--progress",
-                                "--files-from",
-                                    filesFromPath,
-                                "--link-dest",
-                                    basePath.Current,
-
-                                basePath.Current,
-                                basePath.Target
-                            }).WithValidation(CommandResultValidation.None);
-                    } else {
-                        proc = Cli.Wrap("rsync")
-                            .WithArguments(new[] {
-                                "-av",
-                                "--progress",
-                                "--files-from",
-                                    filesFromPath,
-
-                                basePath.Current,
-                                basePath.Target
-                            }).WithValidation(CommandResultValidation.None);
-                    }
-
-                    bool startedSending = false, ending = false;
-                    var currentFile = "?";
-                    uint currentFileIndex = 0;
-
-                    proc = proc.WithStandardOutputPipe(PipeTarget.ToDelegate(async x => {
-                        if (ending)
-                            return;
-
-                        x = x.Trim();
-                        if (!startedSending) {
-                            if (RsyncStartRegex().IsMatch(x)) {
-                                startedSending = true;
-                            }
-
-                            return;
-                        }
-
-                        var progressMatch = RsyncSpeedRegex().Match(x);
-
-                        if (progressMatch.Success) {
-                            if (!UInt64.TryParse(progressMatch.Groups["bytes"].Value.Replace(",", ""), out var bytesMoved))
-                                return;
-
-                            if (!Converters.TryParseSISpeed(progressMatch.Groups["speed"].Value, true, out var speed))
-                                return;
-
-                            if (!Converters.TryParseTimeSpan(progressMatch.Groups["eta"].Value, out var eta))
-                                return;
-
-                            if (progressMatch.Groups.TryGetValue("completeCurrent", out var sCompleteCurrent) && UInt32.TryParse(sCompleteCurrent.Value, out var completeCurrent)) {
-                                currentFileIndex = completeCurrent;
-                            }
-
-                            await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                                File = currentFile,
-                                InfoHash = torrent.InfoHash,
-                                Speed = speed,
-                                Moved = bytesMoved,
-                                ETA = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(eta),
-                                CurrentFileIndex = currentFileIndex
-                            });
-                        } else {
-                            if (RsyncEndRegex().IsMatch(x)) {
-                                ending = true;
-                                return;
-                            }
-
-                            if (!x.StartsWith("rsync:"))
-                                return;
-
-                            x = x[6..];
-                            x = x.TrimStart();
-
-                            if (!String.IsNullOrWhiteSpace(x))
-                                currentFile = x;
-                        }
-                    }, Encoding.UTF8));
-                    proc = proc.WithStandardErrorPipe(PipeTarget.ToDelegate(x => {
-                        Logger.LogWarning("rsync: " + x);
-                    }));
-
-                    var rsyncResult = await proc.ExecuteAsync();
-
-                    if (rsyncResult.ExitCode != 0) {
-                        await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                            File = basePath.Target,
-                            InfoHash = torrent.InfoHash,
-                            Exception = new Protocols.DataProvider.Status {
-                                Command = "rsync",
-                                FaultCode = rsyncResult.ExitCode.ToString(),
-                                FaultString = "Rsync exited with non-zero exit code"
-                            }
-                        });
-
-                        continue;
+                        throw new RpcException(new Status(StatusCode.FailedPrecondition, $"Failed to stat directory {basePath.Current}"));
                     }
                 }
-
-                await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                    File = "Setting directory...",
-                    InfoHash = torrent.InfoHash
-                });
-
-                await XmlActionTorrents(new[] { torrent.InfoHash.ToByteArray() }, "d.stop", "d.close");
-
-                var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>d.directory.set</methodName><params>");
-                xml.Append("<param><value><string>" + Convert.ToHexString(torrent.InfoHash.ToByteArray()) + "</string></value></param>");
-                xml.Append("<param><value><string>" + basePath.Target + "</string></value></param>");
-                xml.Append("</params></methodCall>");
-
-                var result = await Scgi.Get(xml.ToString());
-
-                // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<fault>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Wrong object type.</string></value></member>\r\n</struct></value>\r\n</fault>\r\n</methodResponse>\r\n
-
-                XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
-
-                if (XMLUtils.MaybeSeekFixed(ref result, XMLUtils.FAULT_TOKEN)) {
-                    XMLUtils.MaybeSeekFixed(ref result, XMLUtils.NEWLINE);
-                    var fault = XMLUtils.GetFaultStruct(ref result, "d.directory.set");
-
-                    await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                        File = "Setting directory...",
-                        InfoHash = torrent.InfoHash,
-                        Exception = fault
-                    });
-
-                    continue;
-                }
-
-                await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                    File = "Removing old files...",
-                    InfoHash = torrent.InfoHash
-                });
-
-                var sw = Stopwatch.StartNew();
-                var directories = new HashSet<string>();
-                foreach (var file in torrent.Files) {
-                    var oldPath = Path.Combine(basePath.Current, basePath.ContainerFolder ?? "", file.Path);
-
-                    File.Delete(oldPath);
-                    directories.Add(Path.GetDirectoryName(oldPath));
-
-                    if (sw.ElapsedMilliseconds > 100) {
-                        await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                            File = oldPath,
-                            InfoHash = torrent.InfoHash
-                        });
-                        sw.Restart();
-                    }
-                }
-
-                if (basePath.ContainerFolder != null) {
-                    foreach (var dir in directories.Where(dir => !Directory.EnumerateFileSystemEntries(dir).Any())) {
-                        Directory.Delete(dir, recursive: false);
-
-                        if (sw.ElapsedMilliseconds > 100) {
-                            await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                                File = dir,
-                                InfoHash = torrent.InfoHash
-                            });
-                            sw.Restart();
-                        }
-                    }
-                }
-
-                await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                    File = "Setting state...",
-                    InfoHash = torrent.InfoHash
-                });
-
-                await XmlActionTorrents(new[] { torrent.InfoHash.ToByteArray() }, "d.stop", "d.open", "d.start");
-
-                await Res.WriteAsync(new MoveDownloadDirectoryProgress() {
-                    File = "Done",
-                    InfoHash = torrent.InfoHash
-                });
             }
         }
 
@@ -844,7 +953,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
 
             var input = Req.In.Select(x => (x.InfoHash.ToByteArray(), labels[x.InfoHash.ToByteArray()])).ToArray();
-            return await XmlActionTorrentsParam(input, "d.custom1.set", (action, hash, reply) => reply == labels[hash]);
+            return ToTorrentsReply(await Scgi.XmlActionTorrentsParam(input, "d.custom1.set", (action, hash, reply) => reply == labels[hash]));
         }
 
         public async Task<TorrentsPiecesReply> GetTorrentsPieces(Torrents Req)

@@ -44,6 +44,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin.Mappers
                 Wasted = (ulong)In.CorruptEver!,
                 Done = (float)In.PercentDone! * 100,
                 Downloaded = (ulong)In.DownloadedEver!,
+                CompletedSize = (ulong)In.SizeWhenDone! - (ulong)In.LeftUntilDone!,
                 Uploaded = (ulong)In.UploadedEver!,
                 DLSpeed = (ulong)In.RateDownload!,
                 UPSpeed = (ulong)In.RateUpload!,
@@ -57,7 +58,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin.Mappers
                 FinishedOnDate = In.DoneDate,
                 TimeElapsed = MapFromExternal(In.Status!.Value).HasFlag(Shared.Abstractions.TORRENT_STATE.SEEDING) ? TimeSpan.FromSeconds(In.SecondsSeeding!.Value) : TimeSpan.FromSeconds(In.SecondsDownloading!.Value),
                 AddedOnDate = In.AddedDate == null ? DateTime.MinValue : In.AddedDate.Value,
-                TrackerSingle = In.Trackers?.Length == 0 ? null : new Uri(In.Trackers!.OrderBy(x => x.Tier).First().Announce),
+                TrackerSingle = In.Trackers?.Length == 0 ? null : In.Trackers!.OrderBy(x => x.Tier).First().Announce,
                 StatusMessage = In.ErrorString,
                 Comment = In.Comment ?? "", // TODO:?
                 RemotePath = In.DownloadDir!,
@@ -92,7 +93,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin.Mappers
         {
             return new Shared.Abstractions.Tracker {
                 ID = In.Id!,
-                Uri = new Uri(In.Announce!),
+                Uri = In.Announce!,
                 Status = In.AnnounceState == null ? MapFromExternal(In.ScrapeState!.Value) : MapFromExternal(In.AnnounceState!.Value),
                 Seeders = In.SeederCount == -1 ? 0 : (uint)In.SeederCount!,
                 Peers = In.LeecherCount == -1 ? 0 : (uint)In.LeecherCount!, // TODO: is this right?

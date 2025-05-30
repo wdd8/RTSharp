@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Whois;
+using Whois.NET;
 using Whois.Parsers;
 
 namespace RTSharp.Core.Services
@@ -82,7 +83,11 @@ namespace RTSharp.Core.Services
 
             global::Whois.NET.WhoisResponse? whois;
             try {
-                whois = await global::Whois.NET.WhoisClient.QueryAsync(In.ToString(), encoding: Encoding.UTF8, timeout: 5);
+                whois = await global::Whois.NET.WhoisClient.QueryAsync(In.ToString(), new WhoisQueryOptions {
+                    Timeout = 5000,
+                    RethrowExceptions = true,
+                    Encoding = Encoding.UTF8
+                });
             } catch (Exception ex) {
                 Log.Logger.Debug(ex, "Failed to fetch information for peer " + In);
                 return null;

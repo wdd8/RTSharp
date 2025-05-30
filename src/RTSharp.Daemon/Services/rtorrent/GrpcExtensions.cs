@@ -22,5 +22,17 @@ namespace RTSharp.Daemon.Services.rtorrent
                 FaultString = ""
             };
         }
+        
+        public static Status? ToStatus(XMLUtils.FaultStatus? In)
+        {
+            if (In == null)
+                return null;
+            
+            return new Status {
+                Command = In.Command, 
+                FaultCode = In.FaultCode,
+                FaultString = In.FaultString
+            };
+        }
     }
 }

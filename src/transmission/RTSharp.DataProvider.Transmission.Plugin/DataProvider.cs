@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Collections.Immutable;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using RTSharp.Shared.Abstractions.Daemon;
 
 namespace RTSharp.DataProvider.Transmission.Plugin
 {
@@ -76,7 +77,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
         public Notifyable<long> ActiveTorrentCount { get; } = new();
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
+        public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
         {
             var tasks = new List<Task<(byte[] Hash, IList<Exception> Exceptions)>>();
             foreach (var req in In) {
@@ -99,8 +100,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
                 }));
             }
 
-            return await Task.WhenAll(tasks);
-            throw null;
+            return new TorrentStatuses(await Task.WhenAll(tasks));
         }
 
         int? Translate(byte[] In)
@@ -162,7 +162,24 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             return ret;
         }
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> ForceRecheck(IList<byte[]> In)
+        public async Task<Guid> CompeletedScript()
+        {
+            var id = await PluginHost.AttachedDaemonService.RunCustomScript("""
+#pragma usings
+
+public class Main : IScript
+{
+    public async Task Execute(Dictionary<string, string> Variables, IScriptSession Session, CancellationToken CancellationToken)
+    {
+        Session.Progress.State = TASK_STATE.DONE;
+    }
+}
+""", "CompletedScriptDummy", [ ]);
+
+            return id;
+        }
+
+        public async Task<Guid> ForceRecheck(IList<byte[]> In)
         {
             Exception? exception = null;
 
@@ -212,7 +229,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
                 await Task.Delay(500);
             }
 
-            return res;
+            return await CompeletedScript();
         }
 
         public async Task<IEnumerable<Torrent>> GetAllTorrents()
@@ -234,7 +251,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             return torrents.Select(x => x.Internal);
         }
 
-        public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<byte[]> In)
+        public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<Torrent> In)
         {
             Init();
 
@@ -282,7 +299,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
                     ulong peerDLSpeed = 0;
 
                     if (p.Progress != 1) {
-                        var sma = smas.Get(Plugin, $"PeerDLSpeed_{p.Address}:{p.Port}");
+                        var sma = smas.Get(Plugin.GUID.ToString(), $"PeerDLSpeed_{p.Address}:{p.Port}");
 
                         sma.ValueIfChanged((long)(x.TotalSize.Value * p.Progress.Value));
 
@@ -412,7 +429,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
         }
 
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> MoveDownloadDirectory(IList<(byte[] InfoHash, string TargetDirectory)> In, IList<(string SourceFile, string TargetFile)> Check, IProgress<(byte[] InfoHash, string File, ulong Moved, string? AdditionalProgress)> Progress)
+        public async Task<Guid?> MoveDownloadDirectory(InfoHashDictionary<string> In, IList<(string SourceFile, string TargetFile)> Check)
         {
             /*await Init();
 
@@ -435,41 +452,41 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             throw null;
         }
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> PerformVoidAction(IList<byte[]> In, Func<int[], Task> Fx)
+        public async Task<TorrentStatuses> PerformVoidAction(IList<byte[]> In, Func<int[], Task> Fx)
         {
             try {
                 await Fx(Translate(In));
             } catch (Exception ex) {
-                return In.Select(x => (x, (IList<Exception>)new[] { ex })).ToArray();
+                return new TorrentStatuses(In.Select(x => (x, (IList<Exception>)new[] { ex })));
             }
 
-            return In.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())).ToArray();
+            return new TorrentStatuses(In.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())));
         }
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> PerformVoidActionObj(IList<byte[]> In, Func<object[], Task> Fx)
+        public async Task<TorrentStatuses> PerformVoidActionObj(IList<byte[]> In, Func<object[], Task> Fx)
         {
             try {
                 await Fx(TranslateObj(In));
             } catch (Exception ex) {
-                return In.Select(x => (x, (IList<Exception>)new[] { ex })).ToArray();
+                return new TorrentStatuses(In.Select(x => (x, (IList<Exception>)new[] { ex })));
             }
 
-            return In.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())).ToArray();
+            return new TorrentStatuses(In.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())));
         }
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> StopTorrents(IList<byte[]> In) => PerformVoidActionObj(In, Client.TorrentStopAsync);
+        public Task<TorrentStatuses> StopTorrents(IList<byte[]> In) => PerformVoidActionObj(In, Client.TorrentStopAsync);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> ReannounceToAllTrackers(IList<byte[]> In) => PerformVoidAction(In, x => {
+        public Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> In) => PerformVoidAction(In, x => {
             TransmissionRequest request = new TransmissionRequest("torrent-reannounce", new Dictionary<string, object> { { "ids", x } });
             var sendRequestAsync = Client.GetType().GetMethod("SendRequestAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             return (Task<TransmissionResponse>)sendRequestAsync!.Invoke(Client, new[] { request })!;
         });
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> RemoveTorrents(IList<byte[]> In) => PerformVoidAction(In, x => Client.TorrentRemoveAsync(x, deleteData: false));
+        public Task<TorrentStatuses> RemoveTorrents(IList<byte[]> In) => PerformVoidAction(In, x => Client.TorrentRemoveAsync(x, deleteData: false));
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> RemoveTorrentsAndData(IList<byte[]> In) => PerformVoidAction(In, x => Client.TorrentRemoveAsync(x, deleteData: true));
+        public Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In) => PerformVoidAction(In.Select(x => x.Hash).ToArray(), x => Client.TorrentRemoveAsync(x, deleteData: true));
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> SetLabels(IList<(byte[] Hash, string[] Labels)> In)
+        public async Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In)
         {
             Init();
 
@@ -491,12 +508,12 @@ namespace RTSharp.DataProvider.Transmission.Plugin
                 }));
             }
 
-            return await Task.WhenAll(tasks);
+            return new TorrentStatuses(await Task.WhenAll(tasks));
         }
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> StartTorrents(IList<byte[]> In) => PerformVoidActionObj(In, Client.TorrentStartAsync);
+        public Task<TorrentStatuses> StartTorrents(IList<byte[]> In) => PerformVoidActionObj(In, Client.TorrentStartAsync);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> PauseTorrents(IList<byte[]> In) => throw new NotSupportedException();
+        public Task<TorrentStatuses> PauseTorrents(IList<byte[]> In) => throw new NotSupportedException();
 
         public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
         {

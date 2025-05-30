@@ -1,22 +1,17 @@
-using Avalonia.Controls.Shapes;
-
 using CliWrap;
 using CliWrap.Buffered;
 
 using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
-
-using Microsoft.AspNetCore.Http;
-
 using Mono.Unix;
 
 using RTSharp.Daemon.Protocols;
 
-using System.IO;
-using System.Threading.Channels;
+using Mono.Unix.Native;
+using Path = System.IO.Path;
 
-namespace RTSharp.Daemon.Services
+namespace RTSharp.Daemon.GRPCServices
 {
     public class FilesService(
         ILogger<FilesService> Logger,
@@ -209,6 +204,101 @@ namespace RTSharp.Daemon.Services
             } catch (Exception ex) {
                 Logger.LogError(ex, "Internal_SendFiles: transfer task failed");
             }
+        }
+
+        public override Task<AllowedToDeleteReply> AllowedToDelete(AllowedToDeleteInput Req, ServerCallContext context)
+        {
+            var ret = new List<AllowedToDeleteReply.Types.PathWithStatus>();
+            
+            var uid = Syscall.getuid();
+            var gid = Syscall.getgid();
+            
+            foreach (var file in Req.Paths) {
+                if (!File.Exists(file)) {
+                    ret.Add(new AllowedToDeleteReply.Types.PathWithStatus {
+                        Path = file,
+                        Value = false
+                    });
+                    
+                    continue;
+                }
+                
+                var dir = Path.GetDirectoryName(file);
+                
+                if (!UnixFileSystemInfo.TryGetFileSystemEntry(dir, out var info)) {
+                    ret.Add(new AllowedToDeleteReply.Types.PathWithStatus {
+                        Path = file,
+                        Value = false
+                    });
+                    
+                    continue;
+                }
+                
+                if (info.IsSticky) {
+                    ret.Add(new AllowedToDeleteReply.Types.PathWithStatus {
+                        Path = file,
+                        Value = false
+                    });
+                    
+                    continue;
+                }
+                
+                var userAllowed = (info.FileAccessPermissions & (FileAccessPermissions.UserExecute | FileAccessPermissions.UserWrite)) != 0 && info.OwnerUserId == uid;
+                var groupAllowed = (info.FileAccessPermissions & (FileAccessPermissions.GroupExecute | FileAccessPermissions.GroupWrite)) != 0 && info.OwnerGroupId == gid;
+                var otherAllowed = (info.FileAccessPermissions & (FileAccessPermissions.OtherExecute | FileAccessPermissions.OtherWrite)) != 0;
+                
+                ret.Add(new AllowedToDeleteReply.Types.PathWithStatus {
+                    Path = file,
+                    Value = userAllowed || groupAllowed || otherAllowed
+                });
+            }
+            
+            return Task.FromResult(new AllowedToDeleteReply
+            {
+                Reply = { ret }
+            });
+        }
+        
+        public override Task<AllowedToReadReply> AllowedToRead(AllowedToReadInput Req, ServerCallContext context)
+        {
+            var ret = new List<AllowedToReadReply.Types.PathWithStatus>();
+            
+            var uid = Syscall.getuid();
+            var gid = Syscall.getgid();
+            
+            foreach (var file in Req.Paths) {
+                if (!File.Exists(file)) {
+                    ret.Add(new AllowedToReadReply.Types.PathWithStatus {
+                        Path = file,
+                        Value = false
+                    });
+                    
+                    continue;
+                }
+                
+                if (!UnixFileSystemInfo.TryGetFileSystemEntry(file, out var info)) {
+                    ret.Add(new AllowedToReadReply.Types.PathWithStatus {
+                        Path = file,
+                        Value = false
+                    });
+                    
+                    continue;
+                }
+                
+                var userAllowed = (info.FileAccessPermissions & FileAccessPermissions.UserRead) != 0 && info.OwnerUserId == uid;
+                var groupAllowed = (info.FileAccessPermissions & FileAccessPermissions.GroupRead) != 0 && info.OwnerGroupId == gid;
+                var otherAllowed = (info.FileAccessPermissions & FileAccessPermissions.OtherRead) != 0;
+                
+                ret.Add(new AllowedToReadReply.Types.PathWithStatus {
+                    Path = file,
+                    Value = userAllowed || groupAllowed || otherAllowed
+                });
+            }
+            
+            return Task.FromResult(new AllowedToReadReply
+            {
+                Reply = { ret }
+            });
         }
     }
 }

@@ -22,6 +22,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using RTSharp.Shared.Abstractions.Daemon;
+using ScriptProgressState = RTSharp.Shared.Abstractions.ScriptProgressState;
+using Serilog;
 
 namespace RTSharp.Core.Services.Daemon
 {
@@ -29,7 +31,6 @@ namespace RTSharp.Core.Services.Daemon
     {
         GRPCServerService.GRPCServerServiceClient ServerClient;
         GRPCFilesService.GRPCFilesServiceClient FilesClient;
-        ILogger<DaemonService> Logger;
         IHostApplicationLifetime Lifetime;
 
         private Dictionary<string, Config.Models.Server> Servers;
@@ -53,7 +54,6 @@ namespace RTSharp.Core.Services.Daemon
             ServerClient = clientFactory.CreateClient<GRPCServerService.GRPCServerServiceClient>(nameof(GRPCServerService.GRPCServerServiceClient) + "_" + ServerId);
             FilesClient = clientFactory.CreateClient<GRPCFilesService.GRPCFilesServiceClient>(nameof(GRPCFilesService.GRPCFilesServiceClient) + "_" + ServerId);
             Servers = config.Servers.Value;
-            Logger = scope.ServiceProvider.GetRequiredService<ILogger<DaemonService>>();
 
             var cfg = Servers.First(x => x.Key == ServerId).Value;
             Host = cfg.Host;
@@ -66,9 +66,14 @@ namespace RTSharp.Core.Services.Daemon
         {
             while (!Lifetime.ApplicationStopping.IsCancellationRequested) {
                 var sw = Stopwatch.StartNew();
-                try { await Ping(Lifetime.ApplicationStopping); } catch { }
-                sw.Stop();
-                Latency.Change(sw.Elapsed);
+                try {
+                    await Ping(Lifetime.ApplicationStopping);
+                    sw.Stop();
+                    Latency.Change(sw.Elapsed);
+                } catch {
+                    sw.Stop();
+                    Log.Logger.Error($"Ping failed for {Host}:{Port}");
+                }
 
                 if (sw.Elapsed < TimeSpan.FromSeconds(1))
                     await Task.Delay(TimeSpan.FromSeconds(1) - sw.Elapsed);
@@ -82,7 +87,7 @@ namespace RTSharp.Core.Services.Daemon
 
         record Path(string StorePath, string RemoteSourcePath, ulong TotalSize);
 
-        public async Task RequestRecieveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, IProgress<(string File, float Progress)> Progress)
+        public async Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, IProgress<(string File, float Progress)> Progress)
         {
             var senderServer = Servers[SenderServerId].GetUri();
 
@@ -140,6 +145,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
     }
 }
 """,
+                Name = "RequstReceiveFiles",
                 Variables = {
                     { "Uri", senderServer.ToString() },
                     { "Paths", JsonSerializer.Serialize(Paths.Select(x => new Path(x.StoreTo, x.RemoteSource, x.TotalSize))) }
@@ -181,7 +187,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             try {
                 dir = await FilesClient.GetDirectoryInfoAsync(new StringValue { Value = Path });
             } catch (Exception ex) {
-                Logger.LogError(ex, "Failed to GetDirectoryInfo");
+                Log.Logger.Error(ex, "Failed to GetDirectoryInfo");
                 throw;
             }
 
@@ -205,7 +211,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             try {
                 await FilesClient.CreateDirectoryAsync(new StringValue { Value = Path });
             } catch (Exception ex) {
-                Logger.LogError(ex, "Failed to CreateDirectory");
+                Log.Logger.Error(ex, "Failed to CreateDirectory");
                 throw;
             }
         }
@@ -217,7 +223,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
                     Paths = { Files }
                 })).Existence.ToDictionary(x => x.Key, x => x.Value);
             } catch (Exception ex) {
-                Logger.LogError(ex, "Failed to CheckExists");
+                Log.Logger.Error(ex, "Failed to CheckExists");
                 throw;
             }
         }
@@ -227,7 +233,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             try {
                 await FilesClient.RemoveEmptyDirectoryAsync(new StringValue { Value = Path });
             } catch (Exception ex) {
-                Logger.LogError(ex, "Failed to RemoveEmptyDirectory");
+                Log.Logger.Error(ex, "Failed to RemoveEmptyDirectory");
                 throw;
             }
         }
@@ -240,17 +246,18 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
                     Paths = { Files }
                 });
             } catch (Exception ex) {
-                Logger.LogError(ex, "Failed to Mediainfo");
+                Log.Logger.Error(ex, "Failed to Mediainfo");
                 throw;
             }
 
             return reply.Output;
         }
 
-        public async Task<Guid> RunCustomScript(string Script, Dictionary<string, string> Variables)
+        public async Task<Guid> RunCustomScript(string Script, string Name, Dictionary<string, string> Variables)
         {
             var session = await ServerClient.StartScriptAsync(new StartScriptInput {
                 Script = Script,
+                Name = Name,
                 Variables = { Variables }
             });
 
@@ -261,6 +268,60 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         {
             await ServerClient.StopScriptAsync(new BytesValue { Value = ByteString.CopyFrom(Id.ToByteArray()) });
         }
+
+        public async Task GetScriptProgress(Guid Id, IProgress<ScriptProgressState>? Progress)
+        {
+            var cts = new CancellationTokenSource();
+            var stream = ServerClient.ScriptStatus(Id.ToByteArray().ToBytesValue(), cancellationToken: cts.Token);
+            
+            ScriptProgressState mapProgressState(RTSharp.Daemon.Protocols.ScriptProgressState In)
+            {
+                return new ScriptProgressState
+                {
+                    Progress = In.Progress,
+                    State = In.State switch {
+                        TaskState.Done => TASK_STATE.DONE,
+                        TaskState.Running => TASK_STATE.RUNNING,
+                        TaskState.Waiting => TASK_STATE.WAITING,
+                        TaskState.Failed => TASK_STATE.FAILED,
+                        _ => throw new ArgumentOutOfRangeException()
+                    },
+                    Text = In.Text,
+                    StateData = In.StateData,
+                    Chain = In.Chain?.Select(mapProgressState).ToArray() ?? []
+                };
+            }
+            
+            try {
+                await foreach (var progressData in stream.ResponseStream.ReadAllAsync()) {
+                    Progress?.Report(mapProgressState(progressData));
+                    if (progressData.State == TaskState.Done || progressData.State == TaskState.Failed) {
+                        cts.Cancel();
+                    }
+                }
+            } catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled) { }
+        }
+        
+        public async Task<Dictionary<string, bool>> AllowedToDeleteFiles(IEnumerable<string> In)
+        {
+            var reply = await FilesClient.AllowedToDeleteAsync(new AllowedToDeleteInput
+            {
+                Paths = { In }
+            });
+            
+            return reply.Reply.ToDictionary(x => x.Path, x => x.Value);
+        }
+        
+        public async Task<Dictionary<string, bool>> AllowedToReadFiles(IEnumerable<string> In)
+        {
+            var reply = await FilesClient.AllowedToReadAsync(new AllowedToReadInput
+            {
+                Paths = { In }
+            });
+            
+            return reply.Reply.ToDictionary(x => x.Path, x => x.Value);
+        }
+
 
         public T GetGrpcService<T>()
             where T : ClientBase<T>

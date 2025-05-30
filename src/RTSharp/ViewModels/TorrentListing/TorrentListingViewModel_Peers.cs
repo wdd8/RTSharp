@@ -195,7 +195,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     var delayTask = Task.Delay(config.Behavior.Value.PeersPollingInterval, SelectionChange);
                     
-                    IList<Peer> peers;
+                    IList<Peer> peers = null;
                     try {
                         peers = (await current!.Owner.Instance.GetPeers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).First().Value;
                     } catch (Exception ex) {

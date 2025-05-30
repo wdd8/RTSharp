@@ -58,12 +58,17 @@ namespace RTSharp.Shared.Abstractions
         public float Done { get; set; }
 
         /// <summary>
-        /// Downloaded bytes
+        /// Total downloaded bytes
         /// </summary>
         public ulong Downloaded { get; set; }
 
         /// <summary>
-        /// Uploaded bytes
+        /// Pieces complete * piece size
+        /// </summary>
+        public ulong CompletedSize { get; set; }
+
+        /// <summary>
+        /// Total uploaded bytes
         /// </summary>
         public ulong Uploaded { get; set; }
 
@@ -133,7 +138,7 @@ namespace RTSharp.Shared.Abstractions
         /// <summary>
         /// Primary tracker URI
         /// </summary>
-        public Uri? TrackerSingle { get; set; }
+        public string? TrackerSingle { get; set; }
 
         /// <summary>
         /// Torrent status message

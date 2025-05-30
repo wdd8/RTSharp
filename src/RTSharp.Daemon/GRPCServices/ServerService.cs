@@ -6,10 +6,11 @@ using Grpc.Core;
 using RTSharp.Daemon.Protocols;
 using RTSharp.Daemon.RuntimeCompilation;
 using RTSharp.Daemon.RuntimeCompilation.Exceptions;
+using RTSharp.Daemon.Services;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
-namespace RTSharp.Daemon.Services
+namespace RTSharp.Daemon.GRPCServices
 {
     public class ServerService(ILogger<ServerService> Logger, SessionsService Sessions) : GRPCServerService.GRPCServerServiceBase
     {
@@ -25,7 +26,8 @@ namespace RTSharp.Daemon.Services
 
                 var compilation = DynamicCompilation.Compile<IScript>(
                     ref script,
-                    [ "RTSharp.Daemon", "RTSharp.Daemon.Protocols", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils", "System.Collections", "System.Linq", "System.Text.Json", "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.Logging" ],
+                    Req.Name,
+                    [ "RTSharp.Daemon", "RTSharp.Daemon.Protocols", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils", "System.Collections", "System.Linq", "System.Text.Json", "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging", "System.ComponentModel" ],
                     [ "System", "System.Threading.Tasks", "System.Threading", "System.Collections.Generic", "RTSharp.Daemon", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils" ]);
                 
                 Logger.LogDebug("Compilation successful, running script...");
@@ -48,7 +50,7 @@ namespace RTSharp.Daemon.Services
                     Id = session.Id.ToByteArray().ToByteString()
                 });
             } catch (CompilationFailureException ex) {
-                throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+                throw new RpcException(new Status(StatusCode.InvalidArgument, string.Join('\n', ex.Message.Split([ "\r\n", "\n" ], StringSplitOptions.None).Where(x => !x.StartsWith("warning")))));
             } catch (PragmaParsingException ex) {
                 throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
             } catch (InstantiationException ex) {
@@ -69,10 +71,12 @@ namespace RTSharp.Daemon.Services
                 State = In.State switch {
                     TASK_STATE.WAITING => TaskState.Waiting,
                     TASK_STATE.RUNNING => TaskState.Running,
+                    TASK_STATE.FAILED => TaskState.Failed,
                     TASK_STATE.DONE => TaskState.Done,
                     _ => throw new IndexOutOfRangeException()
                 },
-                Chain = { In.Chain?.Select(x => MapProgressState(Id, x)) ?? [] }
+                Chain = { In.Chain?.Select(x => MapProgressState(Id, x)) ?? [] },
+                StateData = In.StateData
             };
         }
 

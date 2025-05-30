@@ -5,8 +5,4 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\RTSharp.DataProvider.Rtorrent.Protocols\RTSharp.DataProvider.Rtorrent.Protocols.csproj" />
-  </ItemGroup>
-
 </Project>

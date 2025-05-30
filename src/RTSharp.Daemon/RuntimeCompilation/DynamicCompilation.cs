@@ -1,10 +1,13 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Diagnostics;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 using RTSharp.Daemon.RuntimeCompilation.Exceptions;
 
 using System.Reflection;
-using System.Security.Cryptography;
+using System.Text;
+using Microsoft.CodeAnalysis.Emit;
+using Microsoft.CodeAnalysis.Text;
 
 namespace RTSharp.Daemon.RuntimeCompilation
 {
@@ -19,25 +22,54 @@ namespace RTSharp.Daemon.RuntimeCompilation
 			var asms = AppDomain.CurrentDomain.GetAssemblies();
 			var asm = asms.FirstOrDefault(x => x!.FullName!.Substring(0, x.FullName.IndexOf(',', StringComparison.Ordinal)) == Name);
 			if (asm == null) {
-				var runtime = typeof(System.Runtime.GCSettings).GetTypeInfo().Assembly;
-				var index = Math.Max(runtime!.Location.LastIndexOf('/'), runtime.Location.LastIndexOf('\\'));
 				var searchDirs = new List<string>() { "." };
-
-				if (index != -1) {
-					searchDirs.Add(runtime.Location[0..index]);
+			
+				var runtimeVer = FileVersionInfo.GetVersionInfo(typeof(System.Runtime.GCSettings).Assembly.Location).ProductVersion;
+				runtimeVer = runtimeVer[..runtimeVer.IndexOf('+')];
+				
+				var runtime = typeof(System.Runtime.GCSettings).Assembly!.Location;
+				searchDirs.Add(Path.GetDirectoryName(runtime));
+				
+				var pathComponents = runtime.Split(Path.DirectorySeparatorChar, StringSplitOptions.None);
+				var analyzersPath = new List<string>();
+				bool found = false;
+				for (var x = 0;x < pathComponents.Length;x++) {
+					if (pathComponents[x] != "dotnet")
+						analyzersPath.Add(pathComponents[x]);
+					else {
+						analyzersPath.Add("dotnet");
+						found = true;
+						break;
+					}
+				}
+				
+				if (found) {
+					analyzersPath.Add("packs");
+					analyzersPath.Add("Microsoft.NETCore.App.Ref");
+					analyzersPath.Add(runtimeVer);
+					analyzersPath.Add("analyzers");
+					analyzersPath.Add("dotnet");
+					analyzersPath.Add("cs");
+					
+					if (Directory.Exists(string.Join(Path.DirectorySeparatorChar, analyzersPath))) {
+						searchDirs.Add(string.Join(Path.DirectorySeparatorChar, analyzersPath));
+					}
 				}
 
 				var thisLoc = Assembly.GetEntryAssembly()!.Location;
-				index = Math.Max(thisLoc.LastIndexOf('/'), thisLoc.LastIndexOf('\\'));
-				if (index != -1) {
-					searchDirs.Add(thisLoc[0..index]);
-				}
+				searchDirs.Add(Path.GetDirectoryName(thisLoc));
 
 				foreach (var dir in searchDirs) {
-					if (File.Exists(Path.Combine(dir, Name)))
+					Debug.WriteLine($"Searching directory '{dir}'...");
+				
+					if (File.Exists(Path.Combine(dir, Name))) {
+						Debug.WriteLine($"Found assembly at {Path.Combine(dir, Name)}");
 						return Path.Combine(dir, Name);
-					if (File.Exists(Path.Combine(dir, Name) + ".dll"))
+					}
+					if (File.Exists(Path.Combine(dir, Name) + ".dll")) {
+						Debug.WriteLine($"Found assembly at {Path.Combine(dir, Name)}.dll");
 						return Path.Combine(dir, Name) + ".dll";
+					}
 				}
 
 				throw new DllNotFoundException(Name);
@@ -47,7 +79,7 @@ namespace RTSharp.Daemon.RuntimeCompilation
 		}
 
 
-		public static (List<MetadataReference> References, List<string> PragmaTags, string Script) TransformScript(ref string Script, IEnumerable<string> BuildInAssemblyReferences, IEnumerable<string> BuiltInUsings)
+		public static (List<MetadataReference> References, List<string> SourceGenAsms, List<string> PragmaTags, string Script) TransformScript(ref string Script, IEnumerable<string> BuildInAssemblyReferences, IEnumerable<string> BuiltInUsings)
 		{
 			// Include dynamic keyword
 			_ = (dynamic)1 + 1;
@@ -62,6 +94,7 @@ namespace RTSharp.Daemon.RuntimeCompilation
 					"Microsoft.CSharp",
 					"System.Linq.Expressions"
 				};
+			var sourceGenAssemblies = new List<string>();
 
 			if (AssemblyMetadatas.Count == 0) {
 				foreach (var reference in baseReferences) {
@@ -125,6 +158,16 @@ namespace RTSharp.Daemon.RuntimeCompilation
 
 					removeFromStart(ref Script, thisLine.Length);
                     eol = 0;
+                } else if (thisLine.StartsWith("#pragma sourcegen \"", StringComparison.Ordinal)) {
+					var contents = thisLine[19..];
+
+                    if (thisLine[^1] != '"')
+                        throw new PragmaParsingException("Invalid file: #pragma sourcegen end not found");
+
+                    sourceGenAssemblies.Add(GetAssemblyLocationByName(contents[..^1]));
+
+					removeFromStart(ref Script, thisLine.Length);
+                    eol = 0;
                 } else if (thisLine.StartsWith(BuiltInUsingsPragma, StringComparison.Ordinal)) {
 					foundPragmaUsings = true;
 					var builtinUsings = BuiltInUsings.Any() ? BuiltInUsings.Select(x => "using " + x + ";").Aggregate((a, b) => a + b) : "";
@@ -153,7 +196,7 @@ namespace RTSharp.Daemon.RuntimeCompilation
 				throw new PragmaParsingException("Script is missing '#pragma usings'");
 			}
 
-			return (references, pragmaTags, Script);
+			return (references, sourceGenAssemblies, pragmaTags, Script);
 		}
 
 		public static CSharpParseOptions Parse { get; } = new CSharpParseOptions(
@@ -161,37 +204,74 @@ namespace RTSharp.Daemon.RuntimeCompilation
 			languageVersion: LanguageVersion.Latest);
 		public static CSharpCompilationOptions Compilation { get; } = new CSharpCompilationOptions(
 			OutputKind.DynamicallyLinkedLibrary,
-			optimizationLevel: OptimizationLevel.Release,
-			allowUnsafe: false);
+			optimizationLevel: OptimizationLevel.Debug,
+			allowUnsafe: true);
 
 		public static string[] GetScriptTags(string Script)
 		{
             string copy = Script;
-			var (_, pragmaTags, _) = TransformScript(ref copy, new string[] { }, new string[] { });
+			var (_, _, pragmaTags, _) = TransformScript(ref copy, new string[] { }, new string[] { });
 
 			return pragmaTags.ToArray();
 		}
 
-		public static (MemoryStream Stream, string[] PragmaTags) CompileAssembly(
+		public static (MemoryStream Assembly, string[] PragmaTags) CompileAssembly(
 			ref string Script,
+			string Name,
 			IEnumerable<string> BuiltInAssemblyReferences,
 			IEnumerable<string> BuiltInUsings)
 		{
-			var (references, pragmaTags, script) = TransformScript(ref Script, BuiltInAssemblyReferences, BuiltInUsings);
+			var (references, sourceGenAsmNames, pragmaTags, script) = TransformScript(ref Script, BuiltInAssemblyReferences, BuiltInUsings);
 
-			var csTree = CSharpSyntaxTree.ParseText(script, Parse);
+			var generators = new List<ISourceGenerator>();
 
-			var asmName = Guid.NewGuid().ToString();
+			foreach (var name in sourceGenAsmNames) {
+				Debug.WriteLine($"Loading {name}...");
+				var loaded = Assembly.LoadFile(name);
+				
+				generators.AddRange(loaded.GetTypes().Where(x => x.IsAssignableTo(typeof(ISourceGenerator))).Select(x => (ISourceGenerator)Activator.CreateInstance(x)));
+				generators.AddRange(loaded.GetTypes().Where(x => x.IsAssignableTo(typeof(IIncrementalGenerator))).Select(x => GeneratorExtensions.AsSourceGenerator((IIncrementalGenerator)Activator.CreateInstance(x))));
+			}
+			
+			Debug.WriteLine($"Generators: {string.Join(',', generators.Select(x => x.GetType().Name))}...");
 
-			Compilation compilation = CSharpCompilation.Create(asmName, options: Compilation, references: references)
-				.AddSyntaxTrees(csTree);
+			var asmName = Name + "_" + Guid.NewGuid().ToString()[..8];
+			var encoding = Encoding.UTF8;
 
+			var buffer = encoding.GetBytes(script);
+			var sourceText = SourceText.From(buffer, buffer.Length, encoding, canBeEmbedded: true);
+			var csTree = CSharpSyntaxTree.ParseText(sourceText, Parse, path: $"{asmName}.cs");
+			var encoded = CSharpSyntaxTree.Create((CSharpSyntaxNode)csTree.GetRoot(), null, $"{asmName}.cs", encoding);
+			var compilation = CSharpCompilation.Create(asmName, options: Compilation, references: references, syntaxTrees: [ encoded ]);
+			var driver = CSharpGeneratorDriver.Create(generators);
+			driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var _);
+            
+            var texts = new List<EmbeddedText>();
+            texts.Add(EmbeddedText.FromSource($"{asmName}.cs", sourceText));
+            
+            texts.AddRange(outputCompilation.SyntaxTrees.Except([ encoded ]).Select((x, i) => {
+                var filePath = string.IsNullOrEmpty(x.FilePath) ? $"{asmName}.cs" : x.FilePath;
+                
+                var root = x.GetRoot();
+                using var writer = new StringWriter();
+	            
+	            root.WriteTo(writer);
+				
+                var buffer = Encoding.UTF8.GetBytes(writer.ToString());
+                return EmbeddedText.FromSource(filePath, SourceText.From(buffer, buffer.Length, Encoding.UTF8, canBeEmbedded: true));
+            }));
 			var ms = new MemoryStream();
+			
+			Debug.WriteLine($"Texts: {texts.Count}");
 
-			var emitResult = compilation.Emit(ms);
+			var emitResult = outputCompilation.Emit(
+				peStream: ms,
+				embeddedTexts: texts,
+				options: new EmitOptions(debugInformationFormat: DebugInformationFormat.Embedded)
+			);
 
 			if (!emitResult.Success)
-				throw new CompilationFailureException($"Compilation failure. {emitResult.Diagnostics.Select(x => x.ToString()).Aggregate((a, b) => a + Environment.NewLine + b)}");
+				throw new CompilationFailureException($"Compilation failure. {string.Join(Environment.NewLine, emitResult.Diagnostics.Where(x => x.IsWarningAsError || x.Severity == DiagnosticSeverity.Error).Select(x => x.ToString()))}");
 			ms.Seek(0, SeekOrigin.Begin);
 
 			return (ms, pragmaTags.ToArray());
@@ -199,10 +279,11 @@ namespace RTSharp.Daemon.RuntimeCompilation
 
 		public static DynamicScript<T> Compile<T>(
 			ref string Script,
+			string Name,
 			IEnumerable<string> BuiltInAssemblyReferences,
 			IEnumerable<string> BuiltInUsings)
 		{
-			var (ms, pragmaTags) = CompileAssembly(ref Script, BuiltInAssemblyReferences, BuiltInUsings);
+			var (ms, pragmaTags) = CompileAssembly(ref Script, Name, BuiltInAssemblyReferences, BuiltInUsings);
 
             return new DynamicScript<T>(ms, pragmaTags);
         }

@@ -132,8 +132,8 @@ namespace RTSharp.ViewModels.TorrentListing
                                     var innerImageCache = innerScope.ServiceProvider.GetRequiredService<ImageCache>();
 
                                     byte[]? favicon = null;
-                                    if (!string.IsNullOrEmpty(tracker.Uri.Host)) {
-                                        var domainInfo = DomainParser.Parse(tracker.Uri.Host);
+                                    if (!string.IsNullOrEmpty(UriUtils.GetDomainForTracker(tracker.Uri))) {
+                                        var domainInfo = DomainParser.Parse(UriUtils.GetDomainForTracker(tracker.Uri));
                                         favicon = await favicons.GetFavicon(domainInfo.RegistrableDomain);
                                     }
 

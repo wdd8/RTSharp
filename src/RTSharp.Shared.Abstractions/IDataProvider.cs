@@ -1,4 +1,5 @@
-﻿using RTSharp.Shared.Utils;
+﻿using RTSharp.Shared.Abstractions.Daemon;
+using RTSharp.Shared.Utils;
 
 namespace RTSharp.Shared.Abstractions
 {
@@ -18,27 +19,27 @@ namespace RTSharp.Shared.Abstractions
 
         public Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> StartTorrents(IList<byte[]> In);
+        public Task<TorrentStatuses> StartTorrents(IList<byte[]> In);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> PauseTorrents(IList<byte[]> In);
+        public Task<TorrentStatuses> PauseTorrents(IList<byte[]> In);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> StopTorrents(IList<byte[]> In);
+        public Task<TorrentStatuses> StopTorrents(IList<byte[]> In);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In);
+        public Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> ForceRecheck(IList<byte[]> In);
+        public Task<Guid> ForceRecheck(IList<byte[]> In);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> ReannounceToAllTrackers(IList<byte[]> In);
+        public Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> In);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> RemoveTorrents(IList<byte[]> In);
+        public Task<TorrentStatuses> RemoveTorrents(IList<byte[]> In);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> RemoveTorrentsAndData(IList<byte[]> In);
+        public Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> MoveDownloadDirectory(IList<(byte[] InfoHash, string TargetDirectory)> In, IList<(string SourceFile, string TargetFile)> Check, IProgress<(byte[] InfoHash, string File, ulong Moved, string? AdditionalProgress)> Progress);
+        public Task<Guid?> MoveDownloadDirectory(InfoHashDictionary<string> In, IList<(string SourceFile, string TargetFile)> Check);
 
-        public Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<byte[]> In);
+        public Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<Torrent> In);
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> SetLabels(IList<(byte[] Hash, string[] Labels)> In);
+        public Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In);
 
         public IPlugin Plugin { get; }
 

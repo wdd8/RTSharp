@@ -16,6 +16,13 @@ namespace RTSharp.Shared.Utils
         }
     }
 
+    public class ConcurrentInfoHashOwnerDictionary<T> : ConcurrentDictionary<(byte[], Guid), T>
+    {
+        public ConcurrentInfoHashOwnerDictionary() : base(ByteArrayGuidComparer.Default)
+        {
+        }
+    }
+
     public static class InfoHashDictionaryExtensions
     {
         public static InfoHashDictionary<T> ToInfoHashDictionary<T>(this IEnumerable<T> source, Func<T, byte[]> infoHashSelector)

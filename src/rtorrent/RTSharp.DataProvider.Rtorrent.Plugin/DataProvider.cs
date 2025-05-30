@@ -1,30 +1,21 @@
 ﻿#nullable enable
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Avalonia.Controls;
 
-using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
-
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using MsBox.Avalonia.Models;
 
-using RTSharp.Daemon.Protocols.DataProvider.Settings;
-using RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
-using RTSharp.DataProvider.Rtorrent.Plugin.Server;
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Utils;
-using static RTSharp.DataProvider.Rtorrent.Common.Extensions;
 using File = RTSharp.Shared.Abstractions.File;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin
@@ -67,10 +58,6 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             SetLabels: true
         );
 
-        public static readonly Metadata Headers = new Metadata {
-            new Metadata.Entry("data-provider", "rtorrent")
-        };
-
         public DataProvider(Plugin ThisPlugin)
         {
             this.ThisPlugin = ThisPlugin;
@@ -85,14 +72,15 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public async Task<IEnumerable<Torrent>> GetAllTorrents()
         {
-            var client = Clients.Torrents();
-            var list = await client.GetTorrentListAsync(new Empty());
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
+            var list = (await client.GetAllTorrents(default)).ToArray();
 
             LatestTorrentsLock.EnterReadLock(); {
-                LatestTorrents = list.List.Select(TorrentMapper.MapFromProto).ToInfoHashDictionary(x => x.Hash);
+                LatestTorrents = list.ToInfoHashDictionary(x => x.Hash);
             } LatestTorrentsLock.ExitReadLock();
 
-            return list.List.Select(TorrentMapper.MapFromProto);
+            return list;
         }
 
         public async Task<Torrent> GetTorrent(byte[] Hash)
@@ -106,44 +94,19 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public async Task<InfoHashDictionary<(bool MultiFile, IList<File> Files)>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken)
         {
-            var client = Clients.Torrent();
-            var resp = await client.GetTorrentsFilesAsync(new Protocols.Torrents() {
-                Hashes = { In.Select(x => x.Hash.ToByteString()) }
-            }, cancellationToken: cancellationToken);
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var ret = new InfoHashDictionary<(bool MultiFile, IList<File> Files)>();
-            
-            foreach (var torrent in resp.Reply) {
-                var files = new List<File>();
-                files.AddRange(torrent.Files.Select(TorrentMapper.MapFromProto));
-
-                // Needs to be set outside mapping because of piece size access
-                foreach (var file in files) {
-                    file.Downloaded = file.DownloadedPieces * In.Single(x => torrent.InfoHash.SequenceEqual(x.Hash)).PieceSize!.Value;
-                }
-
-                ret[torrent.InfoHash.ToByteArray()] = (torrent.MultiFile, files);
-            }
+            var ret = await client.GetTorrentsFiles(In, cancellationToken: cancellationToken);
 
             return ret;
         }
 
         public async Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken)
         {
-            var client = Clients.Torrent();
-            var resp = await client.GetTorrentsPeersAsync(new Protocols.Torrents {
-                Hashes = { In.Select(x => x.Hash.ToByteString()) }
-            }, cancellationToken: cancellationToken);
-
-            var ret = new InfoHashDictionary<IList<Peer>>();
-
-            foreach (var torrent in resp.Reply) {
-                var peer = new List<Peer>();
-                peer.AddRange(torrent.Peers.Select(TorrentMapper.MapFromProto));
-
-                ret[torrent.InfoHash.ToByteArray()] = peer;
-            }
-
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
+            var ret = await client.GetTorrentsPeers(In, cancellationToken: cancellationToken);
+            
             return ret;
         }
 
@@ -151,7 +114,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
         {
             var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
             
-            var ret = await client.GetTorrentsTrackers(In.Select(x => x.Hash).ToArray());
+            var ret = await client.GetTorrentsTrackers(In, cancellationToken);
             
             return ret;
         }
@@ -164,165 +127,117 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
             var updates = client.GetTorrentChanges(combined.Token);
 
-            return updates;
+            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
+                SingleReader = true,
+                SingleWriter = true
+            });
+            _ = Task.Run(async () => {
+                await foreach (var update in updates.Reader.ReadAllAsync(combined.Token)) {
+                    TotalDLSpeed.Change(update.Changes.Sum(x => (long)x.DLSpeed));
+                    TotalUPSpeed.Change(update.Changes.Sum(x => (long)x.UPSpeed));
+                    ActiveTorrentCount.Change(update.Changes.Where(x => x.State.HasFlag(TORRENT_STATE.ACTIVE)).Count());
 
-        }
-
-        private async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> ActionForMulti(IList<byte[]> In, Func<Protocols.GRPCTorrentService.GRPCTorrentServiceClient, Protocols.Torrents, AsyncUnaryCall<Protocols.TorrentsReply>> Fx)
-        {
-            var client = Clients.Torrent();
-
-            IList<(byte[] Hash, IList<Exception> Exceptions)> res;
-            try {
-                var reply = await Fx(client, new Protocols.Torrents() { Hashes = { In.Select(x => x.ToByteString()) } });
-                res = Common.Extensions.ToExceptions(reply);
-            } catch (RpcException ex) {
-                res = In.Select(x => (x, (IList<Exception>)new[] { ex })).ToList();
-            }
-
-            return res;
-        }
-
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> StartTorrents(IList<byte[]> In) => ActionForMulti(In, (client, hashes) => client.StartTorrentsAsync(hashes));
-
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> PauseTorrents(IList<byte[]> In) => ActionForMulti(In, (client, hashes) => client.PauseTorrentsAsync(hashes));
-
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> StopTorrents(IList<byte[]> In) => ActionForMulti(In, (client, hashes) => client.StopTorrentsAsync(hashes));
-
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
-        {
-            var client = Clients.Torrent();
-
-            var res = new List<(byte[] Hashes, IList<Exception>)>();
-            try {
-                var call = client.AddTorrents();
-
-                for (var x = 0;x < In.Count;x++) {
-                    await call.RequestStream.WriteAsync(new Protocols.NewTorrentsData() {
-                        TMetadata = new Protocols.NewTorrentsData.Types.Metadata() {
-                            Id = x.ToString(),
-                            Path = In[x].Options.RemoteTargetPath,
-                            Filename = In[x].Filename ?? ""
-                        }
-                    });
+                    channel.Writer.TryWrite(update);
                 }
-                for (var x = 0;x < In.Count;x++) {
-                    foreach (var chunk in In[x].Data.Chunk(4096)) {
-                        await call.RequestStream.WriteAsync(new Protocols.NewTorrentsData() {
-                            TData = new Protocols.NewTorrentsData.Types.TorrentData() {
-                                Id = x.ToString(),
-                                Chunk = chunk.ToByteString()
-                            }
-                        });
-                    }
-                }
-
-                await call.RequestStream.CompleteAsync();
-
-                var all = await call.ResponseAsync;
-                return Common.Extensions.ToExceptions(all);
-                
-            } catch (RpcException ex) {
-                foreach (var torrent in In) {
-                    res.Add((Array.Empty<byte>(), new[] { ex }));
-                }
-            }
-
-            return res;
+            }, combined.Token);
+            return channel;
         }
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> ForceRecheck(IList<byte[]> In)
+        public async Task<TorrentStatuses> StartTorrents(IList<byte[]> In)
         {
-            var res = await ActionForMulti(In, (client, hashes) => client.ForceRecheckTorrentsAsync(hashes));
-
-            var successfulRechecks = res.Where(x => x.Exceptions.Count == 0);
-
-            var sw = Stopwatch.StartNew();
-
-            var stateObserved = new InfoHashDictionary<bool>();
-
-            while (sw.Elapsed < TimeSpan.FromSeconds(5)) {
-                LatestTorrentsLock.EnterReadLock(); {
-                    foreach (var (hash, _) in successfulRechecks) {
-                        if (LatestTorrents.TryGetValue(hash, out var torrent)) {
-                            if (torrent.State.HasFlag(TORRENT_STATE.HASHING)) {
-                                stateObserved[hash] = true;
-                                break;
-                            }
-                        }
-                    }
-                } LatestTorrentsLock.ExitReadLock();
-                await Task.Delay(500);
-            }
-
-            while (stateObserved.Count != 0) {
-                LatestTorrentsLock.EnterReadLock(); {
-                    foreach (var hash in stateObserved.Keys.ToImmutableArray()) {
-                        if (LatestTorrents.TryGetValue(hash, out var torrent)) {
-                            if (!torrent.State.HasFlag(TORRENT_STATE.HASHING)) {
-                                stateObserved.Remove(hash);
-                                break;
-                            }
-                        }
-                    }
-                } LatestTorrentsLock.ExitReadLock();
-                await Task.Delay(500);
-            }
-
-            return res;
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
+            return await client.StartTorrents(In);
         }
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> ReannounceToAllTrackers(IList<byte[]> In) => ActionForMulti(In, (client, hashes) => client.ReannounceToAllTrackersAsync(hashes));
+        public async Task<TorrentStatuses> PauseTorrents(IList<byte[]> In)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
+            return await client.PauseTorrents(In);
+        }
 
-        public Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> RemoveTorrents(IList<byte[]> In) => ActionForMulti(In, (client, hashes) => client.RemoveTorrentsAsync(hashes));
+        public async Task<TorrentStatuses> StopTorrents(IList<byte[]> In)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
+            return await client.StopTorrents(In);
+        }
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> RemoveTorrentsAndData(IList<byte[]> In)
+        public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+
+            return await client.AddTorrents(In);
+        }
+
+        public async Task<Guid> ForceRecheck(IList<byte[]> In)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+
+            var id = await client.ForceRecheckTorrents(In);
+
+            return id;
+        }
+
+        public async Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> In)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+
+            var id = await client.ReannounceToAllTrackers(In);
+
+            return id;
+        }
+
+        public async Task<TorrentStatuses> RemoveTorrents(IList<byte[]> In)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+
+            var id = await client.RemoveTorrents(In);
+
+            return id;
+        }
+
+        public async Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In)
         {
             var server = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
             var result = await server.RemoveTorrentsAndData(In);
             
             return result;
         }
 
-        public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<byte[]> In)
+        public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<Torrent> In)
         {
             var server = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
             var result = await server.GetDotTorrents(In);
 
             return result;
         }
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> MoveDownloadDirectory(IList<(byte[] InfoHash, string TargetDirectory)> In, IList<(string SourceFile, string TargetFile)> Check, IProgress<(byte[] InfoHash, string File, ulong Moved, string? AdditionalProgress)> Progress)
+        public async Task<Guid?> MoveDownloadDirectory(InfoHashDictionary<string> In, IList<(string SourceFile, string TargetFile)> Check)
         {
-            var client = Clients.Torrent();
-            var server = PluginHost.AttachedDaemonService;
-
-            var req = new Protocols.MoveDownloadDirectoryArgs();
-            var res = new List<(byte[] Hashes, IList<Exception>)>();
-
-            foreach (var (hash, directory) in In) {
-                req.Torrents.Add(new Protocols.MoveDownloadDirectoryArgs.Types.TorrentMoveDownloadDirectory() {
-                    InfoHash = hash.ToByteString(),
-                    TargetDirectory = directory
-                });
-            }
+            var server = PluginHost.AttachedDaemonService!;
+            var torrentsService = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
             if (Check.Select(x => x.TargetFile).Distinct().Count() != Check.Count) {
                 throw new ArgumentException("Moving multiple torrents with same destination is currently unsupported");
             }
 
-            req.Move = true;
+            var move = true;
+            var deleteSourceFiles = true;
 
             var reply = await server.CheckExists(Check.Select(x => x.TargetFile).ToArray());
 
-            var existsCount = reply.Where(x => x.Value).Count();
+            var existsCount = reply.Count(x => x.Value);
 
             if (existsCount == reply.Count) {
                 // All exist
-                var msgbox = await MessageBoxManager.GetMessageBoxStandard("RT# - rtorrent", "All of the files exist in destination directory, do you want to proceed without moving the files?", ButtonEnum.YesNo, Icon.Info, WindowStartupLocation.CenterOwner).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+                var msgbox = await MessageBoxManager.GetMessageBoxStandard("RT# - rtorrent", "All of the file names exist in destination directory, do you want to proceed without moving the files?", ButtonEnum.YesNo, Icon.Info, WindowStartupLocation.CenterOwner).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
 
                 if (msgbox == ButtonResult.Yes)
-                    req.Move = false;
+                    move = false;
             } else if (existsCount != 0) {
                 var msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
                     ButtonDefinitions = new ButtonDefinition[] {
@@ -335,7 +250,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
                             IsDefault = false,
                         },
                         new ButtonDefinition() {
-                            Name = "Cancel",
+                            Name = "Abort",
                             IsDefault = true,
                             IsCancel = true
                         }
@@ -346,104 +261,143 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
 
-                if (msgbox == "Move (overwrite)")
-                    req.Move = true;
-                else if (msgbox == "Don't move (may result in recheck failure)")
-                    req.Move = false;
-                else {
-                    return res;
+                if (msgbox == "Move (overwrite)") {
+                    var allowedToDeleteTarget = await server.AllowedToDeleteFiles(Check.Select(x => x.TargetFile));
+                    
+                    if (allowedToDeleteTarget.Any(x => !x.Value)) {
+                        var onlySome = allowedToDeleteTarget.Any(x => x.Value);
+                    
+                        msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                            ButtonDefinitions = new ButtonDefinition[] {
+                                new ButtonDefinition() {
+                                    Name = "Try to overwrite anyway",
+                                    IsDefault = false,
+                                },
+                                new ButtonDefinition() {
+                                    Name = "Don't move (may result in recheck failure)",
+                                    IsDefault = false,
+                                },
+                                new ButtonDefinition() {
+                                    Name = "Abort",
+                                    IsDefault = true,
+                                    IsCancel = true
+                                }
+                            },
+                            ContentTitle = "RT# - rtorrent",
+                            ContentMessage = $"There are insufficient permissions to overwrite {(onlySome ? "some of " : "")}target files, how would you like to proceed?",
+                            Icon = Icon.Warning,
+                            WindowStartupLocation = WindowStartupLocation.CenterOwner
+                        }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+                        
+                        if (msgbox == "Try to overwrite anyway") {
+                        } else if (msgbox == "Don't move (may result in recheck failure)")
+                            move = false;
+                        else
+                            return null;
+                    }
+                    
+                    move = true;
+                } else if (msgbox == "Don't move (may result in recheck failure)")
+                    move = false;
+                else
+                    return null;
+            }
+            
+            var allowedToRead = await server.AllowedToReadFiles(Check.Select(x => x.SourceFile));
+            
+            if (allowedToRead.Any(x => !x.Value)) {
+                var msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                    ButtonDefinitions = new ButtonDefinition[] {
+                        new ButtonDefinition() {
+                            Name = "Proceed anyway",
+                            IsDefault = false,
+                        },
+                        new ButtonDefinition() {
+                            Name = "Abort",
+                            IsDefault = true,
+                            IsCancel = true
+                        }
+                    },
+                    ContentTitle = "RT# - rtorrent",
+                    ContentMessage = $"There are insufficient permissions to read one or more source files, how would you like to proceed?",
+                    Icon = Icon.Warning,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+                
+                if (msgbox == "Proceed anyway") {
                 }
+                else
+                    return null;
+            }
+            
+            var allowedToDelete = await server.AllowedToDeleteFiles(Check.Select(x => x.SourceFile));
+            
+            if (allowedToDelete.Any(x => !x.Value)) {
+                var onlySome = allowedToDelete.Any(x => x.Value);
+                var msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                    ButtonDefinitions = new ButtonDefinition[] {
+                        new ButtonDefinition() {
+                            Name = "Try to delete anyway",
+                            IsDefault = false,
+                        },
+                        new ButtonDefinition() {
+                            Name = "Leave them as-is",
+                            IsDefault = false,
+                        },
+                        new ButtonDefinition() {
+                            Name = "Abort",
+                            IsDefault = true,
+                            IsCancel = true
+                        }
+                    },
+                    ContentTitle = "RT# - rtorrent",
+                    ContentMessage = $"There are insufficient permissions to delete {(onlySome ? "some " : "")}source files after move, how would you like to proceed?",
+                    Icon = Icon.Warning,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+                
+                if (msgbox == "Try to delete anyway")
+                    deleteSourceFiles = true;
+                else if (msgbox == "Leave them as-is")
+                    deleteSourceFiles = false;
+                else
+                    return null;
             }
 
-            req.Check.AddRange(Check.Select(x => new Protocols.MoveDownloadDirectoryArgs.Types.SourceTargetCheck() {
-                SourceFile = x.SourceFile,
-                TargetFile = x.TargetFile
-            }));
+            var err = await torrentsService.MoveDownloadDirectoryPreCheck(In, Check, move);
 
-            try {
-                var content = client.MoveDownloadDirectory(req);
-                await foreach (var progress in content.ResponseStream.ReadAllAsync()) {
-                    if (progress.Exception != null) {
-                        res.Add((progress.InfoHash.ToByteArray(), new[] { new Exception(progress.Exception.ToFailureString()) }));
-                        continue;
-                    }
-                    if (progress.ETA == null) {
-                        Progress.Report((
-                            progress.InfoHash.ToByteArray(),
-                            progress.File,
-                            progress.Moved,
-                            null
-                        ));
-                    } else {
-                        Progress.Report((
-                            progress.InfoHash.ToByteArray(),
-                            progress.File,
-                            progress.Moved,
-                            progress.CurrentFileIndex + "...\n" +
-                            Converters.GetSIDataSize(progress.Speed) + "/s\n" +
-                            Converters.ToAgoString(progress.ETA.ToTimeSpan()) + " left"
-                        ));
-                    }
-                }
-            } catch (RpcException ex) {
-                foreach (var torrent in In) {
-                    res.Add((torrent.InfoHash, new[] { ex }));
-                }
+            if (err != null) {
+                await MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
+                    ContentTitle = "RT# - rtorrent",
+                    ContentMessage = err,
+                    Icon = Icon.Error,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+
+                return null;
             }
 
-            return res;
+            var session = await torrentsService.MoveDownloadDirectory(In, move, deleteSourceFiles);
+
+            return session;
         }
 
-        public async Task<IList<(byte[] Hash, IList<Exception> Exceptions)>> SetLabels(IList<(byte[] Hash, string[] Labels)> In)
+        public async Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In)
         {
-            var client = Clients.Torrent();
-
-            IList<(byte[] Hash, IList<Exception> Exceptions)> res;
-            try {
-                var reply = await client.SetLabelsAsync(new Protocols.SetLabelsArgs() {
-                    In = {
-                        In.Select(x => new Protocols.SetLabelsArgs.Types.TorrentLabelsPair() {
-                            InfoHash = x.Hash.ToByteString(),
-                            Labels = { x.Labels }
-                        })
-                    }
-                });
-                res = reply.ToExceptions();
-            } catch (RpcException ex) {
-                res = In.Select(x => (x.Hash, (IList<Exception>)new[] { ex })).ToList();
-            }
-
-            return res;
+            var server = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
+            var result = await server.SetLabels(In);
+            
+            return result;
         }
 
         public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
         {
-            var client = Clients.Torrent();
-
-            var res = new InfoHashDictionary<IList<PieceState>>();
-
-            var reply = await client.GetTorrentsPiecesAsync(new Protocols.Torrents {
-                Hashes = { In.Select(x => x.Hash.ToByteString()) }
-            }, cancellationToken: cancellationToken);
-
-            foreach (var torrent in reply.Reply) {
-                var totalBits = torrent.Bitfield.Length * 8;
-                var pieces = new PieceState[totalBits];
-                for (var x = 0;x < totalBits;x += 8) {
-                    var bitset = torrent.Bitfield[x >> 3];
-                    for (var i = 0;i < 8;i++) {
-                        if ((bitset & 0x80) == 0)
-                            pieces[x+i] = PieceState.NotDownloaded;
-                        else
-                            pieces[x+i] = PieceState.Downloaded;
-                        bitset <<= 1;
-                    }
-                }
-
-                res[torrent.InfoHash.ToByteArray()] = pieces;
-            }
-
-            return res;
+            var server = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            
+            var result = await server.GetPieces(In, cancellationToken);
+            
+            return result;
         }
 
         public IPlugin Plugin => ThisPlugin;

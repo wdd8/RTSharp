@@ -7,14 +7,14 @@
             return In switch {
                 QBittorrent.Client.TorrentState.Unknown => Shared.Abstractions.TORRENT_STATE.NONE,
                 QBittorrent.Client.TorrentState.Error => Shared.Abstractions.TORRENT_STATE.ERRORED | Shared.Abstractions.TORRENT_STATE.DOWNLOADING, // Is downloading always the case?
-                QBittorrent.Client.TorrentState.PausedUpload => Shared.Abstractions.TORRENT_STATE.PAUSED | Shared.Abstractions.TORRENT_STATE.SEEDING,
-                QBittorrent.Client.TorrentState.PausedDownload => Shared.Abstractions.TORRENT_STATE.PAUSED | Shared.Abstractions.TORRENT_STATE.DOWNLOADING,
+                QBittorrent.Client.TorrentState.PausedUpload => Shared.Abstractions.TORRENT_STATE.PAUSED,
+                QBittorrent.Client.TorrentState.PausedDownload => Shared.Abstractions.TORRENT_STATE.PAUSED,
                 QBittorrent.Client.TorrentState.QueuedUpload => Shared.Abstractions.TORRENT_STATE.QUEUED | Shared.Abstractions.TORRENT_STATE.SEEDING,
                 QBittorrent.Client.TorrentState.QueuedDownload => Shared.Abstractions.TORRENT_STATE.QUEUED | Shared.Abstractions.TORRENT_STATE.DOWNLOADING,
                 QBittorrent.Client.TorrentState.Uploading => Shared.Abstractions.TORRENT_STATE.SEEDING,
                 QBittorrent.Client.TorrentState.StalledUpload => Shared.Abstractions.TORRENT_STATE.SEEDING,
-                QBittorrent.Client.TorrentState.CheckingUpload => Shared.Abstractions.TORRENT_STATE.HASHING | Shared.Abstractions.TORRENT_STATE.SEEDING,
-                QBittorrent.Client.TorrentState.CheckingDownload => Shared.Abstractions.TORRENT_STATE.HASHING | Shared.Abstractions.TORRENT_STATE.DOWNLOADING,
+                QBittorrent.Client.TorrentState.CheckingUpload => Shared.Abstractions.TORRENT_STATE.HASHING,
+                QBittorrent.Client.TorrentState.CheckingDownload => Shared.Abstractions.TORRENT_STATE.HASHING,
                 QBittorrent.Client.TorrentState.Downloading => Shared.Abstractions.TORRENT_STATE.DOWNLOADING,
                 QBittorrent.Client.TorrentState.StalledDownload => Shared.Abstractions.TORRENT_STATE.DOWNLOADING,
                 QBittorrent.Client.TorrentState.FetchingMetadata => Shared.Abstractions.TORRENT_STATE.DOWNLOADING,
@@ -65,7 +65,7 @@
                 FinishedOnDate = In.CompletionOn,
                 TimeElapsed = In.ActiveTime == null ? TimeSpan.Zero : In.ActiveTime.Value,
                 AddedOnDate = In.AddedOn == null ? DateTime.MinValue : In.AddedOn.Value,
-                TrackerSingle = String.IsNullOrEmpty(In.CurrentTracker) ? null : new Uri(In.CurrentTracker),
+                TrackerSingle = String.IsNullOrEmpty(In.CurrentTracker) ? null : In.CurrentTracker,
                 StatusMessage = "", // TODO:?
                 Comment = "", // TODO:?
                 RemotePath = In.SavePath,
@@ -101,7 +101,7 @@
             if (External.CompletionOn != null) Stored.FinishedOnDate = External.CompletionOn.Value;
             if (External.ActiveTime != null) Stored.TimeElapsed = External.ActiveTime.Value;
             if (External.AddedOn != null) Stored.AddedOnDate = External.AddedOn.Value;
-            if (External.CurrentTracker != null) Stored.TrackerSingle = String.IsNullOrEmpty(External.CurrentTracker) ? null : new Uri(External.CurrentTracker);
+            if (External.CurrentTracker != null) Stored.TrackerSingle = String.IsNullOrEmpty(External.CurrentTracker) ? null : External.CurrentTracker;
             if (External.SavePath != null) Stored.RemotePath = External.SavePath;
             if (External.MagnetUri != null) Stored.MagnetDummy = External.MagnetUri != null;
 
@@ -235,7 +235,7 @@
         {
             return new Shared.Abstractions.Tracker {
                 ID = In.Url.OriginalString,
-                Uri = In.Url,
+                Uri = In.Url.ToString(),
                 Status = MapFromExternal(In.TrackerStatus.Value),
                 Seeders = (uint)(In.Seeds ?? 0),
                 Peers = (uint)(In.Peers ?? 0),

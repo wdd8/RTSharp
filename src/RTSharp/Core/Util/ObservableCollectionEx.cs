@@ -1,22 +1,39 @@
 ﻿using Avalonia.Controls;
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 
 namespace RTSharp.Core.Util
 {
-    public class ObservableCollectionEx<T> : ObservableCollection<T>
+    public class ObservableCollectionEx<T> : INotifyCollectionChanged, INotifyPropertyChanged, IList<T>, IList, IReadOnlyList<T>
     {
         public ObservableCollectionEx()
         {
         }
 
-        public ObservableCollectionEx(ObservableCollectionEx<T> In) : base(In)
-        {
-        }
+        private IList<T> Items = [];
+
+        public int Count { get { return Items.Count; } }
+
+        public bool IsReadOnly => Items.IsReadOnly;
+
+        public bool IsFixedSize => false;
+
+        public bool IsSynchronized => throw new NotImplementedException();
+
+        public object SyncRoot => throw new NotImplementedException();
+
+        T IList<T>.this[int index] { get => Items[index]; set => Items[index] = value; }
+        object IList.this[int index] { get => Items[index]; set => Items[index] = (T)value; }
+
+        public T this[int index] => Items[index];
+
+        public event NotifyCollectionChangedEventHandler CollectionChanged;
+        public event PropertyChangedEventHandler PropertyChanged;
 
         public void Apply(SelectionChangedEventArgs e)
         {
@@ -29,10 +46,7 @@ namespace RTSharp.Core.Util
                 this.Items.Remove((T)item);
             }
 
-            if (c != this.Items.Count)
-                this.OnPropertyChanged(new PropertyChangedEventArgs("Count"));
-
-            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            Notify(c);
         }
 
         public void Apply(NotifyCollectionChangedEventArgs e)
@@ -53,40 +67,34 @@ namespace RTSharp.Core.Util
                 }
             }
 
-            if (c != this.Items.Count)
-                this.OnPropertyChanged(new PropertyChangedEventArgs("Count"));
-
-            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            Notify(c);
         }
 
-        public void Replace(IEnumerable<T> In)
+        public void Replace(List<T> In)
         {
             var c = this.Items.Count;
 
-            Items.Clear();
-            foreach (var item in In)
-                Items.Add(item);
+            Items = In;
 
-            if (c != this.Items.Count)
-                this.OnPropertyChanged(new PropertyChangedEventArgs("Count"));
-
-            this.OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
-            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            Notify(c);
         }
 
-        public void Replace(System.Collections.IEnumerable In)
+        public void Replace(ObservableCollectionEx<T> In)
         {
             var c = this.Items.Count;
 
-            Items.Clear();
-            foreach (var item in In)
-                Items.Add((T)item);
+            Items = In.Items;
 
-            if (c != this.Items.Count)
-                this.OnPropertyChanged(new PropertyChangedEventArgs("Count"));
+            Notify(c);
+        }
 
-            this.OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
-            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        public void Replace(IReadOnlyCollection<T> In)
+        {
+            var c = this.Items.Count;
+
+            Items = [..In];
+
+            Notify(c);
         }
 
         public void AddRange(IEnumerable<T> In)
@@ -96,22 +104,59 @@ namespace RTSharp.Core.Util
             foreach (var item in In)
                 Items.Add(item);
 
-            if (c != this.Items.Count)
-                this.OnPropertyChanged(new PropertyChangedEventArgs("Count"));
-
-            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            Notify(c);
         }
 
         public void NotifyInnerItemsChanged()
         {
-            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            CollectionChanged?.Invoke(this,new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
         public void Sort(Comparison<T> comparison)
         {
             ((List<T>)Items).Sort(comparison);
-            this.OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
-            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            CollectionChanged?.Invoke(this,new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
+
+        private void Notify(int previousCount)
+        {
+            if (previousCount != this.Items.Count)
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Count)));
+
+            CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+
+        public int IndexOf(T item) => throw new NotImplementedException();
+        public void Insert(int index, T item) => throw new NotImplementedException();
+        public void RemoveAt(int index) => throw new NotImplementedException();
+        public void Add(T item) => AddRange([ item ]);
+        public void Clear()
+        {
+            var c = this.Items.Count;
+
+            Items.Clear();
+
+            Notify(c);
+        }
+        public bool Contains(T item) => throw new NotImplementedException();
+        public void CopyTo(T[] array, int arrayIndex) => throw new NotImplementedException();
+        public bool Remove(T item)
+        {
+            var c = this.Items.Count;
+
+            var ret = Items.Remove(item);
+
+            Notify(c);
+
+            return ret;
+        }
+        public IEnumerator<T> GetEnumerator() => Items.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        public int Add(object value) => throw new NotImplementedException();
+        public bool Contains(object value) => throw new NotImplementedException();
+        public int IndexOf(object value) => throw new NotImplementedException();
+        public void Insert(int index, object value) => throw new NotImplementedException();
+        public void Remove(object value) => throw new NotImplementedException();
+        public void CopyTo(Array array, int index) => throw new NotImplementedException();
     }
 }

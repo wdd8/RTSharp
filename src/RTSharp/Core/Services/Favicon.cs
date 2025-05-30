@@ -46,7 +46,15 @@ namespace RTSharp.Core.Services
                     .ToArray();
 
                 if (links.Any()) {
-                    response = await HttpClient.GetAsync(links.First(), cts.Token);
+                    var link = links.First();
+
+                    if (!link.StartsWith("http")) {
+                        if (!link.StartsWith('/'))
+                            link = "/" + link;
+                        link = $"https://{Domain}" + link;
+                    }
+
+                    response = await HttpClient.GetAsync(link, cts.Token);
                     if (response.IsSuccessStatusCode)
                         return await response.Content.ReadAsByteArrayAsync();
                 }

@@ -27,7 +27,7 @@ namespace RTSharp.Views
             });
         }
 
-        private readonly ISolidColorBrush DarkYellow = new ImmutableSolidColorBrush(Color.FromUInt32(0xFF9B870C));
+        private readonly ISolidColorBrush DarkYellow = new SolidColorBrush(Color.FromUInt32(0xFF9B870C));
 
         private void EvLoadingRow(object sender, DataGridRowEventArgs e)
         {

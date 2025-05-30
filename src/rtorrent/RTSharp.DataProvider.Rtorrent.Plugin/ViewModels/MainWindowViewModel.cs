@@ -27,7 +27,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels
             var daemon = PluginHost.AttachedDaemonService;
             var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
-            Func<Task<CommandReply>> setSettingsTask = async () => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: DataProvider.Headers);
+            Func<Task<CommandReply>> setSettingsTask = async () => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
             var action = ActionQueueAction.New("Set settings", setSettingsTask);
             _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async parent => {

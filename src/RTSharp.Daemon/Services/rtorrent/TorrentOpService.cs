@@ -6,8 +6,17 @@ using Status = RTSharp.Daemon.Protocols.DataProvider.Status;
 
 namespace RTSharp.Daemon.Services.rtorrent
 {
-    public class TorrentOpService(SCGICommunication Scgi, SettingsService Settings)
+    public class TorrentOpService
     {
+        private SCGICommunication Scgi;
+        private SettingsService Settings;
+    
+        public TorrentOpService(IServiceProvider ServiceProvider, [ServiceKey] string InstanceKey)
+        {
+            this.Scgi = ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
+            this.Settings = ServiceProvider.GetRequiredKeyedService<SettingsService>(InstanceKey);
+        }
+        
         public async Task<InfoHashDictionary<string>> GetDotTorrentFilePaths(IEnumerable<byte[]> Hashes)
         {
             var sessionSetting = (string)(await Settings.GetSettings(SettingsService.SessionPath))[SettingsService.SessionPath.RtorrentSetting];
@@ -45,7 +54,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
 
-            Status? fault;
+            XMLUtils.FaultStatus? fault;
             if ((fault = XMLUtils.TryGetFaultStruct(ref result, "f.multicall")) != null)
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.Internal, fault.FaultCode + ": " + fault.FaultString));
 
@@ -87,7 +96,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                             _ => TorrentsFilesReply.Types.FilePriority.Normal // TODO?
                         },
                         Path = path,
-                        CompletedChunks = completedChunks,
+                        DownloadedPieces = completedChunks,
                         DownloadStrategy = downloadStrategy
                     });
                 }

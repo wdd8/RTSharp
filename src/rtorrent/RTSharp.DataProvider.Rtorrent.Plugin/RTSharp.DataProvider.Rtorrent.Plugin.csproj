@@ -18,17 +18,17 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.2.1" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.1" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.2.1" />
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.2.1" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.1" />
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
-        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.67.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
+        <PackageReference Include="Avalonia" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.0" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.5" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.5" />
         <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
-        <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.4.3" />
+        <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.6.2" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\RTSharp.Daemon.Protocols\RTSharp.Daemon.Protocols.csproj" />
@@ -41,8 +41,6 @@
             <ExcludeAssets>runtime</ExcludeAssets>
         </ProjectReference>
         <ProjectReference Include="..\..\RTSharp.Shared.Controls\RTSharp.Shared.Controls.csproj" />
-        <ProjectReference Include="..\RTSharp.DataProvider.Rtorrent.Common\RTSharp.DataProvider.Rtorrent.Common.csproj" />
-        <ProjectReference Include="..\RTSharp.DataProvider.Rtorrent.Protocols\RTSharp.DataProvider.Rtorrent.Protocols.csproj" />
     </ItemGroup>
     <ItemGroup>
       <Folder Include="Properties\" />

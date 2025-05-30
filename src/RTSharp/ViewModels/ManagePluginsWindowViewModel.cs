@@ -56,7 +56,7 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
             var msgBox = MessageBoxManager.GetMessageBoxStandard("RT# - Failed to load plugin", $"Failed to load plugin {config}\n{ex}", MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Stop, Avalonia.Controls.WindowStartupLocation.CenterOwner);
             await msgBox.ShowAsync();
         } finally {
-            UnloadedPluginDirs.Replace(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName));
+            UnloadedPluginDirs.Replace(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName).ToList());
             wBox.Close();
         }
     }
@@ -65,6 +65,6 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
     public async Task UnloadClick()
     {
         await SelectedActivePlugin.Unload();
-        UnloadedPluginDirs.Replace(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName));
+        UnloadedPluginDirs.Replace(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName).ToList());
     }
 }

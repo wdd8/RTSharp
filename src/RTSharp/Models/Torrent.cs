@@ -80,6 +80,12 @@ namespace RTSharp.Models
         public ulong downloaded;
 
         /// <summary>
+        /// Completed bytes
+        /// </summary>
+        [ObservableProperty]
+        public ulong completedSize;
+
+        /// <summary>
         /// Uploaded bytes
         /// </summary>
         [ObservableProperty]
@@ -170,7 +176,7 @@ namespace RTSharp.Models
         /// Primary tracker URI
         /// </summary>
         [ObservableProperty]
-        public Uri? trackerSingle;
+        public string? trackerSingle;
 
         [ObservableProperty]
         public IImage? trackerIcon;
@@ -238,6 +244,7 @@ namespace RTSharp.Models
             this.Wasted = In.Wasted;
             this.Done = In.Done;
             this.Downloaded = In.Downloaded;
+            this.CompletedSize = In.CompletedSize;
             this.Uploaded = In.Uploaded;
             this.Ratio = (float)In.Uploaded / In.Downloaded;
             if (In.Uploaded == 0)
@@ -301,6 +308,7 @@ namespace RTSharp.Models
                 Wasted = Wasted,
                 Done = (float)Downloaded / Size * 100, // Maybe get from server?
                 Downloaded = Downloaded,
+                CompletedSize = CompletedSize,
                 Uploaded = Uploaded,
                 DLSpeed = DLSpeed,
                 UPSpeed = UPSpeed,

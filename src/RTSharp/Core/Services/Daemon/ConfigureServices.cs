@@ -179,6 +179,7 @@ It is also possible that a host key has just been changed.
                     register<RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentService.GRPCTorrentServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentService.GRPCTorrentServiceClient) + "_" + server.Key, server.Value);
                     register<RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentsService.GRPCTorrentsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentsService.GRPCTorrentsServiceClient) + "_" + server.Key, server.Value);
                     register<RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient) + "_" + server.Key, server.Value);
+                    register<RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient) + "_" + server.Key, server.Value);
                 }
             }
         }

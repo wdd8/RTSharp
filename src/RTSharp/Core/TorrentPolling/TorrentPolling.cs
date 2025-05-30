@@ -12,6 +12,7 @@ using System.Collections.ObjectModel;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using RTSharp.Core.Util;
+using RTSharp.Shared.Utils;
 
 namespace RTSharp.Core.TorrentPolling
 {
@@ -27,6 +28,7 @@ namespace RTSharp.Core.TorrentPolling
         });
 
         public static ObservableCollectionEx<Models.Torrent> Torrents { get; } = new();
+        public static ConcurrentInfoHashOwnerDictionary<Models.Torrent> TorrentsLookup { get; } = new();
 
         public static Dictionary<string, int> AllLabelReferences { get; } = new();
         public static IObservable<string[]> AllLabelReferencesObservable { get; private set; }
@@ -65,6 +67,7 @@ namespace RTSharp.Core.TorrentPolling
                 foreach (var remove in toRemove)
                 {
                     Torrents.Remove(remove);
+                    TorrentsLookup.Remove((remove.Hash, remove.Owner.PluginInstance.InstanceId), out var _);
                 }
 
                 bool labelsChanged = false;
@@ -126,6 +129,9 @@ namespace RTSharp.Core.TorrentPolling
                 }));
                 if (newVMTorrents.Count() > 0) {
                     Torrents.AddRange(newVMTorrents);
+                    foreach (var torrent in newVMTorrents)
+                        TorrentsLookup.TryAdd((torrent.Hash, torrent.Owner.PluginInstance.InstanceId), torrent);
+
                     foreach (var x in newVMTorrents)
                     {
                         foreach (var label in x.Labels)

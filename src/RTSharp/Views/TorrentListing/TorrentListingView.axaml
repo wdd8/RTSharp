@@ -162,6 +162,7 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Downloaded" IsReadOnly="True" Binding="{Binding Downloaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
+                    <DataGridTextColumn Header="Completed" IsReadOnly="True" Binding="{Binding CompletedSize, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
                     <DataGridTextColumn Header="Uploaded" IsReadOnly="True" Binding="{Binding Uploaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
                     <DataGridTextColumn Header="Remaining" IsReadOnly="True" Binding="{Binding RemainingSize, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
                     <DataGridTextColumn Header="DL Speed" IsReadOnly="True" Binding="{Binding DLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />

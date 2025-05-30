@@ -4,11 +4,8 @@ using BencodeNET.Torrents;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
-
-using static RTSharp.Shared.Utils.TorrentCreator;
 
 namespace RTSharp.Shared.Utils
 {

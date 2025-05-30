@@ -16,12 +16,14 @@ service GRPCServerService {
 
 message StartScriptInput {
     string Script = 1;
-    map<string, string> Variables = 2;
+    string Name = 2;
+    map<string, string> Variables = 3;
 }
 
 enum TaskState {
     WAITING = 0;
     RUNNING = 1;
+    FAILED = 2;
     DONE = 3;
 }
 
@@ -31,6 +33,7 @@ message ScriptProgressState {
     string Text = 3;
     float Progress = 4;
     TaskState State = 5;
+    google.protobuf.StringValue StateData = 6;
 }
 
 message ScriptSessionReply {

@@ -26,13 +26,13 @@ public class ScriptSession : IScriptSession
 
     public void ProgressChanged()
     {
-        var logger = Scope.ServiceProvider.GetRequiredService<ILogger<SessionsService>>();
-        logger.LogInformation($"EV: Script session {Id} progress changed");
+        var logger = Scope?.ServiceProvider.GetRequiredService<ILogger<SessionsService>>();
+        logger?.LogInformation($"EV: Script session {Id} progress changed");
         EvProgressChanged.Set();
     }
 }
 
-public class SessionsService(IServiceScopeFactory ScopeFactory)
+public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<SessionsService> Logger)
 {
     private readonly List<ScriptSession> Sessions = new();
 
@@ -54,7 +54,6 @@ public class SessionsService(IServiceScopeFactory ScopeFactory)
             throw new InstantiationException($"{DynamicScript.ClassType.Name} has not been resolved");
         }
 
-
         Sessions.Add(session = new ScriptSession {
             Id = id,
             Scope = scope,
@@ -68,8 +67,38 @@ public class SessionsService(IServiceScopeFactory ScopeFactory)
         session.Progress = progress;
 
         session.Execution = instance.Execute(Variables, session, cts.Token);
+        BindContinuations(session);
 
         return session;
+    }
+    
+    internal ScriptSession CreateSession(CancellationTokenSource Cts, Func<ScriptSession, Task> Fx)
+    {
+        ScriptSession session;
+    
+        Sessions.Add(session = new ScriptSession {
+            Id = Guid.NewGuid(),
+            Scope = null,
+            Script = null,
+            ScriptInstance = null,
+            Cts = Cts,
+            Progress = null!
+        });
+        
+        var progress = new ScriptProgressState(session);
+        session.Progress = progress;
+        session.Execution = Fx(session);
+        BindContinuations(session);
+        
+        return session;
+    }
+
+    private void BindContinuations(ScriptSession Session)
+    {
+        Session.Execution!.ContinueWith(x => {
+            Logger.LogError(x.Exception, $"Session {Session.Id} failed");
+            Session.Progress.State = TASK_STATE.FAILED;
+        }, TaskContinuationOptions.OnlyOnFaulted);
     }
 
     public IReadOnlyList<ScriptSession> GetScriptSessions()

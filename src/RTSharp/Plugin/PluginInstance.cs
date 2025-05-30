@@ -149,7 +149,7 @@ namespace RTSharp.Plugin
 
         public IServiceScope CreateScope() => Core.ServiceProvider.CreateScope();
 
-        public IReadOnlyList<IDaemonService> GetDaemonServices() => Core.Servers.Value.Cast<IDaemonService>().ToList().AsReadOnly();
+        public IReadOnlyList<IDaemonService> GetDaemonServices() => Core.Servers.Value.Select(x => x.Value).ToList().AsReadOnly();
 
         public IDaemonService? GetDaemonService(string ServerId)
         {

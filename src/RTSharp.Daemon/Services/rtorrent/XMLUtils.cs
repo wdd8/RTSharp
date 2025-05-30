@@ -5,8 +5,6 @@ using System.Text;
 
 using rm.Trie;
 
-using RTSharp.Daemon.Protocols.DataProvider;
-
 namespace RTSharp.Daemon.Services.rtorrent
 {
     public class XMLUtils
@@ -72,6 +70,29 @@ namespace RTSharp.Daemon.Services.rtorrent
         public static readonly byte[] I8_TOKEN_END = "</i8>"u8.ToArray();
 
         public static readonly byte[] ENDING_TAG = "</"u8.ToArray();
+        
+        public class FaultStatus
+        {
+            public string Command { get; set; }
+            public string FaultCode { get; set; }
+            public string FaultString { get; set; }
+            
+            public string ToFailureString()
+            {
+                return $"{Command}: {FaultCode} {FaultString}";
+            }
+        }
+        public class TorrentsResult
+        {
+            public byte[] InfoHash { get; set; }
+            public FaultStatus[] Status { get; set; }
+
+            public TorrentsResult(byte[] InfoHash, FaultStatus[] Status)
+            {
+                this.InfoHash = InfoHash;
+                this.Status = Status;
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SeekTo(ref ReadOnlyMemory<byte> In, ReadOnlySpan<byte> What)
@@ -249,10 +270,10 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret;
         }
 
-        public static Status GetFaultStruct(ref ReadOnlyMemory<byte> In, string Command)
+        public static FaultStatus GetFaultStruct(ref ReadOnlyMemory<byte> In, string Command)
         {
             // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-506</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Method 'base_path' not defined</string></value></member>\r\n</struct></value>\r\n
-            var ret = new Status() {
+            var ret = new FaultStatus {
                 Command = Command
             };
             foreach (var kv in GetStruct(ref In)) {
@@ -265,10 +286,10 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret;
         }
 
-        public static Status? TryGetFaultStruct(ref ReadOnlyMemory<byte> In, string Command)
+        public static FaultStatus? TryGetFaultStruct(ref ReadOnlyMemory<byte> In, string Command)
         {
             // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-506</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Method 'base_path' not defined</string></value></member>\r\n</struct></value>\r\n
-            var ret = new Status() {
+            var ret = new FaultStatus() {
                 Command = Command
             };
 

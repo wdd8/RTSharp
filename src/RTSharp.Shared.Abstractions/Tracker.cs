@@ -20,7 +20,7 @@
         /// <summary>
         /// Tracker Uri
         /// </summary>
-        public Uri Uri { get; set; }
+        public string Uri { get; set; }
 
         /// <summary>
         /// Tracker status

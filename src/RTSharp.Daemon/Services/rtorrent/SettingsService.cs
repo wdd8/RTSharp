@@ -9,9 +9,9 @@ namespace RTSharp.Daemon.Services.rtorrent
     {
         private readonly SCGICommunication Scgi;
 
-        public SettingsService(SCGICommunication Scgi)
+        public SettingsService(IServiceProvider ServiceProvider, [ServiceKey] string InstanceKey)
         {
-            this.Scgi = Scgi;
+            this.Scgi = ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
         }
 
         public record SettingSpec(string RtorrentSetting, SCGI_DATA_TYPE DataType, string Property);
@@ -203,7 +203,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
                     //<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not set local address: Name or service not known.</string></value></member>\r\n</struct></value>\r\n
                     XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
-                    ret.Response.Add(XMLUtils.GetFaultStruct(ref result, setting.RtorrentSetting));
+                    ret.Response.Add(GrpcExtensions.ToStatus(XMLUtils.GetFaultStruct(ref result, setting.RtorrentSetting)));
                     continue;
                 }
 

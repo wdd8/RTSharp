@@ -13,14 +13,16 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 {
     public partial class TorrentPolling : BackgroundService
     {
+        private string InstanceKey { get; }
         private IServiceScopeFactory ScopeFactory { get; }
         private ILogger<TorrentPolling> Logger { get; }
         private ILogger<PollingSubscription> PollingSubscriptionLogger { get; }
 
         //public TorrentsListResponse LastFetch { get; private set; }
 
-        public TorrentPolling(IServiceScopeFactory ScopeFactory, ILogger<TorrentPolling> Logger, ILogger<PollingSubscription> PollingSubscriptionLogger)
+        public TorrentPolling(IServiceScopeFactory ScopeFactory, [ServiceKey] string InstanceKey, ILogger<TorrentPolling> Logger, ILogger<PollingSubscription> PollingSubscriptionLogger)
         {
+            this.InstanceKey = InstanceKey;
             this.ScopeFactory = ScopeFactory;
             this.ForceLoop = new AsyncManualResetEvent();
             this.Logger = Logger;
@@ -87,7 +89,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             ReadOnlyMemory<byte> xml;
 
             using (var scope = ScopeFactory.CreateScope()) {
-                var comm = scope.ServiceProvider.GetRequiredService<SCGICommunication>();
+                var comm = scope.ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
 
                 xml = await comm.Get(AllTorrentsXml);
             }
@@ -192,13 +194,17 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 if (torrentComment.StartsWith("VRS24mrker"))
                     torrentComment = torrentComment[10..];
 
+                var decodedName = XMLUtils.Decode(name);
+
                 var torrent = new Torrent() {
                     Hash = ByteString.CopyFrom(hash),
-                    Name = XMLUtils.Decode(name),
+                    Name = decodedName,
                     State = torrentState,
+                    WantedSize = totalSize, // TODO: rtorrent supports not downloading specific files, this should account for it
                     IsPrivate = isPrivateRaw,
                     Size = totalSize,
                     Downloaded = downloaded,
+                    CompletedSize = downloaded, // TODO: probably maybe should fix this in future since its possible to download partials with rtorrent
                     Uploaded = uploaded,
                     DLSpeed = downSpeed,
                     CreatedOn = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)creationDateRaw)),
@@ -215,7 +221,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     SeedersConnected = (uint)seedersConnected,
                     PeersConnected = (uint)peersConnected,
                     SeedersTotal = (uint)curTrackers.Sum(x => x.Seeders),
-                    PeersTotal = (uint)curTrackers.Sum(x => x.Peers)
+                    PeersTotal = (uint)curTrackers.Sum(x => x.Peers),
+                    MagnetDummy = Regex.IsMatch(decodedName, "magnet:\\?xt=urn:[a-z0-9]+:[a-z0-9]{32,40}&dn=.+&tr=.+")
                 };
 
                 torrent.Labels.Add(NonEscapedCommaRegex().Split(label).Where(x => !String.IsNullOrEmpty(x)).Select(XMLUtils.Decode));

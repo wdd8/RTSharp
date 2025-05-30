@@ -6,17 +6,20 @@ public enum TASK_STATE
 {
     WAITING,
     RUNNING,
-    DONE
+    DONE,
+    FAILED
 }
 
 public class ScriptProgressState
 {
-    private readonly IScriptSession Base;
+    private readonly IScriptSession? Base;
 
     public ScriptProgressState(IScriptSession Base)
     {
         this.Base = Base;
     }
+    
+    public ScriptProgressState() { }
 
     public ScriptProgressState[]? Chain { get; set; }
 
@@ -25,7 +28,7 @@ public class ScriptProgressState
         get => _text;
         set {
             _text = value;
-            this.Base.ProgressChanged();
+            this.Base?.ProgressChanged();
         }
     }
 
@@ -35,7 +38,7 @@ public class ScriptProgressState
         get => _progress;
         set {
             _progress = value;
-            this.Base.ProgressChanged();
+            this.Base?.ProgressChanged();
         }
     }
 
@@ -44,7 +47,17 @@ public class ScriptProgressState
         get => _state;
         set {
             _state = value;
-            this.Base.ProgressChanged();
+            this.Base?.ProgressChanged();
+        }
+    }
+    
+    private string? _stateData = null;
+    
+    public string? StateData {
+        get => _stateData;
+        set {
+            _stateData = value;
+            this.Base?.ProgressChanged();
         }
     }
 }

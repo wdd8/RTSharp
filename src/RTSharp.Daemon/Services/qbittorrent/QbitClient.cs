@@ -1,25 +1,34 @@
-﻿using QBittorrent.Client;
-using RTSharp.Shared.Abstractions;
+﻿using Microsoft.Extensions.Options;
+using QBittorrent.Client;
 
-namespace RTSharp.Daemon.Services.qbittorrent
+namespace RTSharp.Daemon.Services.qbittorrent;
+
+public class QbitClient
 {
-    public class QbitClient(IConfiguration Config)
+    ConfigModel Config;
+
+    public QbitClient(IOptionsFactory<ConfigModel> Opts, [ServiceKey] string InstanceKey)
     {
-        public IQBittorrentClient2 Client;
+        Config = Opts.Create(InstanceKey);
+    }
 
-        public async Task Init()
-        {
-            if (Client == null) {
-                try {
-                    var uri = new Uri(Config.GetValue<string>("qbittorrent:Uri")!);
-                    var username = Config.GetValue<string>("qbittorrent:Username");
-                    var password = Config.GetValue<string>("qbittorrent:Password");
+    public IQBittorrentClient2 Client;
+    private DateTime Created = DateTime.MinValue;
 
-                    Client = new QBittorrentClient(uri, ApiLevel.Auto);
-                    await Client.LoginAsync(username, password);
-                } catch {
-                    Client = null;
-                }
+    public async Task Init()
+    {
+        if (Client == null || DateTime.UtcNow - Created > TimeSpan.FromMinutes(30)) {
+            try {
+                var uri = new Uri(Config.Uri);
+
+                Client = new QBittorrentClient(uri, ApiLevel.Auto);
+                await Client.LoginAsync(Config.Username, Config.Password);
+
+                Created = DateTime.UtcNow;
+            } catch {
+                Client = null;
+                Created = DateTime.MinValue;
+                throw;
             }
         }
     }

@@ -50,13 +50,29 @@ public interface IDaemonService
     /// <param name="Paths">Absolute paths of remote source <c>RemoteSource</c> and destination target <c>StoreTo</c></param>
     /// <param name="SenderServerId">Server where files are present</param>
     /// <param name="Progress">Progress for each file</param>
-    Task RequestRecieveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, IProgress<(string File, float Progress)> Progress);
+    Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, IProgress<(string File, float Progress)> Progress);
 
     Task<MemoryStream> ReceiveFilesInline(string RemotePath);
 
-    Task<Guid> RunCustomScript(string Script, Dictionary<string, string> Variables);
+    Task<Guid> RunCustomScript(string Script, string Name, Dictionary<string, string> Variables);
 
     Task QueueScriptCancellation(Guid Id);
+    
+    Task GetScriptProgress(Guid Req, IProgress<ScriptProgressState>? Progress);
+    
+    /// <summary>
+    /// Checks files permissions to see if it's possible to delete provided files
+    /// </summary>
+    /// <param name="In">Files</param>
+    /// <returns>Is allowed for each file</returns>
+    Task<Dictionary<string, bool>> AllowedToDeleteFiles(IEnumerable<string> In);
+    
+    /// <summary>
+    /// Checks files permissions to see if it's possible to read provided files
+    /// </summary>
+    /// <param name="In">Files</param>
+    /// <returns>Is allowed for each file</returns>
+    Task<Dictionary<string, bool>> AllowedToReadFiles(IEnumerable<string> In);
 
     T GetGrpcService<T>()
         where T : ClientBase<T>;

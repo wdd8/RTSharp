@@ -20,7 +20,7 @@ namespace RTSharp.Models
         /// <summary>
         /// Tracker URI
         /// </summary>
-        public Uri Uri { get; set; }
+        public string Uri { get; set; }
 
         public string Domain => UriUtils.GetDomainForTracker(Uri);
 
@@ -116,7 +116,7 @@ namespace RTSharp.Models
         public void UpdateDisplay()
         {
             if (String.IsNullOrEmpty(DisplayName))
-                Display = Uri.AbsoluteUri;
+                Display = Uri;
             else {
                 Display = DisplayName;
             }

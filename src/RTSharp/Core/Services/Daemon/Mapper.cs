@@ -1,10 +1,8 @@
 ﻿using RTSharp.Shared.Utils;
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text.RegularExpressions;
 
 namespace RTSharp.Core.Services.Daemon
 {
@@ -52,7 +50,7 @@ namespace RTSharp.Core.Services.Daemon
         public static void UpdateTracker(Shared.Abstractions.Tracker Bottom, RTSharp.Daemon.Protocols.DataProvider.TorrentTracker Top)
         {
             Bottom.ID = Top.Uri;
-            Bottom.Uri = new Uri(Top.Uri);
+            Bottom.Uri = Top.Uri;
             Bottom.Status = MapFromProto(Top.Status);
             Bottom.Seeders = Top.Seeders;
             Bottom.Peers = Top.Peers;
@@ -70,35 +68,40 @@ namespace RTSharp.Core.Services.Daemon
 
         public static Shared.Abstractions.Torrent MapFromProto(RTSharp.Daemon.Protocols.DataProvider.Torrent In)
         {
-            return new Shared.Abstractions.Torrent(In.Hash.ToByteArray()) {
-                Name = In.Name,
-                State = MapFromProto(In.State),
-                IsPrivate = In.IsPrivate,
-                Size = In.Size,
-                WantedSize = In.Size, // ??????????
-                PieceSize = In.ChunkSize,
-                Wasted = In.Wasted,
-                Done = (float)In.Downloaded / In.Size * 100,
-                Downloaded = In.Downloaded,
-                Uploaded = In.Uploaded,
-                DLSpeed = In.DLSpeed,
-                UPSpeed = In.UPSpeed,
-                ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
-                Labels = In.Labels.Select(StringCache.Reuse).ToHashSet(),
-                Peers = (In.PeersConnected, In.PeersTotal),
-                Seeders = (In.SeedersConnected, In.SeedersTotal),
-                Priority = MapFromProto(In.Priority),
-                CreatedOnDate = In.CreatedOn.ToDateTime(),
-                RemainingSize = In.Size - In.Downloaded,
-                FinishedOnDate = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : In.FinishedOn.ToDateTime(),
-                TimeElapsed = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? DateTime.UtcNow - In.AddedOn.ToDateTime() : In.FinishedOn.ToDateTime() - In.AddedOn.ToDateTime(),
-                AddedOnDate = In.AddedOn.ToDateTime(),
-                TrackerSingle = new Uri(In.PrimaryTracker.Uri),
-                StatusMessage = StringCache.Reuse(In.StatusMessage),
-                Comment = StringCache.Reuse(In.Comment),
-                RemotePath = StringCache.Reuse(In.RemotePath),
-                MagnetDummy = Regex.IsMatch(In.Name, "magnet:\\?xt=urn:[a-z0-9]+:[a-z0-9]{32,40}&dn=.+&tr=.+")
-            };
+            try {
+                return new Shared.Abstractions.Torrent(In.Hash.ToByteArray()) {
+                    Name = In.Name,
+                    State = MapFromProto(In.State),
+                    IsPrivate = In.IsPrivate,
+                    Size = In.Size,
+                    WantedSize = In.WantedSize,
+                    PieceSize = In.ChunkSize,
+                    Wasted = In.Wasted,
+                    Done = (float)In.CompletedSize / In.WantedSize * 100,
+                    Downloaded = In.Downloaded,
+                    CompletedSize = In.CompletedSize,
+                    Uploaded = In.Uploaded,
+                    DLSpeed = In.DLSpeed,
+                    UPSpeed = In.UPSpeed,
+                    ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
+                    Labels = In.Labels.Select(StringCache.Reuse).ToHashSet(),
+                    Peers = (In.PeersConnected, In.PeersTotal),
+                    Seeders = (In.SeedersConnected, In.SeedersTotal),
+                    Priority = MapFromProto(In.Priority),
+                    CreatedOnDate = In.CreatedOn?.ToDateTime(),
+                    RemainingSize = In.WantedSize - In.CompletedSize,
+                    FinishedOnDate = In.FinishedOn == null ? null : In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : In.FinishedOn.ToDateTime(),
+                    TimeElapsed = (In.FinishedOn == null || In.FinishedOn.ToDateTime() == DateTime.UnixEpoch) ? DateTime.UtcNow - In.AddedOn.ToDateTime() : In.FinishedOn.ToDateTime() - In.AddedOn.ToDateTime(),
+                    AddedOnDate = In.AddedOn.ToDateTime(),
+                    TrackerSingle = In.PrimaryTracker == null ? null : In.PrimaryTracker.Uri,
+                    StatusMessage = StringCache.Reuse(In.StatusMessage),
+                    Comment = StringCache.Reuse(In.Comment),
+                    RemotePath = StringCache.Reuse(In.RemotePath),
+                    MagnetDummy = In.MagnetDummy
+                };
+            } catch {
+                throw;
+            }
         }
 
         public static Shared.Abstractions.Torrent MapFromProto(RTSharp.Daemon.Protocols.DataProvider.IncompleteDeltaTorrentResponse In, Models.Torrent Torrent)
@@ -108,11 +111,12 @@ namespace RTSharp.Core.Services.Daemon
                 State = MapFromProto(In.State),
                 IsPrivate = Torrent.IsPrivate,
                 Size = Torrent.Size,
-                WantedSize = Torrent.Size, // TODO: ??????????
+                WantedSize = Torrent.WantedSize,
                 PieceSize = Torrent.PieceSize,
                 Wasted = In.Wasted,
-                Done = (float)In.Downloaded / Torrent.Size * 100,
+                Done = (float)In.CompletedSize / Torrent.WantedSize * 100,
                 Downloaded = In.Downloaded,
+                CompletedSize = In.CompletedSize,
                 Uploaded = In.Uploaded,
                 DLSpeed = In.DLSpeed,
                 UPSpeed = In.UPSpeed,
@@ -122,15 +126,15 @@ namespace RTSharp.Core.Services.Daemon
                 Seeders = (In.SeedersConnected, In.SeedersTotal),
                 Priority = MapFromProto(In.Priority),
                 CreatedOnDate = Torrent.CreatedOnDate,
-                RemainingSize = Torrent.Size - In.Downloaded,
-                FinishedOnDate = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : In.FinishedOn.ToDateTime(),
-                TimeElapsed = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? DateTime.UtcNow - Torrent.AddedOnDate : In.FinishedOn.ToDateTime() - Torrent.AddedOnDate,
+                RemainingSize = Torrent.WantedSize - In.CompletedSize,
+                FinishedOnDate = null,
+                TimeElapsed = DateTime.UtcNow - Torrent.AddedOnDate,
                 AddedOnDate = Torrent.AddedOnDate,
-                TrackerSingle = new Uri(In.PrimaryTracker.Uri),
+                TrackerSingle = In.PrimaryTracker != null ? In.PrimaryTracker.Uri : null,
                 StatusMessage = StringCache.Reuse(In.StatusMessage),
                 Comment = StringCache.Reuse(Torrent.Comment),
                 RemotePath = StringCache.Reuse(In.RemotePath),
-                MagnetDummy = Torrent.MagnetDummy
+                MagnetDummy = In.MagnetDummy
             };
         }
 
@@ -141,11 +145,12 @@ namespace RTSharp.Core.Services.Daemon
                 State = MapFromProto(In.State),
                 IsPrivate = Torrent.IsPrivate,
                 Size = Torrent.Size,
-                WantedSize = Torrent.Size, // TODO: ??????????
+                WantedSize = In.WantedSize,
                 PieceSize = Torrent.PieceSize,
                 Wasted = Torrent.Wasted,
                 Done = Torrent.Done,
                 Downloaded = Torrent.Downloaded,
+                CompletedSize = Torrent.CompletedSize,
                 Uploaded = In.Uploaded,
                 DLSpeed = Torrent.DLSpeed,
                 UPSpeed = In.UPSpeed,
@@ -156,10 +161,10 @@ namespace RTSharp.Core.Services.Daemon
                 Priority = MapFromProto(In.Priority),
                 CreatedOnDate = Torrent.CreatedOnDate,
                 RemainingSize = Torrent.RemainingSize,
-                FinishedOnDate = Torrent.FinishedOnDate,
-                TimeElapsed = Torrent.TimeElapsed,
+                FinishedOnDate = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : In.FinishedOn.ToDateTime(),
+                TimeElapsed = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? TimeSpan.Zero : In.FinishedOn.ToDateTime() - Torrent.AddedOnDate,
                 AddedOnDate = Torrent.AddedOnDate,
-                TrackerSingle = new Uri(In.PrimaryTracker.Uri),
+                TrackerSingle = In.PrimaryTracker != null ? In.PrimaryTracker.Uri : null,
                 StatusMessage = StringCache.Reuse(In.StatusMessage),
                 Comment = StringCache.Reuse(Torrent.Comment),
                 RemotePath = StringCache.Reuse(In.RemotePath),
@@ -192,7 +197,8 @@ namespace RTSharp.Core.Services.Daemon
             return new Shared.Abstractions.File() {
                 Path = In.Path,
                 Size = In.Size,
-                DownloadedPieces = In.CompletedChunks,
+                DownloadedPieces = In.DownloadedPieces,
+                Downloaded = In.Downloaded,
                 DownloadStrategy = MapFromProto(In.DownloadStrategy),
                 Priority = MapFromProto(In.Priority)
             };

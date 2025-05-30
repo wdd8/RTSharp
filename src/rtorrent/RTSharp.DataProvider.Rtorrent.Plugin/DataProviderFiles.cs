@@ -28,7 +28,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             var daemon = PluginHost.AttachedDaemonService;
             var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
-            var settings = await client.GetSettingsAsync(new Empty(), headers: DataProvider.Headers);
+            var settings = await client.GetSettingsAsync(new Empty(), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
             PluginHost.Logger.Verbose($"Default save path: {settings.DefaultDirectoryForDownloads}");
 

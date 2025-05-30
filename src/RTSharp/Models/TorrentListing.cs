@@ -29,7 +29,7 @@ public class TorrentListing
                 Done = 54.5f,
                 AddedOnDate = DateTime.Now,
                 FinishedOnDate = DateTime.UtcNow,
-                TrackerSingle = new Uri("http://www.com/"),
+                TrackerSingle = "http://www.com/",
                 Priority = "Nice"
             },
             new Torrent(new[] { (byte)0 }, null) {

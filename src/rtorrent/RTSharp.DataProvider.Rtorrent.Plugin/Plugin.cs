@@ -5,7 +5,6 @@ using Avalonia.Controls;
 
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
-using RTSharp.DataProvider.Rtorrent.Plugin.Server;
 using RTSharp.DataProvider.Rtorrent.Plugin.ViewModels;
 using RTSharp.DataProvider.Rtorrent.Plugin.Views;
 using RTSharp.Shared.Abstractions;
@@ -38,7 +37,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public IPluginHost Host { get; private set; }
 
-        private object DataProvider { get; set; }
+        public IHostedDataProvider DataProvider { get; set; }
 
         internal ActionQueue ActionQueue { get; set; }
 
@@ -47,10 +46,6 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
         public async Task Init(IPluginHost Host, IProgress<(string Status, float Percentage)> Progress)
         {
             this.Host = Host;
-
-            if (String.IsNullOrEmpty(Host.PluginConfig.GetServerUri())) {
-                throw new InvalidOperationException("Failed to load, missing required config values");
-            }
 
             Progress.Report(("Registering queue...", 0f));
 
@@ -65,9 +60,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
                 Active = DataProviderActive.Token
             };
 
-            _ = Server.Clients.Initialize(Host).ContinueWith(task => {
-                DataProvider = Host.RegisterDataProvider(dp);
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            DataProvider = Host.RegisterDataProvider(dp);
 
             Progress.Report(("Loaded", 100f));
         }
@@ -77,7 +70,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             var daemon = Host.AttachedDaemonService;
             var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
-            var settings = await client.GetSettingsAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: Rtorrent.Plugin.DataProvider.Headers);
+            var settings = await client.GetSettingsAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
             var settingsWindow = new MainWindow {
                 ViewModel = new MainWindowViewModel() {

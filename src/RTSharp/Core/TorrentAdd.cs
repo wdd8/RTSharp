@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Daemon;
 using File = System.IO.File;
 
 namespace RTSharp.Core
@@ -75,10 +76,15 @@ namespace RTSharp.Core
                         });
                         break;
                     case START_MODE.RECHECK_AND_START:
-                        action.CreateChild("Recheck", RUN_MODE.DEPENDS_ON_PARENT, parent => {
+                        action.CreateChild("Recheck", RUN_MODE.DEPENDS_ON_PARENT, async parent => {
                             var torrentHashes = parent.GetResult()!.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash).ToArray();
 
-                            return Primary.Instance.ForceRecheck(torrentHashes);
+                            var guid = await Primary.Instance.ForceRecheck(torrentHashes);
+                            
+                            await Primary.PluginInstance.AttachedDaemonService.GetScriptProgress(guid, null);
+                            
+                            // TODO: report proper status
+                            return new TorrentStatuses(torrentHashes.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())));
                         }).CreateChild("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, recheckAction => {
                             var recheckResults = recheckAction.GetResult()!.Where(x => x.Exceptions.All(i => i != null));
 

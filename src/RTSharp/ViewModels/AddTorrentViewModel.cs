@@ -127,7 +127,7 @@ namespace RTSharp.ViewModels
             var files = await OpenLocalFileDialog(SelectedFileTextBox);
             if (!files.Any())
                 return;
-            _selectedFiles = files.Select(x => x.Path.AbsolutePath).ToList();
+            _selectedFiles = files.Select(x => x.Path.LocalPath).ToList();
             this.OnPropertyChanged(nameof(SelectedFileTextBox));
         }
 

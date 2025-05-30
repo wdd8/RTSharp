@@ -12,9 +12,37 @@ service GRPCFilesService {
     rpc RemoveEmptyDirectory (google.protobuf.StringValue) returns (google.protobuf.Empty);
     rpc MediaInfo (MediaInfoInput) returns (MediaInfoReply);
     rpc CheckExists (CheckExistsInput) returns (CheckExistsReply);
+    rpc AllowedToDelete (AllowedToDeleteInput) returns (AllowedToDeleteReply);
+    rpc AllowedToRead (AllowedToReadInput) returns (AllowedToReadReply);
 
     rpc Internal_SendFiles (SendFilesInput) returns (stream FileBuffer);
     rpc SaveFiles (SaveFilesFromRemoteInput) returns (stream SaveFilesFromRemoteReply);
+}
+
+message AllowedToReadInput {
+    repeated string Paths = 1;
+}
+
+message AllowedToReadReply {
+    message PathWithStatus {
+        string Path = 1;
+        bool Value = 2;
+    }
+    
+    repeated PathWithStatus Reply = 1;
+}
+
+message AllowedToDeleteInput {
+    repeated string Paths = 1;
+}
+
+message AllowedToDeleteReply {
+    message PathWithStatus {
+        string Path = 1;
+        bool Value = 2;
+    }
+    
+    repeated PathWithStatus Reply = 1;
 }
 
 message SaveFilesFromRemoteReply {

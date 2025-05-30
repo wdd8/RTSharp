@@ -7,9 +7,11 @@ namespace RTSharp.Daemon.Services.rtorrent
     {
         private readonly IServiceScopeFactory ScopeFactory;
         private readonly ILogger<RtorrentMonitor> Logger;
+        private readonly string InstanceKey;
 
-        public RtorrentMonitor(IServiceScopeFactory ScopeFactory, ILogger<RtorrentMonitor> Logger)
+        public RtorrentMonitor(IServiceScopeFactory ScopeFactory, [ServiceKey] string InstanceKey, ILogger<RtorrentMonitor> Logger)
         {
+            this.InstanceKey = InstanceKey;
             this.ScopeFactory = ScopeFactory;
             this.Logger = Logger;
         }
@@ -18,7 +20,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         {
             while (!stoppingToken.IsCancellationRequested) {
                 using var scope = ScopeFactory.CreateScope();
-                var scgi = scope.ServiceProvider.GetRequiredService<SCGICommunication>();
+                var scgi = scope.ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
 
                 ReadOnlyMemory<byte> result;
                 try {

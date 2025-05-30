@@ -9,16 +9,18 @@
     <ItemGroup>
       <None Remove="DataProvider\CommandReply.proto" />
       <None Remove="DataProvider\Settings.proto" />
+      <None Remove="DataProvider\Settings\qbittorrent.proto" />
       <None Remove="DataProvider\Types.proto" />
       <None Remove="Torrent.proto" />
       <None Remove="Torrents.proto" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Grpc.AspNetCore" Version="2.67.0" />
+        <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     </ItemGroup>
 
     <ItemGroup>
+        <Protobuf Include="DataProvider\Settings\qbittorrent.proto" />
         <Protobuf Include="DataProvider\Settings\rtorrent.proto" GrpcServices="Both" />
         <Protobuf Include="Files.proto" GrpcServices="Both" />
         <Protobuf Include="Server.proto" GrpcServices="Both" />

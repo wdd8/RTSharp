@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 using RTSharp.Shared.Abstractions;
 
@@ -27,34 +29,45 @@ public partial class PieceProgressBar : UserControl
         set { SetAndRaise(PiecesProperty, ref _pieces, value); }
     }
 
-    public override void Render(DrawingContext Ctx)
+    public override unsafe void Render(DrawingContext Ctx)
     {
         if (_pieces == null)
             return;
 
-        var singlePieceSize = this.Bounds.Width / _pieces.Count();
-        double pieceSize = 0;
-        double previousX = 0;
+        using var writeableBitmap = new WriteableBitmap(new PixelSize(_pieces.Count, (int)Height), new Vector(96, 96), PixelFormat.Bgra8888);
 
-        for (var x = 0;x < _pieces.Count;x++) {
-            var thisPiece = _pieces[x];
-            var nextPiece = (x + 1) == _pieces.Count ? PieceState.Unknown : _pieces[x + 1];
+        using (var lockedFrameBuffer = writeableBitmap.Lock()) {
+            unsafe {
+                IntPtr origPtr = new IntPtr(lockedFrameBuffer.Address.ToInt64());
+                IntPtr bufferPtr = new IntPtr(lockedFrameBuffer.Address.ToInt64());
 
-            pieceSize += singlePieceSize;
+                for (int x = 0;x < _pieces.Count;x++) {
+                    var piece = _pieces[x];
 
-            if (thisPiece == nextPiece)
-                continue;
+                    byte r = 0, g = 0, b = 0;
+                    if (piece == PieceState.NotDownloaded) {
+                        r = g = b = 255;
+                    } else if (piece == PieceState.Downloading) {
+                        r = 0;
+                        g = 255;
+                        b = 0;
+                    } else if (piece == PieceState.Downloaded) {
+                        r = 0;
+                        g = 0;
+                        b = 255;
+                    }
 
-            Ctx.FillRectangle(thisPiece switch {
-                PieceState.NotDownloaded => Brushes.White,
-                PieceState.Downloading => Brushes.Yellow,
-                PieceState.Downloaded => Brushes.Blue,
-                _ => throw new ArgumentOutOfRangeException()
-            }, new Rect(previousX, 0, previousX + pieceSize, this.Bounds.Height));
-
-            previousX += pieceSize;
-            pieceSize = 0;
+                    *(int*)bufferPtr = (255 << 24) | (r << 16) | (g << 8) | (b << 0);
+                    bufferPtr += 4;
+                }
+                for (int y = 1;y < (int)Height;y++) {
+                    Buffer.MemoryCopy((void*)origPtr, (void*)bufferPtr, _pieces.Count * 4, _pieces.Count * 4);
+                    bufferPtr += 4 * _pieces.Count;
+                }
+            }
         }
+
+        Ctx.DrawImage(writeableBitmap, Bounds);
     }
 
     static PieceProgressBar()

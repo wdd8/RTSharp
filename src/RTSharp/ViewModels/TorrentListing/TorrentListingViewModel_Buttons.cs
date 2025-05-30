@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Models;
 using RTSharp.Core.Services.Daemon;
+using RTSharp.Shared.Abstractions.Daemon;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
@@ -37,7 +38,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public Action CloseAddLabelDialog { get; set; }
 
-        private async Task ActionForMulti(IList In, string ActionName, Func<IDataProvider, IList<Torrent>, Task<IList<(byte[] Hash, IList<Exception> Exceptions)>>> Fx)
+        private async Task ActionForMulti(IList In, string ActionName, Func<IDataProvider, IList<Torrent>, Task<TorrentStatuses>> Fx)
         {
             var torrents = In.Cast<Torrent>();
             try {
@@ -115,7 +116,15 @@ namespace RTSharp.ViewModels.TorrentListing
             var result = await RecheckTorrentsConfirmationDialog((App.MainWindow, (ulong)torrents.Sum(x => (decimal)x.WantedSize), In.Count));
 
             if (result)
-                await ActionForMulti(In, "Force recheck", (dp, torrents) => dp.ForceRecheck(torrents.Select(x => x.Hash).ToList()));
+                await ActionForMulti(In, "Force recheck", async (dp, torrents) => {
+                    var guid = await dp.ForceRecheck(torrents.Select(x => x.Hash).ToList());
+                    
+                    // Wait for completion
+                    await dp.PluginHost.AttachedDaemonService.GetScriptProgress(guid, null);
+                    
+                    // TODO: report proper status
+                    return new TorrentStatuses(torrents.Select(x => (x.Hash, (IList<Exception>)Array.Empty<Exception>())));
+                });
         }
 
         public bool CanExecuteReannounceToAllTrackers() => CanExecuteAction("Reannounce to all trackers");
@@ -184,7 +193,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 var sourceTargetMapCheck = data.SelectMany(x => x.Files.Select(f => (targetPath(x.BasePath, x, f), targetPath(targetDir, x, f)))).ToArray();
 
                 var progress = new Progress<(float, string)>();
-                var moveProgress = new Progress<(byte[] InfoHash, string File, ulong Moved, string? AdditionalProgress)>(args => {
+                /*var moveProgress = new Progress<(byte[] InfoHash, string File, ulong Moved, string? AdditionalProgress)>(args => {
                     var (infoHash, file, moved, additionalProgress) = args;
 
                     float pct;
@@ -208,17 +217,18 @@ namespace RTSharp.ViewModels.TorrentListing
                         pct,
                         str
                     ));
-                });
+                });*/
 
                 tasks.Add(Core.ActionQueue.GetActionQueueEntry(dataProvider.PluginInstance)!.Queue.RunAction(ActionQueueAction.New("Move torrent", async () => {
                     var result = await dataProvider.Instance.MoveDownloadDirectory(
-                        data.Select(x => (x.Hash, targetDir)).ToList(),
-                        sourceTargetMapCheck,
-                        moveProgress
+                        data.ToInfoHashDictionary(x => x.Hash, _ => targetDir),
+                        sourceTargetMapCheck
                     );
-
-                    if (result.Any(x => x.Exceptions.Any())) {
-                        throw new Exception("Operation failed:\n" + String.Join('\n', result.Select(x => Convert.ToHexString(x.Hash) + ": " + String.Join(", ", x.Exceptions.Select(x => x.Message)))));
+                    
+                    if (result != null) {
+                        await dataProvider.PluginInstance.AttachedDaemonService!.GetScriptProgress(result.Value, new Progress<ScriptProgressState>(state => {
+                            ((IProgress<(float, string)>)progress).Report((state.Progress ?? 0f, state.Text));
+                        }));
                     }
                 }, progress)));
             }
@@ -299,7 +309,7 @@ namespace RTSharp.ViewModels.TorrentListing
             var result = await DeleteTorrentsConfirmationDialog((App.MainWindow, (ulong)torrents.DistinctBy(x => x.Owner.DataProviderInstanceConfig.ServerId + "_" + Convert.ToHexString(x.Hash)).Sum(x => (decimal)x.WantedSize), In.Count, true));
 
             if (result)
-                await ActionForMulti(In, "Remove torrents and data", (dp, torrents) => dp.RemoveTorrentsAndData(torrents.Select(x => x.Hash).ToList()));
+                await ActionForMulti(In, "Remove torrents and data", (dp, torrents) => dp.RemoveTorrentsAndData(torrents.Select(x => x.ToPluginModel()).ToList()));
         }
 
         public bool CanExecuteGetDotTorrents() => CanExecuteAction("Get .torrent");
@@ -313,7 +323,7 @@ namespace RTSharp.ViewModels.TorrentListing
             if (String.IsNullOrEmpty(result))
                 return;
 
-            var tasks = torrents.GroupBy(x => x.Owner).Select(x => (Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance), x.Key.Instance.GetDotTorrents(x.Select(i => i.Hash).ToList())));
+            var tasks = torrents.GroupBy(x => x.Owner).Select(x => (Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance), x.Key.Instance.GetDotTorrents(x.Select(i => i.ToPluginModel()).ToList())));
 
             await Task.WhenAll(tasks.Select((data) => {
                 var action = ActionQueueAction.New("Download .torrent files", async () => {
@@ -405,7 +415,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                 var getDotTorrentFiles = ActionQueueAction.New("Download .torrent files", () => {
                     var groups = torrents.GroupBy(x => x.Owner);
-                    var tasks = groups.Select(x => x.Key.Instance.GetDotTorrents(x.Select(x => x.Hash).ToArray()));
+                    var tasks = groups.Select(x => x.Key.Instance.GetDotTorrents(x.Select(i => i.ToPluginModel()).ToArray()));
                     return Task.WhenAll(tasks);
                 });
 
@@ -459,7 +469,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             transferFiles!.BindProgress(progressRaw);
 
                             try {
-                                await targetServer.RequestRecieveFiles(
+                                await targetServer.RequestReceiveFiles(
                                     files.Files.Select(x => (
                                         RemoteSource: sourceTorrent.RemotePath + (files.MultiFile ? ("/" + sourceTorrent.Name) : "") + "/" + x.Path,
                                         StoreTo: dest + (files.MultiFile ? ("/" + sourceTorrent.Name) : "") + "/" + x.Path,

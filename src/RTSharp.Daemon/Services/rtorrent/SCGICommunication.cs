@@ -1,17 +1,18 @@
 ﻿using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
+using Microsoft.Extensions.Options;
 
 namespace RTSharp.Daemon.Services.rtorrent
 {
     public class SCGICommunication
     {
-        private IConfiguration Config { get; }
+        private ConfigModel Config { get; }
         public ILogger<SCGICommunication> Logger { get; }
 
-        public SCGICommunication(IConfiguration Config, ILogger<SCGICommunication> Logger)
+        public SCGICommunication(IOptionsFactory<ConfigModel> Opts, [ServiceKey] string InstanceKey, ILogger<SCGICommunication> Logger)
         {
-            this.Config = Config;
+            this.Config = Opts.Create(InstanceKey);
             this.Logger = Logger;
         }
 
@@ -23,7 +24,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         {
             var payload = SCGIPayloadBuilder.BuildPayload(Xml);
             NetworkStream stm;
-            var listenPath = Config.GetSection("DataProviders:rtorrent:SCGIListen").Value;
+            var listenPath = Config.SCGIListen;
             Action disconnect;
 
 #if DEBUG
@@ -120,6 +121,72 @@ namespace RTSharp.Daemon.Services.rtorrent
             disconnect();
 
             return buffer;
+        }
+        
+        
+        
+        public Task<XMLUtils.TorrentsResult[]> XmlActionTorrents(IList<byte[]> Hashes, params string[] Actions) =>
+            XmlActionTorrentsMulti(Hashes.Select(x => (x, Array.Empty<string>())), Actions, (action, hash, reply) => reply == "0");
+
+        public Task<XMLUtils.TorrentsResult[]> XmlActionTorrentsParam(IList<(byte[] Hash, string Param)> HashParams, string Action, Func<string, byte[], string, bool> FxExpectedReply) =>
+            XmlActionTorrentsMulti(HashParams.Select(x => (x.Hash, new[] { x.Param })), new[] { Action }, FxExpectedReply);
+
+        private async Task<XMLUtils.TorrentsResult[]> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, string[] Params)> HashParams, string[] Actions, Func<string, byte[], string, bool> FxExpectedReply)
+        {
+            var xml = new StringBuilder();
+            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
+            foreach (var (hash, @params) in HashParams) {
+                var sHash = Convert.ToHexString(hash);
+
+                foreach (var action in Actions) {
+                    xml.Append("<value><struct><member><name>methodName</name><value><string>" + action + "</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value>" + (@params.Length == 0 ? "" : String.Join("", @params.Select(x => $"<value>{x}</value>"))) + "</data></array></value></member></struct></value>");
+                }
+            }
+
+            xml.Append("</data></array></value></param></params></methodCall>");
+
+            var result = await Get(xml.ToString());
+
+            XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
+            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
+
+            var ret = new List<XMLUtils.TorrentsResult>();
+
+            foreach (var (hash, _) in HashParams) {
+
+                foreach (var action in Actions) {
+                    if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
+                        // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not find info-hash.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not find info-hash.</string></value></member>\r\n</struct></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
+                        var status = XMLUtils.GetFaultStruct(ref result, action);
+                        ret.Add(new XMLUtils.TorrentsResult(hash, [ status ]));
+
+                        continue;
+                    }
+
+                    XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+                    var resp = XMLUtils.GetAnyValue(ref result);
+
+                    if (FxExpectedReply(action, hash, resp)) {
+                        ret.Add(new XMLUtils.TorrentsResult(hash, [ new XMLUtils.FaultStatus
+                        {
+                            Command = action,
+                            FaultCode = "0",
+                            FaultString = ""
+                        } ]));
+                    } else {
+                        ret.Add(new XMLUtils.TorrentsResult(hash, [ new XMLUtils.FaultStatus
+                        {
+                            Command = action,
+                            FaultCode = resp,
+                            FaultString = "Unexpected response"
+                        } ]));
+                    }
+
+                    XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+                }
+            }
+
+            return ret.ToArray();
         }
     }
 }

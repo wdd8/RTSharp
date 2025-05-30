@@ -7,22 +7,16 @@ using RTSharp.Daemon.Protocols.DataProvider.Settings;
 
 namespace RTSharp.Daemon.GRPCServices.DataProvider
 {
-    public class RtorrentSettingsService : GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceBase
+    public class RtorrentSettingsService(RegisteredDataProviders RegisteredDataProviders) : GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceBase
     {
-        public RtorrentSettingsService(Services.rtorrent.SettingsService Settings)
-        {
-            this.Settings = Settings;
-        }
-
-        public Services.rtorrent.SettingsService Settings { get; }
-
         public override async Task<RtorrentSettings> GetSettings(Empty Req, ServerCallContext Ctx)
         {
-            var dp = Utils.GetDataProviderName(Ctx);
-            if (dp != DataProviderName.rtorrent)
+            var dp = RegisteredDataProviders.GetDataProvider(Ctx);
+            if (dp.Type != DataProviderType.rtorrent)
                 throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Only applicable to rtorrent data provider"));
 
-            var settings = await Settings.GetSettings(Services.rtorrent.SettingsService.AllSettings);
+            var settingsService = dp.Resolve<Services.rtorrent.SettingsService>();
+            var settings = await settingsService.GetSettings(Services.rtorrent.SettingsService.AllSettings);
 
             var ret = new RtorrentSettings();
             foreach (var (k, v) in settings) {
@@ -38,11 +32,12 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
 
         public override async Task<CommandReply> SetSettings(RtorrentSettings Req, ServerCallContext Ctx)
         {
-            var dp = Utils.GetDataProviderName(Ctx);
-            if (dp != DataProviderName.rtorrent)
+            var dp = RegisteredDataProviders.GetDataProvider(Ctx);
+            if (dp.Type != DataProviderType.rtorrent)
                 throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Only applicable to rtorrent data provider"));
 
-            var ret = await Settings.SetSettings(Req);
+            var settingsService = dp.Resolve<Services.rtorrent.SettingsService>();
+            var ret = await settingsService.SetSettings(Req);
 
             return ret;
         }

@@ -14,6 +14,6 @@ namespace RTSharp.Shared.Abstractions
     [Singleton]
     public interface ISpeedMovingAverageService
     {
-        ISpeedMovingAverage Get(IPlugin Plugin, string Id, int itemsMax = 5, double Alpha = 0.8);
+        ISpeedMovingAverage Get(string Namespace, string Id, int itemsMax = 5, double Alpha = 0.8);
     }
 }

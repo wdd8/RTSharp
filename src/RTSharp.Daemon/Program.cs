@@ -1,6 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-
-using RTSharp.Daemon.GRPCServices.DataProvider;
 using RTSharp.Daemon.Services;
 using RTSharp.Daemon.Utils;
 
@@ -8,25 +5,55 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 
 var builder = WebApplication.CreateBuilder(args);
-
-Utils.RtorrentEnabled = builder.Configuration.GetSection("DataProviders:rtorrent").Exists();
+builder.Services.AddLogging(options =>
+{
+    options.AddSimpleConsole(c =>
+    {
+        c.TimestampFormat = "[yyyy-MM-ddTHH:mm:ss.fffffffK] ";
+        c.SingleLine = true;
+        c.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Default;
+        c.IncludeScopes = false;
+        c.UseUtcTimestamp = false;
+    });
+});
 
 builder.Services.AddGrpc();
+builder.Services.AddSingleton<RTSharp.Shared.Abstractions.ISpeedMovingAverageService, SpeedMovingAverageService>();
 builder.Services.AddSingleton<FileTransferService>();
 builder.Services.AddSingleton<SessionsService>();
 builder.Services.AddSingleton<ChannelsService>();
+builder.Services.AddSingleton<TorrentService>();
 
-builder.Services.AddSingleton<RTSharp.Daemon.Services.qbittorrent.QbitClient>();
-
-if (Utils.RtorrentEnabled) {
-    builder.Services.AddSingleton<RTSharp.Daemon.Services.rtorrent.TorrentPoll.TorrentPolling>();
-    builder.Services.AddSingleton<RTSharp.Daemon.Services.rtorrent.SCGICommunication>();
-    builder.Services.AddTransient<RTSharp.Daemon.Services.rtorrent.Grpc>();
-    builder.Services.AddSingleton<RTSharp.Daemon.Services.rtorrent.TorrentOpService>();
-    builder.Services.AddSingleton<RTSharp.Daemon.Services.rtorrent.SettingsService>();
-    builder.Services.AddHostedService<RTSharp.Daemon.Services.rtorrent.RtorrentMonitor>();
-    builder.Services.AddHostedService(services => services.GetRequiredService<RTSharp.Daemon.Services.rtorrent.TorrentPoll.TorrentPolling>());
+foreach (var key in builder.Configuration.GetSection("DataProviders:rtorrent").GetChildren().Select(x => x.Key)) {
+    builder.Services.Configure<RTSharp.Daemon.Services.rtorrent.ConfigModel>(key, builder.Configuration.GetSection("DataProviders:rtorrent:" + key));
+    
+    builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.TorrentPoll.TorrentPolling>(key);
+    builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.SCGICommunication>(key);
+    builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.Grpc>(key);
+    builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.TorrentOpService>(key);
+    builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.SettingsService>(key);
+    builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.RtorrentMonitor>(key);
+    builder.Services.AddHostedService(services => services.GetRequiredKeyedService<RTSharp.Daemon.Services.rtorrent.RtorrentMonitor>(key));
+    builder.Services.AddHostedService(services => services.GetRequiredKeyedService<RTSharp.Daemon.Services.rtorrent.TorrentPoll.TorrentPolling>(key));
+    
+    Console.WriteLine($"Registered data provider '{key}'");
+    
+    builder.Services.AddKeyedSingleton(key, (services, key) => new RTSharp.Daemon.GRPCServices.DataProvider.RegisteredDataProvider(services, RTSharp.Daemon.GRPCServices.DataProvider.DataProviderType.rtorrent, (string)key));
 }
+
+foreach (var key in builder.Configuration.GetSection("DataProviders:qbittorrent").GetChildren().Select(x => x.Key)) {
+    builder.Services.Configure<RTSharp.Daemon.Services.qbittorrent.ConfigModel>(key, builder.Configuration.GetSection("DataProviders:qbittorrent:" + key));
+
+    builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.qbittorrent.Grpc>(key);
+    builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.qbittorrent.SettingsGrpc>(key);
+    builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.qbittorrent.QbitClient>(key);
+
+    Console.WriteLine($"Registered data provider '{key}'");
+
+    builder.Services.AddKeyedSingleton(key, (services, key) => new RTSharp.Daemon.GRPCServices.DataProvider.RegisteredDataProvider(services, RTSharp.Daemon.GRPCServices.DataProvider.DataProviderType.qbittorrent, (string)key));
+}
+
+builder.Services.AddSingleton<RTSharp.Daemon.GRPCServices.DataProvider.RegisteredDataProviders>();
 
 var setgid = builder.Configuration.GetSection("setgid").Get<string?>();
 
@@ -107,12 +134,11 @@ builder.WebHost.ConfigureKestrel(kestrelServerOptions => {
 
 var app = builder.Build();
 
-app.MapGrpcService<FilesService>();
-app.MapGrpcService<ServerService>();
-app.MapGrpcService<TorrentsService>();
-app.MapGrpcService<TorrentService>();
-if (Utils.RtorrentEnabled) {
-    app.MapGrpcService<RtorrentSettingsService>();
-}
+app.MapGrpcService<RTSharp.Daemon.GRPCServices.FilesService>();
+app.MapGrpcService<RTSharp.Daemon.GRPCServices.ServerService>();
+app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.TorrentsService>();
+app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.TorrentService>();
+app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.RtorrentSettingsService>();
+app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.QBittorrentSettingsService>();
 
 app.Run();

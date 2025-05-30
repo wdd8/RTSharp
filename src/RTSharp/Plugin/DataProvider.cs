@@ -62,18 +62,19 @@ namespace RTSharp.Plugin
 
         public override string ToString() => $"{PluginInstance.PluginInstanceConfig.Name} ({PluginInstance.InstanceId})";
 
-        private readonly Dictionary<Guid, string> SupportedBuiltInDataProviders = new() {
-            { new Guid("90F180F2-F1D3-4CAA-859F-06D80B5DCF5C"), "rtorrent" }
+        private readonly HashSet<Guid> SupportedBuiltInDataProviders = new() {
+            new Guid("90F180F2-F1D3-4CAA-859F-06D80B5DCF5C"),
+            new Guid("E347109B-A06D-4894-9E3A-6FFF63411370")
         };
 
         public Metadata GetBuiltInDataProviderGrpcHeaders()
         {
-            if (!SupportedBuiltInDataProviders.TryGetValue(PluginInstance.Instance.GUID, out var name)) {
+            if (!SupportedBuiltInDataProviders.Contains(PluginInstance.Instance.GUID)) {
                 throw new InvalidOperationException("Not a built-in data provider");
             }
 
             return [
-                new Metadata.Entry("data-provider", name)
+                new Metadata.Entry("data-provider", DataProviderInstanceConfig!.Name)
             ];
         }
     }

@@ -4,6 +4,7 @@ option csharp_namespace = "RTSharp.Daemon.Protocols.DataProvider";
 
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "DataProvider/CommandReply.proto";
 import "DataProvider/Types.proto";
@@ -12,7 +13,7 @@ service GRPCTorrentService {
     rpc StartTorrents (Torrents) returns (TorrentsReply);
     rpc PauseTorrents (Torrents) returns (TorrentsReply);
     rpc StopTorrents (Torrents) returns (TorrentsReply);
-    rpc ForceRecheckTorrents (Torrents) returns (TorrentsReply);
+    rpc ForceRecheckTorrents (Torrents) returns (google.protobuf.BytesValue);
     rpc ReannounceToAllTrackers (Torrents) returns (TorrentsReply);
     rpc AddTorrents (stream NewTorrentsData) returns (TorrentsReply);
     rpc GetTorrentsFiles (Torrents) returns (TorrentsFilesReply);
@@ -22,7 +23,8 @@ service GRPCTorrentService {
     rpc RemoveTorrents (Torrents) returns (TorrentsReply);
     rpc RemoveTorrentsAndData (Torrents) returns (TorrentsReply);
     rpc GetDotTorrents (Torrents) returns (stream DotTorrentsData);
-    rpc MoveDownloadDirectory (MoveDownloadDirectoryArgs) returns (stream MoveDownloadDirectoryProgress);
+    rpc MoveDownloadDirectoryPreCheck (MoveDownloadDirectoryPreCheckArgs) returns (google.protobuf.Empty);
+    rpc MoveDownloadDirectory (MoveDownloadDirectoryArgs) returns (google.protobuf.BytesValue);
     rpc SetLabels (SetLabelsArgs) returns (TorrentsReply);
 }
 
@@ -34,17 +36,7 @@ message SetLabelsArgs {
     repeated TorrentLabelsPair In = 1;
 }
 
-message MoveDownloadDirectoryProgress {
-    bytes InfoHash = 1;
-    string File = 2;
-    uint64 Moved = 3;
-    uint64 Speed = 4;
-    google.protobuf.Duration ETA = 5;
-    uint32 CurrentFileIndex = 6;
-    Status Exception = 7;
-}
-
-message MoveDownloadDirectoryArgs {
+message MoveDownloadDirectoryPreCheckArgs {
     message TorrentMoveDownloadDirectory {
         bytes InfoHash = 1;
         string TargetDirectory = 2;
@@ -58,6 +50,17 @@ message MoveDownloadDirectoryArgs {
     repeated TorrentMoveDownloadDirectory Torrents = 1;
     repeated SourceTargetCheck Check = 2;
     bool Move = 3;
+}
+
+message MoveDownloadDirectoryArgs {
+    message TorrentMoveDownloadDirectory {
+        bytes InfoHash = 1;
+        string TargetDirectory = 2;
+    }
+
+    repeated TorrentMoveDownloadDirectory Torrents = 1;
+    bool Move = 2;
+    bool DeleteSourceFiles = 3;
 }
 
 message TorrentsPeersReply {
@@ -163,7 +166,8 @@ message TorrentsFilesReply {
         // Not a full path hosted in machine, but the one specified in .torrent
         string Path = 1;
         uint64 Size = 2;
-        uint64 CompletedChunks = 4;
+        uint64 DownloadedPieces = 3;
+        uint64 Downloaded = 4;
         FilePriority Priority = 5;
         FileDownloadStrategy DownloadStrategy = 6;
     }

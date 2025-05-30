@@ -1,12 +1,7 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
-
 using RTSharp.Shared.Abstractions;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace RTSharp.Core.Services
+namespace RTSharp.Daemon.Services
 {
     /// <summary>
     /// Exponentially Weighted Moving Average
@@ -107,11 +102,6 @@ namespace RTSharp.Core.Services
             });
 
             return cacheEntry;
-        }
-
-        internal ISpeedMovingAverage Get(string Id, int itemsMax = 5)
-        {
-            return Get(null, Id, itemsMax);
         }
     }
 }

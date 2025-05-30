@@ -47,7 +47,7 @@ public partial class PlaygroundWindowViewModel(IPluginHost Host, PlaygroundWindo
         }
 
         try {
-            CurrentScriptId = await server.RunCustomScript(Script, new System.Collections.Generic.Dictionary<string, string> { });
+            CurrentScriptId = await server.RunCustomScript(Script, $"PlaygroundScript_{DateTime.UtcNow:o}", new System.Collections.Generic.Dictionary<string, string> { });
         } catch (Exception ex) {
             await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
 
