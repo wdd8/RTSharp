@@ -64,7 +64,8 @@ namespace RTSharp.Plugin
 
         private readonly HashSet<Guid> SupportedBuiltInDataProviders = new() {
             new Guid("90F180F2-F1D3-4CAA-859F-06D80B5DCF5C"),
-            new Guid("E347109B-A06D-4894-9E3A-6FFF63411370")
+            new Guid("E347109B-A06D-4894-9E3A-6FFF63411370"),
+            new Guid("0671CE03-09F4-4F07-9402-548CF2E201B1")
         };
 
         public Metadata GetBuiltInDataProviderGrpcHeaders()

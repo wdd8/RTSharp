@@ -106,87 +106,50 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 Stored.State &= ~Protocols.DataProvider.TorrentState.Active;
         }
 
-        public static void ApplyFromExternal(QBittorrent.Client.TorrentInfo Stored, QBittorrent.Client.TorrentPartialInfo External)
+        public static void ApplyFromExternal(Protocols.DataProvider.Torrent Stored, QBittorrent.Client.TorrentInfo External)
         {
             if (External.Name != null)
                 Stored.Name = External.Name;
-            if (External.MagnetUri != null)
-                Stored.MagnetUri = External.MagnetUri;
-            if (External.Size != null)
-                Stored.Size = External.Size.Value;
-            if (External.Progress != null)
-                Stored.Progress = External.Progress.Value;
-            if (External.DownloadSpeed != null)
-                Stored.DownloadSpeed = (int)External.DownloadSpeed.Value;
-            if (External.UploadSpeed != null)
-                Stored.UploadSpeed = (int)External.UploadSpeed.Value;
-            if (External.Priority != null)
-                Stored.Priority = External.Priority.Value;
-            if (External.ConnectedSeeds != null)
-                Stored.ConnectedSeeds = External.ConnectedSeeds.Value;
-            if (External.TotalSeeds != null)
-                Stored.TotalSeeds = External.TotalSeeds.Value;
-            if (External.ConnectedLeechers != null)
-                Stored.ConnectedLeechers = External.ConnectedLeechers.Value;
-            if (External.TotalLeechers != null)
-                Stored.TotalLeechers = External.TotalLeechers.Value;
-            if (External.Ratio != null)
-                Stored.Ratio = External.Ratio.Value;
-            if (External.EstimatedTime != null)
-                Stored.EstimatedTime = External.EstimatedTime;
-            if (External.State != null)
-                Stored.State = External.State.Value;
-            if (External.SequentialDownload != null)
-                Stored.SequentialDownload = External.SequentialDownload.Value;
-            if (External.FirstLastPiecePrioritized != null)
-                Stored.FirstLastPiecePrioritized = External.FirstLastPiecePrioritized.Value;
-            if (External.Category != null)
-                Stored.Category = External.Category;
-            if (External.Tags != null)
-                Stored.Tags = External.Tags;
-            if (External.SuperSeeding != null)
-                Stored.SuperSeeding = External.SuperSeeding.Value;
-            if (External.ForceStart != null)
-                Stored.ForceStart = External.ForceStart.Value;
-            if (External.SavePath != null)
-                Stored.SavePath = External.SavePath;
-            if (External.AddedOn != null)
-                Stored.AddedOn = External.AddedOn;
-            if (External.CompletionOn != null)
-                Stored.CompletionOn = External.CompletionOn;
-            if (External.CurrentTracker != null)
-                Stored.CurrentTracker = External.CurrentTracker;
-            if (External.DownloadLimit != null)
-                Stored.DownloadLimit = External.DownloadLimit;
-            if (External.UploadLimit != null)
-                Stored.UploadLimit = External.UploadLimit;
-            if (External.Downloaded != null)
-                Stored.Downloaded = External.Downloaded;
-            if (External.Uploaded != null)
-                Stored.Uploaded = External.Uploaded;
-            if (External.DownloadedInSession != null)
-                Stored.DownloadedInSession = External.DownloadedInSession;
-            if (External.UploadedInSession != null)
-                Stored.UploadedInSession = External.UploadedInSession;
-            if (External.IncompletedSize != null)
-                Stored.IncompletedSize = External.IncompletedSize;
-            if (External.CompletedSize != null)
-                Stored.CompletedSize = External.CompletedSize;
-            if (External.RatioLimit != null)
-                Stored.RatioLimit = External.RatioLimit.Value;
-            //if (External.SeedingTimeLimit != null) Stored.SeedingTimeLimit = External.SeedingTimeLimit; // TODO: ?
-            if (External.LastSeenComplete != null)
-                Stored.LastSeenComplete = External.LastSeenComplete;
-            if (External.LastActivityTime != null)
-                Stored.LastActivityTime = External.LastActivityTime;
-            if (External.ActiveTime != null)
-                Stored.ActiveTime = External.ActiveTime;
-            if (External.AutomaticTorrentManagement != null)
-                Stored.AutomaticTorrentManagement = External.AutomaticTorrentManagement.Value;
+            Stored.State = MapFromExternal(External.State);
             if (External.TotalSize != null)
-                Stored.TotalSize = External.TotalSize;
-            if (External.AdditionalData != null)
-                Stored.AdditionalData = External.AdditionalData;
+                Stored.Size = (ulong)External.TotalSize.Value;
+            Stored.WantedSize = (ulong)External.Size;
+            if (External.Downloaded != null)
+                Stored.Downloaded = (ulong)External.Downloaded.Value;
+            if (External.Uploaded != null)
+                Stored.Uploaded = (ulong)External.Uploaded.Value;
+            Stored.DLSpeed = (ulong)External.DownloadSpeed;
+            Stored.UPSpeed = (ulong)External.UploadSpeed;
+            if (External.Tags != null) {
+                Stored.Labels.Clear();
+                Stored.Labels.AddRange(External.Tags);
+            }
+            if (External.CompletedSize != null)
+                Stored.CompletedSize = (ulong)External.CompletedSize.Value;
+            Stored.PeersConnected = (uint)External.ConnectedLeechers;
+            Stored.PeersTotal = (uint)External.TotalLeechers;
+            Stored.SeedersConnected = (uint)External.ConnectedSeeds;
+            Stored.SeedersTotal = (uint)External.TotalSeeds;
+            Stored.Priority = MapFromExternalPriority(External.Priority);
+            if (External.CompletionOn != null)
+                Stored.FinishedOn = Timestamp.FromDateTime(External.CompletionOn.Value.ToUniversalTime());
+            if (External.AddedOn != null)
+                Stored.AddedOn = Timestamp.FromDateTime(External.AddedOn.Value.ToUniversalTime());
+            if (!String.IsNullOrEmpty(External.CurrentTracker)) {
+                Stored.PrimaryTracker = new Protocols.DataProvider.TorrentTracker {
+                    ID = External.CurrentTracker,
+                    Uri = External.CurrentTracker
+                };
+            }
+            if (External.SavePath != null)
+                Stored.RemotePath = External.SavePath;
+            if (External.MagnetUri != null)
+                Stored.MagnetDummy = External.MagnetUri != null;
+
+            if (Stored.DLSpeed > 1024 || Stored.UPSpeed > 1024)
+                Stored.State |= Protocols.DataProvider.TorrentState.Active;
+            else
+                Stored.State &= ~Protocols.DataProvider.TorrentState.Active;
         }
 
         public static Shared.Abstractions.File.PRIORITY MapFromExternal(QBittorrent.Client.TorrentContentPriority In)

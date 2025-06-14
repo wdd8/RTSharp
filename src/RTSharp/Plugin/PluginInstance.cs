@@ -71,6 +71,9 @@ namespace RTSharp.Plugin
 
             var provider = new DataProvider(this, In);
 
+            if (provider.DataProviderInstanceConfig == null)
+                throw new InvalidOperationException($"{InstanceId} tried to register, but data provider section is not present");
+
             if (provider.DataProviderInstanceConfig.ServerId == null)
                 throw new InvalidOperationException($"{InstanceId} tried to register, but {nameof(provider.DataProviderInstanceConfig.ServerId)} is missing");
 
@@ -89,6 +92,10 @@ namespace RTSharp.Plugin
         public void UnregisterDataProvider(object In)
         {
             var dp = (DataProvider)In;
+
+            if (dp == null)
+                return;
+
             lock (DataProviderLock) {
                 Plugins.DataProviders.Remove(dp);
             }
@@ -107,7 +114,8 @@ namespace RTSharp.Plugin
             });
         }
 
-        public IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx) => Plugins.Hook(Plugins.HookType.TorrentListing_EvLoadingRow, fx);
+        public IDisposable HookTorrentListingEvRowPrepared(Action<object, TreeDataGridRowEventArgs> fx) => Plugins.Hook(Plugins.HookType.TorrentListing_EvRowPrepared, fx);
+        public IDisposable HookTorrentListingEvCellPrepared(Action<object, TreeDataGridCellEventArgs> fx) => Plugins.Hook(Plugins.HookType.TorrentListing_EvCellPrepared, fx);
 
         /// <summary>
         /// ViewModels.AddTorrentViewModel
@@ -123,7 +131,7 @@ namespace RTSharp.Plugin
                 .ForContext("PluginColor", PluginInstanceConfig.Color)
                 .ForContext("PluginDisplayName", PluginInstanceConfig.Name);
 
-        public IReadOnlyCollection<Torrent> Torrents => Core.TorrentPolling.TorrentPolling.Torrents.Select(x => x.ToPluginModel()).ToArray();
+        public IReadOnlyCollection<Torrent> Torrents => Core.TorrentPolling.TorrentPolling.Torrents.Items.Select(x => x.ToPluginModel()).ToArray();
 
         public HttpClient HttpClient => Core.Http.Client;
 

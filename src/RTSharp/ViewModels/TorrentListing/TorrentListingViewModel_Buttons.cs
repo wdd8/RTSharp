@@ -38,11 +38,10 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public Action CloseAddLabelDialog { get; set; }
 
-        private async Task ActionForMulti(IList In, string ActionName, Func<IDataProvider, IList<Torrent>, Task<TorrentStatuses>> Fx)
+        private async Task ActionForMulti(IReadOnlyList<Torrent> In, string ActionName, Func<IDataProvider, IList<Torrent>, Task<TorrentStatuses>> Fx)
         {
-            var torrents = In.Cast<Torrent>();
             try {
-                var actions = torrents.GroupBy(x => x.Owner).Select(x => (
+                var actions = In.GroupBy(x => x.Owner).Select(x => (
                     Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance),
                     ActionQueueAction.New(ActionName, async () => {
                         var result = await Fx(x.Key.Instance, x.ToList());
@@ -59,7 +58,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
         bool CanExecuteAction(string Action)
         {
-            var dps = CurrentlySelectedItems.Cast<Torrent>().GroupBy(x => x.Owner).DistinctBy(x => x.Key.PluginInstance.Instance.GUID).Select(x => x.Key);
+            var dps = CurrentlySelectedItems.Items.GroupBy(x => x.Owner).DistinctBy(x => x.Key.PluginInstance.Instance.GUID).Select(x => x.Key);
             bool startTorrentCap = dps.All(x => x.Instance.Capabilities.StartTorrent);
             bool pauseTorrentCap = dps.All(x => x.Instance.Capabilities.PauseTorrent);
             bool stopTorrentCap = dps.All(x => x.Instance.Capabilities.StopTorrent);
@@ -81,7 +80,7 @@ namespace RTSharp.ViewModels.TorrentListing
             Debug.Assert(strToCap.ContainsKey(Action));
 
             if (CurrentlySelectedItems.Count == 1) {
-                var currentlySelectedTorrent = (Torrent)CurrentlySelectedItems[0]!;
+                var currentlySelectedTorrent = (Torrent)CurrentlySelectedItems.Items[0]!;
                 return Action switch {
                     "Start" => currentlySelectedTorrent.InternalState != TORRENT_STATE.DOWNLOADING &&
                                 currentlySelectedTorrent.InternalState != TORRENT_STATE.SEEDING &&
@@ -98,22 +97,22 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public bool CanExecuteStartTorrents() => CanExecuteAction("Start");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteStartTorrents))]
-        public async Task StartTorrents(IList In) => await ActionForMulti(In, "Start torrents", (dp, torrents) => dp.StartTorrents(torrents.Select(x => x.Hash).ToList()));
+        public async Task StartTorrents(IReadOnlyList<Torrent> In) => await ActionForMulti(In, "Start torrents", (dp, torrents) => dp.StartTorrents(torrents.Select(x => x.Hash).ToList()));
 
         public bool CanExecutePauseTorrents() => CanExecuteAction("Pause");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecutePauseTorrents))]
-        public async Task PauseTorrents(IList In) => await ActionForMulti(In, "Pause torrents", (dp, torrents) => dp.PauseTorrents(torrents.Select(x => x.Hash).ToList()));
+        public async Task PauseTorrents(IReadOnlyList<Torrent> In) => await ActionForMulti(In, "Pause torrents", (dp, torrents) => dp.PauseTorrents(torrents.Select(x => x.Hash).ToList()));
 
         public bool CanExecuteStopTorrents() => CanExecuteAction("Stop");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteStopTorrents))]
-        public async Task StopTorrents(IList In) => await ActionForMulti(In, "Stop torrents", (dp, torrents) => dp.StopTorrents(torrents.Select(x => x.Hash).ToList()));
+        public async Task StopTorrents(IReadOnlyList<Torrent> In) => await ActionForMulti(In, "Stop torrents", (dp, torrents) => dp.StopTorrents(torrents.Select(x => x.Hash).ToList()));
 
         public bool CanExecuteForceRecheckTorrents() => CanExecuteAction("Force recheck");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteForceRecheckTorrents))]
-        public async Task ForceRecheckTorrents(IList In)
+        public async Task ForceRecheckTorrents(IReadOnlyList<Torrent> In)
         {
-            var torrents = In.Cast<Torrent>();
-            var result = await RecheckTorrentsConfirmationDialog((App.MainWindow, (ulong)torrents.Sum(x => (decimal)x.WantedSize), In.Count));
+            
+            var result = await RecheckTorrentsConfirmationDialog((App.MainWindow, (ulong)In.Sum(x => (decimal)x.WantedSize), In.Count));
 
             if (result)
                 await ActionForMulti(In, "Force recheck", async (dp, torrents) => {
@@ -123,22 +122,22 @@ namespace RTSharp.ViewModels.TorrentListing
                     await dp.PluginHost.AttachedDaemonService.GetScriptProgress(guid, null);
                     
                     // TODO: report proper status
-                    return new TorrentStatuses(torrents.Select(x => (x.Hash, (IList<Exception>)Array.Empty<Exception>())));
+                    return [.. torrents.Select(x => (x.Hash, (IList<Exception>)Array.Empty<Exception>()))];
                 });
         }
 
         public bool CanExecuteReannounceToAllTrackers() => CanExecuteAction("Reannounce to all trackers");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteReannounceToAllTrackers))]
-        public async Task ReannounceToAllTrackers(IList In) => await ActionForMulti(In, "Reannounce to all trackers", (dp, torrents) => dp.ReannounceToAllTrackers(torrents.Select(x => x.Hash).ToList()));
+        public async Task ReannounceToAllTrackers(IReadOnlyList<Torrent> In) => await ActionForMulti(In, "Reannounce to all trackers", (dp, torrents) => dp.ReannounceToAllTrackers(torrents.Select(x => x.Hash).ToList()));
 
         record MoveData(byte[] Hash, string BasePath, string ContainerFolder, IEnumerable<string> Files);
 
         public bool CanExecuteMoveDownloadDirectory() => CanExecuteAction("Move download directory");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteMoveDownloadDirectory))]
-        public async Task MoveDownloadDirectory(IList In)
+        public async Task MoveDownloadDirectory(IReadOnlyList<Torrent> In)
         {
-            var allTorrents = In.Cast<Torrent>().ToInfoHashDictionary(x => x.Hash);
-            var groups = await Task.WhenAll(In.Cast<Torrent>().GroupBy(x => x.Owner).Select(x => x.Key.Instance.GetFiles(x.Select(i => i.ToPluginModel()).ToArray())));
+            var allTorrents = In.ToInfoHashDictionary(x => x.Hash);
+            var groups = await Task.WhenAll(In.GroupBy(x => x.Owner).Select(x => x.Key.Instance.GetFiles(x.Select(i => i.ToPluginModel()).ToArray())));
             var tasks = new List<Task>();
 
             foreach (var torrentFiles in groups) {
@@ -239,9 +238,9 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public bool CanExecuteRemoveTorrents() => CanExecuteAction("Remove torrent");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteRemoveTorrents))]
-        public async Task RemoveTorrents(IList In) 
+        public async Task RemoveTorrents(IReadOnlyList<Torrent> In) 
         {
-            var torrents = In.Cast<Torrent>();
+            
             var result = await DeleteTorrentsConfirmationDialog((App.MainWindow, 0UL, In.Count, false));
 
             if (result)
@@ -250,14 +249,13 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public bool CanExecuteRemoveTorrentsAndData() => CanExecuteAction("Remove torrent & data");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteRemoveTorrentsAndData))]
-        public async Task RemoveTorrentsAndData(IList In)
+        public async Task RemoveTorrentsAndData(IReadOnlyList<Torrent> In)
         {
-            var torrents = In.Cast<Torrent>();
-            var serverIds = torrents.Select(x => x.Owner.DataProviderInstanceConfig.ServerId).Distinct();
+            var serverIds = In.Select(x => x.Owner.DataProviderInstanceConfig.ServerId).Distinct();
 
             var references = new InfoHashDictionary<Torrent[]>();
-            var allTorrents = TorrentPolling.Torrents.Where(x => {
-                var selectedOnly = torrents.Where(i => i.Hash.SequenceEqual(x.Hash)).Select(x => x.Owner.DataProviderInstanceConfig.ServerId);
+            var allTorrents = TorrentPolling.Torrents.Items.Where(x => {
+                var selectedOnly = In.Where(i => i.Hash.SequenceEqual(x.Hash)).Select(x => x.Owner.DataProviderInstanceConfig.ServerId);
                 
                 return selectedOnly.Contains(x.Owner.DataProviderInstanceConfig.ServerId);
             }).ToImmutableArray();
@@ -267,7 +265,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 var found = torrentGroup.GroupBy(x => x.Owner.DataProviderInstanceConfig.ServerId + "_" + x.RemotePath).Where(x => x.Count() > 1);
                 foreach (var torrentsInServer in found) {
 
-                    if (torrentsInServer.Select(x => x.Owner.PluginInstance.InstanceId).Except(torrents.Where(x => x.Hash.SequenceEqual(torrentGroup.Key)).Select(x => x.Owner.PluginInstance.InstanceId)).Count() != 0) {
+                    if (torrentsInServer.Select(x => x.Owner.PluginInstance.InstanceId).Except(In.Where(x => x.Hash.SequenceEqual(torrentGroup.Key)).Select(x => x.Owner.PluginInstance.InstanceId)).Count() != 0) {
                         references[torrentGroup.Key] = torrentsInServer.ToArray();
                         multiReference = true;
                     }
@@ -306,7 +304,7 @@ namespace RTSharp.ViewModels.TorrentListing
             if (multiReference)
                 return;
 
-            var result = await DeleteTorrentsConfirmationDialog((App.MainWindow, (ulong)torrents.DistinctBy(x => x.Owner.DataProviderInstanceConfig.ServerId + "_" + Convert.ToHexString(x.Hash)).Sum(x => (decimal)x.WantedSize), In.Count, true));
+            var result = await DeleteTorrentsConfirmationDialog((App.MainWindow, (ulong)In.DistinctBy(x => x.Owner.DataProviderInstanceConfig.ServerId + "_" + Convert.ToHexString(x.Hash)).Sum(x => (decimal)x.WantedSize), In.Count, true));
 
             if (result)
                 await ActionForMulti(In, "Remove torrents and data", (dp, torrents) => dp.RemoveTorrentsAndData(torrents.Select(x => x.ToPluginModel()).ToList()));
@@ -314,16 +312,14 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public bool CanExecuteGetDotTorrents() => CanExecuteAction("Get .torrent");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteGetDotTorrents))]
-        public async Task GetDotTorrents(IList In)
+        public async Task GetDotTorrents(IReadOnlyList<Torrent> In)
         {
-            var torrents = In.Cast<Torrent>();
-
             var result = await SelectDirectoryDialog((App.MainWindow, "Select destination folder"));
 
             if (String.IsNullOrEmpty(result))
                 return;
 
-            var tasks = torrents.GroupBy(x => x.Owner).Select(x => (Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance), x.Key.Instance.GetDotTorrents(x.Select(i => i.ToPluginModel()).ToList())));
+            var tasks = In.GroupBy(x => x.Owner).Select(x => (Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance), x.Key.Instance.GetDotTorrents(x.Select(i => i.ToPluginModel()).ToList())));
 
             await Task.WhenAll(tasks.Select((data) => {
                 var action = ActionQueueAction.New("Download .torrent files", async () => {
@@ -339,10 +335,11 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public bool CanExecuteAddLabel() => CanExecuteAction("Add label");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddLabel))]
-        private async Task AddLabel((IList SelectedItems, string Text) In)
+        private async Task AddLabel((object SelectedItems, string Text) In)
         {
+            var selectedItems = (IReadOnlyList<Torrent>)In.SelectedItems;
             try {
-                await ActionForMulti(In.SelectedItems, "Set labels", (dp, torrents) =>
+                await ActionForMulti(selectedItems, "Set labels", (dp, torrents) =>
                     dp.SetLabels(torrents
                         .Where(x => !x.Labels.Contains(In.Text))
                         .Select(torrent => (
@@ -375,24 +372,23 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
 
                         return (torrent.Hash, labels);
-                    }).ToList())
+                    }).ToList()
+                )
             );
         }
 
         public bool CanExecuteDuplicateTorrentTo() => CanExecuteAction("Duplicate torrent to");
         [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanExecuteDuplicateTorrentTo))]
-        private async Task DuplicateTorrentTo(IList In)
+        private async Task DuplicateTorrentTo(IReadOnlyList<Torrent> In)
         {
-            var torrents = In.Cast<Torrent>();
-
             Log.Logger.Information("Torrents: ");
-            foreach (var t in torrents) {
+            foreach (var t in In) {
                 Log.Logger.Information("t: " + Convert.ToHexString(t.Hash));
             }
 
             var dests = new InfoHashDictionary<(DataProvider Provider, string Directory)>();
 
-            foreach (var torrent in torrents) {
+            foreach (var torrent in In) {
                 var wnd = new TorrentDuplicationTargetSelectorWindow {
                     ViewModel = new TorrentDuplicationTargetSelectorWindowViewModel(torrent)
                 };
@@ -414,13 +410,13 @@ namespace RTSharp.ViewModels.TorrentListing
                 var targetDataProvider = data.DataProvider;
 
                 var getDotTorrentFiles = ActionQueueAction.New("Download .torrent files", () => {
-                    var groups = torrents.GroupBy(x => x.Owner);
+                    var groups = In.GroupBy(x => x.Owner);
                     var tasks = groups.Select(x => x.Key.Instance.GetDotTorrents(x.Select(i => i.ToPluginModel()).ToArray()));
                     return Task.WhenAll(tasks);
                 });
 
                 var getTorrentFileList = getDotTorrentFiles.CreateChild("Get torrent file list", RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, (parent) => {
-                    var groups = torrents.GroupBy(x => x.Owner);
+                    var groups = In.GroupBy(x => x.Owner);
                     var tasks = groups.Select(x => x.Key.Instance.GetFiles(x.Select(x => x.ToPluginModel()).ToArray()));
                     return Task.WhenAll(tasks);
                 });
@@ -430,7 +426,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     return targetDataProvider.Instance.AddTorrents(dotTorrents.Select(x => (
                         Data: x.Value,
-                        Filename: (string?)torrents.First(i => i.Hash.SequenceEqual(x.Key)).Name,
+                        Filename: (string?)In.First(i => i.Hash.SequenceEqual(x.Key)).Name,
                         Options: new AddTorrentsOptions(null, dests[x.Key].Directory)
                     )).ToArray());
                 });
@@ -450,10 +446,10 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
 
                         Log.Logger.Information("Torrents: ");
-                        foreach (var t in torrents) {
+                        foreach (var t in In) {
                             Log.Logger.Information("t: " + Convert.ToHexString(t.Hash));
                         }
-                        var sourceTorrent = torrents.First(x => x.Hash.SequenceEqual(hash));
+                        var sourceTorrent = In.First(x => x.Hash.SequenceEqual(hash));
 
                         if (sourceTorrent.Owner.DataProviderInstanceConfig.ServerId != targetDataProvider.DataProviderInstanceConfig.ServerId) {
                             await getTorrentFileList.RunningTask;

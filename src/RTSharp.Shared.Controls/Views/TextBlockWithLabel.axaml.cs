@@ -34,7 +34,7 @@ namespace RTSharp.Shared.Controls.Views
 #endregion Label
 
 #region Text
-        private string _text = "Text";
+        private string _text = "";
 
         /// <summary>
         /// Defines the <see cref="Text"/> property.

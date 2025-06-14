@@ -217,5 +217,10 @@ namespace RTSharp.Models
 
             return FromModel(torrent.Name, IsMultiFile, In, map, x => x.Path);
         }
+
+        public string GetRemotePath(string RemoteBasePath, string TorrentName, bool IsMultiFile)
+        {
+            return System.IO.Path.Combine(IsMultiFile ? System.IO.Path.Combine(RemoteBasePath, TorrentName) : RemoteBasePath, Path).Replace("\\", "/");
+        }
     }
 }

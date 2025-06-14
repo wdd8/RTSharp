@@ -5,7 +5,7 @@ namespace RTSharp.Shared.Abstractions
 {
     public interface IDataProvider : IDataProviderBase<DataProviderCapabilities>
     {
-        public Task<IEnumerable<Torrent>> GetAllTorrents();
+        public Task<IEnumerable<Torrent>> GetAllTorrents(CancellationToken cancellationToken);
 
         public Task<Torrent> GetTorrent(byte[] Hash);
 

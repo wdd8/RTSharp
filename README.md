@@ -8,6 +8,11 @@ RTSharp is a cross-platform bittorrent daemon GUI written in C# using AvaloniaUI
 Client application requirements are the same as for [AvaloniaUI](https://docs.avaloniaui.net/docs/faq#what-platforms-are-supported), however mobile, embedded systems and wasm are not supported.
 Daemons and their helper services must be run in a linux environment.
 
+### Security
+
+> [!CAUTION]
+> Granting access to `RTSharp.Daemon` is equivalent to granting shell access. Daemon implements a runtime scripting interface that can be used to perform any action. Add clients to `AllowedClients` with caution.
+
 ### Getting started
 
 See [setting up data providers](setup-dataproviders.md)
@@ -15,9 +20,11 @@ See [setting up data providers](setup-dataproviders.md)
 ### Features
 
  - Multiple servers/torrent daemons in the same GUI
- - RTSharp.Auxiliary
+ - RTSharp.Daemon
    - Remote folder selection
    - Torrent data copy to other servers
+   - Mediainfo
+   - Runtime scripting
  - Standalone built-in torrent creation
  - Peer AS listing
  - Custom names for trackers
@@ -28,8 +35,8 @@ See [setting up data providers](setup-dataproviders.md)
 
 ||rtorrent|qbittorrent|transmission|
 |-|-|-|-|
-|Torrent Listing|🟡Delta changes using `Rtorrent.Server`|🟢Delta changes|🟢Delta changes|
-|File listing|🟡Supported, broken caching|🟡Supported, broken caching|🟡Supported, broken caching|
+|Torrent Listing|🟡Delta changes|🟢Delta changes|🟢Delta changes|
+|File listing|🟢Supported|🟢Supported|🟢Supported|
 |Peer listing|🟢Supported|🟢Supported|🟡No downloaded/uploaded column|
 |Tracker listing|🟢Supported|🟡Only URI, seeders, peers|🟢Supported|
 |Start torrent|🟢Supported|🟢Supported|🟢Supported|
@@ -37,18 +44,24 @@ See [setting up data providers](setup-dataproviders.md)
 |Stop torrent|🟢Supported|🔴Unsupported by daemon|🟢Supported|
 |Force recheck (rehash)|🟢Supported|🟢Supported|🟢Supported|
 |Reannounce to all trackers|🟢Supported|🟢Supported|🟢Supported|
-|Add torrent|🟢Supported|🟢Supported|🟡Untested|
-|Add torrent paused|🟢Supported|🟢Supported|🟡Untested|
-|Move download directory|🟢With data move|🟡Supported|🔴Not implemented|
+|Add torrent|🟢Supported|🟢Supported|🟢Supported|
+|Add torrent paused|🟢Supported|🟢Supported|🟢Supported|
+|Move download directory|🟢With data move & checks|🟢Supported|🟢Supported|
 |Remove torrent|🟢Supported|🟢Supported|🟢Supported|
 |Remove torrent & data|🟢Supported|🟢Supported|🟢Supported|
-|Add label|🟡Buggy|🟡Buggy|🟡Buggy|
-|Set labels|🟡Buggy|🟡Buggy|🟡Buggy|
+|Add label|🟢Supported|🟢Supported|🟢Supported|
+|Set labels|🟢Supported|🟢Supported|🟢Supported|
 |Add peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Ban peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Kick peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Snub peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Unsnub peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
-|Get .torrent|🟢Supported|🔴Supported, not enabled|🔴Unsupported by daemon|
+|Get .torrent|🟢Supported|🟢Supported|🟡With daemon access to config dir|
 |Prefill default save path|🟢Supported|🟢Supported|🟢Supported|
 |Pieces progress bar|🟢Supported|🟢Supported|🟢Supported|
+|Extended statistics|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Partial downloads|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+
+### Configuration
+
+Currently configuration can be edited only in `config.json`. First setup emits a config with all possible entries.

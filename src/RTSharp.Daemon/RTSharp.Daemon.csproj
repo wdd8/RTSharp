@@ -7,6 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AvaloniaXaml Remove="Services\transmission\Transmission.Net\**" />
+    <Compile Remove="Services\transmission\Transmission.Net\**" />
+    <Content Remove="Services\transmission\Transmission.Net\**" />
+    <EmbeddedResource Remove="Services\transmission\Transmission.Net\**" />
+    <None Remove="Services\transmission\Transmission.Net\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.0" />
     <PackageReference Include="CliWrap" Version="3.8.2" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
@@ -21,6 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\RTSharp.Daemon.Protocols\RTSharp.Daemon.Protocols.csproj" />
     <ProjectReference Include="..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj" />
+    <ProjectReference Include="Services\transmission\Transmission.Net\Transmission.Net\Transmission.Net.csproj" />
   </ItemGroup>
 
 </Project>

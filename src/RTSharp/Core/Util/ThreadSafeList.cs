@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace RTSharp.Core.Util
 {
@@ -18,7 +19,7 @@ namespace RTSharp.Core.Util
             return Clone().GetEnumerator();
         }
 
-        private object _lock = new object();
+        private Lock _lock = new();
 
         public int Count {
             get {

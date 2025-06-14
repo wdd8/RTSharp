@@ -11,7 +11,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             GetStateHistory: false
         );
 
-        public DataProviderStats(Plugin ThisPlugin, Action Init)
+        public DataProviderStats(Plugin ThisPlugin)
         {
             this.ThisPlugin = ThisPlugin;
             this.PluginHost = ThisPlugin.Host;

@@ -20,10 +20,6 @@ namespace RTSharp.ViewModels.Converters
             if (values[0] is IDictionary dictionary) {
                 var value = dictionary[values[1]!];
 
-                if (dictionary.Count > 0) {
-                    var fgasdfgsa = 54;
-                }
-
                 if (values.Count == 3) {
                     var key = values[2];
                     

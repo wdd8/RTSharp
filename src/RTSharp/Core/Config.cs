@@ -57,6 +57,16 @@ namespace RTSharp.Core
 
                 public bool? VerifyNative { get; set; }
             }
+
+            public class Look
+            {
+                public class TorrentListingConfig
+                {
+                    public int RowHeight { get; set; }
+                }
+
+                public TorrentListingConfig TorrentListing { get; set; }
+            }
         }
 
         private readonly IServiceProvider Provider;
@@ -71,6 +81,7 @@ namespace RTSharp.Core
             Services.Configure<Models.Behavior>(Config.GetSection(nameof(Behavior)));
             Services.Configure<Models.Caching>(Config.GetSection(nameof(Caching)));
             Services.Configure<Models.UIState>(Config.GetSection(nameof(UIState)));
+            Services.Configure<Models.Look>(Config.GetSection(nameof(Look)));
             Services.Configure<Dictionary<string, Models.Server>>(Config.GetSection(nameof(Servers)));
 
             Services.AddOptions();
@@ -98,6 +109,7 @@ namespace RTSharp.Core
                 json[nameof(Caching)] = JsonSerializer.SerializeToNode(Caching.Value);
                 json[nameof(UIState)] = JsonSerializer.SerializeToNode(UIState.Value);
                 json[nameof(Servers)] = JsonSerializer.SerializeToNode(Servers.Value);
+                json[nameof(Look)] = JsonSerializer.SerializeToNode(Look.Value);
                 await File.WriteAllTextAsync(ConfigPath, json.ToJsonString(new JsonSerializerOptions() {
                     WriteIndented = true
                 }));
@@ -121,6 +133,11 @@ namespace RTSharp.Core
   "UIState": {
     "TorrentGridState": null
   },
+  "Look": {
+    "TorrentListing": {
+      "RowHeight": 32
+    }
+  },
   "Servers": {
     "example": {
       "Host": "example.com",
@@ -139,5 +156,7 @@ namespace RTSharp.Core
         public Lazy<Models.UIState> UIState => new Lazy<Models.UIState>(() => Provider.GetRequiredService<IOptionsMonitor<Models.UIState>>().CurrentValue);
 
         public Lazy<Dictionary<string, Models.Server>> Servers => new Lazy<Dictionary<string, Models.Server>>(() => Provider.GetRequiredService<IOptionsMonitor<Dictionary<string, Models.Server>>>().CurrentValue);
+
+        public Lazy<Models.Look> Look => new Lazy<Models.Look>(() => Provider.GetRequiredService<IOptionsMonitor<Models.Look>>().CurrentValue);
     }
 }

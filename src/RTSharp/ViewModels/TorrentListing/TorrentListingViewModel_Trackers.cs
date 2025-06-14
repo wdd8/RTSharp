@@ -22,8 +22,6 @@ namespace RTSharp.ViewModels.TorrentListing
     {
         private Channel<(Models.Torrent, IList<Tracker>)> TrackersChanges;
 
-        DomainParser DomainParser = new(new CachedHttpRuleProvider(new LocalFileSystemCacheProvider(), Http.Client));
-
         private async Task TrackersTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
             TrackersChanges = Channel.CreateUnbounded<(Models.Torrent, IList<Tracker>)>(new UnboundedChannelOptions() {
@@ -44,7 +42,7 @@ namespace RTSharp.ViewModels.TorrentListing
             var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
             var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
-            foreach (var torrent in Torrents) {
+            foreach (var torrent in Torrents.Items) {
                 var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle);
 
                 if (!infos.TryGetValue(domain, out var trackerInfo))
@@ -130,21 +128,26 @@ namespace RTSharp.ViewModels.TorrentListing
                                     var favicons = innerScope.ServiceProvider.GetRequiredService<Core.Services.Favicon>();
                                     var innerTrackerDb = innerScope.ServiceProvider.GetRequiredService<TrackerDb>();
                                     var innerImageCache = innerScope.ServiceProvider.GetRequiredService<ImageCache>();
+                                    var domainParser = innerScope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>();
 
-                                    byte[]? favicon = null;
+                                    System.IO.Stream? favicon = null;
                                     if (!string.IsNullOrEmpty(UriUtils.GetDomainForTracker(tracker.Uri))) {
-                                        var domainInfo = DomainParser.Parse(UriUtils.GetDomainForTracker(tracker.Uri));
-                                        favicon = await favicons.GetFavicon(domainInfo.RegistrableDomain);
+                                        var domainInfo = domainParser.Parse(UriUtils.GetDomainForTracker(tracker.Uri));
+                                        if (domainInfo != null) {
+                                            favicon = await favicons.GetFavicon(domainInfo.RegistrableDomain);
+                                        }
                                     }
 
                                     try {
+                                        byte[]? hash = null;
                                         if (favicon != null) {
-                                            var (imageHash, icon) = await innerImageCache.AddImage(favicon);
-                                            trackerInfo = new TrackerInfo(tracker.Domain, tracker.Domain, imageHash);
-                                            tracker.Icon = icon;
-                                        } else {
-                                            trackerInfo = new TrackerInfo(tracker.Domain, tracker.Domain, null);
+                                            var img = await innerImageCache.AddImage(favicon);
+                                            if (img != null) {
+                                                hash = img.Value.Hash;
+                                                tracker.Icon = img.Value.Image;
+                                            }
                                         }
+                                        trackerInfo = new TrackerInfo(tracker.Domain, tracker.Domain, hash);
                                         await innerTrackerDb.AddOrUpdateTrackerInfo(tracker.Domain, trackerInfo);
 
                                         await UpdateTrackersInTorrents();

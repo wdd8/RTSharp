@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Avalonia.Threading;
 using NP.Ava.UniDock;
+using System.Net;
 
 namespace RTSharp
 {
@@ -50,7 +51,7 @@ namespace RTSharp
             cfgBuilder.AddJsonFile(Core.Config.ConfigPath, false, true);
             var config = cfgBuilder.Build();
 
-            await RTSharp.Core.Services.Daemon.ConfigureServices.GenerateCertificatesIfNeeded();
+            await ConfigureServices.GenerateCertificatesIfNeeded();
 
             var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>();
 
@@ -71,6 +72,7 @@ namespace RTSharp
                     services.AddTransient<Core.Services.Cache.Images.ImageCache>();
                     services.AddTransient<Core.Services.Cache.TrackerDb.TrackerDb>();
                     services.AddSingleton<Shared.Abstractions.ISpeedMovingAverageService, Core.Services.SpeedMovingAverageService>();
+                    services.AddSingleton<Core.Services.DomainParser>();
                     services.AddHttpClient<Core.Services.Favicon>();
                 })
                 .Build();
@@ -147,9 +149,21 @@ namespace RTSharp
 
             tcs.Task.ContinueWith((task) => {
                 Dispatcher.UIThread.Invoke(() => {
-                    this.DataContext = new AppViewModel();
-                    MainWindowViewModel = new MainWindowViewModel();
-                    MainWindow = new MainWindow(MainWindowViewModel);
+                    try {
+                        this.DataContext = new AppViewModel();
+                        MainWindowViewModel = new MainWindowViewModel();
+                        MainWindow = new MainWindow(MainWindowViewModel);
+                    } catch (Exception ex) {
+                        var msgbox = MessageBoxManager.GetMessageBoxStandard("RTSharp has crashed", $"RTSharp has crashed.\n{ex}", MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error, WindowStartupLocation.CenterOwner);
+                        var task = msgbox.ShowAsync();
+                        var cts = new CancellationTokenSource();
+                        task.ContinueWith((task) => cts.Cancel());
+                        Dispatcher.UIThread.MainLoop(cts.Token);
+#if !DEBUG
+                        Environment.Exit(1);
+#endif
+                        throw;
+                    }
 
                     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime) {
                         desktopLifetime.MainWindow = MainWindow;

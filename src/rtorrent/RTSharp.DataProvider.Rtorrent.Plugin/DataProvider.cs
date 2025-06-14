@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -66,30 +65,11 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             this.Files = new DataProviderFiles(ThisPlugin);
         }
 
-        private CancellationTokenSource TorrentChangesTokenSource;
-        private InfoHashDictionary<Torrent> LatestTorrents = new();
-        private ReaderWriterLockSlim LatestTorrentsLock = new();
-
-        public async Task<IEnumerable<Torrent>> GetAllTorrents()
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
-            
-            var list = (await client.GetAllTorrents(default)).ToArray();
-
-            LatestTorrentsLock.EnterReadLock(); {
-                LatestTorrents = list.ToInfoHashDictionary(x => x.Hash);
-            } LatestTorrentsLock.ExitReadLock();
-
-            return list;
-        }
-
         public async Task<Torrent> GetTorrent(byte[] Hash)
         {
-            Torrent? torrent;
-            LatestTorrentsLock.EnterReadLock(); {
-                LatestTorrents.TryGetValue(Hash, out torrent);
-            } LatestTorrentsLock.ExitReadLock();
-            return torrent;
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+
+            return await client.GetTorrent(Hash);
         }
 
         public async Task<InfoHashDictionary<(bool MultiFile, IList<File> Files)>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken)
@@ -398,6 +378,13 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             var result = await server.GetPieces(In, cancellationToken);
             
             return result;
+        }
+
+        public async Task<IEnumerable<Torrent>> GetAllTorrents(CancellationToken cancellationToken = default)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+
+            return await client.GetAllTorrents(cancellationToken);
         }
 
         public IPlugin Plugin => ThisPlugin;

@@ -11,27 +11,25 @@ using DialogHostAvalonia;
 using RTSharp.Shared.Utils;
 using Torrent = RTSharp.Models.Torrent;
 using RTSharp.Shared.Controls;
-using Microsoft.Extensions.DependencyInjection;
-using Serilog;
-using RTSharp.Core.Util;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
-using Avalonia.Threading;
+using Avalonia;
+using Microsoft.Extensions.DependencyInjection;
+using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Models.TreeDataGrid;
 
 namespace RTSharp.Views.TorrentListing;
 
 public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 {
+    private int RowHeight { get; set; }
+    private Thickness GridBorderThickness { get; } = Thickness.Parse("0 0 0 1");
+
     public TorrentListingView()
     {
         InitializeComponent();
 
         BindViewModelActions(vm => {
-            using var scope = Core.ServiceProvider.CreateScope();
-            var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
-
-            grid.RestoreState(config.UIState.Value.TorrentGridState);
-
             vm!.RecheckTorrentsConfirmationDialog = ShowRecheckTorrentsConfirmationDialog;
             vm!.MoveDownloadDirectoryConfirmationDialog = ShowMoveDownloadDirectoryConfirmationDialog;
             vm!.SelectDirectoryDialog = ShowSelectDirectoryDialog;
@@ -42,44 +40,15 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             vm!.OnViewModelAttached(this);
         }, null);
 
-        grid.Sorted += async (sender, e) => {
-            await Task.Delay(3000); // HACKHACK: Extreme hack! Sorting doesn't provide any information about the sort action itself and current sorting state of columns is not updated, so sort action did not happen yet. Hope that it completes in 3 seconds
-            await SaveGridState();
-        };
+        using var scope = Core.ServiceProvider.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
 
-        this.Loaded += (sender, e) => {
-            using var scope = Core.ServiceProvider.CreateScope();
-            var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
-
-            grid.RestoreState(config.UIState.Value.TorrentGridState);
-            App.RegisterOnExit($"{nameof(TorrentListingView)}_{nameof(grid)}_{nameof(SaveGridState)}", () => SaveGridState());
-        };
+        RowHeight = config.Look.Value.TorrentListing?.RowHeight ?? 32;
     }
 
     public override void EndInit() => base.EndInit();
 
     public TorrentListingViewModel? TypedContext => (TorrentListingViewModel?)DataContext;
-
-    public async ValueTask SaveGridState()
-    {
-        try {
-            string? state = null;
-
-            Dispatcher.UIThread.Invoke(() => {
-                if (grid.StateChanged())
-                    state = grid.SaveState();
-            });
-
-            if (state != null) {
-                using var scope = Core.ServiceProvider.CreateScope();
-                var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
-                config.UIState.Value.TorrentGridState = state;
-                await config.Rewrite();
-            }
-        } catch (Exception ex) {
-            Log.Logger.Error(ex, "SaveGridState");
-        }
-    }
 
     public void ShowAddLabelDialog()
     {
@@ -91,7 +60,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         DialogHost.GetDialogSession(AddLabelDialogHost.Identifier)!.Close(false);
     }
 
-    public void EvLoadingRow(object sender, DataGridRowEventArgs e)
+    public void EvRowPrepared(object sender, TreeDataGridRowEventArgs e)
     {
         var torrent = (Torrent)e.Row.DataContext!;
         if (Color.TryParse(torrent!.Owner.PluginInstance.PluginInstanceConfig.Color, out var color)) {
@@ -102,8 +71,40 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
                 e.Row.Foreground = Brushes.White;
             }
         }
+        e.Row.BorderThickness = GridBorderThickness;
+        e.Row.BorderBrush = Brushes.DarkGray;
+        e.Row.Height = RowHeight;
 
-        var hooks = Plugin.Plugins.GetHook<object, DataGridRowEventArgs>(Plugin.Plugins.HookType.TorrentListing_EvLoadingRow);
+        var hooks = Plugin.Plugins.GetHook<object, TreeDataGridRowEventArgs>(Plugin.Plugins.HookType.TorrentListing_EvRowPrepared);
+        foreach (var hook in hooks) {
+            hook(sender, e);
+        }
+    }
+
+    public void EvCellPrepared(object sender, TreeDataGridCellEventArgs e)
+    {
+        Torrent torrent;
+        if (e.Cell.DataContext is TemplateCell template) {
+            torrent = (Torrent)template.Value;
+        } else {
+            torrent = (Torrent)e.Cell.DataContext!;
+        }
+        
+        var cell = (TreeDataGridCell)e.Cell;
+
+        // Guard against cell recycling. If plugins modify properties of some cells, others might get recycled from before and jumbled
+        cell.Background = null;
+        if (Color.TryParse(torrent!.Owner.PluginInstance.PluginInstanceConfig.Color, out var color)) {
+            if (color.R * 0.299 + color.G * 0.587 + color.B * 0.114 > 186) {
+                cell.Foreground = Brushes.Black;
+            } else {
+                cell.Foreground = Brushes.White;
+            }
+        }
+        cell.BorderThickness = GridBorderThickness;
+        cell.BorderBrush = Brushes.DarkGray;
+
+        var hooks = Plugin.Plugins.GetHook<object, TreeDataGridCellEventArgs>(Plugin.Plugins.HookType.TorrentListing_EvCellPrepared);
         foreach (var hook in hooks) {
             hook(sender, e);
         }

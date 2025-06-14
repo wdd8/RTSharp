@@ -3,14 +3,11 @@ using RTSharp.Shared.Utils;
 
 using System.Threading.Channels;
 
-using Transmission.Net.Api.Entity;
-using Transmission.Net.Api;
-using RTSharp.DataProvider.Transmission.Plugin.Mappers;
-using System.Diagnostics;
-using System.Collections.Immutable;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using RTSharp.Shared.Abstractions.Daemon;
+using Avalonia.Controls;
+using MsBox.Avalonia.Models;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
 
 namespace RTSharp.DataProvider.Transmission.Plugin
 {
@@ -18,7 +15,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
     {
         private Plugin ThisPlugin { get; }
         public IPlugin Plugin => ThisPlugin;
-        public IPluginHost PluginHost => GlobalClient.PluginHost;
+        public IPluginHost PluginHost => ThisPlugin.Host;
 
         public IDataProviderFiles Files { get; }
 
@@ -53,22 +50,12 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             SetLabels: true
         );
 
-
-        private InfoHashDictionary<(Torrent Internal, TorrentView External)> LatestTorrents = new();
-        private ReaderWriterLockSlim LatestTorrentsLock = new();
-
         public DataProvider(Plugin ThisPlugin)
         {
             this.ThisPlugin = ThisPlugin;
-            GlobalClient.PluginHost = ThisPlugin.Host;
 
-            this.Files = new DataProviderFiles(ThisPlugin, Init);
-            this.Stats = new DataProviderStats(ThisPlugin, Init);
-        }
-
-        public string PathCombineFSlash(string a, string b)
-        {
-            return Path.Combine(a, b).Replace("\\", "/");
+            this.Files = new DataProviderFiles(ThisPlugin);
+            this.Stats = new DataProviderStats(ThisPlugin);
         }
 
         public Notifyable<long> TotalDLSpeed { get; } = new();
@@ -79,468 +66,271 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
         public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
         {
-            var tasks = new List<Task<(byte[] Hash, IList<Exception> Exceptions)>>();
-            foreach (var req in In) {
-                tasks.Add(Task.Run(async () => {
-                    var torrent = Convert.ToBase64String(req.Data); // TODO: memory constraints?
-                    var exceptions = new List<Exception>();
-                    NewTorrentInfo info = null;
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-                    try {
-                        info = await Client.TorrentAddAsync(new NewTorrent {
-                            DownloadDirectory = req.Options.RemoteTargetPath,
-                            Paused = true,
-                            Metainfo = torrent
-                        });
-                    } catch (Exception ex) {
-                        exceptions.Add(ex);
-                    }
-
-                    return (info == null ? null : Convert.FromHexString(info.HashString), (IList<Exception>)exceptions);
-                }));
-            }
-
-            return new TorrentStatuses(await Task.WhenAll(tasks));
-        }
-
-        int? Translate(byte[] In)
-        {
-            if (LatestTorrents.TryGetValue(In, out var outp)) {
-                return outp.External.Id;
-            }
-
-            return null;
-        }
-
-        int[] Translate(IList<Torrent> In)
-        {
-            var ret = new int[In.Count];
-            for (var x = 0;x < ret.Length;x++) {
-                var translated = Translate(In[x].Hash) ?? throw new NullReferenceException($"Cannot translate '{Convert.ToHexString(In[x].Hash)}'");
-                ret[x] = translated;
-            }
-
-            return ret;
-        }
-
-        object? TranslateObj(byte[] In)
-        {
-            if (LatestTorrents.TryGetValue(In, out var outp)) {
-                return outp.External.Id;
-            }
-
-            return null;
-        }
-
-        object[] TranslateObj(IList<byte[]> In)
-        {
-            var ret = new object[In.Count];
-
-            for (var x = 0;x < In.Count;x++) {
-                var translated = Translate(In[x]);
-                if (translated == null) {
-                    throw new NullReferenceException($"Cannot translate '{Convert.ToHexString(In[x])}'");
-                }
-                ret[x] = translated.Value;
-            }
-
-            return ret;
-        }
-
-        int[] Translate(IList<byte[]> In)
-        {
-            var ret = new int[In.Count];
-
-            for (var x = 0;x < In.Count;x++) {
-                var translated = Translate(In[x]);
-                if (translated == null) {
-                    throw new NullReferenceException($"Cannot translate '{Convert.ToHexString(In[x])}'");
-                }
-                ret[x] = translated.Value;
-            }
-
-            return ret;
-        }
-
-        public async Task<Guid> CompeletedScript()
-        {
-            var id = await PluginHost.AttachedDaemonService.RunCustomScript("""
-#pragma usings
-
-public class Main : IScript
-{
-    public async Task Execute(Dictionary<string, string> Variables, IScriptSession Session, CancellationToken CancellationToken)
-    {
-        Session.Progress.State = TASK_STATE.DONE;
-    }
-}
-""", "CompletedScriptDummy", [ ]);
-
-            return id;
+            return await client.AddTorrents(In);
         }
 
         public async Task<Guid> ForceRecheck(IList<byte[]> In)
         {
-            Exception? exception = null;
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            try {
-                await Client.TorrentVerifyAsync(TranslateObj(In));
-            } catch (Exception ex) {
-                exception = ex;
-            }
-
-            var res = In.Select(x => (Hash: x, Exceptions: exception == null ? (IList<Exception>)Array.Empty<Exception>() : (new[] { exception }))).ToArray();
-
-            var successfulRechecks = res.Where(x => x.Exceptions.Count == 0);
-
-            var sw = Stopwatch.StartNew();
-
-            var stateObserved = new InfoHashDictionary<bool>();
-
-            while (sw.Elapsed < TimeSpan.FromSeconds(5)) {
-                LatestTorrentsLock.EnterReadLock();
-                {
-                    foreach (var (hash, _) in successfulRechecks) {
-                        if (LatestTorrents.TryGetValue(hash, out var torrent)) {
-                            if (torrent.Internal.State.HasFlag(TORRENT_STATE.HASHING)) {
-                                stateObserved[hash] = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                LatestTorrentsLock.ExitReadLock();
-                await Task.Delay(500);
-            }
-
-            while (stateObserved.Count != 0) {
-                LatestTorrentsLock.EnterReadLock();
-                {
-                    foreach (var hash in stateObserved.Keys.ToImmutableArray()) {
-                        if (LatestTorrents.TryGetValue(hash, out var torrent)) {
-                            if (!torrent.Internal.State.HasFlag(TORRENT_STATE.HASHING)) {
-                                stateObserved.Remove(hash);
-                                break;
-                            }
-                        }
-                    }
-                }
-                LatestTorrentsLock.ExitReadLock();
-                await Task.Delay(500);
-            }
-
-            return await CompeletedScript();
+            return await client.ForceRecheckTorrents(In);
         }
 
-        public async Task<IEnumerable<Torrent>> GetAllTorrents()
+        public async Task<IEnumerable<Torrent>> GetAllTorrents(CancellationToken cancellationToken = default)
         {
-            Init();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var list = await Client.TorrentGetAsync(null, TorrentFields.ALL_FIELDS);
-
-            var torrents = list!.Torrents.Select(x => (External: x, Internal: TorrentMapper.MapFromExternal(x)));
-
-            LatestTorrentsLock.EnterWriteLock();
-            {
-                foreach (var torrent in torrents) {
-                    LatestTorrents[torrent.Internal.Hash] = (torrent.Internal, torrent.External);
-                }
-            }
-            LatestTorrentsLock.ExitWriteLock();
-
-            return torrents.Select(x => x.Internal);
+            return await client.GetAllTorrents(cancellationToken);
         }
 
         public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<Torrent> In)
         {
-            Init();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var torrents = (await Client.TorrentGetAsync(Translate(In))).Torrents;
-
-            var server = PluginHost.AttachedDaemonService;
-
-            var ret = new InfoHashDictionary<byte[]>();
-
-            foreach (var torrent in torrents) {
-                var torrentFile = (await server.ReceiveFilesInline(torrent.TorrentFile)).ToArray();
-                ret[Convert.FromHexString(torrent.HashString)] = torrentFile;
-            }
-
-            return ret;
+            return await client.GetDotTorrents(In);
         }
 
         public async Task<InfoHashDictionary<(bool MultiFile, IList<Shared.Abstractions.File> Files)>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken = default)
         {
-            Init();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var files = await Client.TorrentGetAsync(Translate(In.Select(x => x.Hash).ToArray()));
-
-            return files!.Torrents.Select(x => (
-                Hash: x.HashString,
-                Files: (
-                    MultiFile: x.Files![0].Name!.Contains('/'),
-                    Files: (IList<Shared.Abstractions.File>)x.Files.Select(i => TorrentMapper.MapFromExternal(i, (int)x.PieceSize!.Value)).ToList()
-                )
-            )).ToInfoHashDictionary(x => Convert.FromHexString(x.Hash!), x => x.Files);
+            return await client.GetTorrentsFiles(In, cancellationToken);
         }
 
         public async Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken = default)
         {
-            Init();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var peers = await Client.TorrentGetAsync(Translate(In.Select(x => x.Hash).ToArray()))!;
-
-            using var scope = PluginHost.CreateScope();
-            var smas = scope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
-
-            return peers!.Torrents.Select(x => (
-                Hash: Convert.FromHexString(x.HashString!),
-                Peers: (IList<Peer>)x.Peers!.Select(p => {
-                    ulong peerDLSpeed = 0;
-
-                    if (p.Progress != 1) {
-                        var sma = smas.Get(Plugin.GUID.ToString(), $"PeerDLSpeed_{p.Address}:{p.Port}");
-
-                        sma.ValueIfChanged((long)(x.TotalSize.Value * p.Progress.Value));
-
-                        peerDLSpeed = (ulong)sma.CalculateSpeed();
-                    }
-
-                    return TorrentMapper.MapFromExternal(p, peerDLSpeed);
-                }).ToList()
-            )).ToInfoHashDictionary(x => x.Hash, x => x.Peers);
+            return await client.GetTorrentsPeers(In, cancellationToken);
         }
 
         public async Task<Torrent> GetTorrent(byte[] Hash)
         {
-            Init();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var torrent = await Client.TorrentGetAsync(Translate(new[] { Hash }));
-
-            if (!torrent!.Torrents.Any())
-                throw new ArgumentException("Torrent not found");
-
-            return TorrentMapper.MapFromExternal(torrent.Torrents.First());
+            return await client.GetTorrent(Hash);
         }
 
-        public async Task<ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken cancellationToken)
+        public async Task<ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken CancellationToken)
         {
-            Init();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var channel = Channel.CreateUnbounded<ListingChanges<Torrent, byte[]>>(new UnboundedChannelOptions() {
+            await GetAllTorrents();
+
+            var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
+
+            var updates = client.GetTorrentChanges(combined.Token);
+
+            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
-
             _ = Task.Run(async () => {
-                try {
-                    var all = await Client.TorrentGetAsync(null, TorrentFields.ALL_FIELDS);
-                    var changes = new List<Torrent>();
-                    var removed = new List<byte[]>();
-                    var ret = new ListingChanges<Torrent, byte[]>(changes, removed);
+                await foreach (var update in updates.Reader.ReadAllAsync(combined.Token)) {
 
-                    foreach (var externalTorrent in all!.Torrents) {
-                        var hash = Convert.FromHexString(externalTorrent.HashString!);
-                        var internalTorrent = TorrentMapper.MapFromExternal(externalTorrent);
+                    TotalDLSpeed.Change(update.Changes.Sum(x => (long)x.DLSpeed));
+                    TotalUPSpeed.Change(update.Changes.Sum(x => (long)x.UPSpeed));
+                    ActiveTorrentCount.Change(update.Changes.Where(x => x.State.HasFlag(TORRENT_STATE.ACTIVE)).Count());
 
-                        changes.Add(internalTorrent);
-                        LatestTorrentsLock.EnterWriteLock();
-                        {
-                            LatestTorrents[hash] = (internalTorrent, externalTorrent);
-                        }
-                        LatestTorrentsLock.ExitWriteLock();
-                    }
-
-                    await channel.Writer.WriteAsync(ret);
-
-                    while (!cancellationToken.IsCancellationRequested) {
-                        var request = new TransmissionRequest("torrent-get", new Dictionary<string, object> {
-                            { "fields", TorrentFields.ALL_FIELDS },
-                            { "ids", "recently-active" }
-                        });
-
-                        var sendRequestAsync = Client.GetType().GetMethod("SendRequestAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                        var list = (await (Task<TransmissionResponse>)sendRequestAsync!.Invoke(Client, new[] { request })!).Deserialize<TorrentsResult>();
-
-                        changes = new List<Torrent>();
-                        removed = new List<byte[]>();
-                        ret = new ListingChanges<Torrent, byte[]>(changes, removed);
-
-                        if (list!.Torrents.Any()) {
-                            foreach (var externalTorrent in list!.Torrents) {
-                                var hash = Convert.FromHexString(externalTorrent.HashString!);
-                                var internalTorrent = TorrentMapper.MapFromExternal(externalTorrent);
-
-                                try {
-                                    LatestTorrentsLock.EnterWriteLock();
-
-                                    changes.Add(internalTorrent);
-
-                                    LatestTorrents[hash] = (internalTorrent, externalTorrent);
-                                } finally {
-                                    LatestTorrentsLock.ExitWriteLock();
-                                }
-                            }
-                        }
-
-                        if (list!.Removed?.Any() == true) {
-                            foreach (var externalTorrent in list!.Removed) {
-                                removed.Add(Convert.FromHexString(externalTorrent.HashString!));
-                            }
-                        }
-
-                        await channel.Writer.WriteAsync(ret);
-
-                        LatestTorrentsLock.EnterReadLock();
-                        {
-                            long dlSpeed = 0, upSpeed = 0, activeTorrents = 0;
-                            foreach (var torrent in LatestTorrents) {
-                                dlSpeed += (long)torrent.Value.Internal.DLSpeed;
-                                upSpeed += (long)torrent.Value.Internal.UPSpeed;
-                                activeTorrents += torrent.Value.Internal.State.HasFlag(TORRENT_STATE.ACTIVE) ? 1 : 0;
-                            }
-                            TotalDLSpeed.Change(dlSpeed);
-                            TotalUPSpeed.Change(upSpeed);
-                            ActiveTorrentCount.Change(activeTorrents);
-                        }
-                        LatestTorrentsLock.ExitReadLock();
-
-                        await Task.Delay(ThisPlugin.DataProvider.DataProviderInstanceConfig.ListUpdateInterval);
-                    }
-                } catch (TaskCanceledException) { } catch (Exception ex) {
-                    PluginHost.Logger.Error(ex, $"Exception thrown in {nameof(GetTorrentChanges)}");
-                    await Task.Delay(500); // hack for offline servers
-                    throw;
-                } finally {
-                    channel.Writer.Complete();
+                    channel.Writer.TryWrite(update);
                 }
-            }, cancellationToken);
-
-            return channel.Reader;
+            }, combined.Token);
+            return channel;
         }
 
         public async Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default)
         {
-            Init();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var list = await Client.TorrentGetAsync(Translate(In), TorrentFields.ALL_FIELDS);
-
-            return list!.Torrents.ToInfoHashDictionary(x => Convert.FromHexString(x.HashString!), x => (IList<Tracker>)x.TrackerStats!.Select(TorrentMapper.MapFromExternal).ToList());
+            return await client.GetTorrentsTrackers(In, cancellationToken);
         }
 
 
         public async Task<Guid?> MoveDownloadDirectory(InfoHashDictionary<string> In, IList<(string SourceFile, string TargetFile)> Check)
         {
-            /*await Init();
+            var server = PluginHost.AttachedDaemonService!;
+            var torrentsClient = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var tasks = new List<Task<(byte[] Hash, IList<Exception> Exceptions)>>();
-            foreach (var req in In) {
-                tasks.Add(Task.Run(async () => {
-                    Exception exception = null;
+            if (Check.Select(x => x.TargetFile).Distinct().Count() != Check.Count) {
+                throw new ArgumentException("Moving multiple torrents with same destination is currently unsupported");
+            }
 
-                    try {
-                        await Client.SetLocationAsync(Convert.ToHexString(req.InfoHash), req.TargetDirectory);
-                    } catch (Exception ex) {
-                        exception = ex;
+            var move = true;
+
+            var reply = await server.CheckExists(Check.Select(x => x.TargetFile).ToArray());
+
+            var existsCount = reply.Count(x => x.Value);
+
+            if (existsCount == reply.Count) {
+                // All exist
+                var msgbox = await MessageBoxManager.GetMessageBoxStandard("RT# - transmission", "All of the file names exist in destination directory, do you want to proceed without moving the files?", ButtonEnum.YesNo, Icon.Info, WindowStartupLocation.CenterOwner).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+
+                if (msgbox == ButtonResult.Yes)
+                    move = false;
+            } else if (existsCount != 0) {
+                var msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                    ButtonDefinitions = new ButtonDefinition[] {
+                        new ButtonDefinition() {
+                            Name = "Move (overwrite)",
+                            IsDefault = false,
+                        },
+                        new ButtonDefinition() {
+                            Name = "Don't move (may result in recheck failure)",
+                            IsDefault = false,
+                        },
+                        new ButtonDefinition() {
+                            Name = "Abort",
+                            IsDefault = true,
+                            IsCancel = true
+                        }
+                    },
+                    ContentTitle = "RT# - transmission",
+                    ContentMessage = "Some of the files exist in destination directory, how would you like to proceed?",
+                    Icon = Icon.Warning,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+
+                if (msgbox == "Move (overwrite)") {
+                    var allowedToDeleteTarget = await server.AllowedToDeleteFiles(Check.Select(x => x.TargetFile));
+
+                    if (allowedToDeleteTarget.Any(x => !x.Value)) {
+                        var onlySome = allowedToDeleteTarget.Any(x => x.Value);
+
+                        msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                            ButtonDefinitions = new ButtonDefinition[] {
+                                new ButtonDefinition() {
+                                    Name = "Try to overwrite anyway",
+                                    IsDefault = false,
+                                },
+                                new ButtonDefinition() {
+                                    Name = "Don't move (may result in recheck failure)",
+                                    IsDefault = false,
+                                },
+                                new ButtonDefinition() {
+                                    Name = "Abort",
+                                    IsDefault = true,
+                                    IsCancel = true
+                                }
+                            },
+                            ContentTitle = "RT# - transmission",
+                            ContentMessage = $"There are insufficient permissions to overwrite {(onlySome ? "some of " : "")}target files, how would you like to proceed?",
+                            Icon = Icon.Warning,
+                            WindowStartupLocation = WindowStartupLocation.CenterOwner
+                        }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+
+                        if (msgbox == "Try to overwrite anyway") {
+                        } else if (msgbox == "Don't move (may result in recheck failure)")
+                            move = false;
+                        else
+                            return null;
                     }
 
-                    return (req.InfoHash, exception == null ? (IList<Exception>)Array.Empty<Exception>() : (new[] { exception }));
-                }));
+                    move = true;
+                } else if (msgbox == "Don't move (may result in recheck failure)")
+                    move = false;
+                else
+                    return null;
             }
 
-            return await Task.WhenAll(tasks);*/
-            throw null;
+            var allowedToRead = await server.AllowedToReadFiles(Check.Select(x => x.SourceFile));
+
+            if (allowedToRead.Any(x => !x.Value)) {
+                var msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                    ButtonDefinitions = new ButtonDefinition[] {
+                        new ButtonDefinition() {
+                            Name = "Proceed anyway",
+                            IsDefault = false,
+                        },
+                        new ButtonDefinition() {
+                            Name = "Abort",
+                            IsDefault = true,
+                            IsCancel = true
+                        }
+                    },
+                    ContentTitle = "RT# - transmission",
+                    ContentMessage = $"There are insufficient permissions to read one or more source files, how would you like to proceed?",
+                    Icon = Icon.Warning,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+
+                if (msgbox == "Proceed anyway") {
+                } else
+                    return null;
+            }
+
+            // No pre-check for transmission
+            /*var err = await torrentsClient.MoveDownloadDirectoryPreCheck(In, Check, move);
+
+            if (err != null) {
+                await MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
+                    ContentTitle = "RT# - transmission",
+                    ContentMessage = err,
+                    Icon = Icon.Error,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+
+                return null;
+            }*/
+
+            var session = await torrentsClient.MoveDownloadDirectory(In, move, true);
+
+            return session;
         }
 
-        public async Task<TorrentStatuses> PerformVoidAction(IList<byte[]> In, Func<int[], Task> Fx)
+        public async Task<TorrentStatuses> StopTorrents(IList<byte[]> In)
         {
-            try {
-                await Fx(Translate(In));
-            } catch (Exception ex) {
-                return new TorrentStatuses(In.Select(x => (x, (IList<Exception>)new[] { ex })));
-            }
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            return new TorrentStatuses(In.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())));
+            return await client.StopTorrents(In);
         }
 
-        public async Task<TorrentStatuses> PerformVoidActionObj(IList<byte[]> In, Func<object[], Task> Fx)
+        public async Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> In)
         {
-            try {
-                await Fx(TranslateObj(In));
-            } catch (Exception ex) {
-                return new TorrentStatuses(In.Select(x => (x, (IList<Exception>)new[] { ex })));
-            }
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            return new TorrentStatuses(In.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())));
+            return await client.ReannounceToAllTrackers(In);
         }
 
-        public Task<TorrentStatuses> StopTorrents(IList<byte[]> In) => PerformVoidActionObj(In, Client.TorrentStopAsync);
+        public async Task<TorrentStatuses> RemoveTorrents(IList<byte[]> In)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-        public Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> In) => PerformVoidAction(In, x => {
-            TransmissionRequest request = new TransmissionRequest("torrent-reannounce", new Dictionary<string, object> { { "ids", x } });
-            var sendRequestAsync = Client.GetType().GetMethod("SendRequestAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            return (Task<TransmissionResponse>)sendRequestAsync!.Invoke(Client, new[] { request })!;
-        });
+            return await client.RemoveTorrents(In);
+        }
 
-        public Task<TorrentStatuses> RemoveTorrents(IList<byte[]> In) => PerformVoidAction(In, x => Client.TorrentRemoveAsync(x, deleteData: false));
+        public async Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-        public Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In) => PerformVoidAction(In.Select(x => x.Hash).ToArray(), x => Client.TorrentRemoveAsync(x, deleteData: true));
+            return await client.RemoveTorrentsAndData(In);
+        }
 
         public async Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In)
         {
-            Init();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var tasks = new List<Task<(byte[] Hash, IList<Exception> Exceptions)>>();
-            foreach (var (hash, labels) in In) {
-                tasks.Add(Task.Run(async () => {
-                    Exception exception = null;
+            var ret = await client.SetLabels(In);
+            await client.QueueTorrentUpdate([.. In.Select(x => x.Hash)]);
 
-                    try {
-                        await Client.TorrentSetAsync(new global::Transmission.Net.Arguments.TorrentSettings {
-                            IDs = Translate(hash),
-                            Labels = labels
-                        });
-                    } catch (Exception ex) {
-                        exception = ex;
-                    }
-
-                    return (hash, exception == null ? (IList<Exception>)Array.Empty<Exception>() : (new[] { exception }));
-                }));
-            }
-
-            return new TorrentStatuses(await Task.WhenAll(tasks));
+            return ret;
         }
 
-        public Task<TorrentStatuses> StartTorrents(IList<byte[]> In) => PerformVoidActionObj(In, Client.TorrentStartAsync);
+        public async Task<TorrentStatuses> StartTorrents(IList<byte[]> In)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-        public Task<TorrentStatuses> PauseTorrents(IList<byte[]> In) => throw new NotSupportedException();
+            return await client.StartTorrents(In);
+        }
+
+        public Task<TorrentStatuses> PauseTorrents(IList<byte[]> In) => throw new NotImplementedException();
 
         public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
         {
-            Init();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            var torrents = await Client.TorrentGetAsync(Translate(In.Select(x => x.Hash).ToArray()))!;
-
-            return torrents!.Torrents.Select(x => {
-                var bits = Convert.FromBase64String(x.Pieces!);
-                var totalBits = bits.Length * 8;
-                var pieces = new PieceState[totalBits];
-                for (var i = 0;i < totalBits;i += 8) {
-                    var bitset = bits[i >> 3];
-                    for (var a = 0;a < 8;a++) {
-                        if ((bitset & 0x80) == 0)
-                            pieces[i+a] = PieceState.NotDownloaded;
-                        else
-                            pieces[i+a] = PieceState.Downloaded;
-                        bitset <<= 1;
-                    }
-                }
-
-                return (
-                    Hash: Convert.FromHexString(x.HashString!),
-                    Pieces: (IList<PieceState>)pieces
-                );
-            }).ToInfoHashDictionary(x => x.Hash, x => x.Pieces);
+            return await client.GetPieces(In, cancellationToken);
         }
     }
 }

@@ -30,7 +30,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             this.Logger = Logger;
         }
 
-        public async Task<DeltaTorrentsListResponse>? GetChanges(bool AlwaysFullUpdate, CancellationToken CancellationToken)
+        public async Task<DeltaTorrentsListResponse?> GetChanges(bool AlwaysFullUpdate, CancellationToken CancellationToken)
         {
             InfoHashDictionary<Torrent>? previousList = null;
             InfoHashDictionary<Torrent> currentList;
@@ -70,8 +70,6 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             }
 
             var ret = new DeltaTorrentsListResponse();
-
-            int c = 0;
 
             foreach (var (hash, torrent) in currentList) {
                 var trackers = currentTrackers[hash];
@@ -201,7 +199,6 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                         torrent.StatusMessage != previous.StatusMessage ||
                         torrent.WantedSize != previous.WantedSize) {
 
-                        c++;
                         add(false);
                     }
                 } else if (torrent.Downloaded != previous.Downloaded ||
@@ -227,8 +224,6 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     add(false);
                 }
             }
-
-            Logger.LogInformation($"C: {c}");
 
             if (previousList != null) {
                 foreach (var t in previousList) {

@@ -10,6 +10,7 @@ using NetTools;
 using RTSharp.Core.Services.Cache.TrackerDb.Migrations;
 using RTSharp.Shared.Utils;
 using SQLitePCL;
+using System.Collections.Generic;
 
 namespace RTSharp.Core.Services.Cache.TrackerDb
 {
@@ -50,6 +51,17 @@ namespace RTSharp.Core.Services.Cache.TrackerDb
             await using var conn = await New();
 
             var d = await conn.QueryFirstOrDefaultAsync<TrackerInfo>("select Name, ImageHash from TrackerDb where Domain = @Domain", new {
+                Domain = Domain
+            });
+
+            return d;
+        }
+
+        public async Task<IEnumerable<TrackerInfo>> GetTrackerInfo(IEnumerable<string> Domain)
+        {
+            await using var conn = await New();
+
+            var d = await conn.QueryAsync<TrackerInfo>("select Domain, Name, ImageHash from TrackerDb where Domain IN @Domain", new {
                 Domain = Domain
             });
 

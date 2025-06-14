@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Microsoft.Extensions.DependencyInjection;
+
+using NP.Utilities;
+
 using RTSharp.Core.Services.Cache.Images;
 using RTSharp.Core.Services.Cache.TrackerDb;
 using RTSharp.Plugin;
@@ -14,6 +21,56 @@ using RTSharp.Shared.Utils;
 
 namespace RTSharp.Models
 {
+    public static class TorrentUpdateExt
+    {
+        public static async ValueTask UpdateFromPluginModelMulti(IEnumerable<Torrent> Domain, InfoHashDictionary<Shared.Abstractions.Torrent> Plugin)
+        {
+            var trackers = new HashSet<string>();
+            foreach (var torrent in Domain) {
+                if (Plugin.TryGetValue(torrent.Hash, out var plugin)) {
+                    if (torrent.TrackerSingle != plugin.TrackerSingle && plugin.TrackerSingle != null) {
+                        trackers.Add(plugin.TrackerSingle);
+                    }
+                }
+            }
+
+            IEnumerable<TrackerInfo> trackerInfo = [];
+            Dictionary<TrackerInfo, Bitmap> images = [];
+
+            if (trackers.Count != 0) {
+                using var scope = Core.ServiceProvider.CreateScope();
+                var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
+                var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
+
+                trackerInfo = await trackerDb.GetTrackerInfo(trackers.Select(UriUtils.GetDomainForTracker));
+                var imagesTasks = trackerInfo.Where(x => x.ImageHash != null).ToDictionary(x => x, x => imageCache.GetCachedImage(x.ImageHash).AsTask());
+                await Task.WhenAll(imagesTasks.Values.ToArray());
+
+                images = imagesTasks.ToDictionary(x => x.Key, x => x.Value.Result);
+            }
+
+            foreach (var torrent in Domain) {
+                if (Plugin.TryGetValue(torrent.Hash, out var plugin)) {
+                    if (plugin.TrackerSingle != torrent.TrackerSingle && plugin.TrackerSingle != null) {
+                        var domain = UriUtils.GetDomainForTracker(plugin.TrackerSingle);
+                        var info = trackerInfo.FirstOrDefault(x => x.Domain == domain);
+
+                        if (info != null) {
+                            if (images.TryGetValue(info, out var image)) {
+                                torrent.TrackerIcon = image;
+                            }
+                            torrent.TrackerDisplayName = info.Name ?? domain;
+                        } else {
+                            torrent.TrackerDisplayName = domain;
+                        }
+                    }
+
+                    await torrent.UpdateFromPluginModel(plugin, false);
+                }
+            }
+        }
+    }
+
     public partial class Torrent : ObservableObject
     {
         /// <summary>
@@ -120,7 +177,7 @@ namespace RTSharp.Models
         /// Torrent label
         /// </summary>
         [ObservableProperty]
-        public HashSet<string> labels;
+        public ObservableCollection<string> labels;
 
         /// <summary>
         /// Torrent peers. Connected, Total
@@ -213,7 +270,7 @@ namespace RTSharp.Models
             this.Owner = Owner;
         }
 
-        public async ValueTask UpdateFromPluginModel(Shared.Abstractions.Torrent In)
+        public async ValueTask UpdateFromPluginModel(Shared.Abstractions.Torrent In, bool updateTracker = true)
         {
             this.Name = In.Name;
 
@@ -252,7 +309,7 @@ namespace RTSharp.Models
             this.DLSpeed = In.DLSpeed;
             this.UPSpeed = In.UPSpeed;
             this.ETA = In.ETA;
-            this.Labels = In.Labels;
+            this.Labels = In.Labels.ToObservableCollection();
             this.Peers = new ConnectedTotalPair(In.Peers.Connected, In.Peers.Total);
             this.Seeders = new ConnectedTotalPair(In.Seeders.Connected, In.Seeders.Total);
 
@@ -267,7 +324,7 @@ namespace RTSharp.Models
 
             this.InternalPriority = In.Priority;
 
-            if (this.TrackerSingle != In.TrackerSingle) {
+            if (updateTracker && this.TrackerSingle != In.TrackerSingle) {
                 using var scope = Core.ServiceProvider.CreateScope();
                 var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
                 var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
@@ -313,7 +370,7 @@ namespace RTSharp.Models
                 DLSpeed = DLSpeed,
                 UPSpeed = UPSpeed,
                 ETA = ETA,
-                Labels = Labels,
+                Labels = [.. Labels],
                 Peers = (Peers.Connected, Peers.Total),
                 Seeders = (Seeders.Connected, Seeders.Total),
                 Priority = InternalPriority,

@@ -13,5 +13,6 @@
              TextWrapping="Wrap"
              FontFamily="Consolas"
              Text="{Binding Text}"
+             ScrollViewer.VerticalScrollBarVisibility="Visible"
              Margin="5,5,5,5" />
 </Window>

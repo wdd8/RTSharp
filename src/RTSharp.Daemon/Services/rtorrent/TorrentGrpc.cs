@@ -82,12 +82,14 @@ namespace RTSharp.Daemon.Services.rtorrent
                 while (true) {
                     var changes = await sub.GetChanges(false, cts.Token);
                     
-                    if (cts.IsCancellationRequested)
+                    if (cts.IsCancellationRequested) {
+                        session.Progress.State = TASK_STATE.FAILED;
                         break;
+                    }
                     
                     if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
                         foreach (var torrentResult in res) {
-                            var torrentState = changes.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                            var torrentState = changes!.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
                             torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
                             torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
                             
@@ -103,7 +105,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                     
                     if (stateObserved.Count != 0) {
                         foreach (var torrentResult in res) {
-                            var torrentState = changes.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                            var torrentState = changes!.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
                             torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
                             torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
                             
@@ -117,8 +119,10 @@ namespace RTSharp.Daemon.Services.rtorrent
                         }
                     }
                     
-                    if (stateObserved.All(x => !x.Value))
+                    if (stateObserved.All(x => !x.Value)) {
+                        session.Progress.State = TASK_STATE.DONE;
                         break;
+                    }
                 }
             });
             
@@ -1014,6 +1018,16 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
             
             return ret;
+        }
+
+        public Task<Protocols.DataProvider.Torrent> GetTorrent(BytesValue Hash)
+        {
+            var torrent = PollingSubscription.GetLatestHistoryEntry(Hash.Value.ToByteArray());
+
+            if (torrent == null)
+                throw new RpcException(new Status(StatusCode.NotFound, "Torrent not found"));
+
+            return Task.FromResult(torrent.Value.Torrent);
         }
     }
 }

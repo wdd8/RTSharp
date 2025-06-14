@@ -253,10 +253,12 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                         if (pass) {
                             Logger.LogDebug("(1) Observed all");
+                            session.Progress.State = TASK_STATE.DONE;
                             break;
                         }
                     } else {
                         Logger.LogWarning("Finishing checking for rehash state after 10 minutes");
+                        session.Progress.State = TASK_STATE.FAILED;
                         break;
                     }
 
@@ -395,13 +397,13 @@ namespace RTSharp.Daemon.Services.qbittorrent
             var tasks = Req.Hashes.Select(x => (Hash: x, Peers: Client.Client.GetPeerPartialDataAsync(Convert.ToHexString(x.Span), 0))).ToArray();
             await Task.WhenAll(tasks.Select(x => x.Peers));
 
+            using var scope = ServiceProvider.CreateScope();
+            var smas = scope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
+
             return new TorrentsPeersReply {
                 Reply = {
                     tasks.Select(x => {
                         Debug.Assert(x.Peers.Result.FullUpdate);
-
-                        using var scope = ServiceProvider.CreateScope();
-                        var smas = scope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
 
                         Protocols.DataProvider.Torrent? torrent;
 
@@ -467,19 +469,43 @@ namespace RTSharp.Daemon.Services.qbittorrent
             };
         }
 
-        /*public async Task<Torrent> GetTorrent(byte[] Hash)
+        public async Task<Protocols.DataProvider.Torrent> GetTorrent(BytesValue Hash)
         {
             await Client.Init();
 
             var torrent = await Client.Client.GetTorrentListAsync(new TorrentListQuery {
-                Hashes = new[] { Convert.ToHexString(Hash) }
+                Hashes = [ Convert.ToHexString(Hash.Value.Span) ]
             });
 
             if (!torrent.Any())
-                throw new ArgumentException("Torrent not found");
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
 
-            return TorrentMapper.MapFromExternal(torrent.First());
-        }*/
+            var internalTorrent = new Protocols.DataProvider.Torrent {
+                Hash = Hash.ToByteString()
+            };
+            TorrentMapper.ApplyFromExternal(internalTorrent, torrent.First());
+            return internalTorrent;
+        }
+
+        public async Task<TorrentsListResponse> GetTorrentList()
+        {
+            await Client.Init();
+
+            var all = await Client.Client.GetTorrentListAsync();
+
+            var ret = new TorrentsListResponse {
+                List = {
+                    all.Select(x => {
+                        var internalTorrent = new Protocols.DataProvider.Torrent {
+                            Hash = Convert.FromHexString(x.Hash).ToByteString()
+                        };
+                        TorrentMapper.ApplyFromExternal(internalTorrent, x);
+                        return internalTorrent;
+                    })
+                }
+            };
+            return ret;
+        }
 
         public async Task GetTorrentListUpdates(GetTorrentListUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsListResponse> Res, CancellationToken CancellationToken)
         {
@@ -616,7 +642,6 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 await Task.Delay(pollInternal, CancellationToken);
             }
         }
-
 
         public async Task<BytesValue> MoveDownloadDirectory(MoveDownloadDirectoryArgs Req, CancellationToken CancellationToken)
         {
@@ -813,6 +838,8 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
         public async Task<TorrentsTrackersReply> GetTorrentsTrackers(Torrents Req, CancellationToken CancellationToken)
         {
+            await Client.Init();
+
             var tasks = Req.Hashes.Select(x => (Hash: x, Trackers: Client.Client.GetTorrentTrackersAsync(Convert.ToHexString(x.Span), CancellationToken))).ToArray();
 
             return new TorrentsTrackersReply {

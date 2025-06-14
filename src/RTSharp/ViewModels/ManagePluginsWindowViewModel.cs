@@ -5,7 +5,6 @@ using DynamicData;
 
 using MsBox.Avalonia;
 
-using RTSharp.Core.Util;
 using RTSharp.Plugin;
 using RTSharp.Shared.Controls.Views;
 
@@ -22,7 +21,7 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
 {
     public ObservableCollection<PluginInstance> ActivePlugins => Plugins.LoadedPlugins;
 
-    public ObservableCollectionEx<string> UnloadedPluginDirs { get; } = new();
+    public ObservableCollection<string> UnloadedPluginDirs { get; } = new();
 
     [ObservableProperty]
     public string selectedUnloadedDir;
@@ -35,7 +34,9 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
         UnloadedPluginDirs.AddRange(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName));
     }
 
-    [RelayCommand]
+    public bool CanExecute() => !String.IsNullOrEmpty(SelectedUnloadedDir);
+
+    [RelayCommand(CanExecute = nameof(CanExecute))]
     public async Task LoadClick()
     {
         var existingConfig = Plugins.GetFirstPluginConfigOrDefault(Path.GetFullPath(Path.Combine(Shared.Abstractions.Consts.PLUGINS_PATH, SelectedUnloadedDir)));
@@ -56,7 +57,8 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
             var msgBox = MessageBoxManager.GetMessageBoxStandard("RT# - Failed to load plugin", $"Failed to load plugin {config}\n{ex}", MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Stop, Avalonia.Controls.WindowStartupLocation.CenterOwner);
             await msgBox.ShowAsync();
         } finally {
-            UnloadedPluginDirs.Replace(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName).ToList());
+            UnloadedPluginDirs.Clear();
+            UnloadedPluginDirs.AddRange(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName));
             wBox.Close();
         }
     }
@@ -65,6 +67,7 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
     public async Task UnloadClick()
     {
         await SelectedActivePlugin.Unload();
-        UnloadedPluginDirs.Replace(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName).ToList());
+        UnloadedPluginDirs.Clear();
+        UnloadedPluginDirs.AddRange(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName));
     }
 }

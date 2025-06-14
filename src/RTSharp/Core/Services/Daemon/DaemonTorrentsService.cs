@@ -363,7 +363,7 @@ namespace RTSharp.Core.Services.Daemon
                         Labels = { x.Labels }
                     })
                 }
-            });
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
             
             return FromReply(reply);
         }
@@ -434,6 +434,20 @@ namespace RTSharp.Core.Services.Daemon
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
             return new Guid(session.Value.Span);
+        }
+
+        public async Task<Shared.Abstractions.Torrent> GetTorrent(byte[] Hash)
+        {
+            var resp = await TorrentsClient.GetTorrentAsync(Hash.ToBytesValue(), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+
+            return Mapper.MapFromProto(resp);
+        }
+
+        public async Task QueueTorrentUpdate(IList<byte[]> Hashes)
+        {
+            await TorrentClient.QueueTorrentUpdateAsync(new Torrents {
+                Hashes = { Hashes.Select(x => x.ToByteString()) }
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
         }
     }
 }

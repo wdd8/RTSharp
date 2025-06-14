@@ -2,6 +2,7 @@ syntax = "proto3";
 
 option csharp_namespace = "RTSharp.Daemon.Protocols.DataProvider";
 
+import "google/protobuf/wrappers.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
@@ -10,6 +11,7 @@ import "DataProvider/Types.proto";
 service GRPCTorrentsService {
     rpc GetTorrentListUpdates (GetTorrentListUpdatesRequest) returns (stream DeltaTorrentsListResponse);
     rpc GetTorrentList (google.protobuf.Empty) returns (TorrentsListResponse);
+    rpc GetTorrent (google.protobuf.BytesValue) returns (Torrent);
 }
 
 message GetTorrentListUpdatesRequest {

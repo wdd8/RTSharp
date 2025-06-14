@@ -22,6 +22,7 @@
     </UserControl.Styles>
 
     <StackPanel Margin="8 16 8 8">
+        <TextBlock FontSize="16" Text="{Binding Torrent.Name}" Margin="0 0 0 8" />
         <Grid ColumnDefinitions="*, Auto" Margin="0 0 0 16">
             <Border Grid.Column="0" BorderBrush="DarkGray" BorderThickness="1">
                 <views:PieceProgressBar Pieces="{Binding Pieces}" Height="20" />

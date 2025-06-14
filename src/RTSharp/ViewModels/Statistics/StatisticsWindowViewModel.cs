@@ -33,7 +33,7 @@ namespace RTSharp.ViewModels.Statistics
 
         public bool RefreshStats()
         {
-            var snap = Core.TorrentPolling.TorrentPolling.Torrents.ToArray();
+            var snap = Core.TorrentPolling.TorrentPolling.Torrents.Items.ToArray();
 
             var total = 0;
             ulong totalSeedingSize = 0, totalUploaded = 0, totalDownloaded = 0;

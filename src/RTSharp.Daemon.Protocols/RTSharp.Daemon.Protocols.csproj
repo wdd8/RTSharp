@@ -10,6 +10,7 @@
       <None Remove="DataProvider\CommandReply.proto" />
       <None Remove="DataProvider\Settings.proto" />
       <None Remove="DataProvider\Settings\qbittorrent.proto" />
+      <None Remove="DataProvider\Settings\transmission.proto" />
       <None Remove="DataProvider\Types.proto" />
       <None Remove="Torrent.proto" />
       <None Remove="Torrents.proto" />
@@ -22,6 +23,7 @@
     <ItemGroup>
         <Protobuf Include="DataProvider\Settings\qbittorrent.proto" />
         <Protobuf Include="DataProvider\Settings\rtorrent.proto" GrpcServices="Both" />
+        <Protobuf Include="DataProvider\Settings\transmission.proto" />
         <Protobuf Include="Files.proto" GrpcServices="Both" />
         <Protobuf Include="Server.proto" GrpcServices="Both" />
         <Protobuf Include="DataProvider\CommandReply.proto" GrpcServices="Both" />

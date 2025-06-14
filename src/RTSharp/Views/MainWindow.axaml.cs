@@ -174,19 +174,30 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
             scope.ServiceProvider.GetRequiredService<TrackerDb>().Initialize()
         );
 
+        var domainParser = scope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>();
+        var domainParserTask = domainParser.Initialize();
+
         var waitingBox = new WaitingBox("Loading...", "Initializing and loading data providers and plugins...", WAITING_BOX_ICON.VISTA_WAIT);
         Log.Logger.Debug("Loading plugins...");
 
         _ = waitingBox.ShowDialog(this);
+        const int TOTAL_TASKS = 4;
+        int curProgress = 100 / TOTAL_TASKS;
+        int progress() => curProgress += 100 / TOTAL_TASKS;
 
         await Plugin.Plugins.LoadPlugins(waitingBox);
 
-        waitingBox.Report((33, "Loading caches..."));
+        waitingBox.Report((progress(), "Loading caches..."));
         Log.Logger.Debug("Loading caches...");
 
         await cacheTasks;
 
-        waitingBox.Report((66, "Starting..."));
+        waitingBox.Report((progress(), "Loading domain parser..."));
+        Log.Logger.Debug("Loading domain parser...");
+
+        await domainParserTask;
+
+        waitingBox.Report((progress(), "Starting..."));
         Log.Logger.Debug("Starting...");
 
         TorrentPolling.Start();

@@ -75,6 +75,8 @@ namespace RTSharp.Models
         [ObservableProperty]
         public ulong peerDLSpeed;
 
+        public DateTime ObservedOn { get; set; }
+
         public void UpdateFromPluginModel(Shared.Abstractions.Peer In)
         {
             this.Flags = FlagsMapper.MapConcat(In.Flags, x => x switch {

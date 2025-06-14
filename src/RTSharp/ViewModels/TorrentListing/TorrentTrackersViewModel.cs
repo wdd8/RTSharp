@@ -68,15 +68,15 @@ namespace RTSharp.ViewModels.TorrentListing
         }
 
         [RelayCommand]
-        public async Task SetName((IList SelectedItems, string Text) In)
+        public async Task SetName((object SelectedItems, string Text) In)
         {
-            using var scope = Core.ServiceProvider.CreateScope();
-            var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
-
-            var trackers = In.SelectedItems.Cast<Models.Tracker>().ToArray();
+            var trackers = ((IList)In.SelectedItems).Cast<Models.Tracker>().ToArray();
 
             if (trackers.Length != 1)
                 return;
+
+            using var scope = Core.ServiceProvider.CreateScope();
+            var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
 
             trackers[0].DisplayName = In.Text;
             trackers[0].UpdateDisplay();
@@ -110,9 +110,9 @@ namespace RTSharp.ViewModels.TorrentListing
             if (iconPath == null)
                 return;
 
-            byte[] icon;
+            System.IO.Stream icon;
             try {
-                icon = await System.IO.File.ReadAllBytesAsync(iconPath);
+                icon = System.IO.File.OpenRead(iconPath);
             } catch (Exception ex) {
                 Log.Logger.Error(ex, $"Failed to open file \"{iconPath}\"");
                 return;
@@ -123,14 +123,18 @@ namespace RTSharp.ViewModels.TorrentListing
                 Name = trackers[0].Domain
             };
 
-            var (imageHash, image) = await imageCache.AddImage(icon);
+            var img = await imageCache.AddImage(icon);
+            if (img == null) {
+                Log.Logger.Error("Invalid image");
+                return;
+            }
 
-            trackerInfo.ImageHash = imageHash;
+            trackerInfo.ImageHash = img.Value.Hash;
             foreach (var tracker in Trackers) {
                 if (tracker.Domain != trackers[0].Domain)
                     continue;
 
-                tracker.Icon = image;
+                tracker.Icon = img.Value.Image;
             }
 
             await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, trackerInfo);

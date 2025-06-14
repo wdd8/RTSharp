@@ -1,17 +1,17 @@
-﻿using NetTools;
+﻿using Arin.NET.Client;
+using Arin.NET.Entities;
+
+using NetTools;
 using Serilog;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
-using Whois;
-using Whois.NET;
-using Whois.Parsers;
 
 namespace RTSharp.Core.Services
 {
@@ -25,8 +25,9 @@ namespace RTSharp.Core.Services
 
     public class Whois
     {
-        private static Regex DomainRegex = new(@"@(([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6})", RegexOptions.Compiled);
-        private static Regex CidrRegex = new(@"(?<adr>[\da-f\.:]+)/(?<mask>\d+)", RegexOptions.Compiled);
+        private static ArinClient ArinClient = new();
+
+        private static RegionInfo[] Regions = [ ..CultureInfo.GetCultures(CultureTypes.SpecificCultures).Select(x => new RegionInfo(x.Name)) ];
 
         public static bool IsPrivate(IPAddress ip)
         {
@@ -81,94 +82,100 @@ namespace RTSharp.Core.Services
                 };
             }
 
-            global::Whois.NET.WhoisResponse? whois;
+            var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(5));
+
+            RdapResponse rdap;
             try {
-                whois = await global::Whois.NET.WhoisClient.QueryAsync(In.ToString(), new WhoisQueryOptions {
-                    Timeout = 5000,
-                    RethrowExceptions = true,
-                    Encoding = Encoding.UTF8
-                });
-            } catch (Exception ex) {
-                Log.Logger.Debug(ex, "Failed to fetch information for peer " + In);
+                rdap = await ArinClient.Query(In, cts.Token);
+            } catch {
                 return null;
             }
 
-            var raw = whois.Raw;
-
-            var parser = new WhoisParser();
-            var parsed = parser.Parse(whois.RespondedServers.Last(), raw);
-
-            var org = parsed?.Registrant?.Name ?? parsed?.AdminContact?.Organization ?? parsed?.TechnicalContact?.Organization ?? parsed?.Registrant?.Organization ?? null;
-            var ret = new WhoisInfo {
-                Organization = org == null ? null : org.Trim(),
-            };
-            
-            var domainMatches = DomainRegex.Match(raw);
-            if (domainMatches.Groups[0].Captures.Count != 0)
-                ret.Domain = domainMatches.Groups[0].Captures[0].Value[1..];
-
-            if (ret.Domain != null) {
-                if (ret.Domain.StartsWith("abuse."))
-                    ret.Domain = ret.Domain[6..];
+            if (rdap is ErrorResponse error) {
+                if (error.ErrorCode == 429) {
+                    await Task.Delay(TimeSpan.FromSeconds(30));
+                }
+                Log.Logger.Error($"{error.ErrorCode}: {error.Title}");
+                return null;
             }
 
-            foreach (var line in raw.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)) {
-                if (line.StartsWith('%'))
-                    continue;
+            var resp = (IpResponse)rdap;
 
-                var colIdx = line.IndexOf(':');
-                if (colIdx == -1)
-                    continue;
-
-                var key = line[..colIdx];
-                var val = line[(colIdx+1)..].Trim();
-
-                switch (key.ToLowerInvariant()) {
-                    case "country":
-                        ret.Country = val.ToLower();
-                        break;
-                    case "inetnum":
-                    case "netrange":
-                    case "cidr":
-                        try {
-                            ret.Range = IPAddressRange.Parse(val);
-                        } catch { }
-                        
-                        if (ret.Range == null || !ret.Range.Contains(In)) {
-                            var cidrMatch = CidrRegex.Match(val);
-                            if (!cidrMatch.Success)
-                                continue;
-
-                            var mask = Int32.Parse(cidrMatch.Groups["mask"].Value);
-                            ret.Range = IPAddressRange.Parse(In + "/" + mask);
-                        }
-                        break;
-                    case "organization":
-                    case "orgname":
-                    case "org-name":
-                    case "responsible":
-                    case "owner":
-                    case "person":
-                    case "mnt-by":
-                    case "role":
-                    case "descr":
-                        ret.Organization ??= val.Trim();
-                        break;
+            var entities = new List<Entity>();
+            void addEntities(Entity entity)
+            {
+                entities.Add(entity);
+                foreach (var e in entity.Entities) {
+                    entities.Add(e);
+                    addEntities(e);
                 }
+            }
+            foreach (var e in resp.Entities) {
+                addEntities(e);
+            }
+
+            var vcards = entities.OrderBy(x => x.Roles?.Contains("technical") == true).Select(x => x.VCard);
+            var domain = vcards.Select(x => x?.FirstOrDefault(i => i.Key == "email").Value).FirstOrDefault(x => x != null)?.Value?.FirstOrDefault();
+            IPAddressRange range;
+            string organization = "Unknown";
+            string country = vcards.Select(x => x?.FirstOrDefault(i => i.Key == "adr").Value).FirstOrDefault(x => x != null)?.Value?.Where(x => !String.IsNullOrWhiteSpace(x))?.LastOrDefault();
+
+            if (!String.IsNullOrWhiteSpace(domain)) {
+                domain = domain.Split('@')[^1];
             }
 
             // Domain replacements
-            if (ret.Domain != null && DomainReplacements.TryGetValue(ret.Domain, out var domainReplacement))
-                ret.Domain = domainReplacement;
+            if (!String.IsNullOrWhiteSpace(domain) && DomainReplacements.TryGetValue(domain, out var domainReplacement))
+                domain = domainReplacement;
+
+            if (String.IsNullOrWhiteSpace(country)) {
+                country = vcards.Select(x => x?.FirstOrDefault(i => i.Key == "adr").Value).FirstOrDefault(x => x != null)?.Parameters?.FirstOrDefault().Value?.ToString()?.Split('\n')?.LastOrDefault();
+            }
+            if (!String.IsNullOrWhiteSpace(country)) {
+                Log.Logger.Information("-> " + country);
+                country = Regions.FirstOrDefault(region => region.EnglishName.Contains(country))?.TwoLetterISORegionName;
+                Log.Logger.Information("?-> " + country);
+
+                if (country == null && domain?.Contains('.') == true) {
+                    try {
+                        country = new RegionInfo(domain.Split('.')[^1]).TwoLetterISORegionName;
+                        Log.Logger.Information("??-> " + country);
+                    } catch { }
+                }
+            }
+            if (String.IsNullOrWhiteSpace(country) && domain?.Contains('.') == true) {
+                try {
+                    country = new RegionInfo(domain.Split('.')[^1]).TwoLetterISORegionName;
+                    Log.Logger.Information("??!-> " + country);
+                } catch { }
+            }
 
             // Fallback on range
-            if (ret.Range == null)
-                ret.Range = new IPAddressRange(In);
+            if (String.IsNullOrWhiteSpace(resp.Handle))
+                range = new IPAddressRange(In);
+            else
+                range = IPAddressRange.Parse(resp.StartAddress + " - " + resp.EndAddress);
 
-            if (ret.Organization == null)
-                ret.Organization = "Unknown";
+            var fnOrg = vcards.Select(x => x?.FirstOrDefault(i => i.Key == "fn").Value).FirstOrDefault(x => x != null)?.Value?.FirstOrDefault();;
+            if (!String.IsNullOrWhiteSpace(resp.Name)) {
+                organization = resp.Name;
 
-            return ret;
+                // Prefer other org string if original is in upper case
+                if (fnOrg != null && organization.ToUpperInvariant() == organization) {
+                    organization = fnOrg;
+                }
+            } else {
+                organization = fnOrg;
+            }
+
+            return new WhoisInfo
+            {
+                Domain = String.IsNullOrWhiteSpace(domain) ? null : domain,
+                Range = range,
+                Organization = organization,
+                Country = String.IsNullOrWhiteSpace(country) ? null : country
+            };
         }
     }
 }

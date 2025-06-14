@@ -12,6 +12,7 @@ using Avalonia.Media.Imaging;
 using RTSharp.Shared.Utils;
 using RTSharp.Core.Services.Cache.Images.Migrations;
 using Microsoft.Data.Sqlite;
+using Avalonia;
 
 namespace RTSharp.Core.Services.Cache.Images
 {
@@ -60,24 +61,20 @@ namespace RTSharp.Core.Services.Cache.Images
 
         private static Dictionary<byte[], WeakReference<Bitmap>> Images;
 
-        private Bitmap CacheInMemory(byte[] ImageHash, byte[] Image)
+        private Bitmap CacheInMemory(byte[] ImageHash, Bitmap Image)
         {
-            Bitmap? bitmap;
             if (Images.TryGetValue(ImageHash, out var weakRef))
             {
-                if (weakRef.TryGetTarget(out bitmap))
+                if (weakRef.TryGetTarget(out var cached))
                 {
-                    return bitmap;
+                    return cached;
                 }
             }
 
-            using var mem = new MemoryStream(Image);
-            bitmap = new Bitmap(mem);
-
             if (weakRef != null)
             {
-                weakRef.SetTarget(bitmap);
-                return bitmap;
+                weakRef.SetTarget(Image);
+                return Image;
             }
 
             if (Images.Count > Config.Caching.Value.InMemoryImages)
@@ -107,18 +104,15 @@ namespace RTSharp.Core.Services.Cache.Images
                 }
             }
 
-            Images[ImageHash] = new WeakReference<Bitmap>(bitmap);
+            Images[ImageHash] = new WeakReference<Bitmap>(Image);
 
-            return bitmap;
+            return Image;
         }
 
         public async ValueTask<Bitmap?> GetCachedImage(byte[] ImageHash)
         {
-            Bitmap? bitmap;
-            if (Images.TryGetValue(ImageHash, out var weakRef))
-            {
-                if (weakRef.TryGetTarget(out bitmap))
-                {
+            if (Images.TryGetValue(ImageHash, out var weakRef)) {
+                if (weakRef.TryGetTarget(out var bitmap)) {
                     return bitmap;
                 }
             }
@@ -133,39 +127,42 @@ namespace RTSharp.Core.Services.Cache.Images
             if (d == default)
                 return null;
 
-            return CacheInMemory(ImageHash, d.Image);
+            using var mem = new MemoryStream();
+            mem.Write(d.Image);
+            mem.Position = 0;
+            var image = new Bitmap(mem);
+
+            return CacheInMemory(ImageHash, image);
         }
 
-        public Task<(byte[] Hash, Bitmap Image)> AddImage(Stream Image)
-        {
-            if (Image is MemoryStream memStream) {
-                return AddImage(memStream.ToArray());
-            }
-
-            using var memoryStream = new MemoryStream();
-            Image.CopyTo(memoryStream);
-            return AddImage(memoryStream.ToArray());
-        }
-
-
-        public async Task<(byte[] Hash, Bitmap Image)> AddImage(byte[] Image)
+        public async Task<(byte[] Hash, Bitmap Image)?> AddImage(Stream Image)
         {
             await using var conn = await New();
 
-            var sha256 = SHA256.HashData(Image);
+            Bitmap scaled;
+            try {
+                using var bitmap = new Bitmap(Image);
+                scaled = bitmap.CreateScaledBitmap(new PixelSize(64, 64));
+            } catch {
+                return null;
+            }
+
+            var mem = new MemoryStream();
+            scaled.Save(mem);
+            mem.Position = 0;
+
+            var sha256 = SHA256.HashData(mem);
+            mem.Position = 0;
+            var bytes = mem.ToArray();
 
             Bitmap? alreadyCached;
             if ((alreadyCached = await GetCachedImage(sha256)) != null) {
                 return (sha256, alreadyCached);
             }
 
-            await conn.ExecuteAsync("insert into Images (ImageHash, Image) values (@ImageHash, @Image)", new
-            {
-                ImageHash = sha256,
-                Image
-            });
+            await conn.ExecuteAsync("insert into Images (ImageHash, Image) values (@ImageHash, @Image)", new CachedImage(ImageHash: sha256, Image: bytes));
 
-            return (sha256, CacheInMemory(sha256, Image));
+            return (sha256, CacheInMemory(sha256, scaled));
         }
     }
 }

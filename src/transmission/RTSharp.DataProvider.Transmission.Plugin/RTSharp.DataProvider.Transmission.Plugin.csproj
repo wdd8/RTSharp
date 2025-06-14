@@ -32,7 +32,7 @@
         <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.6.2" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\Transmission.Net\Transmission.Net\Transmission.Net.csproj" />
+        <ProjectReference Include="..\..\RTSharp.Daemon.Protocols\RTSharp.Daemon.Protocols.csproj" />
         <ProjectReference Include="..\..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj">
             <Private>false</Private>
             <ExcludeAssets>runtime</ExcludeAssets>

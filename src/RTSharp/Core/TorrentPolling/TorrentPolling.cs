@@ -1,18 +1,24 @@
-﻿using RTSharp.Plugin;
+﻿using DynamicData;
+
+using Nito.AsyncEx;
+
+using RTSharp.Plugin;
+using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Utils;
+
+using Serilog;
+
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using RTSharp.Shared.Abstractions;
-using Serilog;
-using Nito.AsyncEx;
-using System.Collections.ObjectModel;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using RTSharp.Core.Util;
-using RTSharp.Shared.Utils;
 
 namespace RTSharp.Core.TorrentPolling
 {
@@ -27,8 +33,9 @@ namespace RTSharp.Core.TorrentPolling
             SingleWriter = true
         });
 
-        public static ObservableCollectionEx<Models.Torrent> Torrents { get; } = new();
+        public static SourceList<Models.Torrent> Torrents { get; } = new();
         public static ConcurrentInfoHashOwnerDictionary<Models.Torrent> TorrentsLookup { get; } = new();
+        public static event Action TorrentBatchChange;
 
         public static Dictionary<string, int> AllLabelReferences { get; } = new();
         public static IObservable<string[]> AllLabelReferencesObservable { get; private set; }
@@ -50,13 +57,13 @@ namespace RTSharp.Core.TorrentPolling
         {
             await foreach (var (dp, listingChanges) in ListingChanges.Reader.ReadAllAsync())
             {
-                var changes = listingChanges.Changes.ToList();
+                var changes = listingChanges.Changes.ToInfoHashDictionary(x => x.Hash);
                 var removed = listingChanges.Removed.ToHashSet(new HashEqualityComparer());
 
                 var toRemove = new List<Models.Torrent>();
 
                 // Since it is possible to remove torrent and add it right after in same change, we must handle removals first
-                foreach (var torrent in Torrents)
+                foreach (var torrent in Torrents.Items)
                 {
                     if (removed.Contains(torrent.Hash) && torrent.Owner == dp)
                     {
@@ -74,73 +81,62 @@ namespace RTSharp.Core.TorrentPolling
 
                 void add(string label)
                 {
-                    if (AllLabelReferences.ContainsKey(label))
-                        AllLabelReferences[label]++;
+                    ref var val = ref CollectionsMarshal.GetValueRefOrAddDefault(AllLabelReferences, label, out var exists);
+
+                    if (exists)
+                        val++;
                     else {
-                        AllLabelReferences[label] = 1;
+                        val = 1;
                         labelsChanged = true;
                     }
                 }
 
                 void subtract(string label)
                 {
-                    if (AllLabelReferences.TryGetValue(label, out var val)) {
+                    ref var val = ref CollectionsMarshal.GetValueRefOrNullRef(AllLabelReferences, label);
+                    if (!Unsafe.IsNullRef(ref val)) {
                         if (val == 1) {
                             AllLabelReferences.Remove(label);
                             labelsChanged = true;
                         } else
-                            AllLabelReferences[label]--;
+                            val--;
                     } else
                         Log.Logger.Warning($"Tried to subtract ref count from label {label}, but it didn't exist");
                 }
 
-                foreach (var torrent in Torrents)
-                {
-                    Torrent? changedTorrent = null;
+                await Models.TorrentUpdateExt.UpdateFromPluginModelMulti(Torrents.Items.Where(x => x.Owner == dp), changes);
 
+                foreach (var torrent in Torrents.Items)
+                {
                     if (torrent.Owner != dp)
                         continue;
 
-                    foreach (var i in changes)
-                    {
-                        if (i.Hash.SequenceEqual(torrent.Hash))
-                        {
-                            foreach (var label in torrent.Labels)
-                                subtract(label);
-                            await torrent.UpdateFromPluginModel(i);
-                            foreach (var label in torrent.Labels)
-                                add(label);
-                            changedTorrent = i;
-                            break;
-                        }
-                    }
-                    if (changedTorrent != null)
-                    {
-                        changes.Remove(changedTorrent);
+                    if (changes.TryGetValue(torrent.Hash, out var i)) {
+                        foreach (var label in torrent.Labels)
+                            subtract(label);
+                        foreach (var label in i.Labels)
+                            add(label);
+
+                        changes.Remove(i.Hash);
                     }
                 }
-                Torrents.NotifyInnerItemsChanged();
 
                 // For new torrents
-                var newVMTorrents = await Task.WhenAll(changes.Select(async x => {
-                    var newVMTorrent = new Models.Torrent(x.Hash, dp);
-                    await newVMTorrent.UpdateFromPluginModel(x);
-                    return newVMTorrent;
-                }));
+                var newVMTorrents = changes.Select(x => new Models.Torrent(x.Value.Hash, dp)).ToList();
+                await Models.TorrentUpdateExt.UpdateFromPluginModelMulti(newVMTorrents, changes);
                 if (newVMTorrents.Count() > 0) {
                     Torrents.AddRange(newVMTorrents);
-                    foreach (var torrent in newVMTorrents)
+                    foreach (var torrent in newVMTorrents) {
                         TorrentsLookup.TryAdd((torrent.Hash, torrent.Owner.PluginInstance.InstanceId), torrent);
-
-                    foreach (var x in newVMTorrents)
-                    {
-                        foreach (var label in x.Labels)
+                        foreach (var label in torrent.Labels)
                             add(label);
                     }
                 }
 
                 if (labelsChanged)
                     AllLabelReferencesSubject.OnNext(AllLabelReferences.Keys.ToArray());
+
+                TorrentBatchChange?.Invoke();
             }
         }
 
@@ -173,14 +169,16 @@ namespace RTSharp.Core.TorrentPolling
                 {
                     var dataProviders = Plugins.DataProviders.ToList();
 
-                    if (!dataProviders.Any())
+                    if (dataProviders.Count == 0)
                     {
                         await dataProvidersChanged.WaitAsync();
                         continue;
                     }
 
-                    if (dataProviders.All(x => DateTime.UtcNow - x.TorrentChangesTaskStartedAt <= TimeSpan.FromSeconds(5)))
-                        await Task.Delay(dataProviders.Min(x => DateTime.UtcNow - x.TorrentChangesTaskStartedAt));
+                    // Prevent rapid retrying in case changes task is crashing
+                    if (dataProviders.Where(x => x.TorrentChangesTaskStartedAt != DateTime.MinValue).Any(x => DateTime.UtcNow - x.TorrentChangesTaskStartedAt <= TimeSpan.FromSeconds(5))) {
+                        await Task.Delay(TimeSpan.FromSeconds(5) - dataProviders.Where(x => x.TorrentChangesTaskStartedAt != DateTime.MinValue).Min(x => DateTime.UtcNow - x.TorrentChangesTaskStartedAt));
+                    }
 
                     foreach (var dp in dataProviders.Where(x => x.CurrentTorrentChangesTask == null))
                     {
@@ -196,6 +194,7 @@ namespace RTSharp.Core.TorrentPolling
                         catch (Exception ex)
                         {
                             Log.Logger.Error(ex, $"{dp.PluginInstance.PluginInstanceConfig.Name} GetTorrentChanges threw an error");
+                            
                             dp.TorrentChangesTaskStartedAt = DateTime.MinValue;
                             continue;
                         }
@@ -204,20 +203,22 @@ namespace RTSharp.Core.TorrentPolling
                         dp.TorrentChangesTaskStartedAt = DateTime.UtcNow;
                     }
 
-                    var tasks = dataProviders.Select(x => x.CurrentTorrentChangesTask).Where(x => x != null);
+                    var tasks = dataProviders.Select(x => x.CurrentTorrentChangesTask ?? Task.Delay(1000)); // Wait for changes task or 1 second before retrying
 
                     // Wait for any changes in tasks or data providers
                     var dataProvidersChangedTask = dataProvidersChanged.WaitAsync();
 
-                    var task = await Task.WhenAny(tasks.Concat(new[] { dataProvidersChangedTask }).ToArray()!);
+                    var task = await Task.WhenAny(tasks.Concat([dataProvidersChangedTask]).ToArray()!);
 
                     if (task != dataProvidersChangedTask)
                     {
-                        var dp = dataProviders.Single(x => x.CurrentTorrentChangesTask == task);
+                        var dps = dataProviders.Where(x => x.CurrentTorrentChangesTask != dataProvidersChangedTask);
 
-                        // Changes task was running but died, full reset
-                        dp.CurrentTorrentChangesTask = null;
-                        dp.CurrentTorrentChangesTaskCts.Cancel();
+                        // Reset on retry
+                        foreach (var dp in dps) {
+                            dp.CurrentTorrentChangesTask = null;
+                            dp.CurrentTorrentChangesTaskCts.Cancel();
+                        }
                     }
                 }
             }

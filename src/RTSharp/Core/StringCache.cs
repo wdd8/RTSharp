@@ -32,12 +32,12 @@ namespace RTSharp.Core
             }
         }
 
-        private static HashSet<WeakReference<string>> Cache = new(WeakReferenceStringEqualityComparer.Default);
-        private static HashSet<WeakReference<string>>.AlternateLookup<string> Lookup = Cache.GetAlternateLookup<string>();
+        private static System.Collections.Concurrent.ConcurrentDictionary<WeakReference<string>, object> Cache = new(WeakReferenceStringEqualityComparer.Default);
+        private static System.Collections.Concurrent.ConcurrentDictionary<WeakReference<string>, object>.AlternateLookup<string> Lookup = Cache.GetAlternateLookup<string>();
 
         public static string Reuse(string In)
         {
-            if (Lookup.TryGetValue(In, out var ret)) {
+            if (Lookup.TryGetValue(In, out var ret, out _)) {
                 if (ret.TryGetTarget(out var rett))
                     return rett;
 
@@ -45,7 +45,7 @@ namespace RTSharp.Core
                 return In;
             }
 
-            Cache.Add(new WeakReference<string>(In));
+            Cache.TryAdd(new WeakReference<string>(In), null);
             return In;
         }
     }

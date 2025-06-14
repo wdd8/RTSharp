@@ -6,15 +6,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections;
-using System;
-using NP.Ava.UniDockService;
-using RTSharp.Core.Util;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentPeersViewModel : ObservableObject
     {
-        public ObservableCollectionEx<Peer> Peers { get; } = new();
+        public ObservableCollection<Peer> Peers { get; } = new();
 
         [RelayCommand]
         public async Task AddPeers(IList Input)

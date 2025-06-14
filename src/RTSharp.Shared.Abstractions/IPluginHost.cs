@@ -92,11 +92,18 @@ namespace RTSharp.Shared.Abstractions
         IDisposable RegisterRootMenuItem(MenuItem In);
 
         /// <summary>
-        /// Hooks TorrentListing EvLoadingRow event, which then allows to modify appearance or behavior of row or its cells
+        /// Hooks TorrentListing EvRowPrepared event, which then allows to modify appearance or behavior of a row
         /// </summary>
         /// <param name="fx">Hook function</param>
         /// <returns>Unhook</returns>
-        IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx);
+        IDisposable HookTorrentListingEvRowPrepared(Action<object, TreeDataGridRowEventArgs> fx);
+
+        /// <summary>
+        /// Hooks TorrentListing EvRowPrepared event, which then allows to modify appearance or behavior of a cell
+        /// </summary>
+        /// <param name="fx">Hook function</param>
+        /// <returns>Unhook</returns>
+        IDisposable HookTorrentListingEvCellPrepared(Action<object, TreeDataGridCellEventArgs> fx);
 
         /// <summary>
         /// Hooks AddTorrent EvDragDrop event, which allows to modify AddTorrent window ViewModel

@@ -11,6 +11,7 @@
              xmlns:abstractions="clr-namespace:RTSharp.Shared.Abstractions;assembly=RTSharp.Shared.Abstractions"
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              d:DataContext="{x:Static torrentListingVm:ExampleTorrentListingViewModel.ViewModel}"
+             x:DataType="torrentListingVm:TorrentListingViewModel"
              x:CompileBindings="False"
              d:DesignWidth="600" d:DesignHeight="450">
 
@@ -40,7 +41,7 @@
                 >
                     <Button.CommandParameter>
                         <MultiBinding Converter="{StaticResource ItemsParamConverter}">
-                            <Binding Path="#grid.SelectedItems" />
+                            <Binding Path="#grid.Source.RowSelection.SelectedItems" />
                             <Binding Path="#LabelName.Text" />
                         </MultiBinding>
                     </Button.CommandParameter>
@@ -55,21 +56,21 @@
                     <Button
                         i:Attached.Icon="fa-solid fa-play"
                         Command="{Binding StartTorrentsCommand}"
-                        CommandParameter="{Binding #grid.SelectedItems}"
+                        CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         Background="Transparent"
                         ToolTip.Tip="Start"
                     />
                     <Button
                         i:Attached.Icon="fa-solid fa-pause"
                         Command="{Binding PauseTorrentsCommand}"
-                        CommandParameter="{Binding #grid.SelectedItems}"
+                        CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         Background="Transparent"
                         ToolTip.Tip="Pause"
                     />
                     <Button
                         i:Attached.Icon="fa-solid fa-stop"
                         Command="{Binding StopTorrentsCommand}"
-                        CommandParameter="{Binding #grid.SelectedItems}"
+                        CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         Background="Transparent"
                         ToolTip.Tip="Stop"
                     />
@@ -88,32 +89,47 @@
                 </StackPanel>
                 <TextBox Name="FilterTextBox" Grid.Column="1" Width="150" Watermark="Filter..." Text="{Binding StringFilter}" />
             </Grid>
-            <dataGridEx:DataGridEx Grid.Row="1"
+            <TreeDataGrid Grid.Row="1"
                       Name="grid"
-                      ItemsSource="{Binding FilteredTorrents}"
-                      LoadingRow="EvLoadingRow">
-                <dataGridEx:DataGridEx.ContextMenu>
+                      Source="{Binding Source}"
+                      RowPrepared="EvRowPrepared"
+                      CellPrepared="EvCellPrepared"
+                      CanUserResizeColumns="true">
+                <TreeDataGrid.Resources>
+
+                    <DataTemplate x:Key="DoneCell" x:DataType="models:Torrent">
+                        <ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" VerticalAlignment="Stretch" HorizontalAlignment="Center" Name="TorrentProgressBar" />
+                    </DataTemplate>
+                    <DataTemplate x:Key="TrackerCell" x:DataType="models:Torrent">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{Binding TrackerIcon, Mode=OneWay}" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" Margin="0 0 4 0" />
+                            <TextBlock Text="{Binding TrackerDisplayName, Mode=OneWay}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DataTemplate>
+
+                </TreeDataGrid.Resources>
+                <TreeDataGrid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="_Start"
                                   Command="{Binding StartTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         />
                         <MenuItem Header="_Pause"
                                   Command="{Binding PauseTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         />
                         <MenuItem Header="S_top"
                                   Command="{Binding StopTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         />
                         <Separator />
                         <MenuItem Header="Force _recheck"
                                   Command="{Binding ForceRecheckTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         />
                         <MenuItem Header="Reannounce to all trackers"
                                   Command="{Binding ReannounceToAllTrackersCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         />
                         <MenuItem Header="_Add peer..." IsEnabled="False" />
                         <Separator />
@@ -125,69 +141,30 @@
                         </MenuItem>
                         <MenuItem Header="Move download directory..."
                                   Command="{Binding MoveDownloadDirectoryCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         />
                         <Separator />
                         <MenuItem Header="Remove torrent"
                                   Command="{Binding RemoveTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         />
                         <MenuItem Header="Remove torrent &amp; data"
                                   Command="{Binding RemoveTorrentsAndDataCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                         />
                         <Separator />
                         <MenuItem Header="Get .torrent"
                                   Command="{Binding GetDotTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                                   />
-                        <MenuItem Header="Copy info _hash" IsEnabled="False" />
                         <MenuItem Header="Edit torrent..." IsEnabled="False" />
                         <MenuItem Header="Duplicate torrent &amp; data to..."
                                   Command="{Binding DuplicateTorrentToCommand}"
-                                  CommandParameter="{Binding #grid.SelectedItems}"
+                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
                                   />
                     </ContextMenu>
-                </dataGridEx:DataGridEx.ContextMenu>
-                <dataGridEx:DataGridEx.Columns>
-                    <DataGridTextColumn Header="Connection" IsReadOnly="True" Binding="{Binding Owner.PluginInstance.PluginInstanceConfig.Name, Mode=OneWay}" />
-                    <DataGridTextColumn Header="Name" IsReadOnly="True" Binding="{Binding Name, Mode=OneWay}" />
-                    <DataGridTextColumn Header="State" IsReadOnly="True" Binding="{Binding State, Mode=OneWay}" />
-                    <DataGridTextColumn Header="Size" IsReadOnly="True" Binding="{Binding Size, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
-                    <DataGridTemplateColumn Header="Done" IsReadOnly="True">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate x:DataType="models:Torrent">
-                                <ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" VerticalAlignment="Stretch" Name="TorrentProgressBar" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Downloaded" IsReadOnly="True" Binding="{Binding Downloaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
-                    <DataGridTextColumn Header="Completed" IsReadOnly="True" Binding="{Binding CompletedSize, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
-                    <DataGridTextColumn Header="Uploaded" IsReadOnly="True" Binding="{Binding Uploaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
-                    <DataGridTextColumn Header="Remaining" IsReadOnly="True" Binding="{Binding RemainingSize, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
-                    <DataGridTextColumn Header="DL Speed" IsReadOnly="True" Binding="{Binding DLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
-                    <DataGridTextColumn Header="UP Speed" IsReadOnly="True" Binding="{Binding UPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
-                    <DataGridTextColumn Header="Peers" IsReadOnly="True" Binding="{Binding Peers, Mode=OneWay, StringFormat=\{0\}}" />
-                    <DataGridTextColumn Header="Seeders" IsReadOnly="True" Binding="{Binding Seeders, Mode=OneWay, StringFormat=\{0\}}" />
-                    <DataGridTextColumn Header="Labels" IsReadOnly="True" Binding="{Binding Labels, Mode=OneWay, Converter={StaticResource StringJoiner}}" />
-                    <DataGridTextColumn Header="ETA" IsReadOnly="True" Binding="{Binding ETA, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" />
-                    <DataGridTextColumn Header="Created On" IsReadOnly="True" Binding="{Binding CreatedOnDate, Mode=OneWay}" />
-                    <DataGridTextColumn Header="Added On" IsReadOnly="True" Binding="{Binding AddedOnDate, Mode=OneWay}" />
-                    <DataGridTextColumn Header="Ratio" IsReadOnly="True" Binding="{Binding Ratio, Mode=OneWay, StringFormat=\{0:0.000\}}" />
-                    <DataGridTextColumn Header="Finished On" IsReadOnly="True" Binding="{Binding FinishedOnDate, Mode=OneWay}" />
-                    <DataGridTemplateColumn Header="Tracker" IsReadOnly="True">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate x:DataType="models:Torrent">
-                                <StackPanel Orientation="Horizontal">
-                                    <Image Source="{Binding TrackerIcon, Mode=OneWay}" Width="16" Height="16" Stretch="Uniform" Margin="0 0 4 0" />
-                                    <TextBlock Text="{Binding TrackerDisplayName, Mode=OneWay}" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Priority" IsReadOnly="True" Binding="{Binding Priority}" />
-                </dataGridEx:DataGridEx.Columns>
-            </dataGridEx:DataGridEx>
+                </TreeDataGrid.ContextMenu>
+            </TreeDataGrid>
             <GridSplitter Grid.Row="2" ResizeDirection="Rows" />
             <TabControl Grid.Row="3">
                 <TabControl.Styles>

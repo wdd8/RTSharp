@@ -13,6 +13,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().StartTorrents(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().StartTorrents(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().StartTorrents(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -23,6 +24,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().PauseTorrents(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().PauseTorrents(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().PauseTorrents(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -33,6 +35,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().StopTorrents(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().StopTorrents(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().StopTorrents(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -43,6 +46,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().ForceRecheckTorrents(Req, Ctx.CancellationToken),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().ForceRecheckTorrents(Req, Ctx.CancellationToken),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().ForceRecheckTorrents(Req, Ctx.CancellationToken),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -53,6 +57,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().ReannounceToAllTrackers(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().ReannounceToAllTrackers(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().ReannounceToAllTrackers(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -63,6 +68,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().AddTorrents(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().AddTorrents(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().AddTorrents(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -73,6 +79,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().GetTorrentsFiles(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().GetTorrentsFiles(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().GetTorrentsFiles(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -83,6 +90,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().RemoveTorrents(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().RemoveTorrents(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().RemoveTorrents(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -93,6 +101,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().RemoveTorrentsAndData(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().RemoveTorrentsAndData(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().RemoveTorrentsAndData(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -100,16 +109,12 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
         public override async Task GetDotTorrents(Torrents Req, IServerStreamWriter<DotTorrentsData> Res, ServerCallContext Ctx)
         {
             var dp = RegisteredDataProviders.GetDataProvider(Ctx);
-            switch (dp.Type) {
-                case DataProviderType.rtorrent:
-                    await dp.Resolve<Services.rtorrent.Grpc>().GetDotTorrents(Req, Res, Ctx.CancellationToken);
-                    break;
-                case DataProviderType.qbittorrent:
-                    await dp.Resolve<Services.qbittorrent.Grpc>().GetDotTorrents(Req, Res, Ctx.CancellationToken);
-                    break;
-                default:
-                    throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"));
-            };
+            await (dp.Type switch {
+                DataProviderType.rtorrent => dp.Resolve<Services.rtorrent.Grpc>().GetDotTorrents(Req, Res, Ctx.CancellationToken),
+                DataProviderType.qbittorrent => dp.Resolve<Services.qbittorrent.Grpc>().GetDotTorrents(Req, Res, Ctx.CancellationToken),
+                DataProviderType.transmission => dp.Resolve<Services.transmission.Grpc>().GetDotTorrents(Req, Res, Ctx.CancellationToken),
+                _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
+            });
         }
 
         public override async Task<TorrentsPeersReply> GetTorrentsPeers(Torrents Req, ServerCallContext Ctx)
@@ -118,6 +123,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().GetTorrentsPeers(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().GetTorrentsPeers(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().GetTorrentsPeers(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -128,6 +134,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().MoveDownloadDirectory(Req, Ctx.CancellationToken),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().MoveDownloadDirectory(Req, Ctx.CancellationToken),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().MoveDownloadDirectory(Req, Ctx.CancellationToken),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -152,6 +159,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().SetLabels(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().SetLabels(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().SetLabels(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -162,6 +170,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().GetTorrentsPieces(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().GetTorrentsPieces(Req),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().GetTorrentsPieces(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
@@ -172,6 +181,18 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp.Type switch {
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().GetTorrentsTrackers(Req),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().GetTorrentsTrackers(Req, Ctx.CancellationToken),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().GetTorrentsTrackers(Req, Ctx.CancellationToken),
+                _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
+            };
+        }
+
+        public override async Task<Empty> QueueTorrentUpdate(Torrents Req, ServerCallContext Ctx)
+        {
+            var dp = RegisteredDataProviders.GetDataProvider(Ctx);
+            return dp.Type switch {
+                DataProviderType.rtorrent => throw new NotImplementedException(),
+                DataProviderType.qbittorrent => throw new NotImplementedException(),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().QueueTorrentUpdate(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }

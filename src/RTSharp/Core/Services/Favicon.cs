@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
+using System.IO;
 
 namespace RTSharp.Core.Services
 {
@@ -16,7 +17,7 @@ namespace RTSharp.Core.Services
             this.HttpClient = HttpClient;
         }
 
-        public async Task<byte[]?> GetFavicon(string Domain)
+        public async Task<Stream?> GetFavicon(string Domain)
         {
             var cts = new CancellationTokenSource();
             cts.CancelAfter(5000);
@@ -27,11 +28,11 @@ namespace RTSharp.Core.Services
                 if (!response.IsSuccessStatusCode)
                     return null;
 
-                return await response.Content.ReadAsByteArrayAsync();*/
+                return await response.Content.ReadAsStreamAsync();*/
                 var response = await HttpClient.GetAsync($"https://{Domain}/favicon.ico", cts.Token);
 
                 if (response.IsSuccessStatusCode)
-                    return await response.Content.ReadAsByteArrayAsync();
+                    return await response.Content.ReadAsStreamAsync();
 
                 var html = await HttpClient.GetStringAsync($"https://{Domain}/", cts.Token);
 
@@ -56,7 +57,7 @@ namespace RTSharp.Core.Services
 
                     response = await HttpClient.GetAsync(link, cts.Token);
                     if (response.IsSuccessStatusCode)
-                        return await response.Content.ReadAsByteArrayAsync();
+                        return await response.Content.ReadAsStreamAsync();
                 }
 
                 return null;

@@ -32,7 +32,8 @@ namespace RTSharp.Plugin
 
         public enum HookType
         {
-            TorrentListing_EvLoadingRow,
+            TorrentListing_EvRowPrepared,
+            TorrentListing_EvCellPrepared,
             AddTorrent_EvDragDrop,
         }
 
@@ -40,7 +41,8 @@ namespace RTSharp.Plugin
 
         static Plugins()
         {
-            Hooks.TryAdd(HookType.TorrentListing_EvLoadingRow, new ThreadSafeList<Action<object, DataGridRowEventArgs>>());
+            Hooks.TryAdd(HookType.TorrentListing_EvRowPrepared, new ThreadSafeList<Action<object, TreeDataGridRowEventArgs>>());
+            Hooks.TryAdd(HookType.TorrentListing_EvCellPrepared, new ThreadSafeList<Action<object, TreeDataGridCellEventArgs>>());
             Hooks.TryAdd(HookType.AddTorrent_EvDragDrop, new ThreadSafeList<Func<object, ValueTask>>());
         }
 

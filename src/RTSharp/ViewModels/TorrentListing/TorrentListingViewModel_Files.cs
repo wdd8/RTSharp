@@ -103,6 +103,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         var cachedProps = await propertiesCache.GetCachedTorrentProperties(current.Hash);
 
                         if (cachedFiles.Any() && cachedProps != null) {
+                            FilesViewModel.MultiFile = cachedProps.IsMultiFile;
                             FilesChanges.Writer.TryWrite((current, Models.File.FromCache(current, cachedProps.IsMultiFile, cachedFiles, current.Done == 100)));
                             try {
                                 await Task.Delay(-1, selectionChange); // TODO: what about state change?
@@ -114,6 +115,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     try {
                         files = (await current!.Owner.Instance.GetFiles(new List<Torrent> { current.ToPluginModel() }, selectionChange)).First().Value;
 
+                        FilesViewModel.MultiFile = files.MultiFile;
                         FilesChanges.Writer.TryWrite((current, Models.File.FromPluginModel(current.Name, files.MultiFile, files.Files)));
                     } catch {
                         return;

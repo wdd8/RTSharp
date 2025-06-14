@@ -1,12 +1,15 @@
-﻿using RTSharp.Shared.Abstractions;
-using RTSharp.Shared.Utils;
+﻿using Avalonia.Controls;
 
-using System.Threading.Channels;
-using RTSharp.Shared.Abstractions.Daemon;
-using Avalonia.Controls;
+using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using MsBox.Avalonia.Models;
-using MsBox.Avalonia;
+
+using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Daemon;
+using RTSharp.Shared.Utils;
+
+using System.Threading;
+using System.Threading.Channels;
 
 namespace RTSharp.DataProvider.Qbittorrent.Plugin
 {
@@ -49,10 +52,6 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
             SetLabels: true
         );
 
-        
-        private InfoHashDictionary<Torrent> LatestTorrents = new();
-        private ReaderWriterLockSlim LatestTorrentsLock = new();
-
         public DataProvider(Plugin ThisPlugin)
         {
             this.ThisPlugin = ThisPlugin;
@@ -88,14 +87,11 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
             return id;
         }
 
-        public Task<IEnumerable<Torrent>> GetAllTorrents()
+        public async Task<IEnumerable<Torrent>> GetAllTorrents(CancellationToken cancellationToken = default)
         {
-            IEnumerable<Torrent> torrents;
-            LatestTorrentsLock.EnterReadLock(); {
-                torrents = LatestTorrents.Select(x => x.Value).ToList();
-            } LatestTorrentsLock.ExitReadLock();
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            return Task.FromResult(torrents);
+            return await client.GetAllTorrents(cancellationToken);
         }
 
         public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<Torrent> In)
@@ -119,13 +115,11 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
             return await client.GetTorrentsPeers(In, cancellationToken);
         }
 
-        public Task<Torrent> GetTorrent(byte[] Hash)
+        public async Task<Torrent> GetTorrent(byte[] Hash)
         {
-            Torrent? torrent;
-            LatestTorrentsLock.EnterReadLock(); {
-                LatestTorrents.TryGetValue(Hash, out torrent);
-            } LatestTorrentsLock.ExitReadLock();
-            return Task.FromResult(torrent);
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+
+            return await client.GetTorrent(Hash);
         }
 
         public async Task<ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken CancellationToken)
