@@ -145,10 +145,10 @@ namespace RTSharp.ViewModels.TorrentListing
             var columnList = new List<IColumn<Torrent>>
             {
                 new TextColumn<Torrent, string>("Connection", x => x.Owner.PluginInstance.PluginInstanceConfig.Name, width: widths.GetValueOrDefault("Connection")),
-                new TextColumn<Torrent, string>("Name", x => x.Name, width: widths["Name"], options: new TextColumnOptions<Torrent> {
+                new TextColumn<Torrent, string>("Name", x => x.Name, width: widths.GetValueOrDefault("Name"), options: new TextColumnOptions<Torrent> {
                     IsTextSearchEnabled = true
                 }),
-                new TextColumn<Torrent, string>("State", x => x.State, width: widths["State"]),
+                new TextColumn<Torrent, string>("State", x => x.State, width: widths.GetValueOrDefault("State")),
                 new FormattableTextColumn<ulong>("Size", x => Shared.Utils.Converters.GetSIDataSize(x.Size), x => x.Size, widths.GetValueOrDefault("Size")),
                 new TemplateColumn<Torrent>("Done", "DoneCell", width: widths.GetValueOrDefault("Done"), options: new TemplateColumnOptions<Torrent> {
                     CompareAscending = new Comparison<Torrent?>((a, b) => a.Done.CompareTo(b.Done))
