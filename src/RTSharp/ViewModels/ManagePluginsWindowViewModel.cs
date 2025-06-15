@@ -24,9 +24,11 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
     public ObservableCollection<string> UnloadedPluginDirs { get; } = new();
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LoadClickCommand))]
     public string selectedUnloadedDir;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UnloadClickCommand))]
     public PluginInstance selectedActivePlugin;
 
     public ManagePluginsWindowViewModel()
@@ -34,9 +36,9 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
         UnloadedPluginDirs.AddRange(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName));
     }
 
-    public bool CanExecute() => !String.IsNullOrEmpty(SelectedUnloadedDir);
+    public bool CanExecuteLoad() => !String.IsNullOrEmpty(SelectedUnloadedDir);
 
-    [RelayCommand(CanExecute = nameof(CanExecute))]
+    [RelayCommand(CanExecute = nameof(CanExecuteLoad))]
     public async Task LoadClick()
     {
         var existingConfig = Plugins.GetFirstPluginConfigOrDefault(Path.GetFullPath(Path.Combine(Shared.Abstractions.Consts.PLUGINS_PATH, SelectedUnloadedDir)));
@@ -63,7 +65,9 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    public bool CanExecuteUnload() => SelectedActivePlugin != null;
+
+    [RelayCommand(CanExecute = nameof(CanExecuteUnload))]
     public async Task UnloadClick()
     {
         await SelectedActivePlugin.Unload();
