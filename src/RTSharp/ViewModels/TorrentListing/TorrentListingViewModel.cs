@@ -174,7 +174,7 @@ namespace RTSharp.ViewModels.TorrentListing
             };
             OriginalColumns = [ ..columnList ];
 
-            if (data.Columns.Count != 0) {
+            if (data?.Columns?.Count > 0) {
                 columnList.Clear();
                 foreach (var col in data.Columns.OrderBy(x => x.DisplayIndex)) {
                     if (!col.IsVisible)
@@ -189,7 +189,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 }
             }
 
-            App.RegisterOnExit($"{nameof(TorrentListingView)}_{nameof(DataGrid)}_{nameof(SaveGridState)}", () => SaveGridState());
+            App.RegisterOnExit($"{nameof(TorrentListingView)}_{nameof(DataGrid)}_{nameof(SaveGridState)}", SaveGridState);
 
             var comparerChanged = Observable.FromEvent(x => Sorted += x, x => { Sorted -= x; }).Select(x => {
                 foreach (var col in Source.Columns) {
