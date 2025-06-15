@@ -133,40 +133,44 @@ namespace RTSharp.ViewModels.TorrentListing
             using var scope = Core.ServiceProvider.CreateScope();
             var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
 
-            var data = JsonSerializer.Deserialize<SerializationData>(config.UIState.Value.TorrentGridState)!;
+            SerializationData? data = null;
+            try {
+                data = JsonSerializer.Deserialize<SerializationData>(config.UIState.Value.TorrentGridState)!;
+            } catch { }
+
             LastSerialization = config.UIState.Value.TorrentGridState;
 
-            var widths = data.Columns.ToDictionary(x => x.HeaderId, x => String.IsNullOrEmpty(x.Width) ? default : (GridLength?)GridLength.Parse(x.Width));
+            var widths = data == null ? [] : data.Columns.ToDictionary(x => x.HeaderId, x => String.IsNullOrEmpty(x.Width) ? default : (GridLength?)GridLength.Parse(x.Width));
 
             var columnList = new List<IColumn<Torrent>>
             {
-                new TextColumn<Torrent, string>("Connection", x => x.Owner.PluginInstance.PluginInstanceConfig.Name, width: widths["Connection"]),
+                new TextColumn<Torrent, string>("Connection", x => x.Owner.PluginInstance.PluginInstanceConfig.Name, width: widths.GetValueOrDefault("Connection")),
                 new TextColumn<Torrent, string>("Name", x => x.Name, width: widths["Name"], options: new TextColumnOptions<Torrent> {
                     IsTextSearchEnabled = true
                 }),
                 new TextColumn<Torrent, string>("State", x => x.State, width: widths["State"]),
-                new FormattableTextColumn<ulong>("Size", x => Shared.Utils.Converters.GetSIDataSize(x.Size), x => x.Size, widths["Size"]),
-                new TemplateColumn<Torrent>("Done", "DoneCell", width: widths["Done"], options: new TemplateColumnOptions<Torrent> {
+                new FormattableTextColumn<ulong>("Size", x => Shared.Utils.Converters.GetSIDataSize(x.Size), x => x.Size, widths.GetValueOrDefault("Size")),
+                new TemplateColumn<Torrent>("Done", "DoneCell", width: widths.GetValueOrDefault("Done"), options: new TemplateColumnOptions<Torrent> {
                     CompareAscending = new Comparison<Torrent?>((a, b) => a.Done.CompareTo(b.Done))
                 }),
-                new FormattableTextColumn<ulong>("Downloaded", x => Shared.Utils.Converters.GetSIDataSize(x.Downloaded), x => x.Downloaded, widths["Downloaded"]),
-                new FormattableTextColumn<ulong>("Completed", x => Shared.Utils.Converters.GetSIDataSize(x.CompletedSize), x => x.CompletedSize, widths["Completed"]),
-                new FormattableTextColumn<ulong>("Uploaded", x => Shared.Utils.Converters.GetSIDataSize(x.Uploaded), x => x.Uploaded, widths["Uploaded"]),
-                new FormattableTextColumn<ulong>("Remaining", x => Shared.Utils.Converters.GetSIDataSize(x.RemainingSize), x => x.RemainingSize, widths["Remaining"]),
-                new FormattableTextColumn<ulong>("DL Speed", x => Shared.Utils.Converters.GetSIDataSize(x.DLSpeed) + "/s", x => x.DLSpeed, widths["DL Speed"]),
-                new FormattableTextColumn<ulong>("UP Speed", x => Shared.Utils.Converters.GetSIDataSize(x.UPSpeed) + "/s", x => x.UPSpeed, widths["UP Speed"]),
-                new TextColumn<Torrent, string>("Peers", x => x.Peers.ToString(), width: widths["Peers"]),
-                new TextColumn<Torrent, string>("Seeders", x => x.Seeders.ToString(), width: widths["Seeders"]),
-                new TextColumn<Torrent, string>("Labels", x => String.Join(", ", x.Labels), width: widths["Labels"]),
-                new TextColumn<Torrent, string>("ETA", x => Shared.Utils.Converters.ToAgoString(x.ETA), width: widths["ETA"]),
-                new TextColumn<Torrent, string>("Created On", x => x.CreatedOnDate == null ? "N/A" : x.CreatedOnDate.Value.ToString(), width: widths["Created On"]),
-                new TextColumn<Torrent, string>("Added On", x => new Nullable<DateTime>(x.AddedOnDate).Value.ToString(), width: widths["Added On"]),
+                new FormattableTextColumn<ulong>("Downloaded", x => Shared.Utils.Converters.GetSIDataSize(x.Downloaded), x => x.Downloaded, widths.GetValueOrDefault("Downloaded")),
+                new FormattableTextColumn<ulong>("Completed", x => Shared.Utils.Converters.GetSIDataSize(x.CompletedSize), x => x.CompletedSize, widths.GetValueOrDefault("Completed")),
+                new FormattableTextColumn<ulong>("Uploaded", x => Shared.Utils.Converters.GetSIDataSize(x.Uploaded), x => x.Uploaded, widths.GetValueOrDefault("Uploaded")),
+                new FormattableTextColumn<ulong>("Remaining", x => Shared.Utils.Converters.GetSIDataSize(x.RemainingSize), x => x.RemainingSize, widths.GetValueOrDefault("Remaining")),
+                new FormattableTextColumn<ulong>("DL Speed", x => Shared.Utils.Converters.GetSIDataSize(x.DLSpeed) + "/s", x => x.DLSpeed, widths.GetValueOrDefault("DL Speed")),
+                new FormattableTextColumn<ulong>("UP Speed", x => Shared.Utils.Converters.GetSIDataSize(x.UPSpeed) + "/s", x => x.UPSpeed, widths.GetValueOrDefault("UP Speed")),
+                new TextColumn<Torrent, string>("Peers", x => x.Peers.ToString(), width: widths.GetValueOrDefault("Peers")),
+                new TextColumn<Torrent, string>("Seeders", x => x.Seeders.ToString(), width: widths.GetValueOrDefault("Seeders")),
+                new TextColumn<Torrent, string>("Labels", x => String.Join(", ", x.Labels), width: widths.GetValueOrDefault("Labels")),
+                new TextColumn<Torrent, string>("ETA", x => Shared.Utils.Converters.ToAgoString(x.ETA), width: widths.GetValueOrDefault("ETA")),
+                new TextColumn<Torrent, string>("Created On", x => x.CreatedOnDate == null ? "N/A" : x.CreatedOnDate.Value.ToString(), width: widths.GetValueOrDefault("Created On")),
+                new TextColumn<Torrent, string>("Added On", x => new Nullable<DateTime>(x.AddedOnDate).Value.ToString(), width: widths.GetValueOrDefault("Added On")),
                 new TextColumn<Torrent, float>("Ratio", x => x.Ratio, options: new TextColumnOptions<Torrent> {
                     StringFormat = "{0:0.000}"
-                }, width: widths["Ratio"]),
-                new TextColumn<Torrent, string>("Finished On", x => x.FinishedOnDate == null ? "N/A" : x.FinishedOnDate.Value.ToString(), width: widths["Finished On"]),
-                new TemplateColumn<Torrent>("Tracker", "TrackerCell", width: widths["Tracker"]),
-                new TextColumn<Torrent, string>("Priority", x => x.Priority, width: widths["Priority"]),
+                }, width: widths.GetValueOrDefault("Ratio")),
+                new TextColumn<Torrent, string>("Finished On", x => x.FinishedOnDate == null ? "N/A" : x.FinishedOnDate.Value.ToString(), width: widths.GetValueOrDefault("Finished On")),
+                new TemplateColumn<Torrent>("Tracker", "TrackerCell", width: widths.GetValueOrDefault("Tracker")),
+                new TextColumn<Torrent, string>("Priority", x => x.Priority, width: widths.GetValueOrDefault("Priority")),
             };
             OriginalColumns = [ ..columnList ];
 
