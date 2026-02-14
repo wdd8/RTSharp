@@ -10,7 +10,7 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using NP.Ava.UniDockService;
+using NP.UniDockService;
 
 using RTSharp.Core;
 using RTSharp.Models;

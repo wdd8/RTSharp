@@ -7,6 +7,7 @@
              xmlns:plugin="clr-namespace:RTSharp.Plugin"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:vm="clr-namespace:RTSharp.ViewModels"
+             xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              x:Class="RTSharp.Views.DataProvidersView"
              x:DataType="vm:DataProvidersViewModel"
@@ -21,22 +22,22 @@
         <ListBox.ItemTemplate>
             <DataTemplate>
                 <StackPanel Orientation="Vertical">
-                    <TextBlock Text="{Binding}" />
+                    <TextBlock Text="{Binding DisplayName}" />
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding State.Value}" />
+                        <TextBlock Text="{Binding State}" />
                         <TextBlock Padding="4 0 0 0" Text="(" />
-                        <TextBlock Text="{Binding PluginInstance.AttachedDaemonService.Latency.Value, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" />
+                        <TextBlock Text="{Binding Latency, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" />
                         <TextBlock Text=")" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <i:Icon Margin="0 0 4 0" Value="fa-solid fa-download" />
-                        <TextBlock Padding="0 0 8 0" Text="{Binding Instance.TotalDLSpeed.Value, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+                        <TextBlock Padding="0 0 8 0" Text="{Binding TotalDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
 
                         <i:Icon Margin="0 0 4 0" Value="fa-solid fa-upload" />
-                        <TextBlock Text="{Binding Instance.TotalUPSpeed.Value, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+                        <TextBlock Text="{Binding TotalUPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding Instance.ActiveTorrentCount.Value}" />
+                        <TextBlock Text="{Binding ActiveTorrentCount}" />
                         <TextBlock Text=" active torrents" />
                     </StackPanel>
                 </StackPanel>

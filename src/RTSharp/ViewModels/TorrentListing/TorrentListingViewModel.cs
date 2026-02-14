@@ -2,26 +2,25 @@
 using Avalonia.Controls.Models.TreeDataGrid;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Selection;
-using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Media;
-using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using DynamicData;
 using DynamicData.Binding;
+using DynamicData.Kernel;
+
+using Google.Protobuf.WellKnownTypes;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using NP.Ava.UniDockService;
+using NP.UniDockService;
 using NP.Utilities;
 
 using RTSharp.Core;
 using RTSharp.Core.TorrentPolling;
-using RTSharp.Core.Util;
-using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Controls;
 using RTSharp.ViewModels.Options;
@@ -31,6 +30,7 @@ using RTSharp.Views.TorrentListing;
 using Serilog;
 
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -39,7 +39,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -63,7 +63,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public TreeDataGrid DataGrid { get; set; }
 
-        SourceList<Torrent> CurrentlySelectedItems { get; } = new();
+        public SourceList<Torrent> CurrentlySelectedItems { get; } = new();
 
         [ObservableProperty]
         private string stringFilter;
@@ -71,13 +71,13 @@ namespace RTSharp.ViewModels.TorrentListing
         [ObservableProperty]
         private TemplatedControl[] labelsWithAdd;
 
-        private GeneralTorrentInfoViewModel GeneralInfoViewModel { get; } = new();
+        public GeneralTorrentInfoViewModel GeneralInfoViewModel { get; } = new();
 
-        private TorrentFilesViewModel FilesViewModel { get; } = new();
+        public TorrentFilesViewModel FilesViewModel { get; } = new();
 
-        private TorrentPeersViewModel PeersViewModel { get; } = new();
+        public TorrentPeersViewModel PeersViewModel { get; } = new();
 
-        private TorrentTrackersViewModel TrackersViewModel { get; }
+        public TorrentTrackersViewModel TrackersViewModel { get; }
 
         private static readonly DrawingImage DefaultImage;
 
@@ -107,24 +107,41 @@ namespace RTSharp.ViewModels.TorrentListing
 
         List<IColumn<Torrent>> OriginalColumns { get; }
 
-        private class FormattableTextColumn<T> : TemplateColumn<Torrent>
-            where T : IComparable<T>
+        private interface IComparisons
         {
-            public FormattableTextColumn(string Header, Expression<Func<Torrent, string>> FxStr, Func<Torrent, T> FxValue, GridLength? Width)
-                : this(Header, FxStr, FxStr.Compile(), FxValue, Width)
-            {
-            }
-            private FormattableTextColumn(string Header, Expression<Func<Torrent, string>> FxStr, Func<Torrent, string> FxStrCompiled, Func<Torrent, T> FxValue, GridLength? Width)
-                : base(Header, new FuncDataTemplate<Torrent>(x => x is Torrent, x => x == null ? null : new TreeDataGridTextCell() { Value = FxStrCompiled(x) }, supportsRecycling: true), null, Width, new TemplateColumnOptions<Torrent> {
-                    TextSearchValueSelector = x => FxStrCompiled(x),
-                    CompareAscending = new Comparison<Torrent?>((a, b) => FxValue(a).CompareTo(FxValue(b))),
-                    CompareDescending = new Comparison<Torrent?>((a, b) => -FxValue(a).CompareTo(FxValue(b))),
-                })
-            {
-            }
+            public Comparison<Torrent> AscComparison { get; }
+            public Comparison<Torrent> DescComparison { get; }
         }
 
-        event Action Sorted;
+        private class FastFormattableTextColumn<T> : ColumnBase<Torrent>, IComparisons
+            where T : IComparable<T>
+        {
+            public FastFormattableTextColumn(string Header, Expression<Func<Torrent, string>> FxStr, Func<Torrent, T> FxValue, GridLength? Width)
+                : base(Header, Width, new ColumnOptions<Torrent>())
+            {
+                this.FxStr = FxStr.Compile();
+                AscComparison = new Comparison<Torrent?>((a, b) => FxValue(a).CompareTo(FxValue(b)));
+                DescComparison = new Comparison<Torrent?>((a, b) => -FxValue(a).CompareTo(FxValue(b)));
+            }
+
+            private Func<Torrent, string> FxStr;
+
+            public Comparison<Torrent> AscComparison { get; }
+            public Comparison<Torrent> DescComparison { get; }
+
+            public override ICell CreateCell(IRow<Torrent> row) => new TextCell<string>(FxStr(row.Model));
+            public override Comparison<Torrent> GetComparison(ListSortDirection direction)
+            {
+                switch (direction) {
+                    case ListSortDirection.Ascending:
+                        return AscComparison;
+                    case ListSortDirection.Descending:
+                        return DescComparison;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
 
         public TorrentListingViewModel()
         {
@@ -149,26 +166,24 @@ namespace RTSharp.ViewModels.TorrentListing
                     IsTextSearchEnabled = true
                 }),
                 new TextColumn<Torrent, string>("State", x => x.State, width: widths.GetValueOrDefault("State")),
-                new FormattableTextColumn<ulong>("Size", x => Shared.Utils.Converters.GetSIDataSize(x.Size), x => x.Size, widths.GetValueOrDefault("Size")),
+                new FastFormattableTextColumn<ulong>("Size", x => x.SizeDisplay, x => x.Size, widths.GetValueOrDefault("Size")),
                 new TemplateColumn<Torrent>("Done", "DoneCell", width: widths.GetValueOrDefault("Done"), options: new TemplateColumnOptions<Torrent> {
                     CompareAscending = new Comparison<Torrent?>((a, b) => a.Done.CompareTo(b.Done))
                 }),
-                new FormattableTextColumn<ulong>("Downloaded", x => Shared.Utils.Converters.GetSIDataSize(x.Downloaded), x => x.Downloaded, widths.GetValueOrDefault("Downloaded")),
-                new FormattableTextColumn<ulong>("Completed", x => Shared.Utils.Converters.GetSIDataSize(x.CompletedSize), x => x.CompletedSize, widths.GetValueOrDefault("Completed")),
-                new FormattableTextColumn<ulong>("Uploaded", x => Shared.Utils.Converters.GetSIDataSize(x.Uploaded), x => x.Uploaded, widths.GetValueOrDefault("Uploaded")),
-                new FormattableTextColumn<ulong>("Remaining", x => Shared.Utils.Converters.GetSIDataSize(x.RemainingSize), x => x.RemainingSize, widths.GetValueOrDefault("Remaining")),
-                new FormattableTextColumn<ulong>("DL Speed", x => Shared.Utils.Converters.GetSIDataSize(x.DLSpeed) + "/s", x => x.DLSpeed, widths.GetValueOrDefault("DL Speed")),
-                new FormattableTextColumn<ulong>("UP Speed", x => Shared.Utils.Converters.GetSIDataSize(x.UPSpeed) + "/s", x => x.UPSpeed, widths.GetValueOrDefault("UP Speed")),
-                new TextColumn<Torrent, string>("Peers", x => x.Peers.ToString(), width: widths.GetValueOrDefault("Peers")),
-                new TextColumn<Torrent, string>("Seeders", x => x.Seeders.ToString(), width: widths.GetValueOrDefault("Seeders")),
-                new TextColumn<Torrent, string>("Labels", x => String.Join(", ", x.Labels), width: widths.GetValueOrDefault("Labels")),
-                new TextColumn<Torrent, string>("ETA", x => Shared.Utils.Converters.ToAgoString(x.ETA), width: widths.GetValueOrDefault("ETA")),
-                new TextColumn<Torrent, string>("Created On", x => x.CreatedOnDate == null ? "N/A" : x.CreatedOnDate.Value.ToString(), width: widths.GetValueOrDefault("Created On")),
-                new TextColumn<Torrent, string>("Added On", x => new Nullable<DateTime>(x.AddedOnDate).Value.ToString(), width: widths.GetValueOrDefault("Added On")),
-                new TextColumn<Torrent, float>("Ratio", x => x.Ratio, options: new TextColumnOptions<Torrent> {
-                    StringFormat = "{0:0.000}"
-                }, width: widths.GetValueOrDefault("Ratio")),
-                new TextColumn<Torrent, string>("Finished On", x => x.FinishedOnDate == null ? "N/A" : x.FinishedOnDate.Value.ToString(), width: widths.GetValueOrDefault("Finished On")),
+                new FastFormattableTextColumn<ulong>("Downloaded", x => x.DownloadedDisplay, x => x.Downloaded, widths.GetValueOrDefault("Downloaded")),
+                new FastFormattableTextColumn<ulong>("Completed", x => x.CompletedSizeDisplay, x => x.CompletedSize, widths.GetValueOrDefault("Completed")),
+                new FastFormattableTextColumn<ulong>("Uploaded", x => x.UploadedDisplay, x => x.Uploaded, widths.GetValueOrDefault("Uploaded")),
+                new FastFormattableTextColumn<ulong>("Remaining", x => x.RemainingSizeDisplay, x => x.RemainingSize, widths.GetValueOrDefault("Remaining")),
+                new FastFormattableTextColumn<ulong>("DL Speed", x => x.DLSpeedDisplay + "/s", x => x.DLSpeed, widths.GetValueOrDefault("DL Speed")),
+                new FastFormattableTextColumn<ulong>("UP Speed", x => x.UPSpeedDisplay + "/s", x => x.UPSpeed, widths.GetValueOrDefault("UP Speed")),
+                new TextColumn<Torrent, string>("Peers", x => x.PeersDisplay, width: widths.GetValueOrDefault("Peers")),
+                new TextColumn<Torrent, string>("Seeders", x => x.SeedersDisplay, width: widths.GetValueOrDefault("Seeders")),
+                new TextColumn<Torrent, string>("Labels", x => x.LabelsDisplay, width: widths.GetValueOrDefault("Labels")),
+                new TextColumn<Torrent, string>("ETA", x => x.ETADisplay, width: widths.GetValueOrDefault("ETA")),
+                new TextColumn<Torrent, string>("Created On", x => x.CreatedOnDateDisplay, width: widths.GetValueOrDefault("Created On")),
+                new TextColumn<Torrent, string>("Added On", x => x.AddedOnDateDisplay, width: widths.GetValueOrDefault("Added On")),
+                new FastFormattableTextColumn<float>("Ratio", x => x.RatioDisplay, x => x.Ratio, widths.GetValueOrDefault("Ratio")),
+                new TextColumn<Torrent, string>("Finished On", x => x.FinishedOnDateDisplay, width: widths.GetValueOrDefault("Finished On")),
                 new TemplateColumn<Torrent>("Tracker", "TrackerCell", width: widths.GetValueOrDefault("Tracker")),
                 new TextColumn<Torrent, string>("Priority", x => x.Priority, width: widths.GetValueOrDefault("Priority")),
             };
@@ -191,31 +206,19 @@ namespace RTSharp.ViewModels.TorrentListing
 
             App.RegisterOnExit($"{nameof(TorrentListingView)}_{nameof(DataGrid)}_{nameof(SaveGridState)}", SaveGridState);
 
-            var comparerChanged = Observable.FromEvent(x => Sorted += x, x => { Sorted -= x; }).Select(x => {
-                foreach (var col in Source.Columns) {
-                    if (col.SortDirection == null)
-                        continue;
-
-                    if ((string)col.Header == "Name")
-                        return SortExpressionComparer<Torrent>.Ascending(static x => x.Name);
-                }
-                return SortExpressionComparer<Torrent>.Descending(static x => x.UPSpeed);
-            });
-            VMDisposables.Add(_filteredTorrents.Connect().Bind(out FilteredTorrents).Subscribe());
-            //.Sort(comparerChanged, SortOptions.None)
+            VMDisposables.Add(_filteredTorrents.Connect().FastAutoRefresh().RefreshingBind(out FilteredTorrents, default).Subscribe());
 
             Source = new FlatTreeDataGridSource<Torrent>(FilteredTorrents) {
                 Columns = { columnList }
             };
             Source.RowSelection!.SingleSelect = false;
-            Source.Sorted += Sorted;
 
-            /*foreach (var col in Source.Columns) {
+            foreach (var col in Source.Columns) {
                 if (col.SortDirection == null)
                     continue;
 
                 ((ITreeDataGridSource)Source).SortBy(col, col.SortDirection.Value);
-            }*/
+            }
         }
 
         private string GetState()
@@ -292,7 +295,7 @@ namespace RTSharp.ViewModels.TorrentListing
             };
         }
 
-        public void OnTorrentsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) => EvaluateFilters(e);
+        public void OnTorrentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => EvaluateFilters(e);
 
         partial void OnStringFilterChanged(string value) => EvaluateFilters(null);
 
@@ -423,21 +426,21 @@ namespace RTSharp.ViewModels.TorrentListing
             this.OnPropertyChanging(nameof(_filteredTorrents));
 
             _filteredTorrents.Edit(torrents => {
-                if (e.Action == NotifyCollectionChangedAction.Reset) {
+                if (e != null) {
+                    if (e.Action == NotifyCollectionChangedAction.Reset) {
                         torrents.Clear();
                         torrents.AddRange(Torrents.Items);
-                } else {
-                    if (e?.NewItems?.Count > 0) {
-                        torrents.AddRange(e.NewItems.Cast<Torrent>());
-                    }
-                    if (e?.OldItems?.Count > 0) {
-                        foreach (var item in e.OldItems) {
-                            var idx = torrents.IndexOf(item);
-                            if (idx != -1) {
-                                if (e.Action == NotifyCollectionChangedAction.Remove)
-                                    torrents.RemoveAt(idx);
-                                else
-                                    torrents[idx] = (Torrent)item;
+                    } else {
+                        if (e.NewItems?.Count > 0) {
+                            torrents.AddRange(e.NewItems.Cast<Torrent>());
+                        }
+                        if (e.OldItems?.Count > 0) {
+                            foreach (var item in e.OldItems) {
+                                var idx = torrents.IndexOf(item);
+                                if (idx != -1) {
+                                    if (e.Action == NotifyCollectionChangedAction.Remove)
+                                        torrents.RemoveAt(idx);
+                                }
                             }
                         }
                     }
@@ -463,18 +466,6 @@ namespace RTSharp.ViewModels.TorrentListing
             });
 
             this.OnPropertyChanged(nameof(_filteredTorrents));
-
-            SortList();
-        }
-
-        private void SortList()
-        {
-            foreach (var col in Source.Columns) {
-                if (col.SortDirection == null)
-                    continue;
-
-                ((ITreeDataGridSource)Source).SortBy(col, col.SortDirection.Value);
-            }
         }
 
         public void OnContextPopulated()
@@ -483,14 +474,7 @@ namespace RTSharp.ViewModels.TorrentListing
             VMDisposables.Add(Torrents.Connect().Bind(out observable).Subscribe());
             ((INotifyCollectionChanged)observable).CollectionChanged += OnTorrentsCollectionChanged;
 
-            TorrentPolling.TorrentBatchChange -= SortList;
-            TorrentPolling.TorrentBatchChange += SortList;
-
             VMDisposables.Add(TorrentPolling.AllLabelReferencesObservable.Subscribe(x => LabelsWithAdd = GetLabelsWithAdd(x)));
-
-            this.OnPropertyChanging(nameof(_filteredTorrents));
-            _filteredTorrents.AddRange(Torrents.Items);
-            this.OnPropertyChanged(nameof(_filteredTorrents));
         }
 
         private void CurrentlySelectedTorrents_CollectionChanged()

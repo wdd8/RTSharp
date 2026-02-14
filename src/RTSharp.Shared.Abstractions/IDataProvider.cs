@@ -1,5 +1,8 @@
-﻿using RTSharp.Shared.Abstractions.Daemon;
+﻿using RTSharp.Daemon.Protocols.DataProvider;
+using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Utils;
+
+using System.Threading.Channels;
 
 namespace RTSharp.Shared.Abstractions
 {
@@ -9,7 +12,8 @@ namespace RTSharp.Shared.Abstractions
 
         public Task<Torrent> GetTorrent(byte[] Hash);
 
-        public Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken cancellationToken);
+        Task<ChannelReader<ListingChanges<Torrent, T, byte[]>>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<IncompleteDeltaTorrentResponse, T> Update, Action<CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
+            where T : class;
 
         public Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken = default);
 
@@ -42,12 +46,6 @@ namespace RTSharp.Shared.Abstractions
         public Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In);
 
         public IPlugin Plugin { get; }
-
-        public Notifyable<long> TotalDLSpeed { get; }
-
-        public Notifyable<long> TotalUPSpeed { get; }
-
-        public Notifyable<long> ActiveTorrentCount { get; }
 
         public IDataProviderFiles Files { get; }
 

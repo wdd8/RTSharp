@@ -840,39 +840,77 @@ namespace RTSharp.Daemon.Services.qbittorrent
         {
             await Client.Init();
 
-            var tasks = Req.Hashes.Select(x => (Hash: x, Trackers: Client.Client.GetTorrentTrackersAsync(Convert.ToHexString(x.Span), CancellationToken))).ToArray();
+            var groups = Req.Hashes.Chunk(50).Select(x => x.Select(async x => {
+                var trackers = await Client.Client.GetTorrentTrackersAsync(Convert.ToHexString(x.Span), CancellationToken);
+
+                return new TorrentsTrackersReply.Types.TorrentsTrackers {
+                    InfoHash = x,
+                    Trackers = {
+                        trackers.Select(x => new Protocols.DataProvider.TorrentTracker {
+                            ID = x.Url.OriginalString,
+                            Uri = x.Url.ToString(),
+                            Status = x.TrackerStatus!.Value switch {
+                                QBittorrent.Client.TorrentTrackerStatus.Working => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.Active,
+                                QBittorrent.Client.TorrentTrackerStatus.Updating => Protocols.DataProvider.TorrentTrackerStatus.Enabled,
+                                QBittorrent.Client.TorrentTrackerStatus.NotContacted => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.NotContactedYet,
+                                QBittorrent.Client.TorrentTrackerStatus.NotWorking => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.NotActive,
+                                QBittorrent.Client.TorrentTrackerStatus.Disabled => Protocols.DataProvider.TorrentTrackerStatus.Disabled,
+                                _ => Protocols.DataProvider.TorrentTrackerStatus.Placeholder
+                            },
+                            Seeders = (uint)(x.Seeds ?? 0),
+                            Peers = (uint)(x.Peers ?? 0),
+                            // Where do leeches come in?
+                            Downloaded = 0, // TODO: feature flag?
+                            LastUpdated = DateTime.UnixEpoch.ToTimestamp(),
+                            ScrapeInterval = TimeSpan.Zero.ToDuration(), // TODO: feature flag?
+                            StatusMessage = x.Message
+                        })
+                    }
+                };
+            }));
+
+            var ret = new List<TorrentsTrackersReply.Types.TorrentsTrackers>();
+
+            foreach (var tasks in groups)
+            {
+                var result = await Task.WhenAll(tasks);
+                ret.AddRange(result);
+            }
 
             return new TorrentsTrackersReply {
                 Reply = {
-                    await Task.WhenAll(tasks.Select(async x => {
-                        var trackers = await x.Trackers;
-
-                        return new TorrentsTrackersReply.Types.TorrentsTrackers {
-                            InfoHash = x.Hash,
-                            Trackers = {
-                                trackers.Select(x => new Protocols.DataProvider.TorrentTracker {
-                                    ID = x.Url.OriginalString,
-                                    Uri = x.Url.ToString(),
-                                    Status = x.TrackerStatus!.Value switch {
-                                        QBittorrent.Client.TorrentTrackerStatus.Working => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.Active,
-                                        QBittorrent.Client.TorrentTrackerStatus.Updating => Protocols.DataProvider.TorrentTrackerStatus.Enabled,
-                                        QBittorrent.Client.TorrentTrackerStatus.NotContacted => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.NotContactedYet,
-                                        QBittorrent.Client.TorrentTrackerStatus.NotWorking => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.NotActive,
-                                        QBittorrent.Client.TorrentTrackerStatus.Disabled => Protocols.DataProvider.TorrentTrackerStatus.Disabled,
-                                        _ => Protocols.DataProvider.TorrentTrackerStatus.Placeholder
-                                    },
-                                    Seeders = (uint)(x.Seeds ?? 0),
-                                    Peers = (uint)(x.Peers ?? 0),
-                                    // Where do leeches come in?
-                                    Downloaded = 0, // TODO: feature flag?
-                                    LastUpdated = DateTime.UnixEpoch.ToTimestamp(),
-                                    ScrapeInterval = TimeSpan.Zero.ToDuration(), // TODO: feature flag?
-                                    StatusMessage = x.Message
-                                })
-                            }
-                        };
-                    }))
+                    ret
                 }
+            };
+        }
+
+        public async Task<Empty> EditTracker(ByteString InfoHash, string Existing, string New, CancellationToken CancellationToken)
+        {
+            await Client.Init();
+
+            if (!Uri.TryCreate(Existing, UriKind.Absolute, out var existing)) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "Existing is not an Uri"));
+            }
+
+            if (!Uri.TryCreate(New, UriKind.Absolute, out var @new)) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "New is not an Uri"));
+            }
+
+            await Client.Client.EditTrackerAsync(Convert.ToHexString(InfoHash.Span), existing, @new, CancellationToken);
+
+            return new();
+        }
+
+        public async Task<Protocols.DataProvider.AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken)
+        {
+            await Client.Init();
+
+            var stats = await Client.Client.GetPartialDataAsync(0, cancellationToken);
+
+            return new Protocols.DataProvider.AllTimeDataStats {
+                Download = (ulong)stats.ServerState.AllTimeDownloaded!,
+                Upload = (ulong)stats.ServerState.AllTimeUploaded!,
+                ShareRatio = (float)stats.ServerState.AllTimeDownloaded.Value / stats.ServerState.AllTimeDownloaded.Value
             };
         }
     }

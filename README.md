@@ -61,6 +61,17 @@ See [setting up data providers](setup-dataproviders.md)
 |Pieces progress bar|🟢Supported|🟢Supported|🟢Supported|
 |Extended statistics|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Partial downloads|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Add new tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Enable tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Disable tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Remove tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Reannounce tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Replace tracker|🟡Hacky workaround*|🟢Supported|🟢Supported|
+|Global download statistics|🟡Workaround*|🟢Supported|🟢Supported|
+|Global upload statistics|🟡Workaround*|🟢Supported|🟢Supported|
+|Global ratio statistics|🟡Workaround*|🟢Supported|🟢Supported|
+
+_* - not directly supported by torrent daemon_
 
 ### Configuration
 

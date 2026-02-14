@@ -13,7 +13,7 @@ jobs:
       - name: Setup .NET Core SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
       - name: Publish linux x64
         run: pwsh scripts/publish.ps1 linux-x64
       - name: Publish windows x64

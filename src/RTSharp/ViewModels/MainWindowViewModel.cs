@@ -122,10 +122,10 @@ namespace RTSharp.ViewModels
         {
             var curCount = App.DockManager.DockItemsViewModels.Where(x => x.DockId.StartsWith("ActionQueue")).Count();
 
-            var vm = new DockActionQueueViewModel() {
+            var vm = new DockActionQueuesViewModel() {
                 DockId = "ActionQueue" + curCount,
                 DefaultDockGroupId = "MainGroup",
-                TheVM = new ActionQueueViewModel(),
+                TheVM = new ActionQueuesViewModel(),
                 HeaderContentTemplateResourceKey = "TabHeaderTemplate",
                 ContentTemplateResourceKey = "ActionQueueTemplate",
                 IsPredefined = false,

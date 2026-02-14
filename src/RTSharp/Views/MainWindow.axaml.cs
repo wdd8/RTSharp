@@ -17,17 +17,10 @@ using Avalonia.Controls;
 using RTSharp.Core.Services.Cache.TorrentPropertiesCache;
 using RTSharp.Shared.Controls;
 using NP.Ava.UniDock;
-using NP.Ava.UniDockService;
 using System.Collections.ObjectModel;
 using RTSharp.ViewModels.TorrentListing;
-using RTSharp.Views.TorrentListing;
 using RTSharp.Core;
-using System.IO;
-using System.Text;
-using NP.Ava.UniDock.Serialization;
-using NP.Utilities;
-using SkiaSharp;
-using Avalonia.Threading;
+using NP.UniDockService;
 
 namespace RTSharp.Views;
 
@@ -72,11 +65,11 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
                 ContentTemplateResourceKey = "LogEntriesTemplate",
                 IsPredefined = false
             },
-            new DockActionQueueViewModel() {
+            new DockActionQueuesViewModel() {
                 DockId = "ActionQueue0",
                 DefaultDockGroupId = "MainGroup",
                 Header = null,
-                TheVM = new ActionQueueViewModel(),
+                TheVM = new ActionQueuesViewModel(),
                 HeaderContentTemplateResourceKey = "TabHeaderTemplate",
                 ContentTemplateResourceKey = "ActionQueueTemplate",
                 IsPredefined = false
@@ -177,7 +170,7 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         var domainParser = scope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>();
         var domainParserTask = domainParser.Initialize();
 
-        var waitingBox = new WaitingBox("Loading...", "Initializing and loading data providers and plugins...", WAITING_BOX_ICON.VISTA_WAIT);
+        var waitingBox = new WaitingBox("Loading...", "Initializing and loading data providers and plugins...", BuiltInIcons.VISTA_WAIT);
         Log.Logger.Debug("Loading plugins...");
 
         _ = waitingBox.ShowDialog(this);

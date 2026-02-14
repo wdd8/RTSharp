@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:RTSharp.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="150"
+             x:DataType="vm:ServerActionQueueViewModel"
+             x:Class="RTSharp.Views.ServerActionQueue">
+    <StackPanel Orientation="Horizontal">
+        <Panel Margin="0,0,8,0" VerticalAlignment="Top">
+            <Image Source="/Assets/Icons/server.ico" Width="64" Height="64" RenderOptions.BitmapInterpolationMode="None" />
+        </Panel>
+        <StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock FontWeight="Bold" Text="Server " />
+                <TextBlock FontWeight="Bold" Text="{Binding DisplayName}" />
+            </StackPanel>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="In queue: " />
+                    <TextBlock Text="{Binding ActionsInQueue}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Foreground="Red" Text="Errors: " />
+                    <TextBlock Foreground="Red" Text="{Binding ErroredActions}" />
+                </StackPanel>
+            </StackPanel>
+            <TextBlock Text="{Binding ActionQueueString}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

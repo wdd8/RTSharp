@@ -2,6 +2,8 @@
 using RTSharp.DataProvider.Transmission.Plugin.Views;
 using RTSharp.DataProvider.Transmission.Plugin.ViewModels;
 using Avalonia.Controls;
+using RTSharp.Daemon.Protocols.DataProvider.Settings;
+using RTSharp.DataProvider.Transmission.Plugin.Mappers;
 
 namespace RTSharp.DataProvider.Transmission.Plugin
 {
@@ -36,16 +38,16 @@ namespace RTSharp.DataProvider.Transmission.Plugin
 
         private CancellationTokenSource DataProviderActive { get; set; }
 
-        public async Task Init(IPluginHost Host, IProgress<(string Status, float Percentage)> Progress)
+        public async Task Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
         {
             this.Host = Host;
 
-            Progress.Report(("Registering queue...", 0f));
+            Progress(("Registering queue...", 0f));
 
             ActionQueue = new ActionQueue(Host.PluginInstanceConfig.Name, Host.InstanceId);
             Host.RegisterActionQueue(ActionQueue);
 
-            Progress.Report(("Registering data provider...", 50f));
+            Progress(("Registering data provider...", 50f));
 
             DataProvider dp;
             DataProviderActive = new();
@@ -53,17 +55,22 @@ namespace RTSharp.DataProvider.Transmission.Plugin
                 Active = DataProviderActive.Token
             });
 
-            Progress.Report(("Loaded", 100f));
+            Progress(("Loaded", 100f));
         }
 
         public async Task ShowPluginSettings(object ParentWindow)
         {
+            var daemon = Host.AttachedDaemonService;
+            var client = daemon.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
+
+            var settings = await client.GetSessionInformationAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+
             var settingsWindow = new MainWindow {
                 ViewModel = new MainWindowViewModel() {
                     PluginHost = Host,
                     ThisPlugin = this,
                     Title = Host.PluginInstanceConfig.Name + " transmission settings",
-                    //Settings = SettingsMapper.MapFromProto(settings)
+                    Settings = SettingsMapper.MapFromProto(settings)
                 }
             };
             ((MainWindowViewModel)settingsWindow.DataContext).ThisWindow = settingsWindow;

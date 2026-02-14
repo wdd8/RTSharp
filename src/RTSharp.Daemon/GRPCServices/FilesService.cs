@@ -1,19 +1,23 @@
 using CliWrap;
 using CliWrap.Buffered;
 
+using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
+
 using Mono.Unix;
+using Mono.Unix.Native;
 
 using RTSharp.Daemon.Protocols;
 
-using Mono.Unix.Native;
+using System.Runtime.InteropServices;
+
 using Path = System.IO.Path;
 
 namespace RTSharp.Daemon.GRPCServices
 {
-    public class FilesService(
+    public partial class FilesService(
         ILogger<FilesService> Logger,
         Services.FileTransferService FileTransferService
     ) : GRPCFilesService.GRPCFilesServiceBase
@@ -299,6 +303,136 @@ namespace RTSharp.Daemon.GRPCServices
             {
                 Reply = { ret }
             });
+        }
+
+        public override async Task<BytesValue> HashFileBlock(HashFileBlockInput Req, ServerCallContext Ctx)
+        {
+            if (!File.Exists(Req.Path))
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "File doesn't exist"));
+
+            if (Req.End - Req.Start > 32 * 1024 * 1024)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Requested block is too large"));
+
+            Memory<byte> buffer;
+
+            try {
+                using var stream = File.OpenRead(Req.Path);
+                stream.Seek((long)Req.Start, SeekOrigin.Begin);
+                buffer = new Memory<byte>(new byte[Req.End - Req.Start]);
+
+                await stream.ReadExactlyAsync(buffer);
+            } catch (Exception ex) {
+                throw new RpcException(new Status(StatusCode.Internal, $"Failed to read file block: {ex.Message}"));
+            }
+
+            var hash = Req.Algorithm switch {
+                HashFileBlockInput.Types.HashAlgorithm.Sha1 => System.Security.Cryptography.SHA1.HashData(buffer.Span),
+                HashFileBlockInput.Types.HashAlgorithm.Sha256 => System.Security.Cryptography.SHA256.HashData(buffer.Span),
+                _ => throw new RpcException(new Status(StatusCode.InvalidArgument, "Unsupported hash algorithm")),
+            };
+            return new BytesValue {
+                Value = ByteString.CopyFrom(hash)
+            };
+        }
+
+        /*[LibraryImport("libc")]
+        private static unsafe partial nint copy_file_range(nint fd_in, nint* off_in, nint fd_out, nint* off_out, nint size, nuint flags);*/
+
+        [LibraryImport("libc")]
+        private static unsafe partial nint ioctl(nint dest_fd, nint op, nint src_fd);
+
+        public override async Task<Empty> LinkFiles(LinkFilesInput Req, ServerCallContext Ctx)
+        {
+            if (Req.Source.Count != Req.Target.Count) {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Source and Target path count must match"));
+            }
+
+            foreach (var (src, dst) in Req.Source.Zip(Req.Target)) {
+                int hSrcFile = -1;
+                int hDstFile = -1;
+                bool created = false;
+
+                try {
+                    if (Req.Type.HasFlag(LinkFilesInput.Types.LinkType.Reflink)) {
+                        try {
+                            hSrcFile = Syscall.open(src, OpenFlags.O_RDONLY, 0);
+                            if (hSrcFile == -1) {
+                                var errno = Syscall.GetLastError();
+                                if (errno == Errno.EACCES || errno == Errno.EPERM) {
+                                    throw new RpcException(new Status(StatusCode.PermissionDenied, $"Cannot open {src}"));
+                                } else if (errno == Errno.ENOENT) {
+                                    throw new RpcException(new Status(StatusCode.InvalidArgument, $"{dst} doesn't exist"));
+                                } else {
+                                    throw new RpcException(new Status(StatusCode.Internal, $"open {dst}: {errno}"));
+                                }
+                            }
+                        } catch (Exception ex) {
+                            throw new RpcException(new Status(StatusCode.Internal, "Error: " + ex.Message, ex));
+                        }
+
+                        if (Syscall.fstat(hSrcFile, out var stat) != 0) {
+                            var errno = Syscall.GetLastError();
+                            if (errno == Errno.EACCES || errno == Errno.EPERM) {
+                                throw new RpcException(new Status(StatusCode.PermissionDenied, $"Cannot stat {src}"));
+                            } else if (errno == Errno.ENOENT) {
+                                throw new RpcException(new Status(StatusCode.InvalidArgument, $"{dst} doesn't exist"));
+                            } else {
+                                throw new RpcException(new Status(StatusCode.Internal, $"stat {dst}: {errno}"));
+                            }
+                        }
+
+                        try {
+                            for (var x = 0;x < 2;x++) {
+                                hDstFile = Syscall.open(dst, OpenFlags.O_CREAT | OpenFlags.O_WRONLY, stat.st_mode);
+                                if (hDstFile == -1) {
+                                    var errno = Syscall.GetLastError();
+                                    if (errno == Errno.ENOENT) {
+                                        Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
+                                    } else if (errno == Errno.EACCES || errno == Errno.EPERM) {
+                                        throw new RpcException(new Status(StatusCode.PermissionDenied, $"Cannot open {dst}"));
+                                    } else if (errno == Errno.EEXIST) {
+                                        throw new RpcException(new Status(StatusCode.InvalidArgument, $"{dst} already exists"));
+                                    } else {
+                                        throw new RpcException(new Status(StatusCode.Internal, $"open {dst}: {errno}"));
+                                    }
+                                } else
+                                    break;
+                            }
+                        } catch (Exception ex) {
+                            throw new RpcException(new Status(StatusCode.Internal, "Error (2): " + ex.Message, ex));
+                        }
+
+                        var resp = ioctl(hDstFile, 0x40049409 /* FICLONE */, hSrcFile);
+                        if (resp != 0) {
+                            var errno = Syscall.GetLastError();
+                            if (errno != Errno.EOPNOTSUPP) {
+                                throw new RpcException(new Status(StatusCode.Internal, "ioctl error: " + errno));
+                            }
+                        } else
+                            created = true;
+                    }
+
+                    if (Req.Type.HasFlag(LinkFilesInput.Types.LinkType.Hardlink) && !created) {
+                        var resp = Syscall.link(src, dst);
+                        if (resp != 0) {
+                            var errno = Syscall.GetLastError();
+                            if (errno == Errno.EACCES || errno == Errno.EPERM) {
+                                throw new RpcException(new Status(StatusCode.PermissionDenied, $"Cannot open {dst}"));
+                            } else if (errno == Errno.EEXIST) {
+                                throw new RpcException(new Status(StatusCode.InvalidArgument, $"{dst} already exists"));
+                            } else {
+                                throw new RpcException(new Status(StatusCode.Internal, $"{dst}: {errno}"));
+                            }
+                        }
+                    }
+                } finally {
+                    if (hSrcFile != -1)
+                        _ = Syscall.close(hSrcFile);
+                    if (hDstFile != -1)
+                        _ = Syscall.close(hDstFile);
+                }
+            }
+            return new();
         }
     }
 }

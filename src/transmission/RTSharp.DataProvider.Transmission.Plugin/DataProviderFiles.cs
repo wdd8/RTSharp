@@ -24,7 +24,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
         {
             var client = PluginHost.AttachedDaemonService.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
 
-            return (await client.GetDefaultSavePathAsync(new Empty(), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders())).Value;
+            return (await client.GetSessionInformationAsync(new Empty(), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders())).DownloadDirectory;
         }
     }
 }

@@ -1,5 +1,9 @@
 ﻿using Grpc.Core;
+
 using RTSharp.Shared.Utils;
+
+using System.Security.Cryptography;
+using System.Threading.Channels;
 
 namespace RTSharp.Shared.Abstractions.Daemon;
 
@@ -50,7 +54,7 @@ public interface IDaemonService
     /// <param name="Paths">Absolute paths of remote source <c>RemoteSource</c> and destination target <c>StoreTo</c></param>
     /// <param name="SenderServerId">Server where files are present</param>
     /// <param name="Progress">Progress for each file</param>
-    Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, IProgress<(string File, float Progress)> Progress);
+    Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, Action<(string File, float Progress)> Progress);
 
     Task<MemoryStream> ReceiveFilesInline(string RemotePath);
 
@@ -58,8 +62,15 @@ public interface IDaemonService
 
     Task QueueScriptCancellation(Guid Id);
     
-    Task GetScriptProgress(Guid Req, IProgress<ScriptProgressState>? Progress);
-    
+    Task GetScriptProgress(Guid Req, Action<ScriptProgressState>? Progress);
+
+    /// <summary>
+    /// Streams status updates of all scripts in the server
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    ChannelReader<ScriptProgressState> StreamScriptsStatus(CancellationToken cancellationToken);
+
     /// <summary>
     /// Checks files permissions to see if it's possible to delete provided files
     /// </summary>
@@ -74,10 +85,32 @@ public interface IDaemonService
     /// <returns>Is allowed for each file</returns>
     Task<Dictionary<string, bool>> AllowedToReadFiles(IEnumerable<string> In);
 
+
+    /// <summary>
+    /// Hashes a file block using a specified hash algorithm
+    /// </summary>
+    /// <param name="Path">Full remote path</param>
+    /// <param name="Start">Start offset</param>
+    /// <param name="End">End offset</param>
+    /// <param name="HashAlgorithm">SHA1 or SHA256</param>
+    /// <returns></returns>
+    Task<byte[]> HashFileBlock(string Path, ulong Start, ulong End, HashAlgorithmName HashAlgorithm);
+
+    /// <summary>
+    /// Links files from source to destination using either reflink, hardlink, or reflink with hardlink fallback. There is no hardlink with reflink fallback.
+    /// </summary>
+    /// <param name="SrcToDst">Paths</param>
+    /// <param name="Reflink"></param>
+    /// <param name="Hardlink"></param>
+    /// <returns></returns>
+    Task LinkFiles(List<KeyValuePair<string, string>> SrcToDst, bool Reflink, bool Hardlink);
+
     T GetGrpcService<T>()
         where T : ClientBase<T>;
 
     IDaemonTorrentsService GetTorrentsService(IDataProvider DataProvider);
+
+    IDaemonStatsService GetStatsService(IDataProvider DataProvider);
 
     string Id { get; }
 

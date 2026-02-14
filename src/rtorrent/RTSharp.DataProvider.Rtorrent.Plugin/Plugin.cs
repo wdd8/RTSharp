@@ -39,20 +39,19 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public IHostedDataProvider DataProvider { get; set; }
 
-        internal ActionQueue ActionQueue { get; set; }
+        internal ActionQueueRenderer ActionQueue { get; set; }
 
         private CancellationTokenSource DataProviderActive { get; set; }
 
-        public async Task Init(IPluginHost Host, IProgress<(string Status, float Percentage)> Progress)
+        public async Task Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
         {
             this.Host = Host;
+            Progress(("Registering queue...", 0f));
 
-            Progress.Report(("Registering queue...", 0f));
-
-            ActionQueue = new ActionQueue(Host.PluginInstanceConfig.Name, Host.InstanceId);
+            ActionQueue = new ActionQueueRenderer(Host.PluginInstanceConfig.Name, Host.InstanceId);
             Host.RegisterActionQueue(ActionQueue);
 
-            Progress.Report(("Registering data provider...", 50f));
+            Progress(("Registering data provider...", 50f));
 
             DataProviderActive = new();
             var dp = new DataProvider(this)
@@ -62,7 +61,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
             DataProvider = Host.RegisterDataProvider(dp);
 
-            Progress.Report(("Loaded", 100f));
+            Progress(("Loaded", 100f));
         }
 
         public async Task ShowPluginSettings(object ParentWindow)
@@ -86,7 +85,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
 
         public Task Unload()
         {
-            DataProviderActive.Cancel();
+            DataProviderActive?.Cancel();
             Host?.UnregisterDataProvider(DataProvider);
             Host?.UnregisterActionQueue();
             return Task.CompletedTask;

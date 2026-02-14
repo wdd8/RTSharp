@@ -78,7 +78,7 @@ namespace RTSharp.Shared.Controls.Views
             set { SetValue(IsRadioButtonCheckedProperty, value); }
         }
         #endregion IsRadioButtonChecked
-        #region CheckBoxEnabled
+#region CheckBoxEnabled
         private bool _checkBoxEnabled;
 
         public static readonly DirectProperty<GroupBox, bool> CheckBoxEnabledProperty =
@@ -127,7 +127,7 @@ namespace RTSharp.Shared.Controls.Views
 
         Type IStyleable.StyleKey => typeof(GroupBox);
 
-        private void EvTextBlockTapped(object e, TappedEventArgs args)
+        public void EvTextBlockTapped(object e, TappedEventArgs args)
         {
             IsRadioButtonChecked = true;
         }

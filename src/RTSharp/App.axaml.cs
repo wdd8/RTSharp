@@ -13,7 +13,6 @@ using Projektanker.Icons.Avalonia.FontAwesome;
 using RTSharp.Core;
 using Serilog;
 using Serilog.Configuration;
-using Splat;
 
 using Microsoft.Extensions.DependencyInjection;
 using Splat.Microsoft.Extensions.DependencyInjection;
@@ -27,7 +26,6 @@ using System.Threading.Tasks;
 using System.Threading;
 using Avalonia.Threading;
 using NP.Ava.UniDock;
-using System.Net;
 
 namespace RTSharp
 {
@@ -58,8 +56,6 @@ namespace RTSharp
             var host = Host.CreateDefaultBuilder()
                 .ConfigureServices((_, services) => {
                     services.UseMicrosoftDependencyResolver();
-                    var resolver = Locator.CurrentMutable;
-                    resolver.InitializeSplat();
 
                     services.AddSingleton<IConfiguration>(config);
                     Core.Config.AddConfig(config, services);
@@ -81,7 +77,11 @@ namespace RTSharp
             Core.ServiceProvider._provider.UseMicrosoftDependencyResolver();
 
             foreach (var server in servers) {
-                Core.Servers.Value.Add(server.Key, ActivatorUtilities.CreateInstance<DaemonService>(Core.ServiceProvider._provider, server.Key));
+                var instance = ActivatorUtilities.CreateInstance<DaemonService>(Core.ServiceProvider._provider, server.Key);
+                Core.Servers.Value.Add(server.Key, instance);
+                var renderer = new ServersActionQueueRenderer(server.Key);
+                ActionQueue.RegisterActionQueue(instance, renderer);
+                _ = renderer.TrackServerActions(instance);
             }
         }
     }
@@ -123,6 +123,10 @@ namespace RTSharp
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
+
+#if DEBUG
+            this.AttachDeveloperTools();
+#endif
         }
 
         private static ConcurrentDictionary<string, Func<ValueTask>> FxOnExit = new();

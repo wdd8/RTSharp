@@ -7,5 +7,108 @@ import "google/protobuf/wrappers.proto";
 import "DataProvider/CommandReply.proto";
 
 service GRPCTransmissionSettingsService {
-    rpc GetDefaultSavePath (google.protobuf.Empty) returns (google.protobuf.StringValue);
+    rpc GetSessionInformation (google.protobuf.Empty) returns (TransmissionSessionInformation);
+    rpc SetSessionSettings (TransmissionSessionInformation) returns (google.protobuf.Empty);
+}
+
+enum TransmissionEncryption {
+    TransmissionEncryption_REQUIRED = 0;
+    TransmissionEncryption_PREFERRED = 1;
+    TransmissionEncryption_TOLERATED = 2;
+    TransmissionEncryption_MAX = 3;
+}
+
+message TransmissionSessionInformation {
+    // Max alternative download speed (KBps)
+    google.protobuf.Int32Value AlternativeSpeedDown = 1;
+    // True means use the alt speeds
+    bool AlternativeSpeedEnabled = 2;
+    // When to turn on alt speeds (units: minutes after midnight)
+    google.protobuf.Int32Value AlternativeSpeedTimeBegin = 3;
+    // True means the scheduled on/off times are used
+    bool AlternativeSpeedTimeEnabled = 4;
+    // When to turn off alt speeds
+    google.protobuf.Int32Value AlternativeSpeedTimeEnd = 5;
+    // What day(s) to turn on alt speeds
+    google.protobuf.Int32Value AlternativeSpeedTimeDay = 6;
+    // Max alternative upload speed (KBps)
+    google.protobuf.Int32Value AlternativeSpeedUp = 7;
+    // Location of the blocklist to use for "blocklist-update"
+    google.protobuf.StringValue BlocklistURL = 8;
+    // True means enabled
+    bool BlocklistEnabled = 9;
+    // Maximum size of the disk cache (MB)
+    google.protobuf.Int32Value CacheSizeMB = 10;
+    // Default path to download torrents
+    google.protobuf.StringValue DownloadDirectory = 11;
+    // Max number of torrents to download at once (see download-queue-enabled)
+    google.protobuf.Int32Value DownloadQueueSize = 12;
+    // If true, limit how many torrents can be downloaded at once
+    bool DownloadQueueEnabled = 13;
+    // True means allow dht in public torrents
+    bool DHTEnabled = 14;
+    // "required", "preferred", "tolerated"
+    TransmissionEncryption Encryption = 15;
+    // Torrents we're seeding will be stopped if they're idle for this long
+    google.protobuf.Int32Value IdleSeedingLimit = 16;
+    // True if the seeding inactivity limit is honored by default
+    bool IdleSeedingLimitEnabled = 17;
+    // Path for incomplete torrents, when enabled
+    google.protobuf.StringValue IncompleteDirectory = 18;
+    // True means keep torrents in incomplete-dir until done
+    bool IncompleteDirectoryEnabled = 19;
+    // True means allow Local Peer Discovery in public torrents
+    bool LPDEnabled = 20;
+    // Maximum global number of peers
+    google.protobuf.Int32Value PeerLimitGlobal = 21;
+    // Maximum global number of peers
+    google.protobuf.Int32Value PeerLimitPerTorrent = 22;
+    // True means allow pex in public torrents
+    bool PexEnabled = 23;
+    // Port number
+    int32 PeerPort = 24;
+    // True means pick a random peer port on launch
+    bool PeerPortRandomOnStart = 25;
+    // true means enabled
+    bool PortForwardingEnabled = 26;
+    // Whether or not to consider idle torrents as stalled
+    bool QueueStalledEnabled = 27;
+    // Torrents that are idle for N minuets aren't counted toward seed-queue-size or download-queue-size
+    google.protobuf.Int32Value QueueStalledMinutes = 28;
+    // True means append ".part" to incomplete files
+    bool RenamePartialFiles = 29;
+    // Session ID
+    string SessionID = 30;
+    // Filename of the script to run
+    google.protobuf.StringValue ScriptTorrentDoneFilename = 31;
+    // Whether or not to call the "done" script
+    bool ScriptTorrentDoneEnabled = 32;
+    // The default seed ratio for torrents to use
+    google.protobuf.DoubleValue SeedRatioLimit = 33;
+    // True if seedRatioLimit is honored by default
+    bool SeedRatioLimited = 34;
+    // Max number of torrents to uploaded at once (see seed-queue-enabled)
+    google.protobuf.Int32Value SeedQueueSize = 35;
+    // If true, limit how many torrents can be uploaded at once
+    bool SeedQueueEnabled = 36;
+    // Max global download speed (KBps)
+    google.protobuf.Int32Value SpeedLimitDown = 37;
+    // True means enabled
+    bool SpeedLimitDownEnabled = 38;
+    // max global upload speed (KBps)
+    google.protobuf.Int32Value SpeedLimitUp = 39;
+    // True means enabled
+    bool SpeedLimitUpEnabled = 40;
+    // True means allow utp
+    bool UtpEnabled = 41;
+    // Number of rules in the blocklist
+    int32 BlocklistSize = 42;
+    // Location of transmission's configuration directory
+    string ConfigDirectory = 43;
+    // The current RPC API version
+    int32 RpcVersion = 44;
+    // The minimum RPC API version supported
+    int32 RpcVersionMinimum = 45;
+    // Long version string "$version ($revision)"
+    google.protobuf.StringValue Version = 46;
 }

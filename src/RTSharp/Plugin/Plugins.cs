@@ -1,26 +1,30 @@
-﻿using RTSharp.Core.Util;
+﻿using Avalonia.Controls;
+
+using DynamicData;
+
+using Microsoft.Extensions.Configuration;
+
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
+
+using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Controls.Views;
+
+using Serilog;
+
 using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using RTSharp.Shared.Abstractions;
-using Serilog;
-using System.Collections.Concurrent;
-using System.Reactive.Disposables;
-using Avalonia.Controls;
-using System.Collections.Generic;
-using MsBox.Avalonia;
-using MsBox.Avalonia.Enums;
-using System.Diagnostics;
-using LiveChartsCore.Measure;
-using RTSharp.Shared.Controls.Views;
-using RTSharp.Core;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RTSharp.Plugin
 {
@@ -28,7 +32,7 @@ namespace RTSharp.Plugin
     {
         public static ObservableCollection<PluginInstance> LoadedPlugins { get; } = new ObservableCollection<PluginInstance>();
 
-        public static ObservableCollection<DataProvider> DataProviders { get; } = new ObservableCollection<DataProvider>();
+        public static SourceList<DataProvider> DataProviders { get; } = new SourceList<DataProvider>();
 
         public enum HookType
         {
@@ -37,58 +41,90 @@ namespace RTSharp.Plugin
             AddTorrent_EvDragDrop,
         }
 
-        private static ConcurrentDictionary<HookType, object> Hooks = new();
+        private static object[][] Hooks = Array.Empty<object[]>();
+        private static FrozenDictionary<HookType, Lock> HookLocks;
 
         static Plugins()
         {
-            Hooks.TryAdd(HookType.TorrentListing_EvRowPrepared, new ThreadSafeList<Action<object, TreeDataGridRowEventArgs>>());
-            Hooks.TryAdd(HookType.TorrentListing_EvCellPrepared, new ThreadSafeList<Action<object, TreeDataGridCellEventArgs>>());
-            Hooks.TryAdd(HookType.AddTorrent_EvDragDrop, new ThreadSafeList<Func<object, ValueTask>>());
+            Hooks = new object[Enum.GetValues<HookType>().Length][];
+
+            Hooks[(int)HookType.TorrentListing_EvRowPrepared] = Array.Empty<Action<object, TreeDataGridRowEventArgs>>();
+            Hooks[(int)HookType.TorrentListing_EvCellPrepared] = Array.Empty<Action<object, TreeDataGridCellEventArgs>>();
+            Hooks[(int)HookType.AddTorrent_EvDragDrop] = Array.Empty<Func<object, ValueTask>>();
+
+            HookLocks = Enum.GetValues<HookType>().ToDictionary(x => x, _ => new Lock()).ToFrozenDictionary();
         }
 
         public static IDisposable Hook<T>(HookType type, Func<T, ValueTask> fx)
         {
-            var list = (ThreadSafeList<Func<T, ValueTask>>)Hooks[type];
-            list.Add(fx);
+            lock (HookLocks[type]) {
+                var list = (Func<T, ValueTask>[])Hooks[(int)type];
+                var newList = list.ToList();
+                newList.Add(fx);
+                Hooks[(int)type] = [.. newList];
+            }
 
             return Disposable.Create(() => {
-                list.Remove(fx);
+                lock (HookLocks[type]) {
+                    var list = (Func<T, ValueTask>[])Hooks[(int)type];
+                    var newList = list.ToList();
+                    newList.Remove(fx);
+                    Hooks[(int)type] = [.. newList];
+                }
             });
         }
 
         public static IDisposable Hook<T, T2>(HookType type, Action<T, T2> fx)
         {
-            var list = (ThreadSafeList<Action<T, T2>>)Hooks[type];
-            list.Add(fx);
+            lock (HookLocks[type]) {
+                var list = (Action<T, T2>[])Hooks[(int)type];
+                var newList = list.ToList();
+                newList.Add(fx);
+                Hooks[(int)type] = [.. newList];
+            }
 
             return Disposable.Create(() => {
-                list.Remove(fx);
+                lock (HookLocks[type]) {
+                    var list = (Action<T, T2>[])Hooks[(int)type];
+                    var newList = list.ToList();
+                    newList.Remove(fx);
+                    Hooks[(int)type] = [.. newList];
+                }
             });
         }
 
         public static IDisposable Hook<T>(HookType type, Action<T> fx)
         {
-            var list = (ThreadSafeList<Action<T>>)Hooks[type];
-            list.Add(fx);
+            lock (HookLocks[type]) {
+                var list = (Action<T>[])Hooks[(int)type];
+                var newList = list.ToList();
+                newList.Add(fx);
+                Hooks[(int)type] = [.. newList];
+            }
 
             return Disposable.Create(() => {
-                list.Remove(fx);
+                lock (HookLocks[type]) {
+                    var list = (Action<T>[])Hooks[(int)type];
+                    var newList = list.ToList();
+                    newList.Remove(fx);
+                    Hooks[(int)type] = [.. newList];
+                }
             });
         }
 
         internal static IEnumerable<Action<T>> GetHook<T>(HookType type)
         {
-            return (ThreadSafeList<Action<T>>)Hooks[type];
+            return Hooks[(int)type].Cast<Action<T>>();
         }
 
         internal static IEnumerable<Action<T, T2>> GetHook<T, T2>(HookType type)
         {
-            return (ThreadSafeList<Action<T, T2>>)Hooks[type];
+            return Hooks[(int)type].Cast<Action<T, T2>>();
         }
 
         internal static IEnumerable<Func<T, ValueTask>> GetHookAsync<T>(HookType type)
         {
-            return (ThreadSafeList<Func<T, ValueTask>>)Hooks[type];
+            return Hooks[(int)type].Cast<Func<T, ValueTask>>();
         }
 
         public static string GetFirstPluginConfigOrDefault(string FullModuleContentsPath)
@@ -138,7 +174,7 @@ namespace RTSharp.Plugin
             return $"{Shared.Abstractions.Consts.PLUGINS_PATH}/{modName}-{next}.json";
         }
 
-        public static async Task LoadPlugin(string Path, IProgress<(string Status, float Percentage)> Progress)
+        public static async Task LoadPlugin(string Path, Action<(string Status, float Percentage)> Progress)
         {
             var pluginName = Path[(Shared.Abstractions.Consts.PLUGINS_PATH.Length + 1)..];
 
@@ -205,7 +241,7 @@ namespace RTSharp.Plugin
             }
 
             Log.Logger.Debug($"Loading plugin {config.Name} ({modulePath})...");
-            Progress.Report(($"Loading plugin {config.Name} ({modulePath})...", 0f));
+            Progress(($"Loading plugin {config.Name} ({modulePath})...", 0f));
 
             PluginAssemblyLoadContext ctx;
             Assembly asm;
@@ -249,18 +285,16 @@ namespace RTSharp.Plugin
 
             var plugin = new PluginInstance(ctx, asm, inst, configRaw, Path, instanceId, modulePath);
 
-            Progress.Report(($"Initializing plugin {pluginName} ({inst.Version.VersionDisplayString})...", 0f));
+            Progress(($"Initializing plugin {pluginName} ({inst.Version.VersionDisplayString})...", 0f));
             Log.Logger.Debug($"Initializing plugin {pluginName} ({inst.Version.VersionDisplayString})...");
 
-            void evPluginProgress(object? sender, (string Status, float Percentage) e)
+            void evPluginProgress((string Status, float Percentage) e)
             {
-                Progress.Report(($"{pluginName}: {e.Status}", e.Percentage));
+                Progress(($"{pluginName}: {e.Status}", e.Percentage));
             }
 
-            var pluginProgress = new Progress<(string Status, float Percentage)>();
-            pluginProgress.ProgressChanged += evPluginProgress;
             try {
-                await inst.Init(plugin, pluginProgress);
+                await inst.Init(plugin, evPluginProgress);
             } catch (Exception ex) {
                 try {
                     await inst.Unload();
@@ -274,11 +308,10 @@ namespace RTSharp.Plugin
 
                 return;
             }
-            pluginProgress.ProgressChanged -= evPluginProgress;
             LoadedPlugins.Add(plugin);
 
             Log.Logger.Information($"Loaded plugin {pluginName}");
-            Progress.Report(($"Loaded plugin {pluginName}", 100f));
+            Progress(($"Loaded plugin {pluginName}", 100f));
         }
 
         public static async Task LoadPlugins(WaitingBox Progress)
@@ -295,9 +328,9 @@ namespace RTSharp.Plugin
                 int progress = (int)((float)x / files.Length * 100);
                 int nextProgress = (int)((float)(x + 1) / files.Length * 100);
 
-                await LoadPlugin(files[x], new Progress<(string Status, float Progress)>((e) => {
+                await LoadPlugin(files[x], ((string Status, float Progress) e) => {
                     Progress.Report(((int)(e.Progress / files.Length), e.Status));
-                }));
+                });
             }
 
             Progress.Report((100, $"Plugins loaded"));

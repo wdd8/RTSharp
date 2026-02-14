@@ -1,5 +1,6 @@
 using RTSharp.Daemon.Services;
 using RTSharp.Daemon.Utils;
+using RTSharp.Shared.Abstractions;
 
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -149,8 +150,50 @@ app.MapGrpcService<RTSharp.Daemon.GRPCServices.FilesService>();
 app.MapGrpcService<RTSharp.Daemon.GRPCServices.ServerService>();
 app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.TorrentsService>();
 app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.TorrentService>();
+app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.StatsService>();
 app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.RtorrentSettingsService>();
 app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.QBittorrentSettingsService>();
 app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.TransmissionSettingsService>();
+
+/*_ = Task.Run(() => {
+    var sessions = app.Services.GetRequiredService<SessionsService>();
+    sessions.CreateSession(new(), async (session) => {
+        var s1 = new ScriptProgressState(session) {
+            Text = "S1...",
+            Progress = 20f,
+            State = TASK_STATE.WAITING
+        };
+        var s2 = new ScriptProgressState(session) {
+            Text = "S2...",
+            Progress = 30f,
+            State = TASK_STATE.RUNNING
+        };
+        var s3 = new ScriptProgressState(session) {
+            Text = "S3...",
+            Progress = 40f,
+            State = TASK_STATE.RUNNING
+        };
+        var s4 = new ScriptProgressState(session) {
+            Text = "S4...",
+            Progress = 50f,
+            State = TASK_STATE.DONE
+        };
+        var s5 = new ScriptProgressState(session) {
+            Text = "S5...",
+            Progress = 60f,
+            State = TASK_STATE.WAITING
+        };
+        var s6 = new ScriptProgressState(session) {
+            Text = "S6...",
+            Progress = 70f,
+            State = TASK_STATE.FAILED
+        };
+
+        s2.Chain = [ s3, s4 ];
+        s4.Chain = [ s6 ];
+        session.Progress.Chain = [s1, s2, s5];
+        app.Logger.LogInformation("Task set");
+    });
+});*/
 
 app.Run();

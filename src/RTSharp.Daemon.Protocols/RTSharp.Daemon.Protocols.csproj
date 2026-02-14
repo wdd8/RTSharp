@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
@@ -11,19 +11,21 @@
       <None Remove="DataProvider\Settings.proto" />
       <None Remove="DataProvider\Settings\qbittorrent.proto" />
       <None Remove="DataProvider\Settings\transmission.proto" />
+      <None Remove="DataProvider\Stats.proto" />
       <None Remove="DataProvider\Types.proto" />
       <None Remove="Torrent.proto" />
       <None Remove="Torrents.proto" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
+        <PackageReference Include="Grpc.AspNetCore" Version="2.76.0" />
     </ItemGroup>
 
     <ItemGroup>
         <Protobuf Include="DataProvider\Settings\qbittorrent.proto" />
         <Protobuf Include="DataProvider\Settings\rtorrent.proto" GrpcServices="Both" />
         <Protobuf Include="DataProvider\Settings\transmission.proto" />
+        <Protobuf Include="DataProvider\Stats.proto" />
         <Protobuf Include="Files.proto" GrpcServices="Both" />
         <Protobuf Include="Server.proto" GrpcServices="Both" />
         <Protobuf Include="DataProvider\CommandReply.proto" GrpcServices="Both" />

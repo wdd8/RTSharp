@@ -29,7 +29,7 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
 
     public FileSystemItem Current { get; set; }
 
-    public DataProvider DataProvider { get; init; }
+    public Plugin.DataProvider DataProvider { get; init; }
 
     public SourceList<FileSystemItem> _itemsSource { get; set; } = new();
 
@@ -47,7 +47,7 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
 
     private DaemonService Server;
 
-    public DirectorySelectorWindowViewModel(DataProvider DataProvider)
+    public DirectorySelectorWindowViewModel(Plugin.DataProvider DataProvider)
     {
         this.DataProvider = DataProvider;
         _itemsSource.Connect().Sort(SortExpressionComparer<FileSystemItem>.Ascending(x => x.Path)).Bind(out _items).Subscribe();

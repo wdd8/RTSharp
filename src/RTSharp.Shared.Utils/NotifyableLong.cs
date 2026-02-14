@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Reactive.Disposables;
 
 namespace RTSharp.Shared.Utils
 {
@@ -7,7 +8,7 @@ namespace RTSharp.Shared.Utils
         public string ValueStr { get; }
     }
 
-    public class Notifyable<T> : INotifyPropertyChanged, INotifyable
+    public class Notifyable<T> : INotifyPropertyChanged, INotifyable, IObservable<T>
     {
         public T Value { get; private set; }
 
@@ -22,6 +23,17 @@ namespace RTSharp.Shared.Utils
 
             this.Value = Value;
             PropertyChanged?.Invoke(null, new PropertyChangedEventArgs(nameof(Value)));
+        }
+
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            PropertyChangedEventHandler fx = (object sender, PropertyChangedEventArgs e) => {
+                observer.OnNext(Value);
+            };
+
+            PropertyChanged += fx;
+
+            return Disposable.Create(() => PropertyChanged -= fx);
         }
 
         public override string ToString() => Value.ToString();

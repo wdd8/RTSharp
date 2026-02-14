@@ -215,13 +215,13 @@ namespace RTSharp.ViewModels.Tools
                 return;
             }
 
-            var progress = new Progress<(float HashProgress, string CurrentFile, float FileProgress, float FileBuffer, string HashExcerpt)>(progress => {
+            var progress = ((float HashProgress, string CurrentFile, float FileProgress, float FileBuffer, string HashExcerpt) progress) => {
                 ProgressInfoInstance.HashProgress = progress.HashProgress;
                 ProgressInfoInstance.CurrentFile = progress.CurrentFile;
                 ProgressInfoInstance.FileProgress = progress.FileProgress;
                 ProgressInfoInstance.FileBuffer = progress.FileBuffer;
                 ProgressInfoInstance.HashExcerpt = progress.HashExcerpt;
-            });
+            };
 
             ProgressInfoInstance.Cts = new();
 

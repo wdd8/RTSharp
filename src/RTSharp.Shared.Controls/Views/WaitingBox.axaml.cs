@@ -6,14 +6,14 @@ using RTSharp.Shared.Controls.ViewModels;
 
 namespace RTSharp.Shared.Controls.Views
 {
-    public partial class WaitingBox : Window, IProgress<(int Progress, string Description)>
+    public partial class WaitingBox : Window//, IProgress<(int Progress, string Description)>
     {
         public WaitingBox()
-            : this("Operation in progress...", "Please wait while the operation is in progress.", WAITING_BOX_ICON.WIN10_INFO)
+            : this("Operation in progress...", "Please wait while the operation is in progress.", BuiltInIcons.WIN10_INFO)
         {
         }
 
-        public WaitingBox(string Text, string Description, WAITING_BOX_ICON Icon)
+        public WaitingBox(string Text, string Description, BuiltInIcons Icon)
         {
             DataContext = new WaitingBoxViewModel(Text, Description, Icon);
 

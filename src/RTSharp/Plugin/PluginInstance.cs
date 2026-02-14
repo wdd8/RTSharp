@@ -1,20 +1,28 @@
-﻿using System;
+﻿using Avalonia.Controls;
+using Avalonia.VisualTree;
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+using RTSharp.Core;
+using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Daemon;
+
+using Serilog;
+
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reactive.Disposables;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
-using Avalonia.Controls;
-
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-
-using RTSharp.Shared.Abstractions;
-using RTSharp.Shared.Abstractions.Daemon;
-using Serilog;
+using static RTSharp.Core.Config.Models;
 
 namespace RTSharp.Plugin
 {
@@ -23,7 +31,7 @@ namespace RTSharp.Plugin
         internal PluginAssemblyLoadContext AssemblyLoadContext { get; private set; }
         internal Assembly Assembly { get; private set; }
         internal IPlugin Instance { get; private set; }
-        public PluginInstanceConfig PluginInstanceConfig => PluginConfig.GetSection("Plugin").Get<PluginInstanceConfig>()!;
+        public PluginInstanceConfig PluginInstanceConfig { get; }
 
         public string ModulePath { get; init; }
 
@@ -55,6 +63,7 @@ namespace RTSharp.Plugin
             this.AssemblyLoadContext = Context;
             this.PluginConfig = PluginConfig;
             this.PluginConfigPath = PluginConfigPath;
+            this.PluginInstanceConfig = PluginConfig.GetSection("Plugin").Get<PluginInstanceConfig>()!;
 
             this.InstanceId = InstanceId;
             this.ModulePath = ModulePath;
@@ -83,7 +92,9 @@ namespace RTSharp.Plugin
                 AttachedServerId = null;
 
             lock (DataProviderLock) {
-                Plugins.DataProviders.Add(provider);
+                Plugins.DataProviders.Edit(x => {
+                    x.Add(provider);
+                });
             }
 
             return provider;
@@ -97,12 +108,14 @@ namespace RTSharp.Plugin
                 return;
 
             lock (DataProviderLock) {
-                Plugins.DataProviders.Remove(dp);
+                Plugins.DataProviders.Edit(x => {
+                    x.Remove(dp);
+                });
             }
             dp.CurrentTorrentChangesTaskCts.Cancel();
         }
 
-        public void RegisterActionQueue(IActionQueue In) => Core.ActionQueue.RegisterActionQueue(this, In);
+        public void RegisterActionQueue(IActionQueueRenderer In) => Core.ActionQueue.RegisterActionQueue(this, In);
 
         public void UnregisterActionQueue() => Core.ActionQueue.UnregisterActionQueue(this);
 
@@ -111,6 +124,38 @@ namespace RTSharp.Plugin
             App.MainWindowViewModel.MenuItems.Add(In);
             return Disposable.Create(() => {
                 App.MainWindowViewModel.MenuItems.Remove(In);
+            });
+        }
+
+        public IDisposable RegisterToolsMenuItem(MenuItem In)
+        {
+            var tools = App.MainWindowViewModel.MenuItems.First(x => x.Name == "ToolsMenu");
+            tools.Items.Add(In);
+            return Disposable.Create(() => {
+                tools.Items.Remove(In);
+            });
+        }
+
+        public IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In)
+        {
+            var fx = (System.Collections.IList items) => {
+                var control = In();
+                Debug.Assert(control.GetVisualParent() == null);
+                items.Add(control);
+                return control;
+            };
+            RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Add(fx);
+            return Disposable.Create(() => {
+                RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Remove(fx);
+            });
+        }
+
+        public IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove)
+        {
+            RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Add(Add);
+            return Disposable.Create(() => {
+                RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Remove(Add);
+                RTSharp.Views.TorrentListing.TorrentListingView.MenuItemRemoves.Remove(Remove);
             });
         }
 
@@ -165,6 +210,25 @@ namespace RTSharp.Plugin
                 return ret;
 
             return null;
+        }
+
+        public async Task SavePluginConfig(Action<JsonNode> Modifications)
+        {
+            var jsonRaw = await System.IO.File.ReadAllTextAsync(PluginConfigPath);
+            var json = JsonNode.Parse(jsonRaw)!;
+
+            Modifications(json);
+
+            var newFileName = System.IO.Path.GetTempFileName();
+            await System.IO.File.WriteAllTextAsync(newFileName, json.ToJsonString(new JsonSerializerOptions() {
+                WriteIndented = true
+            }));
+
+            System.IO.File.Move(PluginConfigPath, PluginConfigPath + ".bak");
+            System.IO.File.Move(newFileName, PluginConfigPath);
+            System.IO.File.Delete(PluginConfigPath + ".bak");
+
+            PluginConfig.Reload();
         }
     }
 }

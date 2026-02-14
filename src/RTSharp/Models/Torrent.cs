@@ -11,11 +11,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using NP.Utilities;
-
 using RTSharp.Core.Services.Cache.Images;
 using RTSharp.Core.Services.Cache.TrackerDb;
-using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
@@ -23,8 +20,12 @@ namespace RTSharp.Models
 {
     public static class TorrentUpdateExt
     {
-        public static async ValueTask UpdateFromPluginModelMulti(IEnumerable<Torrent> Domain, InfoHashDictionary<Shared.Abstractions.Torrent> Plugin)
+        public static async ValueTask<List<(int Index, Torrent Obj)>> UpdateFromPluginModelMulti(IList<Torrent> Domain, InfoHashDictionary<Shared.Abstractions.Torrent> Plugin)
         {
+            var ret = new List<(int Index, Torrent Obj)>();
+            if (Plugin.Count == 0)
+                return ret;
+
             var trackers = new HashSet<string>();
             foreach (var torrent in Domain) {
                 if (Plugin.TryGetValue(torrent.Hash, out var plugin)) {
@@ -49,7 +50,8 @@ namespace RTSharp.Models
                 images = imagesTasks.ToDictionary(x => x.Key, x => x.Value.Result);
             }
 
-            foreach (var torrent in Domain) {
+            for (var x = 0;x < Domain.Count;x++) {
+                var torrent = Domain[x];
                 if (Plugin.TryGetValue(torrent.Hash, out var plugin)) {
                     if (plugin.TrackerSingle != torrent.TrackerSingle && plugin.TrackerSingle != null) {
                         var domain = UriUtils.GetDomainForTracker(plugin.TrackerSingle);
@@ -66,6 +68,49 @@ namespace RTSharp.Models
                     }
 
                     await torrent.UpdateFromPluginModel(plugin, false);
+                    Plugin.Remove(torrent.Hash);
+                    ret.Add((x, torrent));
+                }
+            }
+
+            return ret;
+        }
+
+        public static async ValueTask UpdateMulti(IEnumerable<Torrent> Domain)
+        {
+            var torrents = new HashSet<Torrent>();
+            foreach (var torrent in Domain) {
+                if (torrent.TrackerDisplayName == null && torrent.TrackerSingle != null) {
+                    torrents.Add(torrent);
+                }
+            }
+
+            IEnumerable<TrackerInfo> trackerInfo = [];
+            Dictionary<TrackerInfo, Bitmap> images = [];
+
+            if (torrents.Count != 0) {
+                using var scope = Core.ServiceProvider.CreateScope();
+                var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
+                var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
+
+                trackerInfo = await trackerDb.GetTrackerInfo(torrents.Select(x => UriUtils.GetDomainForTracker(x.TrackerSingle)));
+                var imagesTasks = trackerInfo.Where(x => x.ImageHash != null).ToDictionary(x => x, x => imageCache.GetCachedImage(x.ImageHash).AsTask());
+                await Task.WhenAll(imagesTasks.Values.ToArray());
+
+                images = imagesTasks.ToDictionary(x => x.Key, x => x.Value.Result);
+            }
+
+            foreach (var torrent in torrents) {
+                var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle);
+                var info = trackerInfo.FirstOrDefault(x => x.Domain == domain);
+
+                if (info != null) {
+                    if (images.TryGetValue(info, out var image)) {
+                        torrent.TrackerIcon = image;
+                    }
+                    torrent.TrackerDisplayName = info.Name ?? domain;
+                } else {
+                    torrent.TrackerDisplayName = domain;
                 }
             }
         }
@@ -78,7 +123,7 @@ namespace RTSharp.Models
         /// </summary>
         public byte[] Hash { get; set; }
 
-        public DataProvider Owner { get; set; }
+        public Plugin.DataProvider Owner { get; set; }
 
         /// <summary>
         /// Torrent name
@@ -104,8 +149,16 @@ namespace RTSharp.Models
         /// <summary>
         /// Size in bytes
         /// </summary>
+        public ulong Size {
+            get;
+            set {
+                field = value;
+                SizeDisplay = Converters.GetSIDataSize(value);
+            }
+        }
+
         [ObservableProperty]
-        public ulong size;
+        public string sizeDisplay;
 
         /// <summary>
         /// Size we want to download (in case of 0 priority files)
@@ -133,62 +186,143 @@ namespace RTSharp.Models
         /// <summary>
         /// Downloaded bytes
         /// </summary>
+        public ulong Downloaded {
+            get;
+            set {
+                field = value;
+                DownloadedDisplay = Converters.GetSIDataSize(value);
+            }
+        }
+
         [ObservableProperty]
-        public ulong downloaded;
+        public string downloadedDisplay;
 
         /// <summary>
         /// Completed bytes
         /// </summary>
+        public ulong CompletedSize {
+            get;
+            set {
+                field = value;
+                CompletedSizeDisplay = Converters.GetSIDataSize(value);
+            }
+        }
+
         [ObservableProperty]
-        public ulong completedSize;
+        public string completedSizeDisplay;
 
         /// <summary>
         /// Uploaded bytes
         /// </summary>
+        public ulong Uploaded {
+            get;
+            set {
+                field = value;
+                UploadedDisplay = Converters.GetSIDataSize(value);
+            }
+        }
+
         [ObservableProperty]
-        public ulong uploaded;
+        public string uploadedDisplay;
 
         /// <summary>
         /// Share ratio
         /// </summary>
+        public float Ratio {
+            get;
+            set {
+                field = value;
+                RatioDisplay = value.ToString("N3");
+            }
+        }
+
         [ObservableProperty]
-        public float ratio;
+        public string ratioDisplay;
 
         /// <summary>
         /// Download speed, B/s
         /// </summary>
+        public ulong DLSpeed {
+            get;
+            set {
+                field = value;
+                DLSpeedDisplay = Converters.GetSIDataSize(value);
+            }
+        }
+
         [ObservableProperty]
-        public ulong dLSpeed;
+        public string dLSpeedDisplay;
 
         /// <summary>
         /// Upload speed, B/S
         /// </summary>
+        public ulong UPSpeed {
+            get;
+            set {
+                field = value;
+                UPSpeedDisplay = Converters.GetSIDataSize(value);
+            }
+        }
+
         [ObservableProperty]
-        public ulong uPSpeed;
+        public string uPSpeedDisplay;
 
         /// <summary>
         /// ETA, <c>0</c> if already at 100%
         /// </summary>
         /// <seealso cref="Done"/>
+        public TimeSpan ETA {
+            get;
+            set {
+                field = value;
+                ETADisplay = Converters.ToAgoString(value);
+            }
+        }
+
         [ObservableProperty]
-        public TimeSpan eTA;
+        public string eTADisplay;
 
         /// <summary>
         /// Torrent label
         /// </summary>
+        public string[] Labels {
+            get;
+            set {
+                field = value;
+                LabelsDisplay = String.Join(", ", value);
+            }
+        }
+
         [ObservableProperty]
-        public ObservableCollection<string> labels;
+        public string labelsDisplay;
 
         /// <summary>
         /// Torrent peers. Connected, Total
         /// </summary>
+        public ConnectedTotalPair Peers {
+            get;
+            set {
+                field = value;
+                PeersDisplay = value.ToString();
+            }
+        }
+
         [ObservableProperty]
-        public ConnectedTotalPair peers;
+        public string peersDisplay;
+
         /// <summary>
         /// Torrent seeders. Connected, Total
         /// </summary>
+        public ConnectedTotalPair Seeders {
+            get;
+            set {
+                field = value;
+                SeedersDisplay = value.ToString();
+            }
+        }
+
         [ObservableProperty]
-        public ConnectedTotalPair seeders;
+        public string seedersDisplay;
 
         private TORRENT_PRIORITY InternalPriority;
 
@@ -201,21 +335,45 @@ namespace RTSharp.Models
         /// <summary>
         /// Unix timestamp of when .torrent file was created
         /// </summary>
-        public DateTime? CreatedOnDate { get; set; }
+        public DateTime? CreatedOnDate {
+            get;
+            set {
+                field = value;
+                CreatedOnDateDisplay = value == null ? "" : value.Value.ToString();
+            }
+        }
+
+        public string CreatedOnDateDisplay;
 
         /// <summary>
         /// Remaining size to download
         /// </summary>
         /// <seealso cref="Size"/>
         /// <seealso cref="Downloaded"/>
+        public ulong RemainingSize {
+            get;
+            set {
+                field = value;
+                RemainingSizeDisplay = Converters.GetSIDataSize(value);
+            }
+        }
+
         [ObservableProperty]
-        public ulong remainingSize;
+        public string remainingSizeDisplay;
 
         /// <summary>
         /// Date when torrent finished downloading
         /// </summary>
+        public DateTime? FinishedOnDate {
+            get;
+            set {
+                field = value;
+                FinishedOnDateDisplay = value == null ? "" : value.Value.ToString();
+            }
+        }
+
         [ObservableProperty]
-        public DateTime? finishedOnDate;
+        public string finishedOnDateDisplay;
 
         /// <summary>
         /// Time elapsed when downloading torrent.
@@ -227,7 +385,15 @@ namespace RTSharp.Models
         /// <summary>
         /// Unix timestamp of when torrent was added
         /// </summary>
-        public DateTime AddedOnDate { get; set; }
+        public DateTime AddedOnDate {
+            get;
+            set {
+                field = value;
+                AddedOnDateDisplay = value.ToString();
+            }
+        }
+
+        public string AddedOnDateDisplay;
 
         /// <summary>
         /// Primary tracker URI
@@ -264,7 +430,7 @@ namespace RTSharp.Models
         [ObservableProperty]
         public bool magnetDummy;
 
-        public Torrent(byte[] Hash, DataProvider Owner)
+        public Torrent(byte[] Hash, Plugin.DataProvider Owner)
         {
             this.Hash = Hash;
             this.Owner = Owner;
@@ -274,25 +440,7 @@ namespace RTSharp.Models
         {
             this.Name = In.Name;
 
-            string stateStr = "N/A";
-            if ((In.State & TORRENT_STATE.SEEDING) == TORRENT_STATE.SEEDING)
-                stateStr = "Seeding";
-            if ((In.State & TORRENT_STATE.STOPPED) == TORRENT_STATE.STOPPED)
-                stateStr = "Stopped";
-            if ((In.State & TORRENT_STATE.COMPLETE) == TORRENT_STATE.COMPLETE)
-                stateStr = "Complete";
-            if ((In.State & TORRENT_STATE.DOWNLOADING) == TORRENT_STATE.DOWNLOADING)
-                stateStr = "Downloading";
-            if ((In.State & TORRENT_STATE.PAUSED) == TORRENT_STATE.PAUSED)
-                stateStr = "Paused";
-            if ((In.State & TORRENT_STATE.HASHING) == TORRENT_STATE.HASHING)
-                stateStr = "Hashing";
-            if ((In.State & TORRENT_STATE.ERRORED) == TORRENT_STATE.ERRORED)
-                stateStr = "☠ " + stateStr;
-            if ((In.State & TORRENT_STATE.ACTIVE) == TORRENT_STATE.ACTIVE)
-                stateStr = "⚡ " + stateStr;
-
-            this.State = stateStr;
+            this.State = EnumExt.ToString(In.State);
             this.InternalState = In.State;
 
             this.Size = In.Size;
@@ -309,18 +457,11 @@ namespace RTSharp.Models
             this.DLSpeed = In.DLSpeed;
             this.UPSpeed = In.UPSpeed;
             this.ETA = In.ETA;
-            this.Labels = In.Labels.ToObservableCollection();
+            this.Labels = In.Labels.ToArray();
             this.Peers = new ConnectedTotalPair(In.Peers.Connected, In.Peers.Total);
             this.Seeders = new ConnectedTotalPair(In.Seeders.Connected, In.Seeders.Total);
 
-            if (In.Priority == TORRENT_PRIORITY.HIGH)
-                this.Priority = "High";
-            else if (In.Priority == TORRENT_PRIORITY.LOW)
-                this.Priority = "Low";
-            else if (In.Priority == TORRENT_PRIORITY.NORMAL)
-                this.Priority = "Normal";
-            else
-                this.Priority = In.Priority == TORRENT_PRIORITY.OFF ? "Off" : "N/A";
+            this.Priority = EnumExt.ToString(In.Priority);
 
             this.InternalPriority = In.Priority;
 

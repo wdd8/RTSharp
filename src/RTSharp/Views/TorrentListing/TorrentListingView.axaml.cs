@@ -17,6 +17,12 @@ using Avalonia;
 using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Models.TreeDataGrid;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.Reactive.Linq;
+using System.Reactive;
+using Avalonia.Data;
+using RTSharp.Views.Util;
 
 namespace RTSharp.Views.TorrentListing;
 
@@ -24,6 +30,9 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 {
     private int RowHeight { get; set; }
     private Thickness GridBorderThickness { get; } = Thickness.Parse("0 0 0 1");
+
+    public static ObservableCollection<Func<System.Collections.IList, MenuItem>> MenuItemInserts = new();
+    public static ObservableCollection<Action<System.Collections.IList>> MenuItemRemoves = new();
 
     public TorrentListingView()
     {
@@ -40,10 +49,54 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             vm!.OnViewModelAttached(this);
         }, null);
 
+        MenuItemInserts.CollectionChanged += MenuItemInserts_CollectionChanged;
+        HandleInserts(MenuItemInserts);
+
+        MenuItemRemoves.CollectionChanged += MenuItemRemoves_CollectionChanged;
+        HandleRemoves(MenuItemRemoves);
+
         using var scope = Core.ServiceProvider.CreateScope();
         var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
 
         RowHeight = config.Look.Value.TorrentListing?.RowHeight ?? 32;
+    }
+
+    private void MenuItemInserts_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null) {
+            HandleInserts(e.NewItems);
+        }
+    }
+
+    private void MenuItemRemoves_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null) {
+            HandleRemoves(e.NewItems);
+        }
+    }
+
+    private void HandleInserts(System.Collections.IList List)
+    {
+        if (this.Resources.TryGetResource("GridContextMenuItems", null, out var obj) && obj is System.Collections.IList list) {
+            foreach (var fx in List.OfType<Func<System.Collections.IList, MenuItem>>()) {
+                var menuItem = fx(list);
+                menuItem.Bind(MenuItem.CommandParameterProperty, new Binding("RowSelection.SelectedItems") {
+                    Source = grid,
+                    Mode = BindingMode.OneWay,
+                    Converter = SelectedItemsToPluginModelConverter.Instance
+                });
+            }
+        }
+    }
+
+    private void HandleRemoves(System.Collections.IList List)
+    {
+        if (this.Resources.TryGetResource("GridContextMenuItems", null, out var obj) && obj is System.Collections.IList list) {
+            foreach (var fx in List.OfType<Action<System.Collections.IList>>()) {
+                MenuItemRemoves.Remove(fx);
+                fx(list);
+            }
+        }
     }
 
     public override void EndInit() => base.EndInit();

@@ -15,12 +15,12 @@ namespace RTSharp.ViewModels
 {
     public partial class TorrentDuplicationTargetSelectorWindowViewModel : ObservableObject
     {
-        public List<DataProvider> DataProviders => Plugin.Plugins.DataProviders.ToList();
+        public List<Plugin.DataProvider> DataProviders => [.. Plugin.Plugins.DataProviders.Items];
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
         [NotifyCanExecuteChangedFor(nameof(ConfirmClickCommand))]
-        public DataProvider? selectedProvider;
+        public Plugin.DataProvider? selectedProvider;
 
         [ObservableProperty]
         public string remoteTargetPath;
@@ -49,7 +49,7 @@ namespace RTSharp.ViewModels
         }
 
         [RelayCommand]
-        public async Task ProviderChanged(DataProvider SelectedProvider)
+        public async Task ProviderChanged(Plugin.DataProvider SelectedProvider)
         {
             try {
                 RemoteTargetPathEnabled = false;

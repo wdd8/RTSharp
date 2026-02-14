@@ -8,13 +8,21 @@ namespace RTSharp.DataProvider.Transmission.Plugin
         public IPluginHost PluginHost { get; }
 
         public DataProviderStatsCapabilities Capabilities { get; } = new(
-            GetStateHistory: false
+            GetStateHistory: false,
+            GetAllTimeDataStats: true
         );
 
         public DataProviderStats(Plugin ThisPlugin)
         {
             this.ThisPlugin = ThisPlugin;
             this.PluginHost = ThisPlugin.Host;
+        }
+
+        public Task<AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken)
+        {
+            var client = PluginHost.AttachedDaemonService.GetStatsService(ThisPlugin.DataProvider.Instance);
+
+            return client.GetAllTimeDataStats(cancellationToken);
         }
     }
 }

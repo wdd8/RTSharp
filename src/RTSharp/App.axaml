@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:np="https://np.com/visuals"
              xmlns:local="clr-namespace:RTSharp"
-             xmlns:core="clr-namespace:Dock.Model.Core;assembly=Dock.Model">
+             xmlns:core="clr-namespace:Dock.Model.Core;assembly=Dock.Model"
+			 xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia">
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>
@@ -15,7 +16,7 @@
         <StyleInclude Source="avares://RTSharp/CustomWindowStyles.axaml"/>
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
         <StyleInclude Source="avares://Avalonia.Controls.TreeDataGrid/Themes/Fluent.axaml"/>
-        <StyleInclude Source="avares://DialogHost.Avalonia/Styles.xaml"/>
+        <dialogHostAvalonia:DialogHostStyles />
 
         <Style Selector="TextBlock">
             <Setter Property="FontSize" Value="12" />

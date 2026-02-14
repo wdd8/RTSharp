@@ -14,9 +14,37 @@ service GRPCFilesService {
     rpc CheckExists (CheckExistsInput) returns (CheckExistsReply);
     rpc AllowedToDelete (AllowedToDeleteInput) returns (AllowedToDeleteReply);
     rpc AllowedToRead (AllowedToReadInput) returns (AllowedToReadReply);
+    rpc HashFileBlock (HashFileBlockInput) returns (google.protobuf.BytesValue);
+    rpc LinkFiles (LinkFilesInput) returns (google.protobuf.Empty);
 
     rpc Internal_SendFiles (SendFilesInput) returns (stream FileBuffer);
     rpc SaveFiles (SaveFilesFromRemoteInput) returns (stream SaveFilesFromRemoteReply);
+}
+
+message LinkFilesInput {
+    enum LinkType {
+        option allow_alias = true;
+        LinkType_NA = 0x00;
+        LinkType_HARDLINK = 0x01;
+        LinkType_REFLINK = 0x02;
+        LinkType_MAX = 0x02;
+    }
+
+    repeated string Source = 1;
+    repeated string Target = 2;
+    LinkType Type = 3;
+}
+
+message HashFileBlockInput {
+    enum HashAlgorithm {
+        HashAlgorithm_SHA1 = 0;
+        HashAlgorithm_SHA256 = 1;
+    }
+
+    string Path = 1;
+    uint64 Start = 2;
+    uint64 End = 3;
+    HashAlgorithm Algorithm = 4;
 }
 
 message AllowedToReadInput {

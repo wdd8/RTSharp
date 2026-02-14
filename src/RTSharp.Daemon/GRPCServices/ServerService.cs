@@ -10,11 +10,15 @@ using RTSharp.Daemon.Services;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
+using System.Collections.Concurrent;
+
 namespace RTSharp.Daemon.GRPCServices
 {
     public class ServerService(ILogger<ServerService> Logger, SessionsService Sessions) : GRPCServerService.GRPCServerServiceBase
     {
         public override Task<Empty> Test(Empty request, ServerCallContext context) => Task.FromResult(new Empty());
+
+        private static ConcurrentDictionary<byte[], DynamicScript<IScript>> Cache = new ConcurrentDictionary<byte[], DynamicScript<IScript>>(new ByteArrayComparer());
 
         public override Task<ScriptSessionReply> StartScript(StartScriptInput Req, ServerCallContext context)
         {
@@ -23,14 +27,18 @@ namespace RTSharp.Daemon.GRPCServices
                 Logger.LogTrace("Script: {script}", Req.Script);
 
                 var script = Req.Script;
-
-                var compilation = DynamicCompilation.Compile<IScript>(
-                    ref script,
-                    Req.Name,
-                    [ "RTSharp.Daemon", "RTSharp.Daemon.Protocols", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils", "System.Collections", "System.Linq", "System.Text.Json", "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging", "System.ComponentModel" ],
-                    [ "System", "System.Threading.Tasks", "System.Threading", "System.Collections.Generic", "RTSharp.Daemon", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils" ]);
-                
-                Logger.LogDebug("Compilation successful, running script...");
+                var hash = System.Security.Cryptography.SHA512.HashData(System.Text.Encoding.UTF8.GetBytes(script));
+                if (!Cache.TryGetValue(hash, out var compilation)) {
+                    compilation = DynamicCompilation.Compile<IScript>(
+                        ref script,
+                        Req.Name,
+                        [ "RTSharp.Daemon", "RTSharp.Daemon.Protocols", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils", "System.Collections", "System.Linq", "System.Text.Json", "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging", "System.ComponentModel" ],
+                        [ "System", "System.Threading.Tasks", "System.Threading", "System.Collections.Generic", "RTSharp.Daemon", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils" ]);
+                    Logger.LogDebug("Compilation successful, running script...");
+                    Cache[hash] = compilation;
+                } else {
+                    Logger.LogDebug($"Cached script: {Convert.ToBase64String(hash)}");
+                }
 
                 var session = Sessions.RunScript(compilation, Req.Variables.ToDictionary());
 
@@ -86,8 +94,12 @@ namespace RTSharp.Daemon.GRPCServices
                 var sessions = Sessions.GetScriptSessions();
 
                 await Task.WhenAll(sessions.Select(async x => {
-                    await x.EvProgressChanged.WaitAsync(Ctx.CancellationToken);
-                    await Res.WriteAsync(MapProgressState(x.Id.ToByteArray().ToByteString(), x.Progress), Ctx.CancellationToken);
+                    var linked = CancellationTokenSource.CreateLinkedTokenSource(Ctx.CancellationToken, x.Cts.Token);
+
+                    while (!linked.IsCancellationRequested) {
+                        await Res.WriteAsync(MapProgressState(x.Id.ToByteArray().ToByteString(), x.Progress), linked.Token);
+                        await x.EvProgressChanged.WaitAsync(linked.Token);
+                    }
                 }));
             }
         }

@@ -208,6 +208,44 @@ namespace RTSharp.Shared.Abstractions
         ALLOCATING = 1 << 10
     }
 
+    public static class EnumExt
+    {
+        public static string ToString(this TORRENT_STATE In)
+        {
+            string stateStr = "N/A";
+            if ((In & TORRENT_STATE.SEEDING) == TORRENT_STATE.SEEDING)
+                stateStr = "Seeding";
+            if ((In & TORRENT_STATE.STOPPED) == TORRENT_STATE.STOPPED)
+                stateStr = "Stopped";
+            if ((In & TORRENT_STATE.COMPLETE) == TORRENT_STATE.COMPLETE)
+                stateStr = "Complete";
+            if ((In & TORRENT_STATE.DOWNLOADING) == TORRENT_STATE.DOWNLOADING)
+                stateStr = "Downloading";
+            if ((In & TORRENT_STATE.PAUSED) == TORRENT_STATE.PAUSED)
+                stateStr = "Paused";
+            if ((In & TORRENT_STATE.HASHING) == TORRENT_STATE.HASHING)
+                stateStr = "Hashing";
+            if ((In & TORRENT_STATE.ERRORED) == TORRENT_STATE.ERRORED)
+                stateStr = "☠ " + stateStr;
+            if ((In & TORRENT_STATE.ACTIVE) == TORRENT_STATE.ACTIVE)
+                stateStr = "⚡ " + stateStr;
+
+            return stateStr;
+        }
+
+        public static string ToString(this TORRENT_PRIORITY In)
+        {
+            if (In == TORRENT_PRIORITY.HIGH)
+                return "High";
+            else if (In == TORRENT_PRIORITY.LOW)
+                return "Low";
+            else if (In == TORRENT_PRIORITY.NORMAL)
+                return "Normal";
+            else
+                return In == TORRENT_PRIORITY.OFF ? "Off" : "N/A";
+        }
+    }
+
     public unsafe class HashEqualityComparer : IEqualityComparer<byte[]>
     {
         public bool Equals(byte[] x, byte[] y)

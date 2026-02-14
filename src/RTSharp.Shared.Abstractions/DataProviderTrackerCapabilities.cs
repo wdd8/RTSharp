@@ -5,6 +5,7 @@
         bool EnableTracker,
         bool DisableTracker,
         bool RemoveTracker,
-        bool ReannounceTracker
+        bool ReannounceTracker,
+        bool ReplaceTracker
     );
 }

@@ -6,6 +6,7 @@ using DynamicData;
 using MsBox.Avalonia;
 
 using RTSharp.Plugin;
+using RTSharp.Shared.Controls;
 using RTSharp.Shared.Controls.Views;
 
 using System;
@@ -48,13 +49,13 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
         else
             config = await Plugins.GeneratePluginConfig(SelectedUnloadedDir);
 
-        var wBox = new WaitingBox($"Loading {SelectedUnloadedDir}", $"Loading {config}...", Shared.Controls.ViewModels.WAITING_BOX_ICON.VISTA_WAIT);
+        var wBox = new WaitingBox($"Loading {SelectedUnloadedDir}", $"Loading {config}...", BuiltInIcons.VISTA_WAIT);
         wBox.Show();
 
         try {
-            await Plugins.LoadPlugin(config, new Progress<(string Status, float Percentage)>(e => {
+            await Plugins.LoadPlugin(config, ((string Status, float Percentage) e) => {
                 wBox.Report(((int)e.Percentage, e.Status));
-            }));
+            });
         } catch (Exception ex) {
             var msgBox = MessageBoxManager.GetMessageBoxStandard("RT# - Failed to load plugin", $"Failed to load plugin {config}\n{ex}", MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Stop, Avalonia.Controls.WindowStartupLocation.CenterOwner);
             await msgBox.ShowAsync();

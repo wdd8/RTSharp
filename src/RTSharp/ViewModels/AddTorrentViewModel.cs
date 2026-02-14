@@ -19,7 +19,7 @@ namespace RTSharp.ViewModels
 {
     public partial class AddTorrentViewModel : ObservableObject
     {
-        public List<DataProvider> DataProviders => Plugin.Plugins.DataProviders.Where(x => x.Instance.Capabilities.AddTorrent).ToList();
+        public List<DataProvider> DataProviders => [.. Plugin.Plugins.DataProviders.Items.Where(x => x.Instance.Capabilities.AddTorrent)];
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(ForceStartTorrentOnAdd))]

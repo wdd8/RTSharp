@@ -111,7 +111,6 @@ namespace RTSharp.ViewModels.TorrentListing
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteForceRecheckTorrents))]
         public async Task ForceRecheckTorrents(IReadOnlyList<Torrent> In)
         {
-            
             var result = await RecheckTorrentsConfirmationDialog((App.MainWindow, (ulong)In.Sum(x => (decimal)x.WantedSize), In.Count));
 
             if (result)
@@ -225,9 +224,9 @@ namespace RTSharp.ViewModels.TorrentListing
                     );
                     
                     if (result != null) {
-                        await dataProvider.PluginInstance.AttachedDaemonService!.GetScriptProgress(result.Value, new Progress<ScriptProgressState>(state => {
+                        await dataProvider.PluginInstance.AttachedDaemonService!.GetScriptProgress(result.Value, state => {
                             ((IProgress<(float, string)>)progress).Report((state.Progress ?? 0f, state.Text));
-                        }));
+                        });
                     }
                 }, progress)));
             }
@@ -472,9 +471,9 @@ namespace RTSharp.ViewModels.TorrentListing
                                         TotalSize: x.Size
                                     )),
                                     sourceTorrent.Owner.DataProviderInstanceConfig.ServerId,
-                                    new Progress<(string File, float Progress)>((info) => {
+                                    ((string File, float Progress) info) => {
                                         progress.Report((info.Progress, $"{info.File}"));
-                                    })
+                                    }
                                 );
                             } catch (Exception ex) {
                                 Log.Logger.Error(ex, $"ReceiveFiles failed for {Convert.ToHexString(hash)}");

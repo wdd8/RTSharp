@@ -1,27 +1,32 @@
-﻿using System.Collections.Immutable;
+﻿using BencodeNET.Objects;
+using BencodeNET.Parsing;
 using BencodeNET.Torrents;
 
 using CliWrap;
 using CliWrap.Buffered;
+
+using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
 
 using Mono.Unix;
 
 using RTSharp.Daemon.Protocols.DataProvider;
-using RTSharp.Shared.Utils;
-
-using System.Diagnostics;
-using System.Net;
-using System.Text;
-using System.Text.RegularExpressions;
-using Google.Protobuf;
-using Google.Protobuf.WellKnownTypes;
 using RTSharp.Daemon.Services.rtorrent.TorrentPoll;
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Utils;
+
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.IO.Pipelines;
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+
 using File = System.IO.File;
 using Status = Grpc.Core.Status;
-using System.Text.Json;
 
 namespace RTSharp.Daemon.Services.rtorrent
 {
@@ -96,7 +101,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                             if (torrentState == null)
                                 continue;
                             
-                            if (torrentState.Value.HasFlag(TORRENT_STATE.HASHING)) {
+                            if (torrentState.Value.HasFlag(TorrentState.Hashing)) {
                                 stateObserved[torrentResult.InfoHash] = true;
                                 break;
                             }
@@ -112,7 +117,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                             if (torrentState == null)
                                 continue;
                             
-                            if (!torrentState.Value.HasFlag(TORRENT_STATE.HASHING)) {
+                            if (!torrentState.Value.HasFlag(TorrentState.Hashing)) {
                                 stateObserved[torrentResult.InfoHash] = false;
                                 break;
                             }
@@ -140,26 +145,14 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         record Torrent(string Path, string Filename, MemoryStream Data);
 
-        public async Task<TorrentsReply> AddTorrents(IAsyncStreamReader<NewTorrentsData> Req)
+        private async Task<TorrentsReply> AddTorrents(Dictionary<string, Torrent> Torrents)
         {
-            var torrents = new Dictionary<string, Torrent>();
-            await foreach (var chunk in Req.ReadAllAsync()) {
-                switch (chunk.DataCase) {
-                    case NewTorrentsData.DataOneofCase.TMetadata:
-                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream());
-                        break;
-                    case NewTorrentsData.DataOneofCase.TData:
-                        torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.ToByteArray());
-                        break;
-                }
-            }
-
             var parser = new TorrentParser();
             var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             var ret = new TorrentsReply();
             var hashes = new HashSet<string>();
 
-            foreach (var (id, torrent) in torrents) {
+            foreach (var (id, torrent) in Torrents) {
                 torrent.Data.Position = 0;
 
                 BencodeNET.Torrents.Torrent btorrent;
@@ -229,16 +222,16 @@ namespace RTSharp.Daemon.Services.rtorrent
             foreach (var hash in hashes) {
                 accountedFor[Convert.FromHexString(hash)] = false;
             }
-            
+
             using (var sub = TorrentPolling.Subscribe(TimeSpan.FromSeconds(1))) {
                 while (sw.Elapsed < TimeSpan.FromSeconds(30) && accountedFor.Any(x => !x.Value)) {
                     var changes = await sub.GetChanges(false, default)!;
-                    
+
                     foreach (var (hash, _) in accountedFor) {
                         var torrentHash = changes.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
                         torrentHash ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
                         torrentHash ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
-                        
+
                         if (torrentHash != null) {
                             accountedFor[hash] = true;
                         }
@@ -257,6 +250,23 @@ namespace RTSharp.Daemon.Services.rtorrent
             } else {
                 return ret;
             }
+        }
+
+        public async Task<TorrentsReply> AddTorrents(IAsyncStreamReader<NewTorrentsData> Req)
+        {
+            var torrents = new Dictionary<string, Torrent>();
+            await foreach (var chunk in Req.ReadAllAsync()) {
+                switch (chunk.DataCase) {
+                    case NewTorrentsData.DataOneofCase.TMetadata:
+                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream());
+                        break;
+                    case NewTorrentsData.DataOneofCase.TData:
+                        torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.ToByteArray());
+                        break;
+                }
+            }
+
+            return await AddTorrents(torrents);
         }
 
         public async Task<TorrentsFilesReply> GetTorrentsFiles(Torrents Req)
@@ -331,7 +341,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             var xml = new StringBuilder();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in Req.Hashes) {
-                var sHash = Convert.ToHexString(hash.ToByteArray());
+                var sHash = Convert.ToHexString(hash.Span);
 
                 foreach (var action in actions) {
                     xml.Append("<value><struct><member><name>methodName</name><value><string>" + action + "</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value></data></array></value></member></struct></value>");
@@ -526,7 +536,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         {
             var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in Req.Hashes) {
-                var sHash = Convert.ToHexString(hash.ToByteArray());
+                var sHash = Convert.ToHexString(hash.Span);
 
                 xml.Append("<value><struct><member><name>methodName</name><value><string>p.multicall</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value><value><string></string></value><value><string>p.id=</string></value><value><string>p.client_version=</string></value><value><string>p.down_total=</string></value><value><string>p.up_total=</string></value><value><string>p.down_rate=</string></value><value><string>p.up_rate=</string></value><value><string>p.completed_percent=</string></value><value><string>p.peer_rate=</string></value><value><string>p.is_incoming=</string></value><value><string>p.is_encrypted=</string></value><value><string>p.snubbed=</string></value><value><string>p.is_obfuscated=</string></value><value><string>p.is_preferred=</string></value><value><string>p.is_unwanted=</string></value><value><string>p.address=</string></value><value><string>p.port=</string></value></data></array></value></member></struct></value>");
             }
@@ -690,7 +700,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                     if (!basePaths.TryGetValue(torrent.InfoHash.ToByteArray(), out var basePath)) {
                         session.Progress.State = TASK_STATE.FAILED;
-                        session.Progress.Text = $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.ToByteArray())}, terminating operation";
+                        session.Progress.Text = $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.Span)}, terminating operation";
                         session.Progress.StateData = JsonSerializer.Serialize(new { Hash = torrent.InfoHash, File = "", Text = "Failed to get base directory", Success = false });
                         return;
                     }
@@ -818,7 +828,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                     await Scgi.XmlActionTorrents(new[] { torrent.InfoHash.ToByteArray() }, "d.stop", "d.close");
 
                     var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>d.directory.set</methodName><params>");
-                    xml.Append("<param><value><string>" + Convert.ToHexString(torrent.InfoHash.ToByteArray()) + "</string></value></param>");
+                    xml.Append("<param><value><string>" + Convert.ToHexString(torrent.InfoHash.Span) + "</string></value></param>");
                     xml.Append("<param><value><string>" + basePath.Target + "</string></value></param>");
                     xml.Append("</params></methodCall>");
 
@@ -914,7 +924,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 var torrentPaths = new List<(string SourceFile, string TargetFile)>();
                 foreach (var torrent in files.Reply) {
                     if (!basePaths.TryGetValue(torrent.InfoHash.ToByteArray(), out var basePath))
-                        throw new RpcException(new Status(StatusCode.Internal, $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.ToByteArray())}"));
+                        throw new RpcException(new Status(StatusCode.Internal, $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.Span)}"));
 
                     foreach (var file in torrent.Files) {
                         var current = Path.Combine(basePath.Current, basePath.ContainerFolder ?? "", file.Path);
@@ -934,7 +944,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             foreach (var torrent in files.Reply) {
                 if (!basePaths.TryGetValue(torrent.InfoHash.ToByteArray(), out var basePath))
-                    throw new RpcException(new Status(StatusCode.FailedPrecondition, $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.ToByteArray())}"));
+                    throw new RpcException(new Status(StatusCode.FailedPrecondition, $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.Span)}"));
 
                 if (!UnixFileSystemInfo.TryGetFileSystemEntry(basePath.Target, out var futureBasePathInfo)) {
                     throw new RpcException(new Status(StatusCode.FailedPrecondition, $"Failed to stat directory {basePath.Target}"));
@@ -967,7 +977,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             var xml = new StringBuilder();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in Req.Hashes) {
-                var sHash = Convert.ToHexString(hash.ToByteArray());
+                var sHash = Convert.ToHexString(hash.Span);
 
                 xml.Append("<value><struct><member><name>methodName</name><value><string>d.bitfield</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value></data></array></value></member></struct></value>");
             }
@@ -1028,6 +1038,213 @@ namespace RTSharp.Daemon.Services.rtorrent
                 throw new RpcException(new Status(StatusCode.NotFound, "Torrent not found"));
 
             return Task.FromResult(torrent.Value.Torrent);
+        }
+
+        public async Task<Empty> EditTracker(ByteString InfoHash, string Existing, string New, CancellationToken cancellationToken)
+        {
+            var filePaths = await TorrentOpService.GetDotTorrentFilePaths([InfoHash.ToByteArray()]);
+
+            var torrentFilePath = filePaths.First().Value;
+
+            if (!File.Exists(torrentFilePath)) {
+                throw new RpcException(new Status(StatusCode.NotFound, "Torrent file not found"));
+            }
+
+            var torrentDetails = await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ ("d.directory", []), ("d.custom1", []), ("d.custom2", []), ("d.custom", [ "x-filename" ]), ("d.custom", [ "addtime" ]) ]) ]);
+            XMLUtils.SeekTo(ref torrentDetails, XMLUtils.METHOD_RESPONSE);
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_START);
+
+            Debugger.Break();
+
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+            var directory = XMLUtils.GetValue<string>(ref torrentDetails);
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+            var label = XMLUtils.GetValue<string>(ref torrentDetails);
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+            var comment = XMLUtils.GetValue<string>(ref torrentDetails);
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+            var filename = XMLUtils.GetValue<string>(ref torrentDetails);
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+            XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+            var addtime = XMLUtils.GetValue<string>(ref torrentDetails);
+
+            /*
+             *
+             */
+
+            using var fileContent = File.OpenRead(torrentFilePath);
+            var reader = PipeReader.Create(fileContent);
+
+            var parser = new TorrentParser();
+            BencodeNET.Torrents.Torrent btorrent;
+            bool trackersReplaced = false;
+
+            try {
+                btorrent = await parser.ParseAsync(reader, cancellationToken);
+            } catch (Exception ex) {
+                Logger.LogError(ex, "Torrent file is not a valid bencode file");
+                throw new RpcException(new Status(StatusCode.FailedPrecondition, "Torrent file is not a valid bencode file"));
+            }
+
+            foreach (var trackers in btorrent.Trackers) {
+                var idx = trackers.IndexOf(Existing);
+
+                if (idx != -1) {
+                    trackers[idx] = New;
+                    trackersReplaced = true;
+                }
+            }
+
+            if (!trackersReplaced) {
+                Logger.LogError("No matching trackers replaced");
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "No matching trackers replaced"));
+            }
+
+            btorrent.Comment = comment;
+
+            using var mem = new MemoryStream();
+            btorrent.EncodeTo(mem);
+
+            var removeReply = await RemoveTorrents(new Torrents {
+                Hashes = { InfoHash }
+            });
+
+            if (removeReply.Torrents.SingleOrDefault()?.Status.SingleOrDefault()?.FaultCode != "0") {
+                Logger.LogError("Failed to remove torrent");
+                throw new RpcException(new Status(StatusCode.Unknown, "Failed to remove torrent"));
+            }
+
+            var reply = await AddTorrents(new Dictionary<string, Torrent> {
+                { "0", new Torrent(directory, filename, mem) }
+            });
+
+            if (reply.Torrents.SingleOrDefault()?.Status.SingleOrDefault()?.FaultCode != "0") {
+                Logger.LogError("Failed to add torrent");
+                throw new RpcException(new Status(StatusCode.Unknown, "Failed to add torrent"));
+            }
+
+            // Set label
+            await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ label ]) ], [ "d.custom1.set" ]);
+
+            // Override addtime later
+            Sessions.CreateSession(new(), async session => {
+                Logger.LogInformation("Sleeping for 20sec before setting addtime...");
+                await Task.Delay(TimeSpan.FromSeconds(20), session.Cts.Token);
+                Logger.LogInformation("Setting addtime");
+                await Scgi.XmlActionTorrentsMulti([(InfoHash.ToByteArray(), [ "addtime", addtime ])], ["d.custom.set"]);
+            });
+
+            return new();
+        }
+
+        public async Task<Empty> EditTrackerUntestedOffline(ByteString InfoHash, string Existing, string New, CancellationToken cancellationToken)
+        {
+            var filePaths = await TorrentOpService.GetDotTorrentFilePaths([ InfoHash.ToByteArray() ]);
+
+            var torrentFilePath = filePaths.First().Value;
+            var resumeFilePath = torrentFilePath + ".libtorrent_resume";
+
+            if (!File.Exists(torrentFilePath)) {
+                throw new RpcException(new Status(StatusCode.NotFound, "Torrent file not found"));
+            }
+
+            if (!File.Exists(resumeFilePath)) {
+                throw new RpcException(new Status(StatusCode.NotFound, "Torrent resume file not found"));
+            }
+
+            /*
+             *
+             */
+
+            using var fileContent = File.OpenRead(torrentFilePath);
+            var reader = PipeReader.Create(fileContent);
+
+            var parser = new TorrentParser();
+            BencodeNET.Torrents.Torrent btorrent;
+            bool trackersReplaced = false;
+
+            try {
+                btorrent = await parser.ParseAsync(reader, cancellationToken);
+            } catch (Exception ex) {
+                Logger.LogError(ex, "Torrent file is not a valid bencode file");
+                throw new RpcException(new Status(StatusCode.FailedPrecondition, "Torrent file is not a valid bencode file"));
+            }
+
+            foreach (var trackers in btorrent.Trackers) {
+                var idx = trackers.IndexOf(Existing);
+
+                if (idx != -1) {
+                    trackers[idx] = New;
+                    trackersReplaced = true;
+                }
+            }
+
+            if (!trackersReplaced) {
+                Logger.LogError("No matching trackers replaced");
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "No matching trackers replaced"));
+            }
+
+            var newFileStm = File.OpenWrite(torrentFilePath + ".trackers_replaced");
+            var writer = PipeWriter.Create(newFileStm);
+            await btorrent.EncodeToAsync(writer, cancellationToken);
+
+            /*
+             * 
+             */
+
+            using var resumeFileContent = File.OpenRead(resumeFilePath);
+            var resumeReader = PipeReader.Create(resumeFileContent);
+
+            var bencodeParser = new BencodeParser();
+            BDictionary bresume;
+            bool resumeTrackersReplaced = false;
+
+            try {
+                bresume = await bencodeParser.ParseAsync<BDictionary>(resumeReader, cancellationToken);
+            } catch (Exception ex) {
+                Logger.LogError(ex, "Torrent resume file is not a valid bencode file");
+                throw new RpcException(new Status(StatusCode.FailedPrecondition, "Torrent resume file is not a valid bencode file"));
+            }
+
+            var resumeTrackers = bresume.Get<BDictionary>("trackers");
+
+            if (resumeTrackers == null) {
+                Logger.LogError("Torrent resume file does not contain any trackers");
+                throw new RpcException(new Status(StatusCode.FailedPrecondition, "Torrent resume file does not contain any trackers"));
+            }
+
+            foreach (var tracker in resumeTrackers.ToImmutableDictionary()) {
+                var url = tracker.Key.ToString();
+                if (url == Existing) {
+                    resumeTrackers.Add(New, resumeTrackers[Existing]);
+                    resumeTrackers.Remove(Existing);
+                    resumeTrackersReplaced = true;
+                }
+            }
+
+            if (!resumeTrackersReplaced) {
+                Logger.LogError("No matching trackers replaced (2)");
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "No matching trackers replaced (2)"));
+            }
+
+            var newResumeFileStm = File.OpenWrite(resumeFilePath + ".trackers_replaced");
+            var resumeWriter = PipeWriter.Create(newResumeFileStm);
+            await btorrent.EncodeToAsync(writer, cancellationToken);
+
+            /*
+             *
+             */
+
+            File.Move(torrentFilePath, torrentFilePath + ".old_bak");
+            File.Move(torrentFilePath + ".trackers_replaced", torrentFilePath);
+
+            File.Move(resumeFilePath, resumeFilePath + ".old_bak");
+            File.Move(resumeFilePath + ".trackers_replaced", resumeFilePath);
+
+            return new();
         }
     }
 }

@@ -23,6 +23,8 @@ public class ScriptProgressState
 
     public ScriptProgressState[]? Chain { get; set; }
 
+    public Guid Id { get; init; }
+
     private string _text = "";
     public string Text {
         get => _text;

@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <!-- Disable nullable for now. API must be revised and updated accordingly. -->
+    <Nullable>Disable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Authors>Pavel Fedarovich</Authors>
+    <Company>Pavel Fedarovich</Company>
+    <Copyright>© Pavel Fedarovich, 2018-2023</Copyright>
+    <PackageProjectUrl>https://github.com/fedarovich/qbittorrent-net-client</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/fedarovich/qbittorrent-net-client</RepositoryUrl>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\QBittorrent.Client.xml</DocumentationFile>
+    <Description>qBittorrent remote API client library</Description>
+    <PackageIconUrl></PackageIconUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>nuget.png</PackageIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\resources\nuget.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

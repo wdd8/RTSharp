@@ -133,19 +133,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         private async Task<XMLUtils.TorrentsResult[]> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, string[] Params)> HashParams, string[] Actions, Func<string, byte[], string, bool> FxExpectedReply)
         {
-            var xml = new StringBuilder();
-            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
-            foreach (var (hash, @params) in HashParams) {
-                var sHash = Convert.ToHexString(hash);
-
-                foreach (var action in Actions) {
-                    xml.Append("<value><struct><member><name>methodName</name><value><string>" + action + "</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value>" + (@params.Length == 0 ? "" : String.Join("", @params.Select(x => $"<value>{x}</value>"))) + "</data></array></value></member></struct></value>");
-                }
-            }
-
-            xml.Append("</data></array></value></param></params></methodCall>");
-
-            var result = await Get(xml.ToString());
+            var result = await XmlActionTorrentsMulti(HashParams, Actions);
 
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
@@ -187,6 +175,44 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
 
             return ret.ToArray();
+        }
+
+        public async Task<ReadOnlyMemory<byte>> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, string[] Params)> HashParams, string[] Actions)
+        {
+            var xml = new StringBuilder();
+            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
+            foreach (var (hash, @params) in HashParams) {
+                var sHash = Convert.ToHexString(hash);
+
+                foreach (var action in Actions) {
+                    xml.Append("<value><struct><member><name>methodName</name><value><string>" + action + "</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value>" + (@params.Length == 0 ? "" : String.Join("", @params.Select(x => $"<value>{x}</value>"))) + "</data></array></value></member></struct></value>");
+                }
+            }
+
+            xml.Append("</data></array></value></param></params></methodCall>");
+
+            var result = await Get(xml.ToString());
+
+            return result;
+        }
+
+        public async Task<ReadOnlyMemory<byte>> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, (string Action, string[] Params)[] Actions)> In)
+        {
+            var xml = new StringBuilder();
+            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
+            foreach (var (hash, actions) in In) {
+                var sHash = Convert.ToHexString(hash);
+
+                foreach (var (action, @params) in actions) {
+                    xml.Append("<value><struct><member><name>methodName</name><value><string>" + action + "</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value>" + (@params.Length == 0 ? "" : String.Join("", @params.Select(x => $"<value>{x}</value>"))) + "</data></array></value></member></struct></value>");
+                }
+            }
+
+            xml.Append("</data></array></value></param></params></methodCall>");
+
+            var result = await Get(xml.ToString());
+
+            return result;
         }
     }
 }

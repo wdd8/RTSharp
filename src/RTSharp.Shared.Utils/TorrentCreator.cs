@@ -82,10 +82,10 @@ namespace RTSharp.Shared.Utils
             bool EmitCreationDate,
             int? PieceLength = null,
             bool Parallel = true,
-            IProgress<(float HashProgress, string CurrentFile, float FileProgress, float FileBuffer, string HashExcerpt)> Progress = null,
+            Action<(float HashProgress, string CurrentFile, float FileProgress, float FileBuffer, string HashExcerpt)>? Progress = null,
             CancellationToken cancellationToken = default)
         {
-            Progress.Report((0, "Calculating total size...", 0, 0, ""));
+            Progress?.Invoke((0, "Calculating total size...", 0, 0, ""));
             var dataInfo = await GetDataInfo(Path);
             int pieceLength = PieceLength ?? CalculatePieceLength(dataInfo.TotalSize);
             
@@ -97,7 +97,7 @@ namespace RTSharp.Shared.Utils
 
             void emitProgress()
             {
-                Progress.Report((hashProgress, currentFile, fileProgress, fileBuffer, hashExcerpt));
+                Progress?.Invoke((hashProgress, currentFile, fileProgress, fileBuffer, hashExcerpt));
             }
 
             bool singleFile = dataInfo.SingleFile != null;
@@ -190,7 +190,7 @@ namespace RTSharp.Shared.Utils
 
             async Task hashTask()
             {
-                using var sha1 = SHA1.Create();
+                using var sha1 = SHA1.Create(); // TODO: SHA256
 
                 await foreach (var (x, buf) in dataPipe.Reader.ReadAllAsync()) {
                     var hash = sha1.ComputeHash(buf);

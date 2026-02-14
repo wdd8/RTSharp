@@ -2,7 +2,7 @@
 
 public static class StreamExtensions
 {
-    public static async Task<long> CopyToAsync(this Stream source, Stream destination, IProgress<long> progress, CancellationToken cancellationToken = default, int bufferSize = 0xFFFF)
+    public static async Task<long> CopyToAsync(this Stream source, Stream destination, Action<long> progress, CancellationToken cancellationToken = default, int bufferSize = 0xFFFF)
     {
         var buffer = new byte[bufferSize];
         int bytesRead;
@@ -14,7 +14,7 @@ public static class StreamExtensions
             totalRead += bytesRead;
             bufferCount++;
             if (bufferCount % 100 == 0)
-                progress.Report(totalRead);
+                progress(totalRead);
         }
 
         return totalRead;

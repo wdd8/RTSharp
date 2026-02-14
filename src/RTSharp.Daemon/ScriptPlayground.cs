@@ -27,7 +27,7 @@ namespace RTSharp.Daemon
 
             transfer.State = TASK_STATE.RUNNING;
 
-            await FileTransfer.ReceiveFilesFromRemote(channel, paths.Select(x => (x.StorePath, x.RemoteSourcePath)), new Progress<FileTransferService.FileTransferSessionProgress>(progress => {
+            await FileTransfer.ReceiveFilesFromRemote(channel, paths.Select(x => (x.StorePath, x.RemoteSourcePath)), progress => {
                 transfer.Text = progress.Path;
 
                 if (progress.Path == "") {
@@ -39,7 +39,7 @@ namespace RTSharp.Daemon
                 var path = paths.First(x => progress.Path.EndsWith(x.RemoteSourcePath));
 
                 transfer.Progress = progress.BytesReceived / (float)path.TotalSize * 100f;
-            }));
+            });
 
             Session.Progress.State = TASK_STATE.DONE;
         }

@@ -1,13 +1,15 @@
-<Window x:Class="RTSharp.DataProvider.Transmission.Plugin.Views.MainWindow"
+﻿<Window x:Class="RTSharp.DataProvider.Transmission.Plugin.Views.MainWindow"
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="using:RTSharp.Shared.Controls.Views"
         xmlns:vm="clr-namespace:RTSharp.DataProvider.Transmission.Plugin.ViewModels"
         xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
         mc:Ignorable="d"
-        Width="650" Height="360"
+        Width="750" Height="450"
         x:DataType="vm:MainWindowViewModel"
+        ClipToBounds="True"
         Title="{Binding Title}">
 
     <Design.DataContext>
@@ -15,15 +17,174 @@
     </Design.DataContext>
 
     <Window.Styles>
+        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
         <Style Selector="TextBlock,TextBox">
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
-        <Style Selector="Panel > Grid">
-            <Setter Property="VerticalAlignment" Value="Top" />
-        </Style>
     </Window.Styles>
 
-    <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-        
-    </StackPanel>
+    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+        <ListBox Grid.Column="0"
+                 ItemsSource="{Binding Categories,Mode=OneWay}"
+                 SelectedItem="{Binding CurrentlySelectedCategory}"
+                 MinWidth="150"
+                 VerticalAlignment="Stretch"
+                 HorizontalAlignment="Stretch">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" MinWidth="150">
+                        <!--<i:Icon Value="{Binding Icon}" Margin="0,0,20,0" />-->
+                        <TextBlock TextWrapping="NoWrap" Text="{Binding Name}" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Grid Grid.Column="1" RowDefinitions="*,Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <ScrollViewer Grid.Row="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                <Panel Margin="4,4,4,4">
+                    <Grid ColumnDefinitions="*" RowDefinitions="Auto,Auto,Auto,Auto" IsVisible="{Binding DownloadSelected}" RowSpacing="8">
+                        <views:GroupBox Grid.Row="0" Label="Default download folder on remote host">
+                            <TextBox Text="{Binding Settings.Download.DownloadDirectory}" />
+                        </views:GroupBox>
+
+                        <CheckBox Grid.Row="1" IsChecked="{Binding Settings.Download.RenamePartialFiles}">
+                            Add .part extension to incomplete files
+                        </CheckBox>
+
+                        <views:GroupBox Grid.Row="2" CheckBoxEnabled="True"
+                                        IsCheckBoxChecked="{Binding Settings.Download.IncompleteDirectoryEnabled}"
+                                        Label="Directory for incomplete files">
+                            <TextBox Text="{Binding Settings.Download.IncompleteDirectory}"
+                                     IsEnabled="{Binding Settings.Download.IncompleteDirectoryEnabled}" />
+                       </views:GroupBox>
+
+                        <Grid Grid.Row="3" ColumnDefinitions="2*,*,Auto" RowDefinitions="Auto,Auto,Auto">
+                            <CheckBox Grid.Column="0" IsChecked="{Binding Settings.Download.SeedRatioLimited}" Content="Seed ratio:" />
+                            <NumericUpDown Grid.Column="1" Minimum="0" Increment="0.01" FormatString="0.00" Value="{Binding Settings.Download.SeedRatioLimit}" IsEnabled="{Binding Settings.Download.SeedRatioLimited}" />
+
+                            <CheckBox Grid.Column="0" Grid.Row="1" IsChecked="{Binding Settings.Download.IdleSeedingLimitEnabled}" Content="Stop seeding when inactive for:" />
+                            <NumericUpDown Grid.Column="1" Grid.Row="1" Minimum="0" Increment="1" Value="{Binding Settings.Download.IdleSeedingLimit}" IsEnabled="{Binding Settings.Download.IdleSeedingLimitEnabled}" />
+                            <TextBlock Grid.Column="2" Grid.Row="1" Text=" minutes" />
+
+                            <TextBlock Grid.Column="0" Grid.Row="2" Text="Disk cache size:" />
+                            <NumericUpDown Grid.Column="1" Grid.Row="2" Minimum="1" Increment="1" Value="{Binding Settings.Download.CacheSizeMB}" />
+                            <TextBlock Grid.Column="2" Grid.Row="2" Text=" MB" />
+                        </Grid>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,2*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding NetworkSelected}" RowSpacing="8" Margin="0,8,0,0">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">Incoming port:</TextBlock>
+                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding Settings.Network.PeerPort, Mode=TwoWay}" />
+                            <CheckBox x:Name="RandomizePortCheckBox" IsChecked="{Binding Settings.Network.PeerPortRandomOnStart}" Margin="12,0,0,0">Pick random port on Transmission launch</CheckBox>
+                        </StackPanel>
+						<StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1">
+							<!--<Button Command="{Binding TestPortCommand}">Test port</Button>-->
+                            <CheckBox IsChecked="{Binding Settings.Network.PortForwardingEnabled}">Enable port forwarding</CheckBox>	
+						</StackPanel>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,8,0">Encryption:</TextBlock>
+                        <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding EncryptionOptions}" SelectedItem="{Binding Settings.Network.Encryption, Mode=TwoWay}" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,0,8,0">Global peer limit:</TextBlock>
+                        <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="1" Increment="1" Value="{Binding Settings.Network.PeerLimitGlobal, Mode=TwoWay}" />
+
+						<TextBlock Grid.Row="4" Grid.Column="0" Margin="0,0,8,0">Peer limit per torrent:</TextBlock>
+                        <NumericUpDown Grid.Row="4" Grid.Column="1" Minimum="1" Increment="1" Value="{Binding Settings.Network.PeerLimitPerTorrent, Mode=TwoWay}" />
+
+                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Vertical" Margin="0,6,0,0">
+                            <CheckBox x:Name="EnablePeerExchange" IsChecked="{Binding Settings.Network.PexEnabled}" Content="Enable Peer Exchange" Margin="0,2,0,0"/>
+                            <CheckBox x:Name="EnableDht" IsChecked="{Binding Settings.Network.DHTEnabled}" Content="Enable DHT" Margin="0,2,0,0"/>
+                            <CheckBox x:Name="EnableLocalPeerDiscovery" IsChecked="{Binding Settings.Network.LPDEnabled}" Content="Enable Local Peer Discovery" Margin="0,2,0,0"/>
+                            <CheckBox x:Name="EnableUTP" IsChecked="{Binding Settings.Network.UtpEnabled}" Content="Enable μTP" Margin="0,2,0,0"/>
+                        </StackPanel>
+
+                        <CheckBox x:Name="BlocklistCheckBox" Grid.Row="6" Grid.Column="0" IsChecked="{Binding Settings.Network.BlocklistEnabled}">Enable blocklist:</CheckBox>
+                        <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding Settings.Network.BlocklistURL}" IsEnabled="{Binding IsChecked, ElementName=BlocklistCheckBox}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*" RowDefinitions="Auto,Auto" IsVisible="{Binding BandwidthSelected}" RowSpacing="8">
+                        <views:GroupBox Grid.Row="0" Grid.Column="0" Label="Global bandwidth settings">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">Maximum download speed:</TextBlock>
+                                <CheckBox x:Name="GlobalDownEnabled" Grid.Row="0" Grid.Column="1" IsChecked="{Binding Settings.Bandwidth.SpeedLimitDownEnabled}" />
+                                <NumericUpDown Grid.Row="0" Grid.Column="2" Minimum="0" Increment="1" Value="{Binding Settings.Bandwidth.SpeedLimitDown, Mode=TwoWay}" IsEnabled="{Binding IsChecked, ElementName=GlobalDownEnabled}" />
+                                <TextBlock Grid.Row="0" Grid.Column="3" Padding="6,0,0,0" Text="KiB/s" />
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,0">Maximum upload speed:</TextBlock>
+                                <CheckBox x:Name="GlobalUpEnabled" Grid.Row="1" Grid.Column="1" IsChecked="{Binding Settings.Bandwidth.SpeedLimitUpEnabled}" />
+                                <NumericUpDown Grid.Row="1" Grid.Column="2" Minimum="0" Increment="1" Value="{Binding Settings.Bandwidth.SpeedLimitUp, Mode=TwoWay}" IsEnabled="{Binding IsChecked, ElementName=GlobalUpEnabled}" />
+                                <TextBlock Grid.Row="1" Grid.Column="3" Padding="6,0,0,0" Text="KiB/s" />
+                            </Grid>
+                        </views:GroupBox>
+
+                        <views:GroupBox Grid.Row="1" Grid.Column="0" Label="Alternate bandwidth settings" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Bandwidth.AlternativeSpeedEnabled}">
+                            <Grid RowDefinitions="Auto,Auto" IsEnabled="{Binding Settings.Bandwidth.AlternativeSpeedEnabled}">
+                                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">Maximum download speed:</TextBlock>
+                                    <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.Bandwidth.AlternativeSpeedDown, Mode=TwoWay}" />
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Padding="6,0,0,0" Text="KiB/s" />
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,0">Maximum upload speed:</TextBlock>
+                                    <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.Bandwidth.AlternativeSpeedUp, Mode=TwoWay}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Padding="6,0,0,0" Text="KiB/s"  />
+                                </Grid>
+
+                                <StackPanel Grid.Row="1" Orientation="Vertical">
+                                    <CheckBox x:Name="AutoApplyAlternateCheckBox" IsChecked="{Binding Settings.Bandwidth.AlternativeSpeedTimeEnabled}">
+										Apply alternate bandwidth settings automatically
+									</CheckBox>
+                                    <StackPanel Orientation="Vertical" Margin="0,8,0,0" Spacing="12">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="From:" />
+                                            <TextBox Width="60" IsEnabled="{Binding IsChecked, ElementName=AutoApplyAlternateCheckBox}"
+                                                     Text="{Binding Settings.Bandwidth.AlternativeSpeedTimeBegin, Mode=TwoWay}" />
+                                            <TextBlock Text="to:" />
+                                            <TextBox Width="60" IsEnabled="{Binding IsChecked, ElementName=AutoApplyAlternateCheckBox}"
+                                                     Text="{Binding Settings.Bandwidth.AlternativeSpeedTimeEnd, Mode=TwoWay}" />
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="Days:" />
+                                            <CheckBox IsChecked="{Binding Settings.Bandwidth.AlternativeSpeedTimeDay1}" IsEnabled="{Binding IsChecked, ElementName=AutoApplyAlternateCheckBox}" Content="1" />
+                                            <CheckBox IsChecked="{Binding Settings.Bandwidth.AlternativeSpeedTimeDay2}" IsEnabled="{Binding IsChecked, ElementName=AutoApplyAlternateCheckBox}" Content="2" />
+                                            <CheckBox IsChecked="{Binding Settings.Bandwidth.AlternativeSpeedTimeDay3}" IsEnabled="{Binding IsChecked, ElementName=AutoApplyAlternateCheckBox}" Content="3" />
+                                            <CheckBox IsChecked="{Binding Settings.Bandwidth.AlternativeSpeedTimeDay4}" IsEnabled="{Binding IsChecked, ElementName=AutoApplyAlternateCheckBox}" Content="4" />
+                                            <CheckBox IsChecked="{Binding Settings.Bandwidth.AlternativeSpeedTimeDay5}" IsEnabled="{Binding IsChecked, ElementName=AutoApplyAlternateCheckBox}" Content="5" />
+                                            <CheckBox IsChecked="{Binding Settings.Bandwidth.AlternativeSpeedTimeDay6}" IsEnabled="{Binding IsChecked, ElementName=AutoApplyAlternateCheckBox}" Content="6" />
+                                            <CheckBox IsChecked="{Binding Settings.Bandwidth.AlternativeSpeedTimeDay7}" IsEnabled="{Binding IsChecked, ElementName=AutoApplyAlternateCheckBox}" Content="7" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </views:GroupBox>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" IsVisible="{Binding QueueSelected}" RowSpacing="8" ColumnSpacing="8">
+                        <CheckBox Grid.Row="0" Grid.Column="0" IsChecked="{Binding Settings.Queue.DownloadQueueEnabled}">
+                            Download queue size:
+                        </CheckBox>
+                        <NumericUpDown Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Minimum="0" Increment="1" Value="{Binding Settings.Queue.DownloadQueueSize}" IsEnabled="{Binding Settings.Queue.DownloadQueueEnabled}" />
+
+                        <CheckBox Grid.Row="1" Grid.Column="0" IsChecked="{Binding Settings.Queue.SeedQueueEnabled}">
+                            Upload queue size:
+                        </CheckBox>
+                        <NumericUpDown Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Minimum="0" Increment="1" Value="{Binding Settings.Queue.SeedQueueSize}" IsEnabled="{Binding Settings.Queue.SeedQueueEnabled}" />
+
+                        <CheckBox x:Name="ConsiderStalledCheckBox" Grid.Row="2" Grid.Column="0" IsChecked="{Binding Settings.Queue.QueueStalledEnabled}">
+                            Consider active torrents as stalled when idle for:
+                        </CheckBox>
+                        <NumericUpDown  Grid.Row="2" Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.Queue.QueueStalledMinutes}"
+                                        IsEnabled="{Binding IsChecked, ElementName=ConsiderStalledCheckBox}" />
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="minutes" Margin="6,0,0,0" HorizontalAlignment="Right" />
+                    </Grid>
+                </Panel>
+            </ScrollViewer>
+
+            <Panel Margin="4,4,4,4" VerticalAlignment="Bottom" Grid.Row="1">
+                <Button HorizontalAlignment="Right" Margin="8,0,0,0" Command="{Binding SaveSettingsClickCommand}" IsEnabled="{Binding SaveSettingsEnabled}">Save settings</Button>
+            </Panel>
+        </Grid>
+    </Grid>
 </Window>

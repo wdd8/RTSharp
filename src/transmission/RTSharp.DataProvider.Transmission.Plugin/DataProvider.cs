@@ -1,8 +1,6 @@
 ﻿using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
-using System.Threading.Channels;
-
 using RTSharp.Shared.Abstractions.Daemon;
 using Avalonia.Controls;
 using MsBox.Avalonia.Models;
@@ -55,14 +53,9 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             this.ThisPlugin = ThisPlugin;
 
             this.Files = new DataProviderFiles(ThisPlugin);
+            this.Tracker = new DataProviderTracker(ThisPlugin);
             this.Stats = new DataProviderStats(ThisPlugin);
         }
-
-        public Notifyable<long> TotalDLSpeed { get; } = new();
-
-        public Notifyable<long> TotalUPSpeed { get; } = new();
-
-        public Notifyable<long> ActiveTorrentCount { get; } = new();
 
         public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
         {
@@ -113,31 +106,14 @@ namespace RTSharp.DataProvider.Transmission.Plugin
             return await client.GetTorrent(Hash);
         }
 
-        public async Task<ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken CancellationToken)
+        public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, T, byte[]>>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<Daemon.Protocols.DataProvider.IncompleteDeltaTorrentResponse, T> Update, Action<Daemon.Protocols.DataProvider.CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
+            where T : class
         {
             var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
-            await GetAllTorrents();
-
             var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
 
-            var updates = client.GetTorrentChanges(combined.Token);
-
-            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
-                SingleReader = true,
-                SingleWriter = true
-            });
-            _ = Task.Run(async () => {
-                await foreach (var update in updates.Reader.ReadAllAsync(combined.Token)) {
-
-                    TotalDLSpeed.Change(update.Changes.Sum(x => (long)x.DLSpeed));
-                    TotalUPSpeed.Change(update.Changes.Sum(x => (long)x.UPSpeed));
-                    ActiveTorrentCount.Change(update.Changes.Where(x => x.State.HasFlag(TORRENT_STATE.ACTIVE)).Count());
-
-                    channel.Writer.TryWrite(update);
-                }
-            }, combined.Token);
-            return channel;
+            return client.GetTorrentChanges(Existing, Update, Update2, combined.Token);
         }
 
         public async Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default)

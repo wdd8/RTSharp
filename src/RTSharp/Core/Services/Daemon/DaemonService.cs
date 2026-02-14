@@ -24,6 +24,8 @@ using System.Threading.Tasks;
 using RTSharp.Shared.Abstractions.Daemon;
 using ScriptProgressState = RTSharp.Shared.Abstractions.ScriptProgressState;
 using Serilog;
+using System.Threading.Channels;
+using System.Security.Cryptography;
 
 namespace RTSharp.Core.Services.Daemon
 {
@@ -87,7 +89,7 @@ namespace RTSharp.Core.Services.Daemon
 
         record Path(string StorePath, string RemoteSourcePath, ulong TotalSize);
 
-        public async Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, IProgress<(string File, float Progress)> Progress)
+        public async Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, Action<(string File, float Progress)> Progress)
         {
             var senderServer = Servers[SenderServerId].GetUri();
 
@@ -124,7 +126,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
 
         transfer.State = TASK_STATE.RUNNING;
 
-        await FileTransfer.ReceiveFilesFromRemote(channel, paths.Select(x => (x.StorePath, x.RemoteSourcePath)), new Progress<FileTransferService.FileTransferSessionProgress>(progress => {
+        await FileTransfer.ReceiveFilesFromRemote(channel, paths.Select(x => (x.StorePath, x.RemoteSourcePath)), FileTransferService.FileTransferSessionProgress progress => {
             transfer.Text = progress.Path;
 
             if (progress.Path == "") {
@@ -139,7 +141,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             var path = paths.First(x => progress.Path.EndsWith(x.StorePath));
 
             transfer.Progress = progress.BytesReceived / (float)path.TotalSize * 100f;
-        }));
+        });
 
         Session.Progress.State = TASK_STATE.DONE;
     }
@@ -160,7 +162,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
                 if (info.State == TaskState.Done)
                     return;
 
-                Progress.Report((info.Text, info.Progress));
+                Progress((info.Text, info.Progress));
             }
         }
 
@@ -269,37 +271,53 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             await ServerClient.StopScriptAsync(new BytesValue { Value = ByteString.CopyFrom(Id.ToByteArray()) });
         }
 
-        public async Task GetScriptProgress(Guid Id, IProgress<ScriptProgressState>? Progress)
+        ScriptProgressState MapProgressState(RTSharp.Daemon.Protocols.ScriptProgressState In)
+        {
+            return new ScriptProgressState {
+                Id = new Guid(In.Id.ToByteArray()),
+                Progress = In.Progress,
+                State = In.State switch {
+                    TaskState.Done => TASK_STATE.DONE,
+                    TaskState.Running => TASK_STATE.RUNNING,
+                    TaskState.Waiting => TASK_STATE.WAITING,
+                    TaskState.Failed => TASK_STATE.FAILED,
+                    _ => throw new ArgumentOutOfRangeException()
+                },
+                Text = In.Text,
+                StateData = In.StateData,
+                Chain = In.Chain?.Select(MapProgressState).ToArray() ?? []
+            };
+        }
+
+        public async Task GetScriptProgress(Guid Id, Action<ScriptProgressState>? Progress)
         {
             var cts = new CancellationTokenSource();
             var stream = ServerClient.ScriptStatus(Id.ToByteArray().ToBytesValue(), cancellationToken: cts.Token);
             
-            ScriptProgressState mapProgressState(RTSharp.Daemon.Protocols.ScriptProgressState In)
-            {
-                return new ScriptProgressState
-                {
-                    Progress = In.Progress,
-                    State = In.State switch {
-                        TaskState.Done => TASK_STATE.DONE,
-                        TaskState.Running => TASK_STATE.RUNNING,
-                        TaskState.Waiting => TASK_STATE.WAITING,
-                        TaskState.Failed => TASK_STATE.FAILED,
-                        _ => throw new ArgumentOutOfRangeException()
-                    },
-                    Text = In.Text,
-                    StateData = In.StateData,
-                    Chain = In.Chain?.Select(mapProgressState).ToArray() ?? []
-                };
-            }
-            
             try {
                 await foreach (var progressData in stream.ResponseStream.ReadAllAsync()) {
-                    Progress?.Report(mapProgressState(progressData));
+                    Progress?.Invoke(MapProgressState(progressData));
                     if (progressData.State == TaskState.Done || progressData.State == TaskState.Failed) {
                         cts.Cancel();
                     }
                 }
             } catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled) { }
+        }
+
+        public ChannelReader<ScriptProgressState> StreamScriptsStatus(CancellationToken cancellationToken)
+        {
+            var channel = Channel.CreateUnbounded<ScriptProgressState>(new UnboundedChannelOptions {
+                SingleReader = false,
+                SingleWriter = true
+            });
+            _ = Task.Run(async () => {
+                var stream = ServerClient.ScriptsStatus(new(), cancellationToken: cancellationToken);
+                await foreach (var state in stream.ResponseStream.ReadAllAsync(cancellationToken: cancellationToken)) {
+                    await channel.Writer.WriteAsync(MapProgressState(state), cancellationToken);
+                }
+                channel.Writer.TryComplete();
+            }, cancellationToken);
+            return channel;
         }
         
         public async Task<Dictionary<string, bool>> AllowedToDeleteFiles(IEnumerable<string> In)
@@ -322,6 +340,33 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             return reply.Reply.ToDictionary(x => x.Path, x => x.Value);
         }
 
+        public async Task<byte[]> HashFileBlock(string Path, ulong Start, ulong End, HashAlgorithmName HashAlgorithm)
+        {
+            if (HashAlgorithm != HashAlgorithmName.SHA256 && HashAlgorithm != HashAlgorithmName.SHA1)
+                throw new NotSupportedException("Only SHA1 and SHA256 is supported");
+
+            var reply = await FilesClient.HashFileBlockAsync(new HashFileBlockInput
+            {
+                Path = Path,
+                Start = Start,
+                End = End,
+                Algorithm = HashAlgorithm.Name switch {
+                    "SHA1" => HashFileBlockInput.Types.HashAlgorithm.Sha1,
+                    "SHA256" => HashFileBlockInput.Types.HashAlgorithm.Sha256,
+                    _ => throw new NotSupportedException()
+                }
+            });
+            return reply.Value.ToByteArray();
+        }
+
+        public async Task LinkFiles(List<KeyValuePair<string, string>> SrcToDst, bool Reflink, bool Hardlink)
+        {
+            await FilesClient.LinkFilesAsync(new LinkFilesInput {
+                Source = { SrcToDst.Select(x => x.Key) },
+                Target = { SrcToDst.Select(x => x.Value) },
+                Type = (Reflink ? LinkFilesInput.Types.LinkType.Reflink : 0) | (Hardlink ? LinkFilesInput.Types.LinkType.Hardlink : 0)
+            });
+        }
 
         public T GetGrpcService<T>()
             where T : ClientBase<T>
@@ -333,7 +378,12 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         }
 
         public IDaemonTorrentsService GetTorrentsService(IDataProvider DataProvider) {
-            return new DaemonTorrentsService(Plugins.DataProviders.First(x => x.Instance == DataProvider));
+            return new DaemonTorrentsService(Plugins.DataProviders.Items.First(x => x.Instance == DataProvider));
+        }
+
+        public IDaemonStatsService GetStatsService(IDataProvider DataProvider)
+        {
+            return new DaemonStatsService(Plugins.DataProviders.Items.First(x => x.Instance == DataProvider));
         }
     }
 }

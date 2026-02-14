@@ -4,8 +4,12 @@ using Avalonia.Controls;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+
 using RTSharp.Shared.Abstractions.Daemon;
+
 using Serilog;
+
+using System.Text.Json.Nodes;
 
 namespace RTSharp.Shared.Abstractions
 {
@@ -17,7 +21,7 @@ namespace RTSharp.Shared.Abstractions
         string PluginConfigPath { get; }
 
         /// <summary>
-        /// Plugin instance configuration
+        /// Plugin instance configuration. This property is read only. To make modifications, see <see cref="SavePluginConfig(Action{JsonNode})"/>
         /// </summary>
         IConfigurationRoot PluginConfig { get; }
 
@@ -77,7 +81,7 @@ namespace RTSharp.Shared.Abstractions
         /// Registers the action queue
         /// </summary>
         /// <param name="In">The action queue</param>
-        void RegisterActionQueue(IActionQueue In);
+        void RegisterActionQueue(IActionQueueRenderer In);
 
         /// <summary>
         /// Unregisters the action queue
@@ -90,6 +94,28 @@ namespace RTSharp.Shared.Abstractions
         /// <param name="In">Menu item</param>
         /// <returns>Unregister</returns>
         IDisposable RegisterRootMenuItem(MenuItem In);
+
+        /// <summary>
+        /// Registers a menu item in tools menu
+        /// </summary>
+        /// <param name="In">Menu item</param>
+        /// <returns>Unregister</returns>
+        IDisposable RegisterToolsMenuItem(MenuItem In);
+
+        /// <summary>
+        /// Registers a menu item in torrent context menu
+        /// </summary>
+        /// <param name="In">Menu item creation</param>
+        /// <returns>Unregister</returns>
+        IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In);
+
+        /// <summary>
+        /// Registers a menu item action to torrent context menu
+        /// </summary>
+        /// <param name="Add">Menu item creation</param>
+        /// <param name="Remove">Menu item removal</param>
+        /// <returns>Unregister</returns>
+        IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove);
 
         /// <summary>
         /// Hooks TorrentListing EvRowPrepared event, which then allows to modify appearance or behavior of a row
@@ -131,5 +157,13 @@ namespace RTSharp.Shared.Abstractions
         IServiceScope CreateScope();
 
         IReadOnlyList<IDaemonService> GetDaemonServices();
+
+        /// <summary>
+        /// Override current plugin configuration to disk. See <see cref="PluginConfig" />
+        /// </summary>
+        /// <param name="Modifications"><see cref="JsonNode" /> of the configuration that may be modified by the caller.</param>
+        /// <remarks><see cref="PluginConfig" /> is read only. Changes in <see cref="PluginConfig" /> do not persist.</remarks>
+        /// <returns></returns>
+        Task SavePluginConfig(Action<JsonNode> Modifications);
     }
 }

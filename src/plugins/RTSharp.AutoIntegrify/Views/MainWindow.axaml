@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+		xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="RTSharp.AutoIntegrify.Plugin.MainWindow"
+		Icon="avares://RTSharp/Assets/rtsharp.ico"
+        Title="Auto integrify">
+    <Window.Resources>
+        <converters:MathConverter x:Key="MathConverter"/>
+    </Window.Resources>
+
+	<Window.Styles>
+		<dialogHost:DialogHostStyles />
+		<StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+	</Window.Styles>
+
+	<dialogHost:DialogHost IsOpen="{Binding ProgressDialogShown}">
+        <dialogHost:DialogHost.DialogContent>
+            <StackPanel Margin="8 8 8 8" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.75)}">
+                <TextBlock FontWeight="Bold" Text="{Binding ProgressText}" />
+				<Button HorizontalAlignment="Center" Command="{Binding CancelCommand}">Cancel</Button>
+            </StackPanel>
+        </dialogHost:DialogHost.DialogContent>
+		<Grid ColumnDefinitions="4*, 4, 8*" RowDefinitions="*">
+			<ListBox Grid.Column="0"
+				SelectionMode="Single"
+				Margin="4"
+				ItemsSource="{Binding Files}"
+				SelectedItem="{Binding SelectedFile, Mode=TwoWay}"
+				VerticalAlignment="Stretch"
+				HorizontalAlignment="Stretch"
+				ScrollViewer.VerticalScrollBarVisibility="Auto">
+				<ListBox.ItemTemplate>
+					<DataTemplate>
+						<StackPanel Orientation="Vertical">
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{Binding StatusIcon}" Height="16" />
+								<TextBlock VerticalAlignment="Center" Text="{Binding File.FullPath}" />
+							</StackPanel>
+							<StackPanel Orientation="Horizontal">
+								<TextBlock Text="🡺" Padding="0,0,4,0" />
+								<TextBlock Text="{Binding ResolvedPath}" />
+							</StackPanel>
+						</StackPanel>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</ListBox>
+			<GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns" />
+			<Grid Grid.Column="2" RowDefinitions="20,Auto,Auto, Auto" Margin="4,8,4,4">
+				<views:PieceProgressBar Grid.Row="0" Pieces="{Binding Pieces}" Height="20" Margin="-1,0,0,0" BorderThickness="1" BorderBrush="DarkGray" /> <!-- bug? -->
+				<views:GroupBox Label="File info" Grid.Row="1" Padding="0 8 0 0">
+					<StackPanel>
+						<views:TextBlockWithLabel Label="Path in torrent:" Text="{Binding SelectedFile.File.FullPath}" />
+						<views:TextBlockWithLabel Label="Resolved path:" Text="{Binding SelectedFile.ResolvedPath}" />
+						<views:TextBlockWithLabel Label="State:" Text="{Binding SelectedFile.Resolved}" />
+					</StackPanel>
+				</views:GroupBox>
+				<TextBlock Grid.Row="2" Text="{Binding StatusText}" HorizontalAlignment="Center" />
+				<Button Grid.Row="3" Content="{Binding ActionButtonText}" Command="{Binding ActionButtonCommand}" HorizontalAlignment="Center" />
+			</Grid>
+		</Grid>
+	</dialogHost:DialogHost>
+</Window>

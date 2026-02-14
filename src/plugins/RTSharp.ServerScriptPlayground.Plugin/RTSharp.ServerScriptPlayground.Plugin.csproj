@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <EnableDynamicLoading>true</EnableDynamicLoading>
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
         <OutputPath>$(SolutionDir)src\RTSharp\bin\$(Configuration)\$(TargetFramework)\plugins\ServerScriptPlayground</OutputPath>
@@ -10,14 +10,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.0" />
-        <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.0" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.0" />
+        <PackageReference Include="Avalonia" Version="11.3.11" />
+        <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.4.1" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.11" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.11" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.0" />
-        <PackageReference Include="Avalonia.Xaml.Interactions" Version="11.3.0" />
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.11" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <PackageReference Include="Xaml.Behaviors.Interactions" Version="11.3.9.4" />
     </ItemGroup>
 
     <ItemGroup>

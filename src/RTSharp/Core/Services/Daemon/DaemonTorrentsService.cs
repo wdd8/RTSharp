@@ -45,7 +45,8 @@ namespace RTSharp.Core.Services.Daemon
             Logger = scope.ServiceProvider.GetRequiredService<ILogger<DaemonService>>();
         }
 
-        public Channel<ListingChanges<Shared.Abstractions.Torrent, byte[]>> GetTorrentChanges(CancellationToken CancellationToken)
+        public Channel<ListingChanges<Shared.Abstractions.Torrent, T, byte[]>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<IncompleteDeltaTorrentResponse, T> Update, Action<CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
+            where T : class
         {
             using var scope = Core.ServiceProvider.CreateScope();
             var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
@@ -54,7 +55,7 @@ namespace RTSharp.Core.Services.Daemon
                 Interval = Duration.FromTimeSpan(DataProvider.DataProviderInstanceConfig.ListUpdateInterval)
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
-            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
+            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, T, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
@@ -65,16 +66,18 @@ namespace RTSharp.Core.Services.Daemon
 
                     await foreach (var update in updates.ResponseStream.ReadAllAsync(CancellationToken)) {
                         DataProvider.State.Change(DataProviderState.ACTIVE);
-                        var changes = new List<Shared.Abstractions.Torrent>();
+                        var fullUpdate = new List<Shared.Abstractions.Torrent>();
+                        var changes = new List<T>();
 
                         var incomplete = update.Incomplete.Select(x => {
                             var hash = x.Hash.ToByteArray();
-                            if (!Core.TorrentPolling.TorrentPolling.TorrentsLookup.TryGetValue((hash, ownerId), out var cachedTorrent)) {
+                            if (!Existing.TryGetValue((hash, ownerId), out var cachedTorrent)) {
                                 return null; // TODO: what to do?
                             }
 
                             try {
-                                return Mapper.MapFromProto(x, cachedTorrent);
+                                Update(x, cachedTorrent);
+                                return cachedTorrent;
                             } catch {
                                 // probe point
                                 throw;
@@ -84,12 +87,13 @@ namespace RTSharp.Core.Services.Daemon
 
                         var complete = update.Complete.Select(x => {
                             var hash = x.Hash.ToByteArray();
-                            if (!Core.TorrentPolling.TorrentPolling.TorrentsLookup.TryGetValue((hash, ownerId), out var cachedTorrent)) {
+                            if (!Existing.TryGetValue((hash, ownerId), out var cachedTorrent)) {
                                 return null; // TODO: what to do?
                             }
 
                             try {
-                                return Mapper.MapFromProto(x, cachedTorrent);
+                                Update2(x, cachedTorrent);
+                                return cachedTorrent;
                             } catch {
                                 // Probe point
                                 throw;
@@ -97,11 +101,10 @@ namespace RTSharp.Core.Services.Daemon
                         });
                         changes.AddRange(complete.Where(x => x != null));
 
-                        var fullUpdate = update.FullUpdate.Select(Mapper.MapFromProto);
-                        changes.AddRange(fullUpdate);
+                        fullUpdate.AddRange([ ..update.FullUpdate.Select(x => Mapper.MapFromProto(x, DataProvider.Instance)) ]);
 
-                        if (changes.Count != 0 || update.Removed.Count != 0)
-                            await channel.Writer.WriteAsync(new ListingChanges<Shared.Abstractions.Torrent, byte[]>(changes, update.Removed.Select(x => x.ToByteArray())), CancellationToken);
+                        if (changes.Count != 0 || fullUpdate.Count != 0 || update.Removed.Count != 0)
+                            await channel.Writer.WriteAsync(new ListingChanges<Shared.Abstractions.Torrent, T, byte[]>(fullUpdate, changes, update.Removed.Select(x => x.ToByteArray())), CancellationToken);
                     }
 
                     channel.Writer.Complete();
@@ -267,7 +270,7 @@ namespace RTSharp.Core.Services.Daemon
             
             ), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders(), cancellationToken: cancellationToken);
             
-            return resp.List.Select(Mapper.MapFromProto);
+            return resp.List.Select(x => Mapper.MapFromProto(x, DataProvider.Instance));
         }
         
         public async Task<TorrentStatuses> StartTorrents(IList<byte[]> Hashes)
@@ -440,13 +443,22 @@ namespace RTSharp.Core.Services.Daemon
         {
             var resp = await TorrentsClient.GetTorrentAsync(Hash.ToBytesValue(), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
-            return Mapper.MapFromProto(resp);
+            return Mapper.MapFromProto(resp, DataProvider.Instance);
         }
 
         public async Task QueueTorrentUpdate(IList<byte[]> Hashes)
         {
             await TorrentClient.QueueTorrentUpdateAsync(new Torrents {
                 Hashes = { Hashes.Select(x => x.ToByteString()) }
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        }
+
+        public async Task ReplaceTracker(byte[] Hash, string Existing, string New, CancellationToken cancellationToken)
+        {
+            await TorrentClient.EditTrackerAsync(new EditTrackerArgs {
+                InfoHash = Hash.ToByteString(),
+                Existing = Existing,
+                New = New
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
         }
     }

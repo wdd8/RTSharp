@@ -33,7 +33,7 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels
             _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async parent => {
                 SavingSettings = false;
             });
-            await ((IActionQueue)ThisPlugin.ActionQueue).RunAction(action);
+            await ((IActionQueueRenderer)ThisPlugin.ActionQueue).RunAction(action);
         }
 
         async partial void OnSavingSettingsChanged(bool value)

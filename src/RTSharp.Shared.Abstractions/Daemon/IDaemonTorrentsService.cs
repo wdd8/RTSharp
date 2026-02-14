@@ -1,12 +1,15 @@
-﻿using System.Threading.Channels;
+﻿using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Shared.Utils;
+
+using System.Threading.Channels;
 
 namespace RTSharp.Shared.Abstractions.Daemon;
 
 public interface IDaemonTorrentsService
 {
-    Channel<ListingChanges<Torrent, byte[]>> GetTorrentChanges(CancellationToken CancellationToken);
-    
+    Channel<ListingChanges<Torrent, T, byte[]>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<IncompleteDeltaTorrentResponse, T> Update, Action<CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
+            where T : class;
+
     Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In);
     
     Task<InfoHashDictionary<IList<Tracker>>> GetTorrentsTrackers(IList<Torrent> In, CancellationToken CancellationToken);
@@ -44,4 +47,6 @@ public interface IDaemonTorrentsService
     Task<Torrent> GetTorrent(byte[] Hash);
 
     Task QueueTorrentUpdate(IList<byte[]> Hashes);
+
+    Task ReplaceTracker(byte[] Hash, string Existing, string New, CancellationToken cancellationToken);
 }

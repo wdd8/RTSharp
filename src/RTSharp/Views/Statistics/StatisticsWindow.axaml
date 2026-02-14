@@ -3,7 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="110"
-        Width="250" Height="110"
+		SizeToContent="WidthAndHeight"
         xmlns:views="using:RTSharp.Shared.Controls.Views"
         xmlns:converters="using:RTSharp.ViewModels.Converters"
         x:Class="RTSharp.Views.Statistics.StatisticsWindow"
@@ -16,16 +16,33 @@
         <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
     </Window.Styles>
 
-    <views:GroupBox Label="Total" Margin="4,4,4,4">
-        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
-            <TextBlock Text="Torrents: " Grid.Column="0" Grid.Row="0" />
-            <TextBlock Text="{Binding TotalTorrents}" Grid.Column="1" Grid.Row="0" />
-            <TextBlock Text="Seeding size: " Grid.Column="0" Grid.Row="1" Padding="0,4,0,0" />
-            <TextBlock Text="{Binding TotalSeedingSize, Converter={StaticResource SIDataSizeConverter}}" Grid.Column="1" Grid.Row="1" Padding="0,4,0,0" />
-            <TextBlock Text="Uploaded: " Grid.Column="0" Grid.Row="2" Padding="0,4,0,0" />
-            <TextBlock Text="{Binding TotalUploaded, Converter={StaticResource SIDataSizeConverter}}" Grid.Column="1" Grid.Row="2" Padding="0,4,0,0" />
-            <TextBlock Text="Share ratio: " Grid.Column="0" Grid.Row="3" Padding="0,4,0,0" />
-            <TextBlock Text="{Binding ShareRatio}" Grid.Column="1" Grid.Row="3" Padding="0,4,0,0" />
-        </Grid>
-    </views:GroupBox>
+	<StackPanel Orientation="Vertical">
+		<views:GroupBox Label="Listing" Margin="4,4,4,4">
+			<Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+				<TextBlock Text="Torrents: " Grid.Column="0" Grid.Row="0" />
+				<TextBlock Text="{Binding TotalTorrents}" Grid.Column="1" Grid.Row="0" />
+				<TextBlock Text="Seeding size: " Grid.Column="0" Grid.Row="1" Padding="0,4,0,0" />
+				<TextBlock Text="{Binding TotalSeedingSize, Converter={StaticResource SIDataSizeConverter}}" Grid.Column="1" Grid.Row="1" Padding="0,4,0,0" />
+				<TextBlock Text="Uploaded: " Grid.Column="0" Grid.Row="2" Padding="0,4,0,0" />
+				<TextBlock Text="{Binding TotalUploaded, Converter={StaticResource SIDataSizeConverter}}" Grid.Column="1" Grid.Row="2" Padding="0,4,0,0" />
+				<TextBlock Text="Downloaded: " Grid.Column="0" Grid.Row="3" Padding="0,4,0,0" />
+				<TextBlock Text="{Binding TotalDownloaded, Converter={StaticResource SIDataSizeConverter}}" Grid.Column="1" Grid.Row="3" Padding="0,4,0,0" />
+				<TextBlock Text="Share ratio: " Grid.Column="0" Grid.Row="4" Padding="0,4,0,0" />
+				<TextBlock Text="{Binding ShareRatio}" Grid.Column="1" Grid.Row="4" Padding="0,4,0,0" />
+			</Grid>
+		</views:GroupBox>
+
+		<TextBlock Padding="8,8,8,8" Text="One or more daemons do not support all-time statstics" IsVisible="{Binding SomeDontSupport}" />
+
+		<views:GroupBox Label="Daemons" Margin="4,4,4,4">
+			<Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+				<TextBlock Text="All-time upload: " Grid.Column="0" Grid.Row="1" Padding="0,4,0,0" />
+				<TextBlock Text="{Binding AllTimeUpload, Converter={StaticResource SIDataSizeConverter}}" Grid.Column="1" Grid.Row="1" Padding="0,4,0,0" />
+				<TextBlock Text="All-time download: " Grid.Column="0" Grid.Row="2" Padding="0,4,0,0" />
+				<TextBlock Text="{Binding AllTimeDownload, Converter={StaticResource SIDataSizeConverter}}" Grid.Column="1" Grid.Row="2" Padding="0,4,0,0" />
+				<TextBlock Text="All-time share ratio: " Grid.Column="0" Grid.Row="3" Padding="0,4,0,0" />
+				<TextBlock Text="{Binding AllTimeShareRatio}" Grid.Column="1" Grid.Row="3" Padding="0,4,0,0" />
+			</Grid>
+		</views:GroupBox>
+	</StackPanel>
 </Window>

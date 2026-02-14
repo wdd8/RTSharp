@@ -31,7 +31,7 @@ public partial class PieceProgressBar : UserControl
 
     public override unsafe void Render(DrawingContext Ctx)
     {
-        if (_pieces == null)
+        if (_pieces == null || _pieces.Count == 0 || Double.IsNaN(Height) || Height == 0)
             return;
 
         using var writeableBitmap = new WriteableBitmap(new PixelSize(_pieces.Count, (int)Height), new Vector(96, 96), PixelFormat.Bgra8888);
@@ -55,6 +55,10 @@ public partial class PieceProgressBar : UserControl
                         r = 0;
                         g = 0;
                         b = 255;
+                    } else if (piece == PieceState.Highlighted) {
+                        r = 200;
+                        g = 40;
+                        b = 40;
                     }
 
                     *(int*)bufferPtr = (255 << 24) | (r << 16) | (g << 8) | (b << 0);

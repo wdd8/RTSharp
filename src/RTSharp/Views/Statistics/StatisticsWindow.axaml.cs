@@ -8,6 +8,13 @@ namespace RTSharp.Views.Statistics
         public StatisticsWindow()
         {
             InitializeComponent();
+
+            this.Opened += (sender, e) => {
+                ViewModel?.RunTimer();
+            };
+            this.Closed += (sender, e) => {
+                ViewModel?.Timer.Dispose();
+            };
         }
     }
 }

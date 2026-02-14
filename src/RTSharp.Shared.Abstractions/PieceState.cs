@@ -5,6 +5,7 @@ public enum PieceState : byte
     NotDownloaded,
     Downloading,
     Downloaded,
+    Highlighted,
 
     /// <summary>
     /// Reserved

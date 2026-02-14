@@ -1,0 +1,31 @@
+<Solution>
+  <Folder Name="/plugins/">
+    <Project Path="src/plugins/RTSharp.ColoredRatio/RTSharp.ColoredRatio.Plugin.csproj" />
+    <Project Path="src/plugins/RTSharp.AutoIntegrify/RTSharp.AutoIntegrify.Plugin.csproj" />
+    <Project Path="src/plugins/RTSharp.MassTrackerRewrite.Plugin/RTSharp.MassTrackerRewrite.Plugin.csproj" />
+  </Folder>
+  <Folder Name="/qbittorrent/">
+    <Project Path="src/qbittorrent/RTSharp.DataProvider.Qbittorrent.Plugin/RTSharp.DataProvider.Qbittorrent.Plugin.csproj" />
+  <Project Path="src/RTSharp.Daemon/Services/qbittorrent/qbittorrent-net-client/src/QBittorrent.Client/QBittorrent.Client.csproj" />
+  </Folder>
+  <Folder Name="/rtorrent/">
+    <Project Path="src/rtorrent/RTSharp.DataProvider.Rtorrent.Plugin/RTSharp.DataProvider.Rtorrent.Plugin.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/" />
+  <Folder Name="/Solution Items/GitHub Actions/">
+    <File Path=".github/workflows/build.yml" />
+    <File Path="src/plugin.targets" />
+    <File Path=".editorconfig" />
+  </Folder>
+  <Folder Name="/transmission/">
+    <Project Path="src/transmission/RTSharp.DataProvider.Transmission.Plugin/RTSharp.DataProvider.Transmission.Plugin.csproj" />
+    <Project Path="src/RTSharp.Daemon/Services/transmission/Transmission.Net/Transmission.Net/Transmission.Net.csproj" />
+  </Folder>
+  <Project Path="src/Avalonia.Controls.TreeDataGrid/src/Avalonia.Controls.TreeDataGrid/Avalonia.Controls.TreeDataGrid.csproj" />
+  <Project Path="src/RTSharp.Daemon.Protocols/RTSharp.Daemon.Protocols.csproj" />
+  <Project Path="src/RTSharp.Daemon/RTSharp.Daemon.csproj" />
+  <Project Path="src/RTSharp.Shared.Abstractions/RTSharp.Shared.Abstractions.csproj" />
+  <Project Path="src/RTSharp.Shared.Controls/RTSharp.Shared.Controls.csproj" />
+  <Project Path="src/RTSharp.Shared.Utils/RTSharp.Shared.Utils.csproj" />
+  <Project Path="src/RTSharp/RTSharp.csproj" />
+</Solution>

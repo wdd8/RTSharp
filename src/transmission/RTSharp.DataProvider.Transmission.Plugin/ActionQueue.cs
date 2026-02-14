@@ -9,7 +9,7 @@ using RTSharp.Shared.Abstractions;
 
 namespace RTSharp.DataProvider.Transmission.Plugin
 {
-    public class ActionQueue : DefaultActionQueue
+    public class ActionQueue : DefaultActionQueueRenderer
     {
         public override StyledElement Display { get; }
 
@@ -40,7 +40,7 @@ namespace RTSharp.DataProvider.Transmission.Plugin
                     _ => throw new ArgumentOutOfRangeException()
                 };
                 Builder.AppendLine(new string(Enumerable.Repeat('\t', Identation).ToArray()) + " " + running + " " + action.Name);
-                if (action.ProgressDone != 0) {
+                if (action.ProgressDone > 0) {
                     Builder.AppendLine(new string(Enumerable.Repeat('\t', Identation).ToArray()) + $" {Math.Round(action.ProgressDone, 2)}% {action.ProgressString}");
                 }
 

@@ -32,9 +32,9 @@ namespace RTSharp.ServerScriptPlayground.Plugin
 
         public Task<dynamic> CustomAccess(dynamic In) => Task.FromResult<dynamic>(null);
 
-        public Task Init(IPluginHost Host, IProgress<(string Status, float Percentage)> Progress)
+        public Task Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
         {
-            Progress.Report(("Initializing...", 0f));
+            Progress(("Initializing...", 0f));
 
             RootMenuItem = Host.RegisterRootMenuItem(new MenuItem() {
                 Header = "Server scripting",
@@ -45,7 +45,7 @@ namespace RTSharp.ServerScriptPlayground.Plugin
                 })
             });
 
-            Progress.Report(("Done", 100f));
+            Progress(("Done", 100f));
 
             return Task.CompletedTask;
         }

@@ -31,9 +31,9 @@ namespace RTSharp.ColoredRatio.Plugin
 
         public Task<dynamic> CustomAccess(dynamic In) => Task.FromResult<dynamic>(null);
 
-        public Task Init(IPluginHost Host, IProgress<(string Status, float Percentage)> Progress)
+        public Task Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
         {
-            Progress.Report(("Initializing...", 0f));
+            Progress(("Initializing...", 0f));
 
             Hook = Host.HookTorrentListingEvCellPrepared((sender, e) => {
                 var cell = (TreeDataGridCell)e.Cell;
@@ -65,7 +65,7 @@ namespace RTSharp.ColoredRatio.Plugin
                     cell.Background = null;
             });
 
-            Progress.Report(("Done", 100f));
+            Progress(("Done", 100f));
 
             return Task.CompletedTask;
         }

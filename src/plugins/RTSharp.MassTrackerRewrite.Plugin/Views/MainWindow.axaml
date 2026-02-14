@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+		Width="800" Height="450"
+		x:Name="window"
+        x:Class="RTSharp.MassTrackerRewrite.Plugin.MainWindow"
+		Icon="avares://RTSharp/Assets/rtsharp.ico"
+        Title="Mass tracker rewrite">
+    <Window.Resources>
+        <converters:MathConverter x:Key="MathConverter"/>
+    </Window.Resources>
+
+	<Window.Styles>
+		<dialogHost:DialogHostStyles />
+		<StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+	</Window.Styles>
+
+	<dialogHost:DialogHost IsOpen="{Binding ProgressDialogShown}">
+        <dialogHost:DialogHost.DialogContent>
+            <StackPanel Margin="8 8 8 8" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.75)}">
+                <TextBlock FontWeight="Bold" Text="Loading..." />
+            </StackPanel>
+        </dialogHost:DialogHost.DialogContent>
+		<Grid ColumnDefinitions="4*, 4, 8*" RowDefinitions="*">
+			<ListBox Grid.Column="0"
+				SelectionMode="Single"
+				Margin="4"
+				ItemsSource="{Binding Trackers}"
+				SelectedItem="{Binding SelectedTracker, Mode=TwoWay}"
+				VerticalAlignment="Stretch"
+				HorizontalAlignment="Stretch"
+				ScrollViewer.VerticalScrollBarVisibility="Auto"
+				IsEnabled="{Binding !IsBusy}" />
+			<GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>
+			<StackPanel Grid.Column="2"
+				Margin="10"
+				Spacing="8"
+				IsEnabled="{Binding !IsBusy}">
+					<TextBox Text="{Binding SelectedTracker.Uri}" IsReadOnly="True" />
+					<TextBlock Text="↓" />
+					<TextBox Text="{Binding UrlText, Mode=TwoWay}" Watermark="Replacement..." />
+					<TextBlock Text="{Binding StatusText}" />
+					<ProgressBar Minimum="0" Maximum="100" Height="16" Value="{Binding ProgressValue}" />
+					<Button Content="Go" Command="{Binding GoCommand}" IsEnabled="{Binding CanGo}" />
+			</StackPanel>
+		</Grid>
+	</dialogHost:DialogHost>
+</Window>

@@ -35,7 +35,7 @@ namespace RTSharp.Shared.Abstractions
         /// <param name="Host">Host object</param>
         /// <param name="UniqueGUID">Unique plugin GUID</param>
         /// <param name="WBox">Progress report - status message and progress %</param>
-        Task Init(IPluginHost Host, IProgress<(string Status, float Percentage)> Progress);
+        Task Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress);
 
         /// <summary>
         /// Unload plugin

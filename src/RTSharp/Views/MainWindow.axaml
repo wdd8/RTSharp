@@ -27,7 +27,8 @@
 
     <Window.Resources>
         <ResourceDictionary>
-            <np:DockManager x:Key="MainDockManager"/>
+            <np:DockManager x:Key="MainDockManager">
+			</np:DockManager>
         </ResourceDictionary>
 
         <DataTemplate x:Key="ContentControlTemplate">
@@ -81,7 +82,7 @@
             <Separator />
             <MenuItem Header="Statistics" Command="{Binding ShowStatisticsWindowCommand}" />
         </MenuItem>
-        <MenuItem x:Key="ToolsMenu" Header="_Tools">
+        <MenuItem x:Key="ToolsMenu" Name="ToolsMenu" Header="_Tools">
             <MenuItem Header="Torrent _Creator" Command="{Binding TorrentCreatorClickCommand}" />
             <Separator />
             <MenuItem Header="_Options..." Command="{Binding OptionsClickCommand}" />

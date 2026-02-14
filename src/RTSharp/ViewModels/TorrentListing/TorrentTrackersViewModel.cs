@@ -16,7 +16,6 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using NP.Ava.UniDockService;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
@@ -142,5 +141,30 @@ namespace RTSharp.ViewModels.TorrentListing
         }
 
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-address-book");
+
+        [RelayCommand]
+        public async Task ReplaceTracker((object SelectedItems, string Text) In)
+        {
+            var trackers = ((IList)In.SelectedItems).Cast<Models.Tracker>().ToArray();
+
+            if (trackers.Length != 1)
+                return;
+
+            var oldTracker = trackers[0].Uri;
+
+            var selectedTorrents = Parent.CurrentlySelectedItems;
+            if (selectedTorrents.Count != 1)
+                return;
+
+            var selectedTorrent = selectedTorrents.Items[0];
+
+            try {
+                await selectedTorrent.Owner.Instance.Tracker.ReplaceTracker(selectedTorrent.ToPluginModel(), oldTracker, In.Text);
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, "Replacing tracker failed");
+            } finally {
+                DialogHost.GetDialogSession("ReplaceTrackerHost")!.Close(false);
+            }
+        }
     }
 }

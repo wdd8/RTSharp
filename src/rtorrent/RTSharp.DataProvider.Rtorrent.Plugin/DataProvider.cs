@@ -63,6 +63,8 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             this.PluginHost = ThisPlugin.Host;
 
             this.Files = new DataProviderFiles(ThisPlugin);
+            this.Tracker = new DataProviderTracker(ThisPlugin);
+            this.Stats = new DataProviderStats(ThisPlugin);
         }
 
         public async Task<Torrent> GetTorrent(byte[] Hash)
@@ -99,28 +101,14 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             return ret;
         }
 
-        public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, byte[]>>> GetTorrentChanges(CancellationToken CancellationToken)
+        public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, T, byte[]>>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<Daemon.Protocols.DataProvider.IncompleteDeltaTorrentResponse, T> Update, Action<Daemon.Protocols.DataProvider.CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
+            where T : class
         {
             var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
             var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
 
-            var updates = client.GetTorrentChanges(combined.Token);
-
-            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
-                SingleReader = true,
-                SingleWriter = true
-            });
-            _ = Task.Run(async () => {
-                await foreach (var update in updates.Reader.ReadAllAsync(combined.Token)) {
-                    TotalDLSpeed.Change(update.Changes.Sum(x => (long)x.DLSpeed));
-                    TotalUPSpeed.Change(update.Changes.Sum(x => (long)x.UPSpeed));
-                    ActiveTorrentCount.Change(update.Changes.Where(x => x.State.HasFlag(TORRENT_STATE.ACTIVE)).Count());
-
-                    channel.Writer.TryWrite(update);
-                }
-            }, combined.Token);
-            return channel;
+            return client.GetTorrentChanges(Existing, Update, Update2, combined.Token);
         }
 
         public async Task<TorrentStatuses> StartTorrents(IList<byte[]> In)
@@ -388,11 +376,5 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
         }
 
         public IPlugin Plugin => ThisPlugin;
-
-        public Notifyable<long> TotalDLSpeed { get; } = new();
-
-        public Notifyable<long> TotalUPSpeed { get; } = new();
-
-        public Notifyable<long> ActiveTorrentCount { get; } = new();
     }
 }

@@ -31,17 +31,17 @@
         </Grid>
         <views:GroupBox Label="Transfer">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*">
-                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Time elapsed:" Text="{Binding Torrent.TimeElapsed, Converter={StaticResource ETATimeSpanConverter}}" />
-                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Downloaded:" Text="{Binding Torrent.Downloaded, Converter={StaticResource SIDataSizeConverter}}" />
-                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Uploaded:" Text="{Binding Torrent.Uploaded, Converter={StaticResource SIDataSizeConverter}}" />
-                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Seeders:" Text="{Binding Torrent.Seeders, Mode=OneWay, StringFormat=\{0\}}" />
+                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Time elapsed:" Text="{Binding Torrent.TimeElapsedDisplay}" />
+                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Downloaded:" Text="{Binding Torrent.DownloadedDisplay}" />
+                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Uploaded:" Text="{Binding Torrent.UploadedDisplay}" />
+                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Seeders:" Text="{Binding Torrent.SeedersDisplay}" />
 
-                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Remaining:" Text="{Binding Torrent.ETA, Converter={StaticResource ETATimeSpanConverter}}" />
-                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="DL Speed:" Text="{Binding Torrent.DLSpeed, Converter={StaticResource SIDataSpeedConverter}}" />
-                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="1" Label="UP Speed:" Text="{Binding Torrent.UPSpeed, Converter={StaticResource SIDataSpeedConverter}}" />
-                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="1" Label="Peers:" Text="{Binding Torrent.Peers, Mode=OneWay, StringFormat=\{0\}}" />
+                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Remaining:" Text="{Binding Torrent.ETADisplay}" />
+                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="DL Speed:" Text="{Binding Torrent.DLSpeedDisplay}" />
+                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="1" Label="UP Speed:" Text="{Binding Torrent.UPSpeedDisplay}" />
+                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="1" Label="Peers:" Text="{Binding Torrent.PeersDisplay}" />
 
-                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="2" Label="Ratio:" Text="{Binding Torrent.Ratio, StringFormat=\{0:0.000\}}" />
+                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="2" Label="Ratio:" Text="{Binding Torrent.RatioDisplay}" />
                 <views:TextBlockWithLabel Grid.Row="1" Grid.Column="2" Label="Wasted:" Text="{Binding Torrent.Wasted, Converter={StaticResource SIDataSizeConverter}}" />
             </Grid>
         </views:GroupBox>

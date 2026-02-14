@@ -964,5 +964,48 @@ namespace RTSharp.Daemon.Services.transmission
 
             return Task.FromResult(new Empty());
         }
+
+        public async Task<Empty> EditTracker(ByteString InfoHash, string Existing, string New, CancellationToken CancellationToken)
+        {
+            await Client.Init();
+
+            var id = Translate(InfoHash.Span) ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent translation not found"));
+
+            var torrents = await Client.Client.TorrentGetAsync([ id ], [ TorrentFields.TRACKER_LIST ]);
+            var torrent = torrents?.Torrents.SingleOrDefault();
+
+            if (torrent == default) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
+            }
+
+            var newTrackerList = new List<string>();
+
+            foreach (var tracker in torrent.TrackerList!.Split([ "\r\n", "\n" ], StringSplitOptions.None)) {
+                if (tracker == Existing) {
+                    newTrackerList.Add(New);
+                } else {
+                    newTrackerList.Add(tracker);
+                }
+            }
+
+            await Client.Client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
+                TrackerList = string.Join("\r\n", newTrackerList)
+            });
+
+            return new();
+        }
+
+        public async Task<Protocols.DataProvider.AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken)
+        {
+            await Client.Init();
+
+            var stats = await Client.Client.GetSessionStatisticAsync();
+
+            return new Protocols.DataProvider.AllTimeDataStats {
+                Download = (ulong)stats.CumulativeStats!.DownloadedBytes!,
+                Upload = (ulong)stats.CumulativeStats.UploadedBytes!,
+                ShareRatio = (float)stats.CumulativeStats.DownloadedBytes.Value / (float)stats.CumulativeStats.UploadedBytes.Value
+            };
+        }
     }
 }

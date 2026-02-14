@@ -11,6 +11,7 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -27,7 +28,7 @@ namespace RTSharp.Core.TorrentPolling
         private static Task TorrentChangesTask;
         private static Task TorrentUpdateTask;
 
-        private static Channel<(DataProvider DataProvider, ListingChanges<Torrent, byte[]> Changes)> ListingChanges = Channel.CreateUnbounded<(DataProvider DataProvider, ListingChanges<Torrent, byte[]> Changes)>(new UnboundedChannelOptions()
+        private static Channel<(DataProvider DataProvider, ListingChanges<Torrent, Models.Torrent, byte[]> Changes)> ListingChanges = Channel.CreateUnbounded<(DataProvider DataProvider, ListingChanges<Torrent, Models.Torrent, byte[]> Changes)>(new UnboundedChannelOptions()
         {
             SingleReader = true,
             SingleWriter = true
@@ -35,7 +36,7 @@ namespace RTSharp.Core.TorrentPolling
 
         public static SourceList<Models.Torrent> Torrents { get; } = new();
         public static ConcurrentInfoHashOwnerDictionary<Models.Torrent> TorrentsLookup { get; } = new();
-        public static event Action TorrentBatchChange;
+        public static event Action<List<NotifyCollectionChangedEventArgs>> TorrentBatchChange;
 
         public static Dictionary<string, int> AllLabelReferences { get; } = new();
         public static IObservable<string[]> AllLabelReferencesObservable { get; private set; }
@@ -58,9 +59,11 @@ namespace RTSharp.Core.TorrentPolling
             await foreach (var (dp, listingChanges) in ListingChanges.Reader.ReadAllAsync())
             {
                 var changes = listingChanges.Changes.ToInfoHashDictionary(x => x.Hash);
+                var fullUpdate = listingChanges.FullUpdate.ToInfoHashDictionary(x => x.Hash);
                 var removed = listingChanges.Removed.ToHashSet(new HashEqualityComparer());
-
                 var toRemove = new List<Models.Torrent>();
+
+                var changeSet = new List<NotifyCollectionChangedEventArgs>();
 
                 // Since it is possible to remove torrent and add it right after in same change, we must handle removals first
                 foreach (var torrent in Torrents.Items)
@@ -70,6 +73,9 @@ namespace RTSharp.Core.TorrentPolling
                         toRemove.Add(torrent);
                     }
                 }
+
+                if (toRemove.Count > 0)
+                    changeSet.Add(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, toRemove));
 
                 foreach (var remove in toRemove)
                 {
@@ -104,26 +110,42 @@ namespace RTSharp.Core.TorrentPolling
                         Log.Logger.Warning($"Tried to subtract ref count from label {label}, but it didn't exist");
                 }
 
-                await Models.TorrentUpdateExt.UpdateFromPluginModelMulti(Torrents.Items.Where(x => x.Owner == dp), changes);
-
-                foreach (var torrent in Torrents.Items)
-                {
-                    if (torrent.Owner != dp)
-                        continue;
-
-                    if (changes.TryGetValue(torrent.Hash, out var i)) {
+                foreach (var change in changes) {
+                    if (TorrentsLookup.TryGetValue((change.Key, dp.PluginInstance.InstanceId), out var torrent)) {
                         foreach (var label in torrent.Labels)
                             subtract(label);
-                        foreach (var label in i.Labels)
+                        foreach (var label in change.Value.Labels)
                             add(label);
-
-                        changes.Remove(i.Hash);
+                    }
+                }
+                foreach (var change in fullUpdate) {
+                    if (TorrentsLookup.TryGetValue((change.Key, dp.PluginInstance.InstanceId), out var torrent)) {
+                        foreach (var label in torrent.Labels)
+                            subtract(label);
+                        foreach (var label in change.Value.Labels)
+                            add(label);
                     }
                 }
 
+                foreach (var change in changes.Values) {
+                    var idx = Torrents.Items.IndexOf(change);
+                    changeSet.Add(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, change, null, idx));
+                }
+                await Models.TorrentUpdateExt.UpdateMulti(changes.Values);
+
+                // Modified fullUpdate
+                var updated = await Models.TorrentUpdateExt.UpdateFromPluginModelMulti([.. Torrents.Items.Where(x => x.Owner == dp)], fullUpdate);
+                foreach (var change in updated) {
+                    changeSet.Add(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, change.Obj, null, change.Index));
+                }
+
                 // For new torrents
-                var newVMTorrents = changes.Select(x => new Models.Torrent(x.Value.Hash, dp)).ToList();
-                await Models.TorrentUpdateExt.UpdateFromPluginModelMulti(newVMTorrents, changes);
+                var newVMTorrents = fullUpdate.Select(x => new Models.Torrent(x.Value.Hash, dp)).ToList();
+                updated = await Models.TorrentUpdateExt.UpdateFromPluginModelMulti(newVMTorrents, fullUpdate);
+
+                if (updated.Count > 0)
+                    changeSet.Add(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, updated.Select(x => x.Obj).ToArray(), Torrents.Count - 1));
+
                 if (newVMTorrents.Count() > 0) {
                     Torrents.AddRange(newVMTorrents);
                     foreach (var torrent in newVMTorrents) {
@@ -136,17 +158,17 @@ namespace RTSharp.Core.TorrentPolling
                 if (labelsChanged)
                     AllLabelReferencesSubject.OnNext(AllLabelReferences.Keys.ToArray());
 
-                TorrentBatchChange?.Invoke();
+                TorrentBatchChange?.Invoke(changeSet);
             }
         }
 
-        private static async Task ReadTorrentChanges(DataProvider DataProvider, ChannelReader<ListingChanges<Torrent, byte[]>> In)
+        private static async Task ReadTorrentChanges(DataProvider DataProvider, ChannelReader<ListingChanges<Torrent, Models.Torrent, byte[]>> In)
         {
             try
             {
                 await foreach (var listingChanges in In.ReadAllAsync())
                 {
-                    if (listingChanges.Changes.Any() || listingChanges.Removed.Any())
+                    if (listingChanges.Changes.Any() || listingChanges.FullUpdate.Any() || listingChanges.Removed.Any())
                         await ListingChanges.Writer.WriteAsync((DataProvider, listingChanges));
                 }
             }
@@ -159,15 +181,15 @@ namespace RTSharp.Core.TorrentPolling
         private static async Task GetTorrentChanges()
         {
             AsyncAutoResetEvent dataProvidersChanged = new();
-            Plugins.DataProviders.CollectionChanged += (sender, e) => {
+            Plugins.DataProviders.Connect().Subscribe(x => {
                 dataProvidersChanged.Set();
-            };
+            });
 
             try
             {
                 while (true)
                 {
-                    var dataProviders = Plugins.DataProviders.ToList();
+                    var dataProviders = Plugins.DataProviders.Items.ToList();
 
                     if (dataProviders.Count == 0)
                     {
@@ -182,14 +204,14 @@ namespace RTSharp.Core.TorrentPolling
 
                     foreach (var dp in dataProviders.Where(x => x.CurrentTorrentChangesTask == null))
                     {
-                        ChannelReader<ListingChanges<Torrent, byte[]>> channel;
+                        ChannelReader<ListingChanges<Torrent, Models.Torrent, byte[]>> channel;
 
                         dp.CurrentTorrentChangesTaskCts?.Cancel();
                         dp.CurrentTorrentChangesTaskCts = new();
 
                         try
                         {
-                            channel = await dp.Instance.GetTorrentChanges(dp.CurrentTorrentChangesTaskCts.Token);
+                            channel = await dp.Instance.GetTorrentChanges(TorrentsLookup, Services.Daemon.Mapper.ApplyFromProto, Services.Daemon.Mapper.ApplyFromProto, dp.CurrentTorrentChangesTaskCts.Token);
                         }
                         catch (Exception ex)
                         {

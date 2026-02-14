@@ -8,5 +8,6 @@ namespace RTSharp.Shared.Abstractions
 {
     public interface IDataProviderStats : IDataProviderBase<DataProviderStatsCapabilities>
     {
+        public Task<AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken);
     }
 }

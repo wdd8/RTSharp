@@ -23,11 +23,11 @@ namespace RTSharp.Shared.Abstractions
     {
         public T? GetResult() => RunningTask.IsCompleted ? (T?)RunningTask.Result : default;
 
-        internal ActionQueueAction(string Name, RUN_MODE RunMode, Func<Task<T>> Task, ActionQueueAction<T>? Parent, Progress<(float, string)>? Progress) : base(Name, RunMode, async () => { var res = await Task(); return res; }, Parent, Progress)
+        internal ActionQueueAction(string Name, RUN_MODE RunMode, Func<Task<T>> Task, ActionQueueAction<T>? Parent, Progress<(float, string)>? Progress) : base(Guid.NewGuid(), Name, RunMode, async () => { var res = await Task(); return res; }, Parent, Progress)
         {
         }
 
-        internal ActionQueueAction(ActionQueueAction In) : base(In.Name, In.RunMode, In.FxCreateTask, In.Parent, In.Progress)
+        internal ActionQueueAction(ActionQueueAction In) : base(Guid.NewGuid(), In.Name, In.RunMode, In.FxCreateTask, In.Parent, In.Progress)
         {
         }
 
@@ -62,13 +62,15 @@ namespace RTSharp.Shared.Abstractions
     {
         public ActionQueueAction? Parent { get; private set; }
 
+        public Guid Id { get; init; }
+
         public string Name { get; init; }
 
         public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
         public ACTION_STATE State { get; set; } = ACTION_STATE.WAITING;
 
-        public RUN_MODE RunMode { get; private set; }
+        public RUN_MODE? RunMode { get; private set; }
 
         public Func<Task<object?>> FxCreateTask { get; }
 
@@ -86,15 +88,16 @@ namespace RTSharp.Shared.Abstractions
         {
         }
 
-        protected ActionQueueAction(string Name, RUN_MODE RunMode, Func<Task<object?>> FxCreateTask, ActionQueueAction? Parent, Progress<(float, string)>? Progress = null)
+        protected ActionQueueAction(Guid Id, string Name, RUN_MODE? RunMode, Func<Task<object?>>? FxCreateTask, ActionQueueAction? Parent, Progress<(float, string)>? Progress = null)
         {
+            this.Id = Id;
             this.Name = Name;
             this.FxCreateTask = FxCreateTask;
             this.Parent = Parent;
             this.RunMode = RunMode;
-            this.Progress = Progress;
-            if (this.Progress != null)
-                this.Progress.ProgressChanged += Progress_ProgressChanged;
+            if (Progress != null) {
+                BindProgress(Progress);
+            }
         }
 
         public bool IsCompleted => State == ACTION_STATE.CANCELLED || State == ACTION_STATE.FAILED || State == ACTION_STATE.DONE;
@@ -116,36 +119,49 @@ namespace RTSharp.Shared.Abstractions
 
         public static ActionQueueAction<T> New<T>(string Name, Func<Task<T>> FxCreateTask, Progress<(float, string)>? Progress = null) => new(Name, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, FxCreateTask, null, Progress);
 
-        public static ActionQueueAction New(string Name, Func<Task<object?>> FxCreateTask, Progress<(float, string)>? Progress = null) => new(Name, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, FxCreateTask, null, Progress);
+        public static ActionQueueAction New(string Name, Func<Task<object?>> FxCreateTask, Progress<(float, string)>? Progress = null) => new(Guid.NewGuid(), Name, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, FxCreateTask, null, Progress);
 
-        public static ActionQueueAction New(string Name, Func<ValueTask> FxCreateTask, Progress<(float, string)>? Progress = null) => new(Name, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, async () => { await FxCreateTask(); return null; }, null, Progress);
+        public static ActionQueueAction New(string Name, Func<ValueTask> FxCreateTask, Progress<(float, string)>? Progress = null) => new(Guid.NewGuid(), Name, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, async () => { await FxCreateTask(); return null; }, null, Progress);
+
+        public static ActionQueueAction NewCosmetic(Guid Id, string Name)
+        {
+            var ret = new ActionQueueAction(Id, Name, null, null, null);
+            return ret;
+        }
 
         public ActionQueueAction<TChild> CreateChild<TChild>(string Name, RUN_MODE RunMode, Func<ActionQueueAction, ValueTask> FxCreateTask)
         {
-            var ret = new ActionQueueAction<TChild>(new ActionQueueAction(Name, RunMode, async () => { await FxCreateTask(this); return null!; }, this));
+            var ret = new ActionQueueAction<TChild>(new ActionQueueAction(Guid.NewGuid(), Name, RunMode, async () => { await FxCreateTask(this); return null!; }, this));
             _childActions.Add(ret);
             return ret;
         }
 
         public ActionQueueAction<TChild> CreateChild<TChild>(string Name, RUN_MODE RunMode, Func<ActionQueueAction, Task<object?>> FxCreateTask)
         {
-            var ret = new ActionQueueAction<TChild>(new ActionQueueAction(Name, RunMode, () => FxCreateTask(this), this));
+            var ret = new ActionQueueAction<TChild>(new ActionQueueAction(Guid.NewGuid(), Name, RunMode, () => FxCreateTask(this), this));
             _childActions.Add(ret);
             return ret;
         }
 
         public ActionQueueAction CreateChild(string Name, RUN_MODE RunMode, Func<ActionQueueAction, Task<object?>> FxCreateTask)
         {
-            var ret = new ActionQueueAction(Name, RunMode, () => FxCreateTask(this), this);
+            var ret = new ActionQueueAction(Guid.NewGuid(), Name, RunMode, () => FxCreateTask(this), this);
             _childActions.Add(ret);
             return ret;
         }
 
         public ActionQueueAction CreateChild(string Name, RUN_MODE RunMode, Func<ActionQueueAction, ValueTask> FxCreateTask)
         {
-            var ret = new ActionQueueAction(Name, RunMode, async () => { await FxCreateTask(this); return null!; }, this);
+            var ret = new ActionQueueAction(Guid.NewGuid(), Name, RunMode, async () => { await FxCreateTask(this); return null!; }, this);
             _childActions.Add(ret);
             return this;
+        }
+
+        public ActionQueueAction CreateCosmeticChild(Guid Id, string Name)
+        {
+            var ret = new ActionQueueAction(Id, Name, null, null, null);
+            _childActions.Add(ret);
+            return ret;
         }
 
         private readonly List<Action<Task<object?>>> OnRunFxs = new();

@@ -27,6 +27,13 @@ service GRPCTorrentService {
     rpc MoveDownloadDirectory (MoveDownloadDirectoryArgs) returns (google.protobuf.BytesValue);
     rpc SetLabels (SetLabelsArgs) returns (TorrentsReply);
     rpc QueueTorrentUpdate (Torrents) returns (google.protobuf.Empty);
+    rpc EditTracker (EditTrackerArgs) returns (google.protobuf.Empty);
+}
+
+message EditTrackerArgs {
+    bytes InfoHash = 1;
+    string Existing = 2;
+    string New = 3;
 }
 
 message SetLabelsArgs {

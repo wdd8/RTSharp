@@ -1,9 +1,11 @@
 ﻿#nullable enable
 
+using RTSharp.Shared.Abstractions;
+
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
-using RTSharp.Shared.Abstractions;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin
 {
@@ -17,7 +19,8 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
             EnableTracker: false,
             DisableTracker: false,
             RemoveTracker: false,
-            ReannounceTracker: false
+            ReannounceTracker: false,
+            ReplaceTracker: true
         );
 
         public DataProviderTracker(Plugin ThisPlugin)
@@ -29,6 +32,13 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin
         public async Task<IList<(Uri Uri, IList<Exception> Exceptions)>> Reannounce(byte[] TorrentHash, IList<Uri> TargetUris)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task ReplaceTracker(Torrent Torrent, string Existing, string New, CancellationToken cancellationToken = default)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+
+            await client.ReplaceTracker(Torrent.Hash, Existing, New, cancellationToken);
         }
     }
 }

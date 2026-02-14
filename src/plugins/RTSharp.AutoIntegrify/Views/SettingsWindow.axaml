@@ -1,0 +1,80 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+		xmlns:vm="clr-namespace:RTSharp.AutoIntegrify.Plugin.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="RTSharp.AutoIntegrify.Plugin.SettingsWindow"
+        Title="Settings"
+		SizeToContent="WidthAndHeight"
+        Padding="12">
+  <Window.Resources>
+    <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
+  </Window.Resources>
+
+  <Window.Styles>
+	  <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto" ColumnDefinitions="*,Auto">
+	<views:GroupBox Label="Search paths" Grid.RowSpan="2" Grid.Column="0">
+      <Grid RowDefinitions="Auto,Auto">
+        <ListBox
+			Name="list"
+			Grid.Row="0"
+			Height="230"
+			MinWidth="500"
+			ScrollViewer.HorizontalScrollBarVisibility="Auto"
+			ScrollViewer.VerticalScrollBarVisibility="Visible"
+			ItemsSource="{Binding Items}">
+          <ListBox.ItemTemplate>
+			<DataTemplate>
+			  <StackPanel Orientation="Horizontal">
+			    <Button
+					Content="X"
+					Command="{Binding #list.DataContext.RemoveCommand}"
+					CommandParameter="{Binding}"
+					/>
+			    <TextBlock VerticalAlignment="Center" Text="{Binding}" />
+			  </StackPanel>
+			</DataTemplate>
+		  </ListBox.ItemTemplate>
+        </ListBox>
+
+		<Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0" HorizontalAlignment="Stretch" Text="{Binding NewPath}" />
+		  <Button Grid.Column="1" HorizontalAlignment="Left" Content="Add" Command="{Binding AddCommand}" />
+		</Grid>
+      </Grid>
+    </views:GroupBox>
+
+	<StackPanel Grid.Column="1">
+	  <views:GroupBox VerticalAlignment="Top" Label="Other settings">
+		<StackPanel Orientation="Vertical">
+		  <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+		    <TextBlock Text="Random pieces to check:" VerticalAlignment="Center"/>
+            <NumericUpDown Width="100" Minimum="0" Increment="1" Value="{Binding RandomPiecesToCheck}" />
+		  </StackPanel>
+		  <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+		    <TextBlock Text="Search recursion limit:" VerticalAlignment="Center"/>
+            <NumericUpDown Width="100" Minimum="0" Increment="1" Value="{Binding SearchRecursionLimit}" />
+		  </StackPanel>
+		  <views:GroupBox Label="Links">
+			  <StackPanel Orientation="Vertical">
+			    <RadioButton GroupName="LinkGroup" Content="Reflink with hardlink fallback"
+					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:LinkOptions.ReflinkWithHardlinkFallback}}" />
+			    <RadioButton GroupName="LinkGroup" Content="Reflink" 
+					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:LinkOptions.Reflink}}" />
+			    <RadioButton GroupName="LinkGroup" Content="Hardlink"
+					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:LinkOptions.Hardlink}}" />
+              </StackPanel>
+		  </views:GroupBox>
+		</StackPanel>
+	  </views:GroupBox>
+
+	  <Button Content="Save" IsDefault="True" Command="{Binding SaveCommand}" />
+	</StackPanel>
+  </Grid>
+</Window>

@@ -24,7 +24,7 @@ namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
-        private Channel<(Models.Torrent, ListingChanges<Peer, IPEndPoint>)> PeersChanges;
+        private Channel<(Models.Torrent, ListingChanges<Peer, Models.Peer, IPEndPoint>)> PeersChanges;
         private Channel<Models.Peer> PeerInfoFetches;
         static AsyncBulkheadPolicy? PeerInfoFetchQueue;
 
@@ -34,7 +34,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 SingleReader = true,
                 SingleWriter = true
             });
-            PeersChanges = Channel.CreateUnbounded<(Models.Torrent, ListingChanges<Peer, IPEndPoint>)>(new UnboundedChannelOptions() {
+            PeersChanges = Channel.CreateUnbounded<(Models.Torrent, ListingChanges<Peer, Models.Peer, IPEndPoint>)>(new UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
@@ -153,7 +153,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
                     }
 
-                    foreach (var changedPeer in peers.Changes) {
+                    foreach (var changedPeer in peers.FullUpdate) {
                         if (hs.TryGetValue(changedPeer.IPPort, out var existingPeer)) {
                             // Update
                             existingPeer.UpdateFromPluginModel(changedPeer);
@@ -224,11 +224,11 @@ namespace RTSharp.ViewModels.TorrentListing
                         return;
                     }
 
-                    ListingChanges<Peer, IPEndPoint> changes;
+                    ListingChanges<Peer, Models.Peer, IPEndPoint> changes;
 
                     if (previousPeers == null) {
                         previousPeers = peers.ToDictionary(x => x.IPPort, x => x);
-                        changes = new ListingChanges<Peer, IPEndPoint>(peers, Array.Empty<IPEndPoint>());
+                        changes = new ListingChanges<Peer, Models.Peer, IPEndPoint>(peers, [], Array.Empty<IPEndPoint>());
                     } else {
                         var changedPeers = new List<Peer>();
                         var removedPeers = new List<IPEndPoint>();
@@ -259,7 +259,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             removedPeers.Add(prevPeer.IPPort);
                         }
 
-                        changes = new ListingChanges<Peer, IPEndPoint>(changedPeers, removedPeers);
+                        changes = new ListingChanges<Peer, Models.Peer, IPEndPoint>(changedPeers, [], removedPeers);
                         previousPeers = peers.ToDictionary(x => x.IPPort, x => x);
                     }
 

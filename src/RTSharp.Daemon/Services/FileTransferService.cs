@@ -27,45 +27,10 @@ namespace RTSharp.Daemon.Services
             this.Config = config;
         }
 
-        private async ValueTask<GrpcChannel> GetChannel(string Url)
-        {
-            if (Channels.TryGetValue(Url, out var ret))
-                return ret;
-
-            var publicPem = await System.IO.File.ReadAllTextAsync(Config.GetSection("Certificate").GetValue<string>("PublicPem"));
-            var privatePem = await System.IO.File.ReadAllTextAsync(Config.GetSection("Certificate").GetValue<string>("PrivatePem"));
-            var x509 = X509Certificate2.CreateFromPem(publicPem, privatePem);
-            var cert = new X509Certificate2(x509.Export(X509ContentType.Pkcs12));
-            var allowedClients = Config.GetSection("AllowedClients").Get<string[]>();
-
-            Logger.LogInformation($"Creating channel with certificate {cert.GetCertHashString(HashAlgorithmName.SHA256)}");
-
-            return Channels[Url] = GrpcChannel.ForAddress(Url, new GrpcChannelOptions() {
-                HttpHandler = new SocketsHttpHandler() {
-                    SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
-                        ClientCertificates = [ cert ],
-                        RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => {
-                            if (certificate == null)
-                                return false;
-
-                            var clientThumbprint = certificate.GetCertHashString(HashAlgorithmName.SHA256);
-
-                            if (allowedClients != null && !allowedClients.Any(x => x.Equals(clientThumbprint, StringComparison.OrdinalIgnoreCase))) {
-                                Logger.LogWarning($"Tried to connect to remote server, but server thumbprint {clientThumbprint} is not allowed");
-                                return false;
-                            }
-
-                            return true;
-                        }
-                    }
-                }
-            });
-        }
-
         private readonly IConfiguration Config;
 
 
-        public async Task ReceiveFilesFromRemote(Protocols.GRPCFilesService.GRPCFilesServiceClient Client, IEnumerable<(string StorePath, string RemoteSourcePath)> Paths, IProgress<FileTransferSessionProgress> Progress)
+        public async Task ReceiveFilesFromRemote(Protocols.GRPCFilesService.GRPCFilesServiceClient Client, IEnumerable<(string StorePath, string RemoteSourcePath)> Paths, Action<FileTransferSessionProgress> Progress)
         {
             foreach (var dir in Paths.Select(x => Path.GetDirectoryName(x.StorePath)).Distinct())
                 Directory.CreateDirectory(dir!); // possible that its null but thats consumers problem
@@ -90,7 +55,7 @@ namespace RTSharp.Daemon.Services
                     if (buffer.Path == "") {
                         // Done
                         Logger.LogInformation($"ReceiveFilesFromRemote: Done");
-                        try { Progress.Report(new("", bytesTotal)); } catch { }
+                        try { Progress(new("", bytesTotal)); } catch { }
                         return;
                     }
 
@@ -98,7 +63,7 @@ namespace RTSharp.Daemon.Services
                     file = File.OpenWrite(currentPath = paths[buffer.Path]);
                     bytesTotal = 0;
 
-                    try { Progress.Report(new(currentPath!, bytesTotal)); } catch { }
+                    try { Progress(new(currentPath!, bytesTotal)); } catch { }
 
                     continue;
                 } else if (buffer.DataCase == FileBuffer.DataOneofCase.Buffer) {
@@ -106,7 +71,7 @@ namespace RTSharp.Daemon.Services
                     bytesTotal += buffer.Buffer.Length;
 
                     if (sw.Elapsed > TimeSpan.FromSeconds(1)) {
-                        try { Progress.Report(new(currentPath!, bytesTotal)); } catch { }
+                        try { Progress(new(currentPath!, bytesTotal)); } catch { }
                         sw.Restart();
                     }
                 }

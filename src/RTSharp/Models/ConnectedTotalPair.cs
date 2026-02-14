@@ -1,24 +1,36 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.ComponentModel;
 
 namespace RTSharp.Models
 {
-    public partial class ConnectedTotalPair : ObservableObject
+    public record struct ConnectedTotalPair : INotifyPropertyChanged
     {
-        [ObservableProperty]
-        public uint connected;
+        public uint Connected {
+            get => field;
+            set {
+                var old = field;
+                field = value;
+                if (old != value)
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Connected)));
+            }
+        }
 
-        [ObservableProperty]
-        public uint total;
+        public uint Total {
+            get => field;
+            set {
+                var old = field;
+                field = value;
+                if (old != value)
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
+            }
+        }
 
         public ConnectedTotalPair(uint Connected, uint Total)
         {
             this.Connected = Connected;
             this.Total = Total;
         }
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         public override string ToString()
         {

@@ -133,21 +133,17 @@ namespace RTSharp.Core.Services
                 country = vcards.Select(x => x?.FirstOrDefault(i => i.Key == "adr").Value).FirstOrDefault(x => x != null)?.Parameters?.FirstOrDefault().Value?.ToString()?.Split('\n')?.LastOrDefault();
             }
             if (!String.IsNullOrWhiteSpace(country)) {
-                Log.Logger.Information("-> " + country);
                 country = Regions.FirstOrDefault(region => region.EnglishName.Contains(country))?.TwoLetterISORegionName;
-                Log.Logger.Information("?-> " + country);
 
                 if (country == null && domain?.Contains('.') == true) {
                     try {
                         country = new RegionInfo(domain.Split('.')[^1]).TwoLetterISORegionName;
-                        Log.Logger.Information("??-> " + country);
                     } catch { }
                 }
             }
             if (String.IsNullOrWhiteSpace(country) && domain?.Contains('.') == true) {
                 try {
                     country = new RegionInfo(domain.Split('.')[^1]).TwoLetterISORegionName;
-                    Log.Logger.Information("??!-> " + country);
                 } catch { }
             }
 

@@ -10,6 +10,8 @@
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:abstractions="clr-namespace:RTSharp.Shared.Abstractions;assembly=RTSharp.Shared.Abstractions"
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+             xmlns:acol="clr-namespace:Avalonia.Collections;assembly=Avalonia.Base"
+             xmlns:controls="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
              d:DataContext="{x:Static torrentListingVm:ExampleTorrentListingViewModel.ViewModel}"
              x:DataType="torrentListingVm:TorrentListingViewModel"
              x:CompileBindings="False"
@@ -26,6 +28,63 @@
             <converters:NotConverter />
         </converters:ValueConverterGroup>
         <converters:StringJoiner x:Key="StringJoiner"/>
+
+        <acol:AvaloniaList x:Key="GridContextMenuItems" x:TypeArguments="Control">
+            <MenuItem
+                Header="_Start"
+                Command="{Binding StartTorrentsCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+            <MenuItem
+                Header="_Pause"
+                Command="{Binding PauseTorrentsCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+            <MenuItem
+                Header="S_top"
+                Command="{Binding StopTorrentsCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+            <Separator />
+            <MenuItem
+                Header="Force _recheck"
+                Command="{Binding ForceRecheckTorrentsCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+            <MenuItem
+                Header="Reannounce to all trackers"
+                Command="{Binding ReannounceToAllTrackersCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+            <MenuItem Header="_Add peer..." IsEnabled="False" />
+            <Separator />
+            <MenuItem
+                Header="Set _label..."
+                ItemsSource="{Binding LabelsWithAdd}"/>
+            <MenuItem IsEnabled="False" Header="_Set priority...">
+                <MenuItem Header="yoo" />
+                <MenuItem Header="yoo" />
+                <MenuItem Header="yoo" />
+            </MenuItem>
+            <MenuItem
+                Header="Move download directory..."
+                Command="{Binding MoveDownloadDirectoryCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+            <Separator />
+            <MenuItem
+                Header="Remove torrent"
+                Command="{Binding RemoveTorrentsCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+            <MenuItem
+                Header="Remove torrent &amp; data"
+                Command="{Binding RemoveTorrentsAndDataCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+            <Separator />
+            <MenuItem
+                Header="Get .torrent"
+                Command="{Binding GetDotTorrentsCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+            <MenuItem Header="Edit torrent..." IsEnabled="False" />
+            <MenuItem
+                Header="Duplicate torrent &amp; data to..."
+                Command="{Binding DuplicateTorrentToCommand}"
+                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
+        </acol:AvaloniaList>
     </Control.Resources>
     
     <dialogHost:DialogHost Name="AddLabelDialogHost" Identifier="AddLabelDialog" CloseOnClickAway="True">
@@ -48,7 +107,6 @@
                 </Button>
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
-
         
         <Grid RowDefinitions="Auto,*,4,*">
             <Grid ColumnDefinitions="*,Auto">
@@ -98,7 +156,7 @@
                 <TreeDataGrid.Resources>
 
                     <DataTemplate x:Key="DoneCell" x:DataType="models:Torrent">
-                        <ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" VerticalAlignment="Stretch" HorizontalAlignment="Center" Name="TorrentProgressBar" />
+                        <ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Name="TorrentProgressBar" />
                     </DataTemplate>
                     <DataTemplate x:Key="TrackerCell" x:DataType="models:Torrent">
                         <StackPanel Orientation="Horizontal">
@@ -108,61 +166,10 @@
                     </DataTemplate>
 
                 </TreeDataGrid.Resources>
+
                 <TreeDataGrid.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="_Start"
-                                  Command="{Binding StartTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        />
-                        <MenuItem Header="_Pause"
-                                  Command="{Binding PauseTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        />
-                        <MenuItem Header="S_top"
-                                  Command="{Binding StopTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        />
-                        <Separator />
-                        <MenuItem Header="Force _recheck"
-                                  Command="{Binding ForceRecheckTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        />
-                        <MenuItem Header="Reannounce to all trackers"
-                                  Command="{Binding ReannounceToAllTrackersCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        />
-                        <MenuItem Header="_Add peer..." IsEnabled="False" />
-                        <Separator />
-                        <MenuItem Header="Set _label..." ItemsSource="{Binding LabelsWithAdd}" />
-                        <MenuItem IsEnabled="False" Header="_Set priority...">
-                            <MenuItem Header="yoo" />
-                            <MenuItem Header="yoo" />
-                            <MenuItem Header="yoo" />
-                        </MenuItem>
-                        <MenuItem Header="Move download directory..."
-                                  Command="{Binding MoveDownloadDirectoryCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        />
-                        <Separator />
-                        <MenuItem Header="Remove torrent"
-                                  Command="{Binding RemoveTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        />
-                        <MenuItem Header="Remove torrent &amp; data"
-                                  Command="{Binding RemoveTorrentsAndDataCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        />
-                        <Separator />
-                        <MenuItem Header="Get .torrent"
-                                  Command="{Binding GetDotTorrentsCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                                  />
-                        <MenuItem Header="Edit torrent..." IsEnabled="False" />
-                        <MenuItem Header="Duplicate torrent &amp; data to..."
-                                  Command="{Binding DuplicateTorrentToCommand}"
-                                  CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                                  />
-                    </ContextMenu>
+                    <!-- Single ContextMenu on the grid; items come from the mutable AvaloniaList resource -->
+                    <ContextMenu x:Name="gridCtxMenu" DataContext="{Binding}" ItemsSource="{StaticResource GridContextMenuItems}" />
                 </TreeDataGrid.ContextMenu>
             </TreeDataGrid>
             <GridSplitter Grid.Row="2" ResizeDirection="Rows" />
