@@ -10,15 +10,16 @@ using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
 using RTSharp.Plugin;
+using RTSharp.Shared.Abstractions;
 
 namespace RTSharp.ViewModels
 {
     public partial class PluginsViewModel : ObservableObject
     {
-        public ObservableCollection<PluginInstance> Plugins => Plugin.Plugins.LoadedPlugins;
+        public ObservableCollection<RTSharpPlugin> Plugins => Plugin.Plugins.LoadedPlugins;
         
-        private PluginInstance _currentlySelectedPlugin;
-        public PluginInstance CurrentlySelectedPlugin {
+        private RTSharpPlugin _currentlySelectedPlugin;
+        public RTSharpPlugin CurrentlySelectedPlugin {
             get {
                 return _currentlySelectedPlugin;
             }
@@ -37,12 +38,12 @@ namespace RTSharp.ViewModels
                     Version = value.Instance.Version.VersionDisplayString,
                     PluginGuid = value.Instance.GUID.ToString()
                 };
+                PluginsSettingsClickCommand.NotifyCanExecuteChanged();
             }
         }
 
         [ObservableProperty]
-        public Models.PluginInfo pluginInfo;
-
+        public partial Models.PluginInfo PluginInfo { get; set; }
         public Window ThisWindow { get; set; }
 
         public PluginsViewModel()
@@ -60,11 +61,12 @@ namespace RTSharp.ViewModels
                 CurrentlySelectedPlugin = Plugins[0];
         }
 
-        [RelayCommand]
+        public bool CanExecutePluginsSettingsClick() => ((IPlugin)CurrentlySelectedPlugin.Instance).Capabilities.HasSettingsWindow;
+        [RelayCommand(CanExecute = nameof(CanExecutePluginsSettingsClick))]
         public async Task PluginsSettingsClick()
         {
             try {
-                await CurrentlySelectedPlugin.Instance.ShowPluginSettings(ThisWindow);
+                await ((IPlugin)CurrentlySelectedPlugin.Instance).ShowPluginSettings(ThisWindow);
             } catch (Exception ex) {
                 var msgBox = MessageBoxManager.GetMessageBoxStandard("Plugin manager", $"Failed to show plugin settings:\n{ex}", ButtonEnum.Ok, Icon.Error, WindowStartupLocation.CenterScreen);
                 await msgBox.ShowWindowDialogAsync(ThisWindow);

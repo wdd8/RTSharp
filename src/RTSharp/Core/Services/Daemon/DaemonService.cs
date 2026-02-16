@@ -6,7 +6,6 @@ using Grpc.Net.ClientFactory;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 using RTSharp.Daemon.Protocols;
 using RTSharp.Plugin;
@@ -26,75 +25,76 @@ using ScriptProgressState = RTSharp.Shared.Abstractions.ScriptProgressState;
 using Serilog;
 using System.Threading.Channels;
 using System.Security.Cryptography;
+using RTSharp.Shared.Abstractions.DataProvider;
 
-namespace RTSharp.Core.Services.Daemon
+namespace RTSharp.Core.Services.Daemon;
+
+public class DaemonService : IDaemonService
 {
-    public class DaemonService : IDaemonService
+    GRPCServerService.GRPCServerServiceClient ServerClient;
+    GRPCFilesService.GRPCFilesServiceClient FilesClient;
+    IHostApplicationLifetime Lifetime;
+
+    private Dictionary<string, Config.Models.Server> Servers;
+    public string Id { get; }
+
+    public string Host { get; }
+
+    public ushort Port { get; }
+
+    public Notifyable<TimeSpan> Latency { get; private set; } = new();
+
+    public DaemonService(string ServerId, IHostApplicationLifetime Lifetime)
     {
-        GRPCServerService.GRPCServerServiceClient ServerClient;
-        GRPCFilesService.GRPCFilesServiceClient FilesClient;
-        IHostApplicationLifetime Lifetime;
+        this.Id = ServerId;
+        this.Lifetime = Lifetime;
 
-        private Dictionary<string, Config.Models.Server> Servers;
-        public string Id { get; }
+        using var scope = Core.ServiceProvider.CreateScope();
+        var clientFactory = scope.ServiceProvider.GetRequiredService<GrpcClientFactory>();
+        var config = scope.ServiceProvider.GetRequiredService<Config>();
 
-        public string Host { get; }
+        ServerClient = clientFactory.CreateClient<GRPCServerService.GRPCServerServiceClient>(nameof(GRPCServerService.GRPCServerServiceClient) + "_" + ServerId);
+        FilesClient = clientFactory.CreateClient<GRPCFilesService.GRPCFilesServiceClient>(nameof(GRPCFilesService.GRPCFilesServiceClient) + "_" + ServerId);
+        Servers = config.Servers.Value;
 
-        public ushort Port { get; }
+        var cfg = Servers.First(x => x.Key == ServerId).Value;
+        Host = cfg.Host;
+        Port = cfg.DaemonPort;
 
-        public Notifyable<TimeSpan> Latency { get; private set; } = new();
+        _ = Task.Run(PingLoop);
+    }
 
-        public DaemonService(string ServerId, IHostApplicationLifetime Lifetime)
-        {
-            this.Id = ServerId;
-            this.Lifetime = Lifetime;
-
-            using var scope = Core.ServiceProvider.CreateScope();
-            var clientFactory = scope.ServiceProvider.GetRequiredService<GrpcClientFactory>();
-            var config = scope.ServiceProvider.GetRequiredService<Config>();
-
-            ServerClient = clientFactory.CreateClient<GRPCServerService.GRPCServerServiceClient>(nameof(GRPCServerService.GRPCServerServiceClient) + "_" + ServerId);
-            FilesClient = clientFactory.CreateClient<GRPCFilesService.GRPCFilesServiceClient>(nameof(GRPCFilesService.GRPCFilesServiceClient) + "_" + ServerId);
-            Servers = config.Servers.Value;
-
-            var cfg = Servers.First(x => x.Key == ServerId).Value;
-            Host = cfg.Host;
-            Port = cfg.DaemonPort;
-
-            _ = Task.Run(PingLoop);
-        }
-
-        public async Task PingLoop()
-        {
-            while (!Lifetime.ApplicationStopping.IsCancellationRequested) {
-                var sw = Stopwatch.StartNew();
-                try {
-                    await Ping(Lifetime.ApplicationStopping);
-                    sw.Stop();
-                    Latency.Change(sw.Elapsed);
-                } catch {
-                    sw.Stop();
-                    Log.Logger.Error($"Ping failed for {Host}:{Port}");
-                }
-
-                if (sw.Elapsed < TimeSpan.FromSeconds(1))
-                    await Task.Delay(TimeSpan.FromSeconds(1) - sw.Elapsed);
+    public async Task PingLoop()
+    {
+        while (!Lifetime.ApplicationStopping.IsCancellationRequested) {
+            var sw = Stopwatch.StartNew();
+            try {
+                await Ping(Lifetime.ApplicationStopping);
+                sw.Stop();
+                Latency.Change(sw.Elapsed);
+            } catch {
+                sw.Stop();
+                Log.Logger.Error($"Ping failed for {Host}:{Port}");
             }
+
+            if (sw.Elapsed < TimeSpan.FromSeconds(1))
+                await Task.Delay(TimeSpan.FromSeconds(1) - sw.Elapsed);
         }
+    }
 
-        public async Task Ping(CancellationToken cancellationToken)
-        {
-            await ServerClient.TestAsync(new Empty(), cancellationToken: cancellationToken);
-        }
+    public async Task Ping(CancellationToken cancellationToken)
+    {
+        await ServerClient.TestAsync(new Empty(), cancellationToken: cancellationToken);
+    }
 
-        record Path(string StorePath, string RemoteSourcePath, ulong TotalSize);
+    record Path(string StorePath, string RemoteSourcePath, ulong TotalSize);
 
-        public async Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, Action<(string File, float Progress)> Progress)
-        {
-            var senderServer = Servers[SenderServerId].GetUri();
+    public async Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, Action<(string File, float Progress)> Progress)
+    {
+        var senderServer = Servers[SenderServerId].GetUri();
 
-            var script = await ServerClient.StartScriptAsync(new StartScriptInput {
-                Script =
+        var script = await ServerClient.StartScriptAsync(new StartScriptInput {
+            Script =
 """
 #pragma usings
 #pragma lib "Microsoft.Extensions.Logging.Abstractions"
@@ -147,243 +147,242 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
     }
 }
 """,
-                Name = "RequstReceiveFiles",
-                Variables = {
-                    { "Uri", senderServer.ToString() },
-                    { "Paths", JsonSerializer.Serialize(Paths.Select(x => new Path(x.StoreTo, x.RemoteSource, x.TotalSize))) }
-                }
+            Name = "RequstReceiveFiles",
+            Variables = {
+                { "Uri", senderServer.ToString() },
+                { "Paths", JsonSerializer.Serialize(Paths.Select(x => new Path(x.StoreTo, x.RemoteSource, x.TotalSize))) }
+            }
+        });
+
+        var id = script.Id;
+
+        var progress = ServerClient.ScriptStatus(new BytesValue() { Value = id });
+
+        await foreach (var info in progress.ResponseStream.ReadAllAsync()) {
+            if (info.State == TaskState.Done)
+                return;
+
+            Progress((info.Text, info.Progress));
+        }
+    }
+
+    public async Task<MemoryStream> ReceiveFilesInline(string RemotePath)
+    {
+        var session = FilesClient.Internal_SendFiles(new SendFilesInput {
+            Paths = { RemotePath }
+        });
+
+        var mem = new MemoryStream();
+
+        await foreach (var block in session.ResponseStream.ReadAllAsync()) {
+            if (block.DataCase == FileBuffer.DataOneofCase.Buffer) {
+                mem.Write(block.Buffer.Span);
+            }
+        }
+
+        return mem;
+    }
+
+    public async Task<Shared.Abstractions.FileSystemItem> GetDirectoryInfo(string Path)
+    {
+        RTSharp.Daemon.Protocols.FileSystemItem dir;
+        try {
+            dir = await FilesClient.GetDirectoryInfoAsync(new StringValue { Value = Path });
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Failed to GetDirectoryInfo");
+            throw;
+        }
+
+        static Shared.Abstractions.FileSystemItem map(RTSharp.Daemon.Protocols.FileSystemItem In)
+        {
+            return new Shared.Abstractions.FileSystemItem(
+                Path: In.Path,
+                Directory: In.Directory,
+                LastModified: In.LastModified.ToDateTime(),
+                Permissions: In.Permissions,
+                Size: In.Size,
+                Children: In.Children.Select(map).ToList()
+            );
+        }
+
+        return map(dir);
+    }
+
+    public async Task CreateDirectory(string Path)
+    {
+        try {
+            await FilesClient.CreateDirectoryAsync(new StringValue { Value = Path });
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Failed to CreateDirectory");
+            throw;
+        }
+    }
+
+    public async Task<Dictionary<string, bool>> CheckExists(IList<string> Files)
+    {
+        try {
+            return (await FilesClient.CheckExistsAsync(new CheckExistsInput {
+                Paths = { Files }
+            })).Existence.ToDictionary(x => x.Key, x => x.Value);
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Failed to CheckExists");
+            throw;
+        }
+    }
+
+    public async Task RemoveEmptyDirectory(string Path)
+    {
+        try {
+            await FilesClient.RemoveEmptyDirectoryAsync(new StringValue { Value = Path });
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Failed to RemoveEmptyDirectory");
+            throw;
+        }
+    }
+
+    public async Task<IList<string>> Mediainfo(IList<string> Files)
+    {
+        MediaInfoReply reply;
+        try {
+            reply = await FilesClient.MediaInfoAsync(new MediaInfoInput() {
+                Paths = { Files }
             });
-
-            var id = script.Id;
-
-            var progress = ServerClient.ScriptStatus(new BytesValue() { Value = id });
-
-            await foreach (var info in progress.ResponseStream.ReadAllAsync()) {
-                if (info.State == TaskState.Done)
-                    return;
-
-                Progress((info.Text, info.Progress));
-            }
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Failed to Mediainfo");
+            throw;
         }
 
-        public async Task<MemoryStream> ReceiveFilesInline(string RemotePath)
-        {
-            var session = FilesClient.Internal_SendFiles(new SendFilesInput {
-                Paths = { RemotePath }
-            });
+        return reply.Output;
+    }
 
-            var mem = new MemoryStream();
+    public async Task<Guid> RunCustomScript(string Script, string Name, Dictionary<string, string> Variables)
+    {
+        var session = await ServerClient.StartScriptAsync(new StartScriptInput {
+            Script = Script,
+            Name = Name,
+            Variables = { Variables }
+        });
 
-            await foreach (var block in session.ResponseStream.ReadAllAsync()) {
-                if (block.DataCase == FileBuffer.DataOneofCase.Buffer) {
-                    mem.Write(block.Buffer.Span);
-                }
-            }
+        return new Guid(session.Id.Span);
+    }
 
-            return mem;
-        }
+    public async Task QueueScriptCancellation(Guid Id)
+    {
+        await ServerClient.StopScriptAsync(new BytesValue { Value = ByteString.CopyFrom(Id.ToByteArray()) });
+    }
 
-        public async Task<Shared.Abstractions.FileSystemItem> GetDirectoryInfo(string Path)
-        {
-            RTSharp.Daemon.Protocols.FileSystemItem dir;
-            try {
-                dir = await FilesClient.GetDirectoryInfoAsync(new StringValue { Value = Path });
-            } catch (Exception ex) {
-                Log.Logger.Error(ex, "Failed to GetDirectoryInfo");
-                throw;
-            }
+    ScriptProgressState MapProgressState(RTSharp.Daemon.Protocols.ScriptProgressState In)
+    {
+        return new ScriptProgressState {
+            Id = new Guid(In.Id.ToByteArray()),
+            Progress = In.Progress,
+            State = In.State switch {
+                TaskState.Done => TASK_STATE.DONE,
+                TaskState.Running => TASK_STATE.RUNNING,
+                TaskState.Waiting => TASK_STATE.WAITING,
+                TaskState.Failed => TASK_STATE.FAILED,
+                _ => throw new ArgumentOutOfRangeException()
+            },
+            Text = In.Text,
+            StateData = In.StateData,
+            Chain = In.Chain?.Select(MapProgressState).ToArray() ?? []
+        };
+    }
 
-            static Shared.Abstractions.FileSystemItem map(RTSharp.Daemon.Protocols.FileSystemItem In)
-            {
-                return new Shared.Abstractions.FileSystemItem(
-                    Path: In.Path,
-                    Directory: In.Directory,
-                    LastModified: In.LastModified.ToDateTime(),
-                    Permissions: In.Permissions,
-                    Size: In.Size,
-                    Children: In.Children.Select(map).ToList()
-                );
-            }
-
-            return map(dir);
-        }
-
-        public async Task CreateDirectory(string Path)
-        {
-            try {
-                await FilesClient.CreateDirectoryAsync(new StringValue { Value = Path });
-            } catch (Exception ex) {
-                Log.Logger.Error(ex, "Failed to CreateDirectory");
-                throw;
-            }
-        }
-
-        public async Task<Dictionary<string, bool>> CheckExists(IList<string> Files)
-        {
-            try {
-                return (await FilesClient.CheckExistsAsync(new CheckExistsInput {
-                    Paths = { Files }
-                })).Existence.ToDictionary(x => x.Key, x => x.Value);
-            } catch (Exception ex) {
-                Log.Logger.Error(ex, "Failed to CheckExists");
-                throw;
-            }
-        }
-
-        public async Task RemoveEmptyDirectory(string Path)
-        {
-            try {
-                await FilesClient.RemoveEmptyDirectoryAsync(new StringValue { Value = Path });
-            } catch (Exception ex) {
-                Log.Logger.Error(ex, "Failed to RemoveEmptyDirectory");
-                throw;
-            }
-        }
-
-        public async Task<IList<string>> Mediainfo(IList<string> Files)
-        {
-            MediaInfoReply reply;
-            try {
-                reply = await FilesClient.MediaInfoAsync(new MediaInfoInput() {
-                    Paths = { Files }
-                });
-            } catch (Exception ex) {
-                Log.Logger.Error(ex, "Failed to Mediainfo");
-                throw;
-            }
-
-            return reply.Output;
-        }
-
-        public async Task<Guid> RunCustomScript(string Script, string Name, Dictionary<string, string> Variables)
-        {
-            var session = await ServerClient.StartScriptAsync(new StartScriptInput {
-                Script = Script,
-                Name = Name,
-                Variables = { Variables }
-            });
-
-            return new Guid(session.Id.Span);
-        }
-
-        public async Task QueueScriptCancellation(Guid Id)
-        {
-            await ServerClient.StopScriptAsync(new BytesValue { Value = ByteString.CopyFrom(Id.ToByteArray()) });
-        }
-
-        ScriptProgressState MapProgressState(RTSharp.Daemon.Protocols.ScriptProgressState In)
-        {
-            return new ScriptProgressState {
-                Id = new Guid(In.Id.ToByteArray()),
-                Progress = In.Progress,
-                State = In.State switch {
-                    TaskState.Done => TASK_STATE.DONE,
-                    TaskState.Running => TASK_STATE.RUNNING,
-                    TaskState.Waiting => TASK_STATE.WAITING,
-                    TaskState.Failed => TASK_STATE.FAILED,
-                    _ => throw new ArgumentOutOfRangeException()
-                },
-                Text = In.Text,
-                StateData = In.StateData,
-                Chain = In.Chain?.Select(MapProgressState).ToArray() ?? []
-            };
-        }
-
-        public async Task GetScriptProgress(Guid Id, Action<ScriptProgressState>? Progress)
-        {
-            var cts = new CancellationTokenSource();
-            var stream = ServerClient.ScriptStatus(Id.ToByteArray().ToBytesValue(), cancellationToken: cts.Token);
-            
-            try {
-                await foreach (var progressData in stream.ResponseStream.ReadAllAsync()) {
-                    Progress?.Invoke(MapProgressState(progressData));
-                    if (progressData.State == TaskState.Done || progressData.State == TaskState.Failed) {
-                        cts.Cancel();
-                    }
-                }
-            } catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled) { }
-        }
-
-        public ChannelReader<ScriptProgressState> StreamScriptsStatus(CancellationToken cancellationToken)
-        {
-            var channel = Channel.CreateUnbounded<ScriptProgressState>(new UnboundedChannelOptions {
-                SingleReader = false,
-                SingleWriter = true
-            });
-            _ = Task.Run(async () => {
-                var stream = ServerClient.ScriptsStatus(new(), cancellationToken: cancellationToken);
-                await foreach (var state in stream.ResponseStream.ReadAllAsync(cancellationToken: cancellationToken)) {
-                    await channel.Writer.WriteAsync(MapProgressState(state), cancellationToken);
-                }
-                channel.Writer.TryComplete();
-            }, cancellationToken);
-            return channel;
-        }
+    public async Task GetScriptProgress(Guid Id, Action<ScriptProgressState>? Progress)
+    {
+        var cts = new CancellationTokenSource();
+        var stream = ServerClient.ScriptStatus(Id.ToByteArray().ToBytesValue(), cancellationToken: cts.Token);
         
-        public async Task<Dictionary<string, bool>> AllowedToDeleteFiles(IEnumerable<string> In)
-        {
-            var reply = await FilesClient.AllowedToDeleteAsync(new AllowedToDeleteInput
-            {
-                Paths = { In }
-            });
-            
-            return reply.Reply.ToDictionary(x => x.Path, x => x.Value);
-        }
-        
-        public async Task<Dictionary<string, bool>> AllowedToReadFiles(IEnumerable<string> In)
-        {
-            var reply = await FilesClient.AllowedToReadAsync(new AllowedToReadInput
-            {
-                Paths = { In }
-            });
-            
-            return reply.Reply.ToDictionary(x => x.Path, x => x.Value);
-        }
-
-        public async Task<byte[]> HashFileBlock(string Path, ulong Start, ulong End, HashAlgorithmName HashAlgorithm)
-        {
-            if (HashAlgorithm != HashAlgorithmName.SHA256 && HashAlgorithm != HashAlgorithmName.SHA1)
-                throw new NotSupportedException("Only SHA1 and SHA256 is supported");
-
-            var reply = await FilesClient.HashFileBlockAsync(new HashFileBlockInput
-            {
-                Path = Path,
-                Start = Start,
-                End = End,
-                Algorithm = HashAlgorithm.Name switch {
-                    "SHA1" => HashFileBlockInput.Types.HashAlgorithm.Sha1,
-                    "SHA256" => HashFileBlockInput.Types.HashAlgorithm.Sha256,
-                    _ => throw new NotSupportedException()
+        try {
+            await foreach (var progressData in stream.ResponseStream.ReadAllAsync()) {
+                Progress?.Invoke(MapProgressState(progressData));
+                if (progressData.State == TaskState.Done || progressData.State == TaskState.Failed) {
+                    cts.Cancel();
                 }
-            });
-            return reply.Value.ToByteArray();
-        }
+            }
+        } catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled) { }
+    }
 
-        public async Task LinkFiles(List<KeyValuePair<string, string>> SrcToDst, bool Reflink, bool Hardlink)
+    public ChannelReader<ScriptProgressState> StreamScriptsStatus(CancellationToken cancellationToken)
+    {
+        var channel = Channel.CreateUnbounded<ScriptProgressState>(new UnboundedChannelOptions {
+            SingleReader = false,
+            SingleWriter = true
+        });
+        _ = Task.Run(async () => {
+            var stream = ServerClient.ScriptsStatus(new(), cancellationToken: cancellationToken);
+            await foreach (var state in stream.ResponseStream.ReadAllAsync(cancellationToken: cancellationToken)) {
+                await channel.Writer.WriteAsync(MapProgressState(state), cancellationToken);
+            }
+            channel.Writer.TryComplete();
+        }, cancellationToken);
+        return channel;
+    }
+    
+    public async Task<Dictionary<string, bool>> AllowedToDeleteFiles(IEnumerable<string> In)
+    {
+        var reply = await FilesClient.AllowedToDeleteAsync(new AllowedToDeleteInput
         {
-            await FilesClient.LinkFilesAsync(new LinkFilesInput {
-                Source = { SrcToDst.Select(x => x.Key) },
-                Target = { SrcToDst.Select(x => x.Value) },
-                Type = (Reflink ? LinkFilesInput.Types.LinkType.Reflink : 0) | (Hardlink ? LinkFilesInput.Types.LinkType.Hardlink : 0)
-            });
-        }
-
-        public T GetGrpcService<T>()
-            where T : ClientBase<T>
+            Paths = { In }
+        });
+        
+        return reply.Reply.ToDictionary(x => x.Path, x => x.Value);
+    }
+    
+    public async Task<Dictionary<string, bool>> AllowedToReadFiles(IEnumerable<string> In)
+    {
+        var reply = await FilesClient.AllowedToReadAsync(new AllowedToReadInput
         {
-            using var scope = Core.ServiceProvider.CreateScope();
-            var clientFactory = scope.ServiceProvider.GetRequiredService<GrpcClientFactory>();
+            Paths = { In }
+        });
+        
+        return reply.Reply.ToDictionary(x => x.Path, x => x.Value);
+    }
 
-            return clientFactory.CreateClient<T>(typeof(T).Name + "_" + Id);
-        }
+    public async Task<byte[]> HashFileBlock(string Path, ulong Start, ulong End, HashAlgorithmName HashAlgorithm)
+    {
+        if (HashAlgorithm != HashAlgorithmName.SHA256 && HashAlgorithm != HashAlgorithmName.SHA1)
+            throw new NotSupportedException("Only SHA1 and SHA256 is supported");
 
-        public IDaemonTorrentsService GetTorrentsService(IDataProvider DataProvider) {
-            return new DaemonTorrentsService(Plugins.DataProviders.Items.First(x => x.Instance == DataProvider));
-        }
-
-        public IDaemonStatsService GetStatsService(IDataProvider DataProvider)
+        var reply = await FilesClient.HashFileBlockAsync(new HashFileBlockInput
         {
-            return new DaemonStatsService(Plugins.DataProviders.Items.First(x => x.Instance == DataProvider));
-        }
+            Path = Path,
+            Start = Start,
+            End = End,
+            Algorithm = HashAlgorithm.Name switch {
+                "SHA1" => HashFileBlockInput.Types.HashAlgorithm.Sha1,
+                "SHA256" => HashFileBlockInput.Types.HashAlgorithm.Sha256,
+                _ => throw new NotSupportedException()
+            }
+        });
+        return reply.Value.ToByteArray();
+    }
+
+    public async Task LinkFiles(List<KeyValuePair<string, string>> SrcToDst, bool Reflink, bool Hardlink)
+    {
+        await FilesClient.LinkFilesAsync(new LinkFilesInput {
+            Source = { SrcToDst.Select(x => x.Key) },
+            Target = { SrcToDst.Select(x => x.Value) },
+            Type = (Reflink ? LinkFilesInput.Types.LinkType.Reflink : 0) | (Hardlink ? LinkFilesInput.Types.LinkType.Hardlink : 0)
+        });
+    }
+
+    public T GetGrpcService<T>()
+        where T : ClientBase<T>
+    {
+        using var scope = Core.ServiceProvider.CreateScope();
+        var clientFactory = scope.ServiceProvider.GetRequiredService<GrpcClientFactory>();
+
+        return clientFactory.CreateClient<T>(typeof(T).Name + "_" + Id);
+    }
+
+    public IDaemonTorrentsService GetTorrentsService(IDataProvider DataProvider) {
+        return new DaemonTorrentsService(Plugins.DataProviders.Items.First(x => x.Instance == DataProvider));
+    }
+
+    public IDaemonStatsService GetStatsService(IDataProvider DataProvider)
+    {
+        return new DaemonStatsService(Plugins.DataProviders.Items.First(x => x.Instance == DataProvider));
     }
 }

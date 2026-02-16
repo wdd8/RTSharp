@@ -69,7 +69,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 TrackersViewModel.Trackers.Clear();
 
                 await foreach (var (fetchedFor, trackers) in TrackersChanges.Reader.ReadAllAsync()) {
-                    if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.Owner != lastFetchedFor.Owner)
+                    if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner)
                         TrackersViewModel.Trackers.Clear();
 
                     foreach (var newTracker in trackers) {
@@ -168,6 +168,8 @@ namespace RTSharp.ViewModels.TorrentListing
         private async Task GetTrackersChanges(Models.Torrent current, CancellationToken SelectionChange)
         {
             try {
+                TrackersViewModel.CurrentlySelectedTorrent = current;
+
                 while (!SelectionChange.IsCancellationRequested) {
                     using var scope = Core.ServiceProvider.CreateScope();
                     var config = scope.ServiceProvider.GetRequiredService<Config>();
@@ -176,7 +178,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     IList<Tracker> trackers;
                     try {
-                        trackers = (await current.Owner.Instance.GetTrackers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).First().Value;
+                        trackers = (await current.DataOwner.Instance.GetTrackers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).First().Value;
                     } catch (Exception ex) {
                         Log.Logger.Error(ex, "Trackers pool error");
                         return;

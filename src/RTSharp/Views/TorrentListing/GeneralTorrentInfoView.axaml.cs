@@ -1,27 +1,26 @@
 using Avalonia.Controls;
 
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels.TorrentListing;
 
 using System.Threading.Tasks;
 
-namespace RTSharp.Views.TorrentListing
+namespace RTSharp.Views.TorrentListing;
+
+public partial class GeneralTorrentInfoView : VmUserControl<GeneralTorrentInfoViewModel>
 {
-    public partial class GeneralTorrentInfoView : VmUserControl<GeneralTorrentInfoViewModel>
+    public GeneralTorrentInfoView()
     {
-        public GeneralTorrentInfoView()
-        {
-            InitializeComponent();
+        InitializeComponent();
 
-            this.BindViewModelActions(vm => {
-                vm!.Copy = Copy;
-            });
-        }
+        this.BindViewModelActions(vm => {
+            vm!.Copy = Copy;
+        });
+    }
 
-        public async Task Copy(string In)
-        {
-            var topLevel = TopLevel.GetTopLevel(this);
-            await topLevel!.Clipboard!.SetTextAsync(In);
-        }
+    public async Task Copy(string In)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        await topLevel!.Clipboard!.SetTextAsync(In);
     }
 }

@@ -3,8 +3,7 @@ using Avalonia.Controls;
 
 using System.Collections.Generic;
 using Avalonia.Metadata;
-using RTSharp.Core;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp
 {

@@ -58,7 +58,7 @@ namespace RTSharp.ViewModels.TorrentListing
             FilesViewModel.Files.Clear();
 
             await foreach (var (fetchedFor, files) in FilesChanges.Reader.ReadAllAsync()) {
-                if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.Owner != lastFetchedFor.Owner)
+                if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner)
                     FilesViewModel.Files.Clear();
 
                 if (FilesViewModel.Files.Count == 0) {
@@ -113,7 +113,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     }
                     (bool MultiFile, IList<File> Files) files;
                     try {
-                        files = (await current!.Owner.Instance.GetFiles(new List<Torrent> { current.ToPluginModel() }, selectionChange)).First().Value;
+                        files = (await current!.DataOwner.Instance.GetFiles(new List<Torrent> { current.ToPluginModel() }, selectionChange)).First().Value;
 
                         FilesViewModel.MultiFile = files.MultiFile;
                         FilesChanges.Writer.TryWrite((current, Models.File.FromPluginModel(current.Name, files.MultiFile, files.Files)));
@@ -145,7 +145,7 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             try {
                 while (!selectionChange.IsCancellationRequested) {
-                    if (!current.Owner.Instance.Capabilities.GetPieces) {
+                    if (!current.DataOwner.Instance.Capabilities.GetPieces) {
                         PiecesChanges.Writer.TryWrite((current, []));
                         await Task.Delay(-1, selectionChange);
                     }
@@ -165,7 +165,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to Done% change instead?
                     } else {
                         try {
-                            pieces = (await current!.Owner.Instance.GetPieces(new List<Torrent> { current.ToPluginModel() }, selectionChange)).First().Value;
+                            pieces = (await current!.DataOwner.Instance.GetPieces(new List<Torrent> { current.ToPluginModel() }, selectionChange)).First().Value;
 
                             PiecesChanges.Writer.TryWrite((current, pieces));
                         } catch {

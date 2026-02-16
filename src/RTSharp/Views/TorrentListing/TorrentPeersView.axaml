@@ -5,7 +5,8 @@
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
-             d:DesignWidth="1100" d:DesignHeight="450">
+             d:DesignWidth="1100" d:DesignHeight="450"
+			 x:DataType="torrentListing:TorrentPeersViewModel">
 
     <Control.Resources>
         <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
@@ -25,33 +26,28 @@
                   SelectionMode="Extended"
                   VerticalAlignment="Stretch">
         <DataGrid.ContextMenu>
-            <ContextMenu>
+            <ContextMenu x:DataType="torrentListing:TorrentPeersViewModel">
                 <MenuItem Header="Add peers..."
                           Command="{Binding AddPeersCommand}"
                           CommandParameter="{Binding #grid.SelectedItems}"
-                          IsEnabled="{Binding Owner.Instance.Capabilities.AddPeers}"
                     />
                 <Separator />
                 <MenuItem Header="Ban peer"
                           Command="{Binding BanPeerCommand}"
                           CommandParameter="{Binding #grid.SelectedItems}"
-                          IsEnabled="{Binding Owner.Instance.Capabilities.BanPeer}"
                     />
                 <MenuItem Header="Kick peer"
                           Command="{Binding KickPeerCommand}"
                           CommandParameter="{Binding #grid.SelectedItems}"
-                          IsEnabled="{Binding Owner.Instance.Capabilities.KickPeer}"
                     />
                 <Separator />
                 <MenuItem Header="Snub peer"
                           Command="{Binding SnubPeerCommand}"
                           CommandParameter="{Binding #grid.SelectedItems}"
-                          IsEnabled="{Binding Owner.Instance.Capabilities.SnubPeer}"
                     />
                 <MenuItem Header="Unsnub peer"
                           Command="{Binding UnsnubPeerCommand}"
                           CommandParameter="{Binding #grid.SelectedItems}"
-                          IsEnabled="{Binding Owner.Instance.Capabilities.UnsnubPeer}"
                     />
             </ContextMenu>
         </DataGrid.ContextMenu>

@@ -1,13 +1,12 @@
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels.TorrentListing;
 
-namespace RTSharp.Views.TorrentListing
+namespace RTSharp.Views.TorrentListing;
+
+public partial class TorrentPeersView : VmUserControl<TorrentPeersViewModel>
 {
-    public partial class TorrentPeersView : VmUserControl<TorrentPeersViewModel>
+    public TorrentPeersView()
     {
-        public TorrentPeersView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

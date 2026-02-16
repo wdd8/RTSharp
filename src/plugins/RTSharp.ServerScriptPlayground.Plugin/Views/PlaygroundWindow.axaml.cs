@@ -1,8 +1,7 @@
 using AvaloniaEdit.Indentation.CSharp;
-using AvaloniaEdit;
 
 using RTSharp.ServerScriptPlayground.Plugin.ViewModels;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.ServerScriptPlayground.Plugin.Views;
 

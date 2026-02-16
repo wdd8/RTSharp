@@ -28,7 +28,7 @@ Function AlwaysDelete {
     $Input
   )
 
-  $Input | Where-Object { $_.Name -like "*.deps.json" -or $_.Name -eq "RTSharp" }
+  $Input | Where-Object { $_.Name -like "*.deps.json" -or $_.Name -eq "RTSharp" -or $_.Name -eq "clidriver" -or $_.Name -eq "runtimes" }
 }
 
 $mainOther = Get-ChildItem -Path $mainDirPath | OtherExts;
@@ -44,5 +44,5 @@ foreach ($pluginFile in Get-ChildItem -Path $pluginDirPath | OtherExts) {
 
 foreach ($pluginFile in Get-ChildItem -Path $pluginDirPath | AlwaysDelete) {
     Write-Output "Removing $($pluginFile.Name)";
-    Remove-Item $pluginFile.FullName;
+    Remove-Item -Recurse $pluginFile.FullName;
 }

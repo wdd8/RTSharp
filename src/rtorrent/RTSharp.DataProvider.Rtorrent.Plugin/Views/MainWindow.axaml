@@ -26,7 +26,7 @@
     <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
         <ListBox ItemsSource="{Binding Categories,Mode=OneWay}" SelectedItem="{Binding CurrentlySelectedCategory}">
             <ListBox.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vm:Category">
                     <StackPanel Orientation="Horizontal" MinWidth="150">
                         <i:Icon Value="{Binding Icon}" Margin="0,0,20,0" />
                         <TextBlock TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding Name}" />

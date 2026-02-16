@@ -141,7 +141,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 PeersViewModel.Peers.Clear();
 
                 await foreach (var (fetchedFor, peers) in PeersChanges.Reader.ReadAllAsync()) {
-                    if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.Owner != lastFetchedFor.Owner)
+                    if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner)
                         PeersViewModel.Peers.Clear();
 
                     var hs = PeersViewModel.Peers.ToDictionary(x => x.IPPort, x => x);
@@ -210,6 +210,8 @@ namespace RTSharp.ViewModels.TorrentListing
             try {
                 Dictionary<IPEndPoint, Peer>? previousPeers = null;
 
+                PeersViewModel.CurrentlySelectedTorrent = current;
+
                 while (!SelectionChange.IsCancellationRequested) {
                     using var scope = Core.ServiceProvider.CreateScope();
                     var config = scope.ServiceProvider.GetRequiredService<Config>();
@@ -218,7 +220,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     
                     IList<Peer> peers = null;
                     try {
-                        peers = (await current!.Owner.Instance.GetPeers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).First().Value;
+                        peers = (await current!.DataOwner.Instance.GetPeers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).First().Value;
                     } catch (Exception ex) {
                         Log.Logger.Error(ex, "Peer poll failed");
                         return;

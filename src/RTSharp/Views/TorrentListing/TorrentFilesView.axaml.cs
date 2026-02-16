@@ -1,30 +1,29 @@
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Controls.Views;
 using RTSharp.ViewModels.TorrentListing;
 
-namespace RTSharp.Views.TorrentListing
+namespace RTSharp.Views.TorrentListing;
+
+public partial class TorrentFilesView : VmUserControl<TorrentFilesViewModel>
 {
-    public partial class TorrentFilesView : VmUserControl<TorrentFilesViewModel>
+    public TorrentFilesView()
     {
-        public TorrentFilesView()
-        {
-            InitializeComponent();
+        InitializeComponent();
 
-            BindViewModelActions(vm => {
-                vm!.ShowTextPreviewWindow = ShowTextPreviewWindow;
-            });
-        }
+        BindViewModelActions(vm => {
+            vm!.ShowTextPreviewWindow = ShowTextPreviewWindow;
+        });
+    }
 
-        public void ShowTextPreviewWindow(string Input)
-        {
-            var wnd = new TextPreviewWindow() {
-                ViewModel = new Shared.Controls.ViewModels.TextPreviewWindowViewModel() { 
-                    Text = Input,
-                    Monospace = true
-                }
-            };
+    public void ShowTextPreviewWindow(string Input)
+    {
+        var wnd = new TextPreviewWindow() {
+            ViewModel = new Shared.Controls.ViewModels.TextPreviewWindowViewModel() { 
+                Text = Input,
+                Monospace = true
+            }
+        };
 
-            wnd.Show();
-        }
+        wnd.Show();
     }
 }

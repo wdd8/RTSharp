@@ -1,21 +1,29 @@
-﻿using System;
+﻿using Avalonia.Controls;
+using Avalonia.Media;
+
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+using DialogHostAvalonia;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using RTSharp.Core;
+using RTSharp.Core.Services.Cache.Images;
+using RTSharp.Core.Services.Cache.TrackerDb;
+using RTSharp.Shared.Abstractions;
+
+using Serilog;
+
+using System;
 using System.Collections;
+using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
-
-using RTSharp.Core;
-using DialogHostAvalonia;
-using Microsoft.Extensions.DependencyInjection;
-using RTSharp.Core.Services.Cache.Images;
-using RTSharp.Core.Services.Cache.TrackerDb;
-using Serilog;
-using Avalonia.Controls;
-using Avalonia.Media;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
@@ -27,6 +35,8 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public TorrentListingViewModel Parent { get; init; }
 
+        public Models.Torrent CurrentlySelectedTorrent { get; set; }
+
         public TorrentTrackersViewModel()
         {
         }
@@ -36,31 +46,52 @@ namespace RTSharp.ViewModels.TorrentListing
             this.Parent = Parent;
         }
 
-        [RelayCommand]
+        static readonly FrozenDictionary<string, Func<DataProviderTrackerCapabilities, bool>> StrToCap = new Dictionary<string, Func<DataProviderTrackerCapabilities, bool>>() {
+            { "Add new tracker", x => x.AddNewTracker },
+            { "Enable", x => x.EnableTracker },
+            { "Disable", x => x.DisableTracker },
+            { "Remove", x => x.RemoveTracker },
+            { "Reannounce", x => x.ReannounceTracker },
+            { "Replace", x => x.ReplaceTracker }
+        }.ToFrozenDictionary();
+
+        bool CanExecuteAction(string Action)
+        {
+            Debug.Assert(StrToCap.ContainsKey(Action));
+
+            return StrToCap[Action](CurrentlySelectedTorrent.DataOwner.Instance.Tracker.Capabilities);
+        }
+
+        public bool CanExecuteAddNewTracker() => CanExecuteAction("Add new tracker");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddNewTracker))]
         public async Task AddNewTracker(IList In)
         {
 
         }
 
-        [RelayCommand]
+        public bool CanExecuteEnable() => CanExecuteAction("Enable");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteEnable))]
         public async Task Enable(IList In)
         {
 
         }
 
-        [RelayCommand]
+        public bool CanExecuteDisable() => CanExecuteAction("Disable");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteDisable))]
         public async Task Disable(IList In)
         {
 
         }
 
-        [RelayCommand]
+        public bool CanExecuteRemove() => CanExecuteAction("Remove");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteRemove))]
         public async Task Remove(IList In)
         {
 
         }
 
-        [RelayCommand]
+        public bool CanExecuteReannounce() => CanExecuteAction("Reannounce");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteReannounce))]
         public async Task Reannounce(IList In)
         {
             var trackers = In.Cast<Models.Tracker>().ToArray();
@@ -142,7 +173,8 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-address-book");
 
-        [RelayCommand]
+        public bool CanExecuteReplaceTracker() => CanExecuteAction("Replace");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteReplaceTracker))]
         public async Task ReplaceTracker((object SelectedItems, string Text) In)
         {
             var trackers = ((IList)In.SelectedItems).Cast<Models.Tracker>().ToArray();
@@ -152,14 +184,8 @@ namespace RTSharp.ViewModels.TorrentListing
 
             var oldTracker = trackers[0].Uri;
 
-            var selectedTorrents = Parent.CurrentlySelectedItems;
-            if (selectedTorrents.Count != 1)
-                return;
-
-            var selectedTorrent = selectedTorrents.Items[0];
-
             try {
-                await selectedTorrent.Owner.Instance.Tracker.ReplaceTracker(selectedTorrent.ToPluginModel(), oldTracker, In.Text);
+                await CurrentlySelectedTorrent.DataOwner.Instance.Tracker.ReplaceTracker(CurrentlySelectedTorrent.ToPluginModel(), oldTracker, In.Text);
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Replacing tracker failed");
             } finally {

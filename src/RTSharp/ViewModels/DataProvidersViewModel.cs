@@ -3,13 +3,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using DynamicData;
-using DynamicData.Kernel;
 
 using NP.UniDockService;
 
 using RTSharp.Core;
 using RTSharp.Core.TorrentPolling;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 
 using System;
 using System.Collections.Generic;
@@ -71,7 +70,7 @@ namespace RTSharp.ViewModels
                 var totalUPSpeed = 0UL;
                 var activeTorrentCount = 0U;
 
-                foreach (var torrent in TorrentPolling.Torrents.Items.Where(x => x.Owner.PluginInstance.InstanceId == item.InstanceId)) {
+                foreach (var torrent in TorrentPolling.Torrents.Items.Where(x => x.DataOwner.PluginInstance.InstanceId == item.InstanceId)) {
                     totalDLSpeed += torrent.DLSpeed;
                     totalUPSpeed += torrent.UPSpeed;
                     activeTorrentCount += (torrent.InternalState & Shared.Abstractions.TORRENT_STATE.ACTIVE) == Shared.Abstractions.TORRENT_STATE.ACTIVE ? 1U : 0U;

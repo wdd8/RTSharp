@@ -63,8 +63,7 @@
                     HorizontalContentAlignment="Center"
                     HorizontalAlignment="Stretch"
                     Grid.Row="1"
-                    Command="{Binding PluginsSettingsClickCommand}"
-                    IsEnabled="{Binding CurrentlySelectedPlugin.Instance.Capabilities.HasSettingsWindow}">
+                    Command="{Binding PluginsSettingsClickCommand}">
                     Settings
                 </Button>
             </Grid>

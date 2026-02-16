@@ -8,87 +8,89 @@ using RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
 using RTSharp.DataProvider.Rtorrent.Plugin.ViewModels;
 using RTSharp.DataProvider.Rtorrent.Plugin.Views;
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Client;
+
 using Version = RTSharp.Shared.Abstractions.Version;
 
-namespace RTSharp.DataProvider.Rtorrent.Plugin
+namespace RTSharp.DataProvider.Rtorrent.Plugin;
+
+public class Plugin : BasePlugin
 {
-    public class Plugin : IPlugin
+    public override string Name => "RTSharp data provider for rtorrent";
+
+    public override string Description => "RTSharp data provider for rtorrent";
+
+    public override string Author => "RTSharp";
+
+    public override Version Version => new("0.0.1", 0, 0, 1);
+
+    public override int CompatibleMajorVersion => 0;
+
+    public override Guid GUID => new Guid("90F180F2-F1D3-4CAA-859F-06D80B5DCF5C");
+
+    public override PluginCapabilities Capabilities { get; } = new PluginCapabilities(
+        HasSettingsWindow: true
+    );
+
+    public override Task<dynamic> CustomAccess(dynamic In)
     {
-        public string Name => "RTSharp data provider for rtorrent";
+        return null;
+    }
 
-        public string Description => "RTSharp data provider for rtorrent";
+    public override IPluginHost Host { get; set; }
 
-        public string Author => "RTSharp";
+    public IDataProviderHost DataProvider { get; set; }
 
-        public Version Version => new("0.0.1", 0, 0, 1);
+    internal ActionQueueRenderer ActionQueue { get; set; }
 
-        public int CompatibleMajorVersion => 0;
+    private CancellationTokenSource DataProviderActive { get; set; }
 
-        public Guid GUID => new Guid("90F180F2-F1D3-4CAA-859F-06D80B5DCF5C");
+    public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
+    {
+        this.Host = Host;
+        Progress(("Registering queue...", 0f));
 
-        public PluginCapabilities Capabilities { get; } = new PluginCapabilities(
-            HasSettingsWindow: true
-        );
+        ActionQueue = new ActionQueueRenderer(Host.PluginInstanceConfig.Name, Host.InstanceId);
+        Host.RegisterActionQueue(ActionQueue);
 
-        public Task<dynamic> CustomAccess(dynamic In)
+        Progress(("Registering data provider...", 50f));
+
+        DataProviderActive = new();
+        var dp = new DataProvider(this)
         {
-            return null;
-        }
+            Active = DataProviderActive.Token
+        };
 
-        public IPluginHost Host { get; private set; }
+        DataProvider = Host.RegisterDataProvider(dp);
 
-        public IHostedDataProvider DataProvider { get; set; }
+        Progress(("Loaded", 100f));
+        return Task.FromResult((IPlugin)this);
+    }
 
-        internal ActionQueueRenderer ActionQueue { get; set; }
+    public override async Task ShowPluginSettings(object ParentWindow)
+    {
+        var daemon = Host.AttachedDaemonService;
+        var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
-        private CancellationTokenSource DataProviderActive { get; set; }
+        var settings = await client.GetSettingsAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
-        public async Task Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
-        {
-            this.Host = Host;
-            Progress(("Registering queue...", 0f));
+        var settingsWindow = new MainWindow {
+            ViewModel = new MainWindowViewModel() {
+                PluginHost = Host,
+                ThisPlugin = this,
+                Title = Host.PluginInstanceConfig.Name + " rtorrent settings",
+                Settings = SettingsMapper.MapFromProto(settings)
+            }
+        };
+        ((MainWindowViewModel)settingsWindow.DataContext).ThisWindow = settingsWindow;
+        await settingsWindow.ShowDialog((Window)ParentWindow);
+    }
 
-            ActionQueue = new ActionQueueRenderer(Host.PluginInstanceConfig.Name, Host.InstanceId);
-            Host.RegisterActionQueue(ActionQueue);
-
-            Progress(("Registering data provider...", 50f));
-
-            DataProviderActive = new();
-            var dp = new DataProvider(this)
-            {
-                Active = DataProviderActive.Token
-            };
-
-            DataProvider = Host.RegisterDataProvider(dp);
-
-            Progress(("Loaded", 100f));
-        }
-
-        public async Task ShowPluginSettings(object ParentWindow)
-        {
-            var daemon = Host.AttachedDaemonService;
-            var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
-
-            var settings = await client.GetSettingsAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
-
-            var settingsWindow = new MainWindow {
-                ViewModel = new MainWindowViewModel() {
-                    PluginHost = Host,
-                    ThisPlugin = this,
-                    Title = Host.PluginInstanceConfig.Name + " rtorrent settings",
-                    Settings = SettingsMapper.MapFromProto(settings)
-                }
-            };
-            ((MainWindowViewModel)settingsWindow.DataContext).ThisWindow = settingsWindow;
-            await settingsWindow.ShowDialog((Window)ParentWindow);
-        }
-
-        public Task Unload()
-        {
-            DataProviderActive?.Cancel();
-            Host?.UnregisterDataProvider(DataProvider);
-            Host?.UnregisterActionQueue();
-            return Task.CompletedTask;
-        }
+    public override Task Unload()
+    {
+        DataProviderActive?.Cancel();
+        Host?.UnregisterDataProvider(DataProvider);
+        Host?.UnregisterActionQueue();
+        return Task.CompletedTask;
     }
 }

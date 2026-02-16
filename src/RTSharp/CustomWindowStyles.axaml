@@ -82,7 +82,7 @@
             </ControlTemplate>
         </Setter>
     </Style>
-    <Style Selector=":is(np|CustomWindow).PlainFloatingWindow">
+    <Style Selector=":is(np|CustomWindow).PlainFloatingWindow" x:DataType="np:FloatingWindow">
         <Setter Property="HeaderBackground"
                 Value="Transparent"/>
         <Setter Property="HeaderHeight"
@@ -100,7 +100,7 @@
         <Setter Property="TitleMargin"
                 Value="5"/>
         <Setter Property="Title"
-                Value="{Binding Path=TheDockGroup.ActiveDockItem.Header, StringFormat='Floating Window - {0}', RelativeSource={RelativeSource Self}}" />
+                Value="{ReflectionBinding Path=TheDockGroup.ActiveDockItem.Header, StringFormat='Floating Window - {0}', RelativeSource={RelativeSource Self}}" />
         <Setter Property="ButtonsAreaTemplate"
                 Value="{StaticResource FloatingWindowButtonsTemplate}"/>
         <Setter Property="HeaderContentTemplate">

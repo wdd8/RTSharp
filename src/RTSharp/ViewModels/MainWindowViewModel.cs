@@ -23,7 +23,7 @@ namespace RTSharp.ViewModels
     {
         public ObservableCollection<MenuItem> MenuItems { get; } = new();
 
-        public ObservableCollection<Plugin.PluginInstance> Plugins => Plugin.Plugins.LoadedPlugins;
+        public ObservableCollection<Plugin.RTSharpPlugin> Plugins => Plugin.Plugins.LoadedPlugins;
 
         public ICommand CmdOptionsClick { get; }
 
@@ -32,10 +32,10 @@ namespace RTSharp.ViewModels
         public Func<ServersWindowViewModel, Task> ShowServersDialog { get; set; }
 
         [ObservableProperty]
-        public string stringFilter;
+        public partial string StringFilter { get; set; }
 
         [ObservableProperty]
-        public string title = "RT#";
+        public partial string Title { get; set; } = "RT#";
 
         public MainWindowViewModel()
         {

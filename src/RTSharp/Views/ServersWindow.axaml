@@ -6,6 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         Width="400" Height="300"
         x:Class="RTSharp.Views.ServersWindow"
+		x:DataType="vm:ServersWindowViewModel"
         Title="RT# - Servers">
 
     <Design.DataContext>

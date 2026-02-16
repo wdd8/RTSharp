@@ -3,10 +3,12 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+		xmlns:vm="using:RTSharp.ViewModels"
         mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
         Width="400"
         Height="300"
         x:Class="RTSharp.ManagePluginsWindow"
+		x:DataType="vm:ManagePluginsWindowViewModel"
         Title="RT# - Manage Plugins">
 
     <Window.Styles>

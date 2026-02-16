@@ -1,4 +1,6 @@
 ﻿using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.DataProvider;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.DataProvider.Qbittorrent.Plugin
 {

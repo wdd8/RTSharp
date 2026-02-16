@@ -18,9 +18,9 @@ namespace RTSharp.Core.Services.Daemon
         ILogger<DaemonService> Logger;
 
         private readonly string ServerId;
-        private readonly DataProvider DataProvider;
+        private readonly RTSharpDataProvider DataProvider;
 
-        public DaemonStatsService(DataProvider DataProvider)
+        public DaemonStatsService(RTSharpDataProvider DataProvider)
         {
             this.ServerId = DataProvider.DataProviderInstanceConfig.ServerId;
             this.DataProvider = DataProvider;

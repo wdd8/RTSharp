@@ -19,15 +19,15 @@ namespace RTSharp.ViewModels
 {
     public partial class AddTorrentViewModel : ObservableObject
     {
-        public List<DataProvider> DataProviders => [.. Plugin.Plugins.DataProviders.Items.Where(x => x.Instance.Capabilities.AddTorrent)];
+        public List<RTSharpDataProvider> DataProviders => [.. Plugin.Plugins.DataProviders.Items.Where(x => x.Instance.Capabilities.AddTorrent)];
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(ForceStartTorrentOnAdd))]
         [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
-        public DataProvider? selectedProvider;
+        public partial RTSharpDataProvider? SelectedProvider { get; set; }
 
         [ObservableProperty]
-        public bool fromFileSelected;
+        public partial bool FromFileSelected { get; set; }
 
         private List<string>? _selectedFiles = null;
         public string? SelectedFileTextBox {
@@ -47,7 +47,7 @@ namespace RTSharp.ViewModels
         }
 
         [ObservableProperty]
-        public bool fromUriSelected;
+        public partial bool FromUriSelected { get; set; }
 
         private string? _uri = null;
         public string? Uri {
@@ -66,17 +66,17 @@ namespace RTSharp.ViewModels
         }
 
         [ObservableProperty]
-        public bool fromClipboardSelected;
+        public partial bool FromClipboardSelected { get; set; }
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(AddClickCommand))]
-        public string remoteTargetPath;
+        public partial string RemoteTargetPath { get; set; }
 
         [ObservableProperty]
-        public object dataProviderOptions;
+        public partial object DataProviderOptions { get; set; }
 
         [ObservableProperty]
-        public List<DataProvider> duplicationTargets;
+        public partial List<RTSharpDataProvider> DuplicationTargets { get; set; }
 
         private bool _startTorrent;
         public bool StartTorrent {
@@ -179,7 +179,7 @@ namespace RTSharp.ViewModels
         }
 
         [RelayCommand]
-        public async Task ProviderChanged(DataProvider SelectedProvider)
+        public async Task ProviderChanged(RTSharpDataProvider SelectedProvider)
         {
             try {
                 if (SelectedProvider == null)

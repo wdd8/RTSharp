@@ -6,7 +6,8 @@
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
-             d:DesignWidth="1500" d:DesignHeight="450">
+             d:DesignWidth="1500" d:DesignHeight="450"
+			 x:DataType="torrentListing:TorrentFilesViewModel">
 
     <Control.Resources>
         <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
@@ -36,7 +37,6 @@
                 <MenuItem Header="_Mediainfo"
                           Command="{Binding MediaInfoCommand}"
                           CommandParameter="{Binding Source.RowSelection.SelectedItems}"
-                          IsEnabled="{Binding Torrent.Owner.Instance.Files.Capabilities.MediaInfo}"
                         />
             </ContextMenu>
         </TreeDataGrid.ContextMenu>

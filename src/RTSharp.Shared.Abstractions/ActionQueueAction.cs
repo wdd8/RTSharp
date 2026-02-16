@@ -182,7 +182,7 @@ namespace RTSharp.Shared.Abstractions
             OnFailFxs.Add(Fx);
         }
 
-        internal Task<object?> RunAction()
+        public Task<object?> RunAction()
         {
             this.State = ACTION_STATE.RUNNING;
             RunningTask = FxCreateTask();

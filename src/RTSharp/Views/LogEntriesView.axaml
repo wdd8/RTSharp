@@ -2,7 +2,8 @@
          xmlns="https://github.com/avaloniaui"
          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-         xmlns:vm="clr-namespace:RTSharp.ViewModels;assembly=RTSharp"
+         xmlns:vm="using:RTSharp.ViewModels"
+		 xmlns:models="using:RTSharp.Models"
          d:DataContext="{x:Static vm:ExampleLogEntriesViewModel.ViewModel}"
          x:DataType="vm:LogEntriesViewModel"
          d:DesignWidth="800" d:DesignHeight="400">
@@ -27,9 +28,9 @@
         <DataGrid.ContextMenu>
             <ContextMenu>
                 <MenuItem Header="Copy exception"
-                    Command="{Binding CmdCopyException}"
+                    Command="{Binding CopyException}"
                     CommandParameter="{Binding #MainGrid.SelectedItems}"
-                    IsEnabled="{Binding #MainGrid.SelectedItem.HasException}"
+                    IsEnabled="{Binding #MainGrid.((models:LogEntry)SelectedItem).HasException}"
             />
             </ContextMenu>
         </DataGrid.ContextMenu>

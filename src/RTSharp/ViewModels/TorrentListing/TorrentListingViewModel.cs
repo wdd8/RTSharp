@@ -10,9 +10,6 @@ using CommunityToolkit.Mvvm.Input;
 
 using DynamicData;
 using DynamicData.Binding;
-using DynamicData.Kernel;
-
-using Google.Protobuf.WellKnownTypes;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,7 +19,7 @@ using NP.Utilities;
 using RTSharp.Core;
 using RTSharp.Core.TorrentPolling;
 using RTSharp.Shared.Abstractions;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels.Options;
 using RTSharp.Views.Options;
 using RTSharp.Views.TorrentListing;
@@ -30,7 +27,6 @@ using RTSharp.Views.TorrentListing;
 using Serilog;
 
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -39,7 +35,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -66,11 +61,10 @@ namespace RTSharp.ViewModels.TorrentListing
         public SourceList<Torrent> CurrentlySelectedItems { get; } = new();
 
         [ObservableProperty]
-        private string stringFilter;
+        public partial string StringFilter { get; set; }
 
         [ObservableProperty]
-        private TemplatedControl[] labelsWithAdd;
-
+        public partial TemplatedControl[] LabelsWithAdd { get; set; }
         public GeneralTorrentInfoViewModel GeneralInfoViewModel { get; } = new();
 
         public TorrentFilesViewModel FilesViewModel { get; } = new();
@@ -161,7 +155,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
             var columnList = new List<IColumn<Torrent>>
             {
-                new TextColumn<Torrent, string>("Connection", x => x.Owner.PluginInstance.PluginInstanceConfig.Name, width: widths.GetValueOrDefault("Connection")),
+                new TextColumn<Torrent, string>("Connection", x => x.DataOwner.PluginInstance.PluginInstanceConfig.Name, width: widths.GetValueOrDefault("Connection")),
                 new TextColumn<Torrent, string>("Name", x => x.Name, width: widths.GetValueOrDefault("Name"), options: new TextColumnOptions<Torrent> {
                     IsTextSearchEnabled = true
                 }),

@@ -16,10 +16,10 @@ namespace RTSharp.ViewModels.Options
         public Dictionary<Type, object> Pages { get; } = new();
 
         [ObservableProperty]
-        public OptionsItem currentlySelectedItem;
+        public partial OptionsItem CurrentlySelectedItem { get; set; }
 
         [ObservableProperty]
-        public object? settingsContent;
+        public partial object? SettingsContent { get; set; }
 
         public OptionsViewModel()
         {

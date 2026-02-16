@@ -28,7 +28,7 @@ namespace RTSharp.Core.TorrentPolling
         private static Task TorrentChangesTask;
         private static Task TorrentUpdateTask;
 
-        private static Channel<(DataProvider DataProvider, ListingChanges<Torrent, Models.Torrent, byte[]> Changes)> ListingChanges = Channel.CreateUnbounded<(DataProvider DataProvider, ListingChanges<Torrent, Models.Torrent, byte[]> Changes)>(new UnboundedChannelOptions()
+        private static Channel<(RTSharpDataProvider DataProvider, ListingChanges<Torrent, Models.Torrent, byte[]> Changes)> ListingChanges = Channel.CreateUnbounded<(RTSharpDataProvider DataProvider, ListingChanges<Torrent, Models.Torrent, byte[]> Changes)>(new UnboundedChannelOptions()
         {
             SingleReader = true,
             SingleWriter = true
@@ -68,7 +68,7 @@ namespace RTSharp.Core.TorrentPolling
                 // Since it is possible to remove torrent and add it right after in same change, we must handle removals first
                 foreach (var torrent in Torrents.Items)
                 {
-                    if (removed.Contains(torrent.Hash) && torrent.Owner == dp)
+                    if (removed.Contains(torrent.Hash) && torrent.DataOwner == dp)
                     {
                         toRemove.Add(torrent);
                     }
@@ -80,7 +80,7 @@ namespace RTSharp.Core.TorrentPolling
                 foreach (var remove in toRemove)
                 {
                     Torrents.Remove(remove);
-                    TorrentsLookup.Remove((remove.Hash, remove.Owner.PluginInstance.InstanceId), out var _);
+                    TorrentsLookup.Remove((remove.Hash, remove.DataOwner.PluginInstance.InstanceId), out var _);
                 }
 
                 bool labelsChanged = false;
@@ -134,7 +134,7 @@ namespace RTSharp.Core.TorrentPolling
                 await Models.TorrentUpdateExt.UpdateMulti(changes.Values);
 
                 // Modified fullUpdate
-                var updated = await Models.TorrentUpdateExt.UpdateFromPluginModelMulti([.. Torrents.Items.Where(x => x.Owner == dp)], fullUpdate);
+                var updated = await Models.TorrentUpdateExt.UpdateFromPluginModelMulti([.. Torrents.Items.Where(x => x.DataOwner == dp)], fullUpdate);
                 foreach (var change in updated) {
                     changeSet.Add(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, change.Obj, null, change.Index));
                 }
@@ -149,7 +149,7 @@ namespace RTSharp.Core.TorrentPolling
                 if (newVMTorrents.Count() > 0) {
                     Torrents.AddRange(newVMTorrents);
                     foreach (var torrent in newVMTorrents) {
-                        TorrentsLookup.TryAdd((torrent.Hash, torrent.Owner.PluginInstance.InstanceId), torrent);
+                        TorrentsLookup.TryAdd((torrent.Hash, torrent.DataOwner.PluginInstance.InstanceId), torrent);
                         foreach (var label in torrent.Labels)
                             add(label);
                     }
@@ -162,7 +162,7 @@ namespace RTSharp.Core.TorrentPolling
             }
         }
 
-        private static async Task ReadTorrentChanges(DataProvider DataProvider, ChannelReader<ListingChanges<Torrent, Models.Torrent, byte[]>> In)
+        private static async Task ReadTorrentChanges(RTSharpDataProvider DataProvider, ChannelReader<ListingChanges<Torrent, Models.Torrent, byte[]>> In)
         {
             try
             {

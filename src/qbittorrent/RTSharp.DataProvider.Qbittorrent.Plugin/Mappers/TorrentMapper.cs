@@ -40,10 +40,11 @@
             };
         }
 
-        public static Shared.Abstractions.Torrent MapFromExternal(QBittorrent.Client.TorrentInfo In)
+        /*public static Shared.Abstractions.Torrent MapFromExternal(QBittorrent.Client.TorrentInfo In)
         {
             return new Shared.Abstractions.Torrent(Convert.FromHexString(In.Hash)) {
                 Name = In.Name,
+                DataOwner = 
                 State = MapFromExternal(In.State),
                 IsPrivate = null, // fetch later
                 Size = (ulong)In.TotalSize!,
@@ -71,7 +72,7 @@
                 RemotePath = In.SavePath,
                 MagnetDummy = In.MagnetUri != null
             };
-        }
+        }*/
 
         public static void ApplyFromExternal(Shared.Abstractions.Torrent Stored, QBittorrent.Client.TorrentPartialInfo External)
         {

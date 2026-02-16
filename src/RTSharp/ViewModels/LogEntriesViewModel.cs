@@ -14,50 +14,49 @@ using NP.UniDockService;
 
 using RTSharp.Core;
 using RTSharp.Models;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 
-namespace RTSharp.ViewModels
+namespace RTSharp.ViewModels;
+
+public class DockLogEntriesViewModel : DockItemViewModel<LogEntriesViewModel> { }
+
+public partial class LogEntriesViewModel : ObservableObject, IDockable, IContextPopulatedNotifyable
 {
-    public class DockLogEntriesViewModel : DockItemViewModel<LogEntriesViewModel> { }
+    public ObservableCollection<LogEntry> LogEntries => Core.LogWindowSink.LogEntries;
 
-    public partial class LogEntriesViewModel : ObservableObject, IDockable, IContextPopulatedNotifyable
+    public Action? ScrollToBottom;
+
+    public Func<string, Task>? SetClipboardAsync;
+
+
+    [RelayCommand]
+    public async Task CopyException(IList In)
     {
-        public ObservableCollection<LogEntry> LogEntries => Core.LogWindowSink.LogEntries;
+        var logEntries = In.Cast<LogEntry>().ToArray();
 
-        public Action? ScrollToBottom;
+        if (logEntries.Length != 1 || SetClipboardAsync == null)
+            return;
 
-        public Func<string, Task>? SetClipboardAsync;
-
-
-        [RelayCommand]
-        public async Task CopyException(IList In)
-        {
-            var logEntries = In.Cast<LogEntry>().ToArray();
-
-            if (logEntries.Length != 1 || SetClipboardAsync == null)
-                return;
-
-            await SetClipboardAsync(logEntries.First().Exception!.ToString());
-        }
-
-        private void EvLogEntriesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            if (ScrollToBottom != null)
-                ScrollToBottom();
-        }
-
-        public void OnContextPopulated()
-        {
-            LogEntries.CollectionChanged += EvLogEntriesChanged;
-        }
-
-        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-calendar-days");
-
-        public string HeaderName => "Log";
+        await SetClipboardAsync(logEntries.First().Exception!.ToString());
     }
 
-    public static class ExampleLogEntriesViewModel
+    private void EvLogEntriesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
-        public static LogEntriesViewModel ViewModel { get; } = new LogEntriesViewModel();
+        if (ScrollToBottom != null)
+            ScrollToBottom();
     }
+
+    public void OnContextPopulated()
+    {
+        LogEntries.CollectionChanged += EvLogEntriesChanged;
+    }
+
+    public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-calendar-days");
+
+    public string HeaderName => "Log";
+}
+
+public static class ExampleLogEntriesViewModel
+{
+    public static LogEntriesViewModel ViewModel { get; } = new LogEntriesViewModel();
 }

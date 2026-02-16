@@ -15,32 +15,31 @@ namespace RTSharp.ViewModels.Statistics
     public partial class StatisticsWindowViewModel : ObservableObject
     {
         [ObservableProperty]
-        public int totalTorrents;
+        public partial int TotalTorrents { get; set; }
 
         [ObservableProperty]
-        public ulong totalSeedingSize;
+        public partial ulong TotalSeedingSize { get; set; }
 
         [ObservableProperty]
-        public ulong totalUploaded;
+        public partial ulong TotalUploaded { get; set; }
 
         [ObservableProperty]
-        public ulong totalDownloaded;
+        public partial ulong TotalDownloaded { get; set; }
 
         [ObservableProperty]
-        public float shareRatio;
+        public partial float ShareRatio { get; set; }
 
         [ObservableProperty]
-        public ulong allTimeUpload;
+        public partial ulong AllTimeUpload { get; set; }
 
         [ObservableProperty]
-        public ulong allTimeDownload;
+        public partial ulong AllTimeDownload { get; set; }
 
         [ObservableProperty]
-        public float allTimeShareRatio;
+        public partial float AllTimeShareRatio { get; set; }
 
         [ObservableProperty]
-        public bool someDontSupport;
-
+        public partial bool SomeDontSupport { get; set; }
         public PeriodicTimer Timer { get; set; }
 
         public void RunTimer()
@@ -73,7 +72,7 @@ namespace RTSharp.ViewModels.Statistics
                 totalUploaded += torrent.Uploaded;
                 totalDownloaded += torrent.Downloaded;
 
-                var ownerKey = torrent.Owner!;
+                var ownerKey = torrent.DataOwner!;
                 if (perOwnerSnapshotTotals.TryGetValue(ownerKey, out var cur)) {
                     perOwnerSnapshotTotals[ownerKey] = (cur.Uploaded + torrent.Uploaded, cur.Downloaded + torrent.Downloaded);
                 } else {
@@ -101,7 +100,7 @@ namespace RTSharp.ViewModels.Statistics
                 }
             }
 
-            var owners = snap.GroupBy(x => x.Owner).ToArray();
+            var owners = snap.GroupBy(x => x.DataOwner).ToArray();
 
             if (owners.Count() != owners.Count(x => x.Key.Instance.Stats.Capabilities.GetAllTimeDataStats) && !SomeDontSupport) {
                 await Dispatcher.UIThread.InvokeAsync(() => {

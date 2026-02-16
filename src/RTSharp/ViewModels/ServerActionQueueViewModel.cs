@@ -7,12 +7,12 @@ namespace RTSharp.ViewModels
         public string DisplayName { get; set; }
 
         [ObservableProperty]
-        public uint actionsInQueue;
+        public partial uint ActionsInQueue { get; set; }
 
         [ObservableProperty]
-        public uint erroredActions;
+        public partial uint ErroredActions { get; set; }
 
         [ObservableProperty]
-        public string actionQueueString;
+        public partial string ActionQueueString { get; set; }
     }
 }

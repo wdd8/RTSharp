@@ -29,9 +29,9 @@ namespace RTSharp.Core.Services.Daemon
         ILogger<DaemonService> Logger;
 
         private readonly string ServerId;
-        private readonly DataProvider DataProvider;
+        private readonly RTSharpDataProvider DataProvider;
 
-        public DaemonTorrentsService(DataProvider DataProvider)
+        public DaemonTorrentsService(RTSharpDataProvider DataProvider)
         {
             this.ServerId = DataProvider.DataProviderInstanceConfig.ServerId;
             this.DataProvider = DataProvider;

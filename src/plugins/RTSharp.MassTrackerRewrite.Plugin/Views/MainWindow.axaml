@@ -4,10 +4,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
 		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+		xmlns:vm="using:RTSharp.MassTrackerRewrite.Plugin.ViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		Width="800" Height="450"
 		x:Name="window"
         x:Class="RTSharp.MassTrackerRewrite.Plugin.MainWindow"
+		x:DataType="vm:MainWindowViewModel"
 		Icon="avares://RTSharp/Assets/rtsharp.ico"
         Title="Mass tracker rewrite">
     <Window.Resources>
@@ -45,7 +47,7 @@
 					<TextBox Text="{Binding UrlText, Mode=TwoWay}" Watermark="Replacement..." />
 					<TextBlock Text="{Binding StatusText}" />
 					<ProgressBar Minimum="0" Maximum="100" Height="16" Value="{Binding ProgressValue}" />
-					<Button Content="Go" Command="{Binding GoCommand}" IsEnabled="{Binding CanGo}" />
+					<Button Content="Go" Command="{Binding GoCommand}" />
 			</StackPanel>
 		</Grid>
 	</dialogHost:DialogHost>

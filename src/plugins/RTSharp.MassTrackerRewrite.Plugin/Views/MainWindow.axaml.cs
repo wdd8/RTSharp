@@ -1,5 +1,5 @@
 using RTSharp.MassTrackerRewrite.Plugin.ViewModels;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.MassTrackerRewrite.Plugin;
 

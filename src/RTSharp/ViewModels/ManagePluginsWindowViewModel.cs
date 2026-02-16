@@ -20,17 +20,17 @@ namespace RTSharp.ViewModels;
 
 public partial class ManagePluginsWindowViewModel : ObservableObject
 {
-    public ObservableCollection<PluginInstance> ActivePlugins => Plugins.LoadedPlugins;
+    public ObservableCollection<RTSharpPlugin> ActivePlugins => Plugins.LoadedPlugins;
 
     public ObservableCollection<string> UnloadedPluginDirs { get; } = new();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LoadClickCommand))]
-    public string selectedUnloadedDir;
+    public partial string SelectedUnloadedDir { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UnloadClickCommand))]
-    public PluginInstance selectedActivePlugin;
+    public partial RTSharpPlugin SelectedActivePlugin { get; set; }
 
     public ManagePluginsWindowViewModel()
     {

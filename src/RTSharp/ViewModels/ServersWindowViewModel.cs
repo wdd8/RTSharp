@@ -15,10 +15,10 @@ namespace RTSharp.ViewModels
     public partial class ServersWindowViewModel : ObservableObject
     {
         [ObservableProperty]
-        public ObservableCollection<Models.Server> servers;
+        public partial ObservableCollection<Models.Server> Servers { get; set; }
 
         [ObservableProperty]
-        public Models.Server selectedServer;
+        public partial Models.Server SelectedServer { get; set; }
 
         public ServersWindowViewModel()
         {

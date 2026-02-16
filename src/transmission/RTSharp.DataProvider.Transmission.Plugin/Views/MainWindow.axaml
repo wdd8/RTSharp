@@ -31,9 +31,9 @@
                  VerticalAlignment="Stretch"
                  HorizontalAlignment="Stretch">
             <ListBox.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vm:Category">
                     <StackPanel Orientation="Horizontal" MinWidth="150">
-                        <!--<i:Icon Value="{Binding Icon}" Margin="0,0,20,0" />-->
+                        <i:Icon Value="{Binding Icon}" Margin="0,0,20,0" />
                         <TextBlock TextWrapping="NoWrap" Text="{Binding Name}" />
                     </StackPanel>
                 </DataTemplate>

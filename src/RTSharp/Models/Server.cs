@@ -5,11 +5,11 @@ namespace RTSharp.Models;
 public partial class Server : ObservableObject
 {
     [ObservableProperty]
-    public string serverId;
+    public partial string ServerId { get; set; }
 
     [ObservableProperty]
-    public string host;
+    public partial string Host { get; set; }
 
     [ObservableProperty]
-    public ushort daemonPort;
+    public partial ushort DaemonPort { get; set; }
 }

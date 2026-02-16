@@ -25,11 +25,10 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SelectCommand))]
-    public FileSystemItem? selected;
-
+    public partial FileSystemItem? Selected { get; set; }
     public FileSystemItem Current { get; set; }
 
-    public Plugin.DataProvider DataProvider { get; init; }
+    public Plugin.RTSharpDataProvider DataProvider { get; init; }
 
     public SourceList<FileSystemItem> _itemsSource { get; set; } = new();
 
@@ -43,11 +42,11 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
     public Func<FileSystemItem, Task<bool>> DoCreateDirectory { get; set; }
 
     [ObservableProperty]
-    public bool removeDirectoryAllowed;
+    public partial bool RemoveDirectoryAllowed { get; set; }
 
     private DaemonService Server;
 
-    public DirectorySelectorWindowViewModel(Plugin.DataProvider DataProvider)
+    public DirectorySelectorWindowViewModel(Plugin.RTSharpDataProvider DataProvider)
     {
         this.DataProvider = DataProvider;
         _itemsSource.Connect().Sort(SortExpressionComparer<FileSystemItem>.Ascending(x => x.Path)).Bind(out _items).Subscribe();

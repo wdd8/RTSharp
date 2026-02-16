@@ -1,14 +1,12 @@
-using Avalonia;
-
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Controls.ViewModels;
 
-namespace RTSharp.Shared.Controls.Views
+namespace RTSharp.Shared.Controls.Views;
+
+public partial class TextPreviewWindow : VmWindow<TextPreviewWindowViewModel>
 {
-    public partial class TextPreviewWindow : VmWindow<TextPreviewWindowViewModel>
+    public TextPreviewWindow()
     {
-        public TextPreviewWindow()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

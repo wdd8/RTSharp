@@ -6,307 +6,307 @@ using Avalonia.Controls;
 using MsBox.Avalonia.Models;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
+using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Abstractions.DataProvider;
 
-namespace RTSharp.DataProvider.Transmission.Plugin
+namespace RTSharp.DataProvider.Transmission.Plugin;
+
+public class DataProvider : IDataProvider
 {
-    public class DataProvider : IDataProvider
+    private Plugin ThisPlugin { get; }
+    public BasePlugin Plugin => ThisPlugin;
+    public IDataProviderHost Host => ThisPlugin.DataProvider;
+    public Guid GUID => ThisPlugin.GUID;
+
+    public IDataProviderFiles Files { get; }
+
+    public IDataProviderTracker Tracker { get; }
+
+    public IDataProviderPeer Peer { get; }
+
+    public IDataProviderStats Stats { get; }
+
+    public CancellationToken Active { get; set; }
+
+    public DataProviderCapabilities Capabilities { get; } = new(
+        GetFiles: true,
+        GetPeers: true,
+        GetTrackers: true,
+        GetPieces: true,
+        StartTorrent: true,
+        PauseTorrent: false,
+        StopTorrent: true,
+        AddTorrent: true,
+        ForceRecheckTorrent: true,
+        ReannounceToAllTrackers: true,
+        GetDotTorrent: true,
+        ForceStartTorrentOnAdd: null,
+        MoveDownloadDirectory: true,
+        RemoveTorrent: true,
+        RemoveTorrentAndData: true,
+        AddLabel: true,
+        SetLabels: true
+    );
+
+    public DataProvider(Plugin ThisPlugin)
     {
-        private Plugin ThisPlugin { get; }
-        public IPlugin Plugin => ThisPlugin;
-        public IPluginHost PluginHost => ThisPlugin.Host;
+        this.ThisPlugin = ThisPlugin;
 
-        public IDataProviderFiles Files { get; }
+        this.Files = new DataProviderFiles(ThisPlugin);
+        this.Tracker = new DataProviderTracker(ThisPlugin);
+        this.Peer = new DataProviderPeer(ThisPlugin);
+        this.Stats = new DataProviderStats(ThisPlugin);
+    }
 
-        public IDataProviderTracker Tracker { get; }
+    public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
 
-        public IDataProviderStats Stats { get; }
+        return await client.AddTorrents(In);
+    }
 
-        public CancellationToken Active { get; set; }
+    public async Task<Guid> ForceRecheck(IList<byte[]> In)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
 
-        public DataProviderCapabilities Capabilities { get; } = new(
-            GetFiles: true,
-            GetPeers: true,
-            GetTrackers: true,
-            GetPieces: true,
-            StartTorrent: true,
-            PauseTorrent: false,
-            StopTorrent: true,
-            AddTorrent: true,
-            ForceRecheckTorrent: true,
-            ReannounceToAllTrackers: true,
-            GetDotTorrent: true,
-            ForceStartTorrentOnAdd: null,
-            MoveDownloadDirectory: true,
-            RemoveTorrent: true,
-            RemoveTorrentAndData: true,
-            AddLabel: true,
-            AddPeer: false,
-            BanPeer: true,
-            KickPeer: true,
-            SnubPeer: true,
-            UnsnubPeer: true,
-            SetLabels: true
-        );
+        return await client.ForceRecheckTorrents(In);
+    }
 
-        public DataProvider(Plugin ThisPlugin)
-        {
-            this.ThisPlugin = ThisPlugin;
+    public async Task<IEnumerable<Torrent>> GetAllTorrents(CancellationToken cancellationToken = default)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
 
-            this.Files = new DataProviderFiles(ThisPlugin);
-            this.Tracker = new DataProviderTracker(ThisPlugin);
-            this.Stats = new DataProviderStats(ThisPlugin);
+        return await client.GetAllTorrents(cancellationToken);
+    }
+
+    public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<Torrent> In)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        return await client.GetDotTorrents(In);
+    }
+
+    public async Task<InfoHashDictionary<(bool MultiFile, IList<Shared.Abstractions.File> Files)>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken = default)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        return await client.GetTorrentsFiles(In, cancellationToken);
+    }
+
+    public async Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken = default)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        return await client.GetTorrentsPeers(In, cancellationToken);
+    }
+
+    public async Task<Torrent> GetTorrent(byte[] Hash)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        return await client.GetTorrent(Hash);
+    }
+
+    public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, T, byte[]>>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<Daemon.Protocols.DataProvider.IncompleteDeltaTorrentResponse, T> Update, Action<Daemon.Protocols.DataProvider.CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
+        where T : class
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
+
+        return client.GetTorrentChanges(Existing, Update, Update2, combined.Token);
+    }
+
+    public async Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        return await client.GetTorrentsTrackers(In, cancellationToken);
+    }
+
+
+    public async Task<Guid?> MoveDownloadDirectory(InfoHashDictionary<string> In, IList<(string SourceFile, string TargetFile)> Check)
+    {
+        var server = Host.AttachedDaemonService!;
+        var torrentsClient = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        if (Check.Select(x => x.TargetFile).Distinct().Count() != Check.Count) {
+            throw new ArgumentException("Moving multiple torrents with same destination is currently unsupported");
         }
 
-        public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+        var move = true;
 
-            return await client.AddTorrents(In);
-        }
+        var reply = await server.CheckExists(Check.Select(x => x.TargetFile).ToArray());
 
-        public async Task<Guid> ForceRecheck(IList<byte[]> In)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+        var existsCount = reply.Count(x => x.Value);
 
-            return await client.ForceRecheckTorrents(In);
-        }
+        if (existsCount == reply.Count) {
+            // All exist
+            var msgbox = await MessageBoxManager.GetMessageBoxStandard("RT# - transmission", "All of the file names exist in destination directory, do you want to proceed without moving the files?", ButtonEnum.YesNo, Icon.Info, WindowStartupLocation.CenterOwner).ShowWindowDialogAsync((Window)ThisPlugin.Host.MainWindow);
 
-        public async Task<IEnumerable<Torrent>> GetAllTorrents(CancellationToken cancellationToken = default)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
-
-            return await client.GetAllTorrents(cancellationToken);
-        }
-
-        public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<Torrent> In)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
-
-            return await client.GetDotTorrents(In);
-        }
-
-        public async Task<InfoHashDictionary<(bool MultiFile, IList<Shared.Abstractions.File> Files)>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken = default)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
-
-            return await client.GetTorrentsFiles(In, cancellationToken);
-        }
-
-        public async Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken = default)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
-
-            return await client.GetTorrentsPeers(In, cancellationToken);
-        }
-
-        public async Task<Torrent> GetTorrent(byte[] Hash)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
-
-            return await client.GetTorrent(Hash);
-        }
-
-        public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, T, byte[]>>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<Daemon.Protocols.DataProvider.IncompleteDeltaTorrentResponse, T> Update, Action<Daemon.Protocols.DataProvider.CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
-            where T : class
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
-
-            var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
-
-            return client.GetTorrentChanges(Existing, Update, Update2, combined.Token);
-        }
-
-        public async Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
-
-            return await client.GetTorrentsTrackers(In, cancellationToken);
-        }
-
-
-        public async Task<Guid?> MoveDownloadDirectory(InfoHashDictionary<string> In, IList<(string SourceFile, string TargetFile)> Check)
-        {
-            var server = PluginHost.AttachedDaemonService!;
-            var torrentsClient = PluginHost.AttachedDaemonService.GetTorrentsService(this);
-
-            if (Check.Select(x => x.TargetFile).Distinct().Count() != Check.Count) {
-                throw new ArgumentException("Moving multiple torrents with same destination is currently unsupported");
-            }
-
-            var move = true;
-
-            var reply = await server.CheckExists(Check.Select(x => x.TargetFile).ToArray());
-
-            var existsCount = reply.Count(x => x.Value);
-
-            if (existsCount == reply.Count) {
-                // All exist
-                var msgbox = await MessageBoxManager.GetMessageBoxStandard("RT# - transmission", "All of the file names exist in destination directory, do you want to proceed without moving the files?", ButtonEnum.YesNo, Icon.Info, WindowStartupLocation.CenterOwner).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
-
-                if (msgbox == ButtonResult.Yes)
-                    move = false;
-            } else if (existsCount != 0) {
-                var msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
-                    ButtonDefinitions = new ButtonDefinition[] {
-                        new ButtonDefinition() {
-                            Name = "Move (overwrite)",
-                            IsDefault = false,
-                        },
-                        new ButtonDefinition() {
-                            Name = "Don't move (may result in recheck failure)",
-                            IsDefault = false,
-                        },
-                        new ButtonDefinition() {
-                            Name = "Abort",
-                            IsDefault = true,
-                            IsCancel = true
-                        }
+            if (msgbox == ButtonResult.Yes)
+                move = false;
+        } else if (existsCount != 0) {
+            var msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                ButtonDefinitions = new ButtonDefinition[] {
+                    new ButtonDefinition() {
+                        Name = "Move (overwrite)",
+                        IsDefault = false,
                     },
-                    ContentTitle = "RT# - transmission",
-                    ContentMessage = "Some of the files exist in destination directory, how would you like to proceed?",
-                    Icon = Icon.Warning,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
-
-                if (msgbox == "Move (overwrite)") {
-                    var allowedToDeleteTarget = await server.AllowedToDeleteFiles(Check.Select(x => x.TargetFile));
-
-                    if (allowedToDeleteTarget.Any(x => !x.Value)) {
-                        var onlySome = allowedToDeleteTarget.Any(x => x.Value);
-
-                        msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
-                            ButtonDefinitions = new ButtonDefinition[] {
-                                new ButtonDefinition() {
-                                    Name = "Try to overwrite anyway",
-                                    IsDefault = false,
-                                },
-                                new ButtonDefinition() {
-                                    Name = "Don't move (may result in recheck failure)",
-                                    IsDefault = false,
-                                },
-                                new ButtonDefinition() {
-                                    Name = "Abort",
-                                    IsDefault = true,
-                                    IsCancel = true
-                                }
-                            },
-                            ContentTitle = "RT# - transmission",
-                            ContentMessage = $"There are insufficient permissions to overwrite {(onlySome ? "some of " : "")}target files, how would you like to proceed?",
-                            Icon = Icon.Warning,
-                            WindowStartupLocation = WindowStartupLocation.CenterOwner
-                        }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
-
-                        if (msgbox == "Try to overwrite anyway") {
-                        } else if (msgbox == "Don't move (may result in recheck failure)")
-                            move = false;
-                        else
-                            return null;
+                    new ButtonDefinition() {
+                        Name = "Don't move (may result in recheck failure)",
+                        IsDefault = false,
+                    },
+                    new ButtonDefinition() {
+                        Name = "Abort",
+                        IsDefault = true,
+                        IsCancel = true
                     }
+                },
+                ContentTitle = "RT# - transmission",
+                ContentMessage = "Some of the files exist in destination directory, how would you like to proceed?",
+                Icon = Icon.Warning,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            }).ShowWindowDialogAsync((Window)ThisPlugin.Host.MainWindow);
 
-                    move = true;
-                } else if (msgbox == "Don't move (may result in recheck failure)")
-                    move = false;
-                else
-                    return null;
-            }
+            if (msgbox == "Move (overwrite)") {
+                var allowedToDeleteTarget = await server.AllowedToDeleteFiles(Check.Select(x => x.TargetFile));
 
-            var allowedToRead = await server.AllowedToReadFiles(Check.Select(x => x.SourceFile));
+                if (allowedToDeleteTarget.Any(x => !x.Value)) {
+                    var onlySome = allowedToDeleteTarget.Any(x => x.Value);
 
-            if (allowedToRead.Any(x => !x.Value)) {
-                var msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
-                    ButtonDefinitions = new ButtonDefinition[] {
-                        new ButtonDefinition() {
-                            Name = "Proceed anyway",
-                            IsDefault = false,
+                    msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                        ButtonDefinitions = new ButtonDefinition[] {
+                            new ButtonDefinition() {
+                                Name = "Try to overwrite anyway",
+                                IsDefault = false,
+                            },
+                            new ButtonDefinition() {
+                                Name = "Don't move (may result in recheck failure)",
+                                IsDefault = false,
+                            },
+                            new ButtonDefinition() {
+                                Name = "Abort",
+                                IsDefault = true,
+                                IsCancel = true
+                            }
                         },
-                        new ButtonDefinition() {
-                            Name = "Abort",
-                            IsDefault = true,
-                            IsCancel = true
-                        }
-                    },
-                    ContentTitle = "RT# - transmission",
-                    ContentMessage = $"There are insufficient permissions to read one or more source files, how would you like to proceed?",
-                    Icon = Icon.Warning,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+                        ContentTitle = "RT# - transmission",
+                        ContentMessage = $"There are insufficient permissions to overwrite {(onlySome ? "some of " : "")}target files, how would you like to proceed?",
+                        Icon = Icon.Warning,
+                        WindowStartupLocation = WindowStartupLocation.CenterOwner
+                    }).ShowWindowDialogAsync((Window)ThisPlugin.Host.MainWindow);
 
-                if (msgbox == "Proceed anyway") {
-                } else
-                    return null;
-            }
+                    if (msgbox == "Try to overwrite anyway") {
+                    } else if (msgbox == "Don't move (may result in recheck failure)")
+                        move = false;
+                    else
+                        return null;
+                }
 
-            // No pre-check for transmission
-            /*var err = await torrentsClient.MoveDownloadDirectoryPreCheck(In, Check, move);
-
-            if (err != null) {
-                await MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
-                    ContentTitle = "RT# - transmission",
-                    ContentMessage = err,
-                    Icon = Icon.Error,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
-
+                move = true;
+            } else if (msgbox == "Don't move (may result in recheck failure)")
+                move = false;
+            else
                 return null;
-            }*/
-
-            var session = await torrentsClient.MoveDownloadDirectory(In, move, true);
-
-            return session;
         }
 
-        public async Task<TorrentStatuses> StopTorrents(IList<byte[]> In)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+        var allowedToRead = await server.AllowedToReadFiles(Check.Select(x => x.SourceFile));
 
-            return await client.StopTorrents(In);
+        if (allowedToRead.Any(x => !x.Value)) {
+            var msgbox = await MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                ButtonDefinitions = new ButtonDefinition[] {
+                    new ButtonDefinition() {
+                        Name = "Proceed anyway",
+                        IsDefault = false,
+                    },
+                    new ButtonDefinition() {
+                        Name = "Abort",
+                        IsDefault = true,
+                        IsCancel = true
+                    }
+                },
+                ContentTitle = "RT# - transmission",
+                ContentMessage = $"There are insufficient permissions to read one or more source files, how would you like to proceed?",
+                Icon = Icon.Warning,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            }).ShowWindowDialogAsync((Window)ThisPlugin.Host.MainWindow);
+
+            if (msgbox == "Proceed anyway") {
+            } else
+                return null;
         }
 
-        public async Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> In)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+        // No pre-check for transmission
+        /*var err = await torrentsClient.MoveDownloadDirectoryPreCheck(In, Check, move);
 
-            return await client.ReannounceToAllTrackers(In);
-        }
+        if (err != null) {
+            await MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
+                ContentTitle = "RT# - transmission",
+                ContentMessage = err,
+                Icon = Icon.Error,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            }).ShowWindowDialogAsync((Window)Host.MainWindow);
 
-        public async Task<TorrentStatuses> RemoveTorrents(IList<byte[]> In)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+            return null;
+        }*/
 
-            return await client.RemoveTorrents(In);
-        }
+        var session = await torrentsClient.MoveDownloadDirectory(In, move, true);
 
-        public async Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+        return session;
+    }
 
-            return await client.RemoveTorrentsAndData(In);
-        }
+    public async Task<TorrentStatuses> StopTorrents(IList<byte[]> In)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
 
-        public async Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+        return await client.StopTorrents(In);
+    }
 
-            var ret = await client.SetLabels(In);
-            await client.QueueTorrentUpdate([.. In.Select(x => x.Hash)]);
+    public async Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> In)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
 
-            return ret;
-        }
+        return await client.ReannounceToAllTrackers(In);
+    }
 
-        public async Task<TorrentStatuses> StartTorrents(IList<byte[]> In)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+    public async Task<TorrentStatuses> RemoveTorrents(IList<byte[]> In)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
 
-            return await client.StartTorrents(In);
-        }
+        return await client.RemoveTorrents(In);
+    }
 
-        public Task<TorrentStatuses> PauseTorrents(IList<byte[]> In) => throw new NotImplementedException();
+    public async Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
 
-        public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
+        return await client.RemoveTorrentsAndData(In);
+    }
 
-            return await client.GetPieces(In, cancellationToken);
-        }
+    public async Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        var ret = await client.SetLabels(In);
+        await client.QueueTorrentUpdate([.. In.Select(x => x.Hash)]);
+
+        return ret;
+    }
+
+    public async Task<TorrentStatuses> StartTorrents(IList<byte[]> In)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        return await client.StartTorrents(In);
+    }
+
+    public Task<TorrentStatuses> PauseTorrents(IList<byte[]> In) => throw new NotImplementedException();
+
+    public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        return await client.GetPieces(In, cancellationToken);
     }
 }

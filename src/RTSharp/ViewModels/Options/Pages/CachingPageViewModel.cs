@@ -7,6 +7,6 @@ namespace RTSharp.ViewModels.Options.Pages
         public ulong FilesCacheSize { get; set; }
 
         [ObservableProperty]
-        public bool filesCachingEnabled;
+        public partial bool FilesCachingEnabled { get; set; }
     }
 }

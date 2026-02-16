@@ -1,44 +1,45 @@
 ﻿#nullable enable
 
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.DataProvider;
+using RTSharp.Shared.Abstractions.Client;
 
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RTSharp.DataProvider.Rtorrent.Plugin
+namespace RTSharp.DataProvider.Rtorrent.Plugin;
+
+public class DataProviderTracker : IDataProviderTracker
 {
-    public class DataProviderTracker : IDataProviderTracker
+    private Plugin ThisPlugin { get; }
+    public IPluginHost PluginHost { get; }
+
+    public DataProviderTrackerCapabilities Capabilities { get; } = new(
+        AddNewTracker: false,
+        EnableTracker: false,
+        DisableTracker: false,
+        RemoveTracker: false,
+        ReannounceTracker: false,
+        ReplaceTracker: true
+    );
+
+    public DataProviderTracker(Plugin ThisPlugin)
     {
-        private Plugin ThisPlugin { get; }
-        public IPluginHost PluginHost { get; }
+        this.ThisPlugin = ThisPlugin;
+        this.PluginHost = ThisPlugin.Host;
+    }
 
-        public DataProviderTrackerCapabilities Capabilities { get; } = new(
-            AddNewTracker: false,
-            EnableTracker: false,
-            DisableTracker: false,
-            RemoveTracker: false,
-            ReannounceTracker: false,
-            ReplaceTracker: true
-        );
+    public async Task<IList<(Uri Uri, IList<Exception> Exceptions)>> Reannounce(byte[] TorrentHash, IList<Uri> TargetUris)
+    {
+        throw new NotImplementedException();
+    }
 
-        public DataProviderTracker(Plugin ThisPlugin)
-        {
-            this.ThisPlugin = ThisPlugin;
-            this.PluginHost = ThisPlugin.Host;
-        }
+    public async Task ReplaceTracker(Torrent Torrent, string Existing, string New, CancellationToken cancellationToken = default)
+    {
+        var client = PluginHost.AttachedDaemonService.GetTorrentsService(ThisPlugin.DataProvider.Instance);
 
-        public async Task<IList<(Uri Uri, IList<Exception> Exceptions)>> Reannounce(byte[] TorrentHash, IList<Uri> TargetUris)
-        {
-            throw new NotImplementedException();
-        }
-
-        public async Task ReplaceTracker(Torrent Torrent, string Existing, string New, CancellationToken cancellationToken = default)
-        {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(ThisPlugin.DataProvider.Instance);
-
-            await client.ReplaceTracker(Torrent.Hash, Existing, New, cancellationToken);
-        }
+        await client.ReplaceTracker(Torrent.Hash, Existing, New, cancellationToken);
     }
 }

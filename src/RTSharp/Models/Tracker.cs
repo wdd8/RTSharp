@@ -15,7 +15,7 @@ namespace RTSharp.Models
         /// Icon representing <see cref="Origin"/>
         /// </summary>
         [ObservableProperty]
-        public IImage? icon;
+        public partial IImage? Icon { get; set; }
 
         /// <summary>
         /// Tracker URI
@@ -33,51 +33,50 @@ namespace RTSharp.Models
         /// Display combination of Uri/DisplayName
         /// </summary>
         [ObservableProperty]
-        public string display;
+        public partial string Display { get; set; }
 
         /// <summary>
         /// Status
         /// </summary>
         [ObservableProperty]
-        public string status;
-
+        public partial string Status { get; set; }
         private TRACKER_STATUS StatusInternal { get; set; }
 
         /// <summary>
         /// Tracker seeders
         /// </summary>
         [ObservableProperty]
-        public uint seeders;
+        public partial uint Seeders { get; set; }
 
         /// <summary>
         /// Tracker peers
         /// </summary>
         [ObservableProperty]
-        public uint peers;
+        public partial uint Peers { get; set; }
 
         /// <summary>
         /// Downloaded entries
         /// </summary>
         [ObservableProperty]
-        public uint downloaded;
+        public partial uint Downloaded { get; set; }
 
         /// <summary>
         /// Last updated
         /// </summary>
         [ObservableProperty]
-        public DateTime? lastUpdatedDate;
+        public partial DateTime? LastUpdatedDate { get; set; }
 
         /// <summary>
         /// Update interval
         /// </summary>
         [ObservableProperty]
-        public TimeSpan interval;
+        public partial TimeSpan Interval { get; set; }
 
         /// <summary>
         /// Tracker message
         /// </summary>
         [ObservableProperty]
-        public string message;
+        public partial string Message { get; set; }
 
         public void UpdateFromPluginModel(Shared.Abstractions.Tracker In)
         {

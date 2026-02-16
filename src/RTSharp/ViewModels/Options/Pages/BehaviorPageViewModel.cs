@@ -7,6 +7,6 @@ namespace RTSharp.ViewModels.Options.Pages
     public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
     {
         [ObservableProperty]
-        public TimeSpan filesPollingInterval;
+        public partial TimeSpan FilesPollingInterval { get; set; }
     }
 }

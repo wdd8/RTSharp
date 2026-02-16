@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using DialogHostAvalonia;
 using RTSharp.Shared.Utils;
 using Torrent = RTSharp.Models.Torrent;
-using RTSharp.Shared.Controls;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using Avalonia;
@@ -18,11 +17,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Models.TreeDataGrid;
 using System.Collections.ObjectModel;
-using System.Collections.Generic;
 using System.Reactive.Linq;
-using System.Reactive;
 using Avalonia.Data;
 using RTSharp.Views.Util;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.Views.TorrentListing;
 
@@ -116,7 +114,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     public void EvRowPrepared(object sender, TreeDataGridRowEventArgs e)
     {
         var torrent = (Torrent)e.Row.DataContext!;
-        if (Color.TryParse(torrent!.Owner.PluginInstance.PluginInstanceConfig.Color, out var color)) {
+        if (Color.TryParse(torrent!.DataOwner.PluginInstance.PluginInstanceConfig.Color, out var color)) {
             e.Row.Background = new SolidColorBrush(color);
             if (color.R * 0.299 + color.G * 0.587 + color.B * 0.114 > 186) {
                 e.Row.Foreground = Brushes.Black;
@@ -147,7 +145,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
         // Guard against cell recycling. If plugins modify properties of some cells, others might get recycled from before and jumbled
         cell.Background = null;
-        if (Color.TryParse(torrent!.Owner.PluginInstance.PluginInstanceConfig.Color, out var color)) {
+        if (Color.TryParse(torrent!.DataOwner.PluginInstance.PluginInstanceConfig.Color, out var color)) {
             if (color.R * 0.299 + color.G * 0.587 + color.B * 0.114 > 186) {
                 cell.Foreground = Brushes.Black;
             } else {
@@ -216,7 +214,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         return (await window.ShowWindowDialogAsync(Input.BaseWindow)) == ButtonResult.Yes;
     }
 
-    private async Task<string?> ShowSelectRemoteDirectoryDialog((Window Owner, string Title, Plugin.DataProvider DataProvider, string? StartingDir) Input)
+    private async Task<string?> ShowSelectRemoteDirectoryDialog((Window Owner, string Title, Plugin.RTSharpDataProvider DataProvider, string? StartingDir) Input)
     {
         var dialog = new DirectorySelectorWindow() {
             ViewModel = new DirectorySelectorWindowViewModel(Input.DataProvider) {

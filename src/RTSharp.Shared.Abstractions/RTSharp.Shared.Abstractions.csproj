@@ -8,18 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.11" />
         <PackageReference Include="Grpc.Core.Api" Version="2.76.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
-        <PackageReference Include="Serilog" Version="4.3.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.3" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
+        <PackageReference Include="Serilog" Version="4.3.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Avalonia.Controls.TreeDataGrid\src\Avalonia.Controls.TreeDataGrid\Avalonia.Controls.TreeDataGrid.csproj" />
         <ProjectReference Include="..\RTSharp.Daemon.Protocols\RTSharp.Daemon.Protocols.csproj" />
         <ProjectReference Include="..\RTSharp.Shared.Utils\RTSharp.Shared.Utils.csproj" />
     </ItemGroup>

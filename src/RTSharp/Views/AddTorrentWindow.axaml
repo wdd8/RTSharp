@@ -7,6 +7,7 @@
         xmlns:vm="clr-namespace:RTSharp.ViewModels"
         mc:Ignorable="d"
         x:Class="RTSharp.Views.AddTorrentWindow"
+		x:DataType="vm:AddTorrentViewModel"
         Title="RT# - Add torrent"
         MinWidth="453"
         Width="453"

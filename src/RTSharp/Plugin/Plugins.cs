@@ -8,6 +8,7 @@ using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Controls.Views;
 
 using Serilog;
@@ -30,9 +31,9 @@ namespace RTSharp.Plugin
 {
     public static class Plugins
     {
-        public static ObservableCollection<PluginInstance> LoadedPlugins { get; } = new ObservableCollection<PluginInstance>();
+        public static ObservableCollection<RTSharpPlugin> LoadedPlugins { get; } = new ObservableCollection<RTSharpPlugin>();
 
-        public static SourceList<DataProvider> DataProviders { get; } = new SourceList<DataProvider>();
+        public static SourceList<RTSharpDataProvider> DataProviders { get; } = new SourceList<RTSharpDataProvider>();
 
         public enum HookType
         {
@@ -252,7 +253,7 @@ namespace RTSharp.Plugin
                 ctx = new PluginAssemblyLoadContext(modulePath);
                 asm = ctx.LoadFromAssemblyPath(modulePath);
 
-                pluginType = asm.GetTypes().FirstOrDefault(x => typeof(IPlugin).IsAssignableFrom(x));
+                pluginType = asm.GetTypes().FirstOrDefault(x => typeof(IPluginInit).IsAssignableFrom(x));
             } catch (Exception ex) {
                 throw new PluginLoadException($"Plugin {modulePath}: failed to load", ex);
             }
@@ -264,18 +265,18 @@ namespace RTSharp.Plugin
                 throw new PluginLoadException($"Invalid plugin {modulePath}", null);
             }
 
-            var inst = (IPlugin?)Activator.CreateInstance(pluginType);
+            var init = (IPluginInit?)Activator.CreateInstance(pluginType);
 
-            if (inst == null) {
+            if (init == null) {
                 Log.Logger.Error($"Failed to load plugin {modulePath}");
 
                 ctx.Unload();
                 throw new PluginLoadException($"Failed to load plugin {modulePath}", null);
             }
-            if (Global.Consts.Version.Major != inst.CompatibleMajorVersion) {
+            if (Global.Consts.Version.Major != init.CompatibleMajorVersion) {
                 var msgbox = MessageBoxManager.GetMessageBoxStandard(
                     "Plugin loader",
-                    $"Plugin {modulePath}: Incompatible to RT# core version (RT# - {Global.Consts.Version.Major}, plugin - {inst.CompatibleMajorVersion}), load anyways?",
+                    $"Plugin {modulePath}: Incompatible to RT# core version (RT# - {Global.Consts.Version.Major}, plugin - {init.CompatibleMajorVersion}), load anyways?",
                     ButtonEnum.YesNo,
                     Icon.Error);
                 if (await msgbox.ShowWindowAsync() != ButtonResult.Yes) {
@@ -283,10 +284,10 @@ namespace RTSharp.Plugin
                 }
             }
 
-            var plugin = new PluginInstance(ctx, asm, inst, configRaw, Path, instanceId, modulePath);
+            var plugin = new RTSharpPlugin(ctx, asm, configRaw, Path, instanceId, modulePath);
 
-            Progress(($"Initializing plugin {pluginName} ({inst.Version.VersionDisplayString})...", 0f));
-            Log.Logger.Debug($"Initializing plugin {pluginName} ({inst.Version.VersionDisplayString})...");
+            Progress(($"Initializing plugin {pluginName} ({init.Version.VersionDisplayString})...", 0f));
+            Log.Logger.Debug($"Initializing plugin {pluginName} ({init.Version.VersionDisplayString})...");
 
             void evPluginProgress((string Status, float Percentage) e)
             {
@@ -294,10 +295,12 @@ namespace RTSharp.Plugin
             }
 
             try {
-                await inst.Init(plugin, evPluginProgress);
+                var inst = await init.Init(plugin, evPluginProgress);
+                plugin.Instance = inst;
             } catch (Exception ex) {
                 try {
-                    await inst.Unload();
+                    if (plugin.Instance != null)
+                        await plugin.Instance.Unload();
                 } catch { }
 
                 LoadedPlugins.Remove(plugin);

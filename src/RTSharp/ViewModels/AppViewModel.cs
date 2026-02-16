@@ -23,10 +23,10 @@ namespace RTSharp.ViewModels
     public partial class AppViewModel : ObservableObject
     {
         [ObservableProperty]
-        public bool trayIconVisible;
+        public partial bool TrayIconVisible { get; set; }
 
         [ObservableProperty]
-        public string trayIconText = "RT#";
+        public partial string TrayIconText { get; set; } = "RT#";
 
         private SIDataSpeedConverter SIDataSpeedConverterInstance = new();
 

@@ -4,12 +4,11 @@ using CommunityToolkit.Mvvm.Input;
 using MsBox.Avalonia.Enums;
 using MsBox.Avalonia;
 
-using RTSharp.Shared.Abstractions;
-
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 using RTSharp.ServerScriptPlayground.Plugin.Views;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.ServerScriptPlayground.Plugin.ViewModels;
 

@@ -1,22 +1,21 @@
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels.TorrentListing;
 
-namespace RTSharp.Views.TorrentListing
+namespace RTSharp.Views.TorrentListing;
+
+public partial class MoveDownloadDirectoryConfirmationDialog : VmWindow<MoveDownloadDirectoryConfirmationDialogViewModel>
 {
-    public partial class MoveDownloadDirectoryConfirmationDialog : VmWindow<MoveDownloadDirectoryConfirmationDialogViewModel>
+    public MoveDownloadDirectoryConfirmationDialog()
     {
-        public MoveDownloadDirectoryConfirmationDialog()
-        {
-            InitializeComponent();
+        InitializeComponent();
 
-            BindViewModelActions(vm => {
-                vm!.CloseWithResult = CloseWithResult;
-            });
-        }
+        BindViewModelActions(vm => {
+            vm!.CloseWithResult = CloseWithResult;
+        });
+    }
 
-        public void CloseWithResult(bool Input)
-        {
-            this.Close(Input);
-        }
+    public void CloseWithResult(bool Input)
+    {
+        this.Close(Input);
     }
 }

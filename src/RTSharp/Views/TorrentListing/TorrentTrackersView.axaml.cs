@@ -4,44 +4,43 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels.TorrentListing;
 
-namespace RTSharp.Views.TorrentListing
+namespace RTSharp.Views.TorrentListing;
+
+public partial class TorrentTrackersView : VmUserControl<TorrentTrackersViewModel>
 {
-    public partial class TorrentTrackersView : VmUserControl<TorrentTrackersViewModel>
+    public TorrentTrackersView()
     {
-        public TorrentTrackersView()
-        {
-            InitializeComponent();
+        InitializeComponent();
 
-            BindViewModelActions(vm => {
-                vm!.BrowseForIconDialog = ShowBrowserForIconDialog;
-            });
-        }
+        BindViewModelActions(vm => {
+            vm!.BrowseForIconDialog = ShowBrowserForIconDialog;
+        });
+    }
 
-        private async Task<string?> ShowBrowserForIconDialog(Window Input)
-        {
-            var dialog = await Input.StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions() {
-                Title = "RT# - Browse for icon...",
-                AllowMultiple = false,
-                FileTypeFilter = new List<FilePickerFileType> {
-                    new("Image files") {
-                        Patterns = new List<string> {
-                            "*.bmp",
-                            "*.gif",
-                            "*.ico",
-                            "*.jpg",
-                            "*.jpeg",
-                            "*.png",
-                            "*.tiff",
-                            "*.wdp"
-                        }
+    private async Task<string?> ShowBrowserForIconDialog(Window Input)
+    {
+        var dialog = await Input.StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions() {
+            Title = "RT# - Browse for icon...",
+            AllowMultiple = false,
+            FileTypeFilter = new List<FilePickerFileType> {
+                new("Image files") {
+                    Patterns = new List<string> {
+                        "*.bmp",
+                        "*.gif",
+                        "*.ico",
+                        "*.jpg",
+                        "*.jpeg",
+                        "*.png",
+                        "*.tiff",
+                        "*.wdp"
                     }
                 }
-            });
+            }
+        });
 
-            return dialog.FirstOrDefault()?.Path?.LocalPath;
-        }
+        return dialog.FirstOrDefault()?.Path?.LocalPath;
     }
 }

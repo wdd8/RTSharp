@@ -1,4 +1,4 @@
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels;
 
 namespace RTSharp.Views;

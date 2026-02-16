@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
         xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+		xmlns:vm="using:RTSharp.ViewModels"
         Name="window"
         mc:Ignorable="d"
         MinWidth="453"
@@ -12,6 +13,7 @@
         MinHeight="203"
         MaxHeight="203"
         x:Class="RTSharp.Views.TorrentDuplicationTargetSelectorWindow"
+		x:DataType="vm:TorrentDuplicationTargetSelectorWindowViewModel"
         Title="RT# - Select destination">
 
     <Window.Resources>

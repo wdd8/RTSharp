@@ -15,20 +15,19 @@ namespace RTSharp.ViewModels
 {
     public partial class TorrentDuplicationTargetSelectorWindowViewModel : ObservableObject
     {
-        public List<Plugin.DataProvider> DataProviders => [.. Plugin.Plugins.DataProviders.Items];
+        public List<Plugin.RTSharpDataProvider> DataProviders => [.. Plugin.Plugins.DataProviders.Items];
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
         [NotifyCanExecuteChangedFor(nameof(ConfirmClickCommand))]
-        public Plugin.DataProvider? selectedProvider;
+        public partial Plugin.RTSharpDataProvider? SelectedProvider { get; set; }
 
         [ObservableProperty]
-        public string remoteTargetPath;
+        public partial string RemoteTargetPath { get; set; }
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
-        public bool remoteTargetPathEnabled;
-
+        public partial bool RemoteTargetPathEnabled { get; set; }
         public Torrent SourceTorrent { get; }
 
         public Func<string?, Task<string?>> SelectRemoteDirectoryDialog { get; set; }
@@ -49,7 +48,7 @@ namespace RTSharp.ViewModels
         }
 
         [RelayCommand]
-        public async Task ProviderChanged(Plugin.DataProvider SelectedProvider)
+        public async Task ProviderChanged(Plugin.RTSharpDataProvider SelectedProvider)
         {
             try {
                 RemoteTargetPathEnabled = false;
@@ -58,7 +57,7 @@ namespace RTSharp.ViewModels
 
                 RemoteTargetPathEnabled = true;
 
-                if (SourceTorrent.Owner.DataProviderInstanceConfig.ServerId != SelectedProvider.DataProviderInstanceConfig.ServerId) {
+                if (SourceTorrent.DataOwner.DataProviderInstanceConfig.ServerId != SelectedProvider.DataProviderInstanceConfig.ServerId) {
                     var savePath = await SelectedProvider.Instance.Files.GetDefaultSavePath();
                     RemoteTargetPath = savePath;
                 } else {
@@ -87,7 +86,7 @@ namespace RTSharp.ViewModels
             if (SelectedProvider == null)
                 return false;
 
-            if (SourceTorrent.Owner.PluginInstance.InstanceId == SelectedProvider.Instance.PluginHost.InstanceId)
+            if (SourceTorrent.DataOwner.PluginInstance.InstanceId == SelectedProvider.PluginInstance.InstanceId)
                 return false;
 
             return true;

@@ -25,6 +25,7 @@
   <Project Path="src/RTSharp.Daemon.Protocols/RTSharp.Daemon.Protocols.csproj" />
   <Project Path="src/RTSharp.Daemon/RTSharp.Daemon.csproj" />
   <Project Path="src/RTSharp.Shared.Abstractions/RTSharp.Shared.Abstractions.csproj" />
+  <Project Path="src/RTSharp.Shared.Abstractions.Client/RTSharp.Shared.Abstractions.UI.csproj" />
   <Project Path="src/RTSharp.Shared.Controls/RTSharp.Shared.Controls.csproj" />
   <Project Path="src/RTSharp.Shared.Utils/RTSharp.Shared.Utils.csproj" />
   <Project Path="src/RTSharp/RTSharp.csproj" />

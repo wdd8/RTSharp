@@ -1,28 +1,29 @@
 ﻿using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.DataProvider;
+using RTSharp.Shared.Abstractions.Client;
 
-namespace RTSharp.DataProvider.Qbittorrent.Plugin
+namespace RTSharp.DataProvider.Qbittorrent.Plugin;
+
+public class DataProviderStats : IDataProviderStats
 {
-    public class DataProviderStats : IDataProviderStats
+    private Plugin ThisPlugin { get; }
+    public IPluginHost PluginHost { get; }
+
+    public DataProviderStatsCapabilities Capabilities { get; } = new(
+        GetStateHistory: false,
+        GetAllTimeDataStats: true
+    );
+
+    public DataProviderStats(Plugin ThisPlugin)
     {
-        private Plugin ThisPlugin { get; }
-        public IPluginHost PluginHost { get; }
+        this.ThisPlugin = ThisPlugin;
+        this.PluginHost = ThisPlugin.Host;
+    }
 
-        public DataProviderStatsCapabilities Capabilities { get; } = new(
-            GetStateHistory: false,
-            GetAllTimeDataStats: true
-        );
+    public Task<AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken)
+    {
+        var client = PluginHost.AttachedDaemonService.GetStatsService(ThisPlugin.DataProvider.Instance);
 
-        public DataProviderStats(Plugin ThisPlugin)
-        {
-            this.ThisPlugin = ThisPlugin;
-            this.PluginHost = ThisPlugin.Host;
-        }
-
-        public Task<AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken)
-        {
-            var client = PluginHost.AttachedDaemonService.GetStatsService(ThisPlugin.DataProvider.Instance);
-
-            return client.GetAllTimeDataStats(cancellationToken);
-        }
+        return client.GetAllTimeDataStats(cancellationToken);
     }
 }

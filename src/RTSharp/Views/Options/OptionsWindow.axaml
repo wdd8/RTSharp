@@ -7,6 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
         Width="600" Height="500"
         x:Class="RTSharp.Views.Options.OptionsWindow"
+		x:DataType="options:OptionsViewModel"
         Title="Options">
 
     <Design.DataContext>

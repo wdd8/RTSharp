@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using MsBox.Avalonia;
 
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Controls;
 
 using System.Collections.ObjectModel;
@@ -26,6 +27,7 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : 
     private TrackerInfo? selectedTracker;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(GoCommand))]
     private string urlText = string.Empty;
 
     [ObservableProperty]
@@ -40,10 +42,15 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : 
     [ObservableProperty]
     private bool progressDialogShown = true;
 
-    [RelayCommand]
+    public bool CanExecuteGo()
+    {
+        return !IsBusy && SelectedTracker != null && !string.IsNullOrWhiteSpace(UrlText);
+    }
+    [RelayCommand(CanExecute = nameof(CanExecuteGo))]
     public async Task Go()
     {
         IsBusy = true;
+        GoCommand.NotifyCanExecuteChanged();
         StatusText = "Fetching torrents...";
         ProgressValue = 0;
 
@@ -52,7 +59,7 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : 
         var affectedTorrents = new List<Torrent>();
 
         try {
-            foreach (var group in Host.Torrents.GroupBy(x => x.Owner)) {
+            foreach (var group in Host.Torrents.GroupBy(x => x.DataOwner)) {
                 var torrents = await group.Key.GetTrackers([.. group], default /* TODO: bind to window closing!! */);
                 foreach (var torrent in torrents) {
                     foreach (var tracker in torrent.Value) {
@@ -82,11 +89,11 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : 
 
         for (var x = 0;x < affectedTorrents.Count;x++) {
             var torrent = affectedTorrents[x];
-            var trackers = await torrent.Owner.GetTrackers([ torrent ]);
+            var trackers = await torrent.DataOwner.GetTrackers([ torrent ]);
             try {
                 StatusText = torrent.Name + "...";
 
-                await torrent.Owner.Tracker.ReplaceTracker(torrent, SelectedTracker.Uri, UrlText);
+                await torrent.DataOwner.Tracker.ReplaceTracker(torrent, SelectedTracker.Uri, UrlText);
             } catch (Exception ex) {
                 Host.Logger.Error(ex, "Failed to replace tracker for torrent " + torrent.Name);
                 StatusText = "Failed to replace tracker for torrent " + torrent.Name;
@@ -98,6 +105,7 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : 
         StatusText = "Done";
         ProgressValue = 0;
         IsBusy = false;
+        GoCommand.NotifyCanExecuteChanged();
 
         OnContextPopulated();
     }
@@ -110,11 +118,11 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : 
             bool hasRtorrent = false;
 
             try {
-                foreach (var group in Host.Torrents.GroupBy(x => x.Owner)) {
+                foreach (var group in Host.Torrents.GroupBy(x => x.DataOwner)) {
                     if (!group.Key.Tracker.Capabilities.ReplaceTracker)
                         continue;
 
-                    if (group.Key.Plugin.GUID == new Guid("90F180F2-F1D3-4CAA-859F-06D80B5DCF5C")) {
+                    if (group.Key.GUID == new Guid("90F180F2-F1D3-4CAA-859F-06D80B5DCF5C")) {
                         hasRtorrent = true;
                     }
 

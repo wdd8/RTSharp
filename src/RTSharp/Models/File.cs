@@ -32,39 +32,36 @@ namespace RTSharp.Models
         /// Downloaded pieces
         /// </summary>
         [ObservableProperty]
-        public ulong downloadedPieces;
+        public partial ulong DownloadedPieces { get; set; }
 
         /// <summary>
         /// Percent done
         /// </summary>
         [ObservableProperty]
-        public float done;
+        public partial float Done { get; set; }
 
         /// <summary>
         /// Downloaded size in bytes
         /// </summary>
         [ObservableProperty]
-        public ulong downloaded;
-
+        public partial ulong Downloaded { get; set; }
         private PRIORITY PriorityInternal { get; set; }
 
         /// <summary>
         /// Priority
         /// </summary>
         [ObservableProperty]
-        public string priority;
-
+        public partial string Priority { get; set; }
         private DOWNLOAD_STRATEGY DownloadStrategyInternal { get; set; }
 
         /// <summary>
         /// Download strategy
         /// </summary>
         [ObservableProperty]
-        public string downloadStrategy;
+        public partial string DownloadStrategy { get; set; }
 
         [ObservableProperty]
-        public bool isExpanded;
-
+        public partial bool IsExpanded { get; set; }
         public bool IsDirectory { get; set; }
 
         public ObservableCollection<File> Children { get; set; } = new();

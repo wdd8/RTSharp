@@ -1,9 +1,7 @@
-﻿using System.Reactive;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using RTSharp.Core.Services.Cache.ASCache;
 using RTSharp.Core.Services.Cache.Images;
 using RTSharp.Core.Services.Cache.TorrentFileCache;
-using RTSharp.Shared.Controls.ViewModels;
 using RTSharp.Shared.Controls.Views;
 using RTSharp.ViewModels;
 using Serilog;
@@ -21,6 +19,7 @@ using System.Collections.ObjectModel;
 using RTSharp.ViewModels.TorrentListing;
 using RTSharp.Core;
 using NP.UniDockService;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.Views;
 

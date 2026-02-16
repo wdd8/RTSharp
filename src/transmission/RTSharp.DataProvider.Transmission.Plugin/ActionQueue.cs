@@ -1,70 +1,67 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 
 using Avalonia;
 
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Client;
 
-namespace RTSharp.DataProvider.Transmission.Plugin
+namespace RTSharp.DataProvider.Transmission.Plugin;
+
+public class ActionQueue : DefaultActionQueueRenderer
 {
-    public class ActionQueue : DefaultActionQueueRenderer
+    public override StyledElement Display { get; }
+
+    public List<ActionQueueAction> _actions = new();
+
+    private Views.ActionQueue ActionQueueView;
+    private ViewModels.ActionQueueViewModel ActionQueueVm;
+
+    public ActionQueue(string PluginDisplayName, Guid InstanceId)
     {
-        public override StyledElement Display { get; }
+        ActionQueueView = new Views.ActionQueue() {
+            DataContext = ActionQueueVm = new ViewModels.ActionQueueViewModel() {
+                DisplayName = $"{PluginDisplayName} ({InstanceId})"
+            }
+        };
+        Display = ActionQueueView;
+    }
 
-        public List<ActionQueueAction> _actions = new();
-
-        private Views.ActionQueue ActionQueueView;
-        private ViewModels.ActionQueueViewModel ActionQueueVm;
-
-        public ActionQueue(string PluginDisplayName, Guid InstanceId)
-        {
-            ActionQueueView = new Views.ActionQueue() {
-                DataContext = ActionQueueVm = new ViewModels.ActionQueueViewModel() {
-                    DisplayName = $"{PluginDisplayName} ({InstanceId})"
-                }
+    private string RenderActionQueue(IEnumerable<ActionQueueAction> Actions, StringBuilder Builder, int Identation = 0)
+    {
+        foreach (var action in Actions) {
+            var running = action.State switch {
+                ACTION_STATE.WAITING => "[waiting]",
+                ACTION_STATE.RUNNING => "[running]",
+                ACTION_STATE.CANCELLED => "[cancelled]",
+                ACTION_STATE.FAILED => "[failed]",
+                ACTION_STATE.DONE => "[done]",
+                _ => throw new ArgumentOutOfRangeException()
             };
-            Display = ActionQueueView;
-        }
-
-        private string RenderActionQueue(IEnumerable<ActionQueueAction> Actions, StringBuilder Builder, int Identation = 0)
-        {
-            foreach (var action in Actions) {
-                var running = action.State switch {
-                    ACTION_STATE.WAITING => "[waiting]",
-                    ACTION_STATE.RUNNING => "[running]",
-                    ACTION_STATE.CANCELLED => "[cancelled]",
-                    ACTION_STATE.FAILED => "[failed]",
-                    ACTION_STATE.DONE => "[done]",
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-                Builder.AppendLine(new string(Enumerable.Repeat('\t', Identation).ToArray()) + " " + running + " " + action.Name);
-                if (action.ProgressDone > 0) {
-                    Builder.AppendLine(new string(Enumerable.Repeat('\t', Identation).ToArray()) + $" {Math.Round(action.ProgressDone, 2)}% {action.ProgressString}");
-                }
-
-                if (action.ChildActions.Any()) {
-                    RenderActionQueue(action.ChildActions, Builder, Identation + 1);
-                }
+            Builder.AppendLine(new string(Enumerable.Repeat('\t', Identation).ToArray()) + " " + running + " " + action.Name);
+            if (action.ProgressDone > 0) {
+                Builder.AppendLine(new string(Enumerable.Repeat('\t', Identation).ToArray()) + $" {Math.Round(action.ProgressDone, 2)}% {action.ProgressString}");
             }
 
-            return Builder.ToString();
+            if (action.ChildActions.Any()) {
+                RenderActionQueue(action.ChildActions, Builder, Identation + 1);
+            }
         }
 
-        public override void RenderActionQueue(IEnumerable<ActionQueueAction> Actions)
-        {
-            ActionQueueVm.ActionQueueString = RenderActionQueue(Actions, new StringBuilder());
-        }
-
-        public override void ActionCreated(ActionQueueAction Action) => ActionQueueVm.ActionsInQueue++;
-        public override void ActionRun(ActionQueueAction Action) { }
-        public override void ActionCompleted(ActionQueueAction Action) => ActionQueueVm.ActionsInQueue--;
-        public override void ActionErrored(ActionQueueAction Action)
-        {
-            ActionQueueVm.ErroredActions++;
-            ActionQueueVm.ActionsInQueue--;
-        }
-        public override void ActionExpired(ActionQueueAction Action) { }
+        return Builder.ToString();
     }
+
+    public override void RenderActionQueue(IEnumerable<ActionQueueAction> Actions)
+    {
+        ActionQueueVm.ActionQueueString = RenderActionQueue(Actions, new StringBuilder());
+    }
+
+    public override void ActionCreated(ActionQueueAction Action) => ActionQueueVm.ActionsInQueue++;
+    public override void ActionRun(ActionQueueAction Action) { }
+    public override void ActionCompleted(ActionQueueAction Action) => ActionQueueVm.ActionsInQueue--;
+    public override void ActionErrored(ActionQueueAction Action)
+    {
+        ActionQueueVm.ErroredActions++;
+        ActionQueueVm.ActionsInQueue--;
+    }
+    public override void ActionExpired(ActionQueueAction Action) { }
 }

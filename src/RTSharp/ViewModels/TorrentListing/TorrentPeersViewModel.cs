@@ -1,11 +1,20 @@
-﻿using System.Collections.ObjectModel;
-using Avalonia.Media;
-using RTSharp.Models;
-using RTSharp.Core;
+﻿using Avalonia.Media;
+
 using CommunityToolkit.Mvvm.ComponentModel;
-using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+
+using RTSharp.Core;
+using RTSharp.Shared.Abstractions;
+
+using System;
 using System.Collections;
+using System.Collections.Frozen;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Threading.Tasks;
+
+using Peer = RTSharp.Models.Peer;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
@@ -13,30 +22,53 @@ namespace RTSharp.ViewModels.TorrentListing
     {
         public ObservableCollection<Peer> Peers { get; } = new();
 
-        [RelayCommand]
+        public Models.Torrent CurrentlySelectedTorrent { get; set; }
+
+        static readonly FrozenDictionary<string, Func<DataProviderPeerCapabilities, bool>> StrToCap = new Dictionary<string, Func<DataProviderPeerCapabilities, bool>>() {
+            { "Add peers", x => x.AddPeer },
+            { "Ban peer", x => x.BanPeer},
+            { "Kick peer", x => x.KickPeer },
+            { "Snub peer", x => x.SnubPeer },
+            { "Unsnub peer", x => x.UnsnubPeer }
+        }.ToFrozenDictionary();
+
+        bool CanExecuteAction(string Action)
+        {
+            Debug.Assert(StrToCap.ContainsKey(Action));
+
+            return StrToCap[Action](CurrentlySelectedTorrent.DataOwner.Instance.Peer.Capabilities);
+        }
+
+        public bool CanExecuteAddPeers() => CanExecuteAction("Add peers");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddPeers))]
         public async Task AddPeers(IList Input)
         {
 
         }
 
-        [RelayCommand]
+        public bool CanExecuteBanPeer() => CanExecuteAction("Ban peer");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteBanPeer))]
         public async Task BanPeer(IList Input)
         {
 
         }
 
-        [RelayCommand]
+        public bool CanExecuteKickPeer() => CanExecuteAction("Kick peer");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteKickPeer))]
         public async Task KickPeer(IList Input)
         {
 
         }
 
-        [RelayCommand]
+        public bool CanExecuteSnubPeer() => CanExecuteAction("Snub peer");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteSnubPeer))]
         public async Task SnubPeer(IList Input)
         {
 
         }
-        [RelayCommand]
+
+        public bool CanExecuteUnsnubPeer() => CanExecuteAction("Unsnub peer");
+        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteUnsnubPeer))]
         public async Task UnsnubPeer(IList Input)
         {
 

@@ -77,8 +77,7 @@
         <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
             <Grid Grid.Column="0">
                 <Button
-                    Command="{Binding CreateDirectoryCommand}"
-                    IsEnabled="{Binding DataProvider.Instance.Capabilities.CreateDirectory}">
+                    Command="{Binding CreateDirectoryCommand}">
                     <StackPanel Orientation="Horizontal">
                         <i:Icon Value="fa-solid fa-folder-plus" Margin="0 0 4 0" />
                         <TextBlock>Create directory</TextBlock>

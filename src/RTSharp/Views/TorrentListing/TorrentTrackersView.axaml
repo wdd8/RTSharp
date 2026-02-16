@@ -7,7 +7,8 @@
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              xmlns:s="clr-namespace:System;assembly=System.Runtime"
-             d:DesignWidth="1100" d:DesignHeight="450">
+             d:DesignWidth="1100" d:DesignHeight="450"
+			 x:DataType="torrentListing:TorrentTrackersViewModel">
 
     <Control.Resources>
         <converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter"/>
@@ -22,9 +23,9 @@
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
                     <TextBlock FontWeight="Bold">Set a new name for tracker</TextBlock>
-                    <TextBlock FontWeight="Bold" Margin="4 0 0 0" Text="{Binding #grid.SelectedItem.Domain}" />
+                    <TextBlock FontWeight="Bold" Margin="4 0 0 0" Text="{Binding #grid.((models:Tracker)SelectedItem).Domain}" />
                 </StackPanel>
-                <TextBox Name="TrackerName" Text="{Binding #grid.SelectedItem.DisplayName, Mode=OneWay}" />
+                <TextBox Name="TrackerName" Text="{Binding #grid.((models:Tracker)SelectedItem).DisplayName, Mode=OneWay}" />
                 <Button
                     Margin="0 -6 0 -7"
                     Width="0"
@@ -44,7 +45,7 @@
         <dialogHost:DialogHost.DialogContent>
             <StackPanel>
                 <TextBlock FontWeight="Bold">Replace tracker to</TextBlock>
-                <TextBox Name="NewTracker" Text="{Binding #grid.SelectedItem.Uri, Mode=OneWay}" />
+                <TextBox Name="NewTracker" Text="{Binding #grid.((models:Tracker)SelectedItem).Uri, Mode=OneWay}" />
                 <Button
                     Margin="0 -6 0 -7"
                     Width="0"
@@ -74,33 +75,27 @@
                     <MenuItem Header="Add a new tracker..."
                               Command="{Binding AddNewTrackerCommand}"
                               CommandParameter="{Binding #grid.SelectedItems}"
-                              IsEnabled="{Binding Owner.Instance.Capabilities.Tracker.AddNewTracker}"
                     />
                     <Separator />
                     <MenuItem Header="Enable"
                               Command="{Binding EnableCommand}"
                               CommandParameter="{Binding #grid.SelectedItems}"
-                              IsEnabled="{Binding Owner.Instance.Capabilities.Tracker.EnableTracker}"
                     />
                     <MenuItem Header="Disable"
                               Command="{Binding DisableCommand}"
                               CommandParameter="{Binding #grid.SelectedItems}"
-                              IsEnabled="{Binding Owner.Instance.Capabilities.Tracker.DisableTracker}"
                     />
                     <MenuItem Header="Remove"
                               Command="{Binding RemoveCommand}"
                               CommandParameter="{Binding #grid.SelectedItems}"
-                              IsEnabled="{Binding Owner.Instance.Capabilities.Tracker.RemoveTracker}"
                     />
 					<MenuItem Header="Replace"
                               Command="{Binding #DialogHostReplace.OpenDialogCommand}"
-                              IsEnabled="{Binding Owner.Instance.Capabilities.Tracker.ReplaceTracker}"
                     />
                     <Separator />
                     <MenuItem Header="Reannounce"
                               Command="{Binding ReannounceCommand}"
                               CommandParameter="{Binding #grid.SelectedItems}"
-                              IsEnabled="{Binding Owner.Instance.Capabilities.Tracker.ReannounceTracker}"
                     />
                     <Separator />
                     <MenuItem Header="Set name..."

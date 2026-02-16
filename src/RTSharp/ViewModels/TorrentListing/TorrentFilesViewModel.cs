@@ -25,8 +25,7 @@ namespace RTSharp.ViewModels.TorrentListing
         public bool MultiFile { get; set; }
 
         [ObservableProperty]
-        public Models.Torrent torrent;
-
+        public partial Models.Torrent Torrent { get; set; }
         public Action<string> ShowTextPreviewWindow { get; set; }
 
         public TorrentFilesViewModel()
@@ -75,7 +74,7 @@ namespace RTSharp.ViewModels.TorrentListing
             if (files.Count() == 0)
                 return;
 
-            var server = Torrent.Owner.PluginInstance.AttachedDaemonService;
+            var server = Torrent.DataOwner.PluginInstance.AttachedDaemonService;
 
             IList<string> reply;
             try {

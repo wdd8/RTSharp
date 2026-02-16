@@ -15,11 +15,10 @@ namespace RTSharp.ViewModels.TorrentListing
     public partial class GeneralTorrentInfoViewModel : ObservableObject
     {
         [ObservableProperty]
-        public Torrent? torrent;
+        public partial Torrent? Torrent { get; set; }
 
         [ObservableProperty]
-        public IList<Shared.Abstractions.PieceState> pieces;
-
+        public partial IList<Shared.Abstractions.PieceState> Pieces { get; set; }
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-circle-info");
 
         public Func<string, Task> Copy;

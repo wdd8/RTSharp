@@ -1,6 +1,4 @@
-﻿using Avalonia.Controls.Shapes;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
+﻿using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,14 +10,13 @@ using MsBox.Avalonia;
 using MsBox.Avalonia.Models;
 
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Controls;
 
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
@@ -225,7 +222,7 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
 
         var remotePathParts = Torrent.RemotePath.Split('/');
 
-        var script = await Torrent.Owner.PluginHost.AttachedDaemonService!.RunCustomScript(
+        var script = await Torrent.DataOwner.Host.AttachedDaemonService!.RunCustomScript(
 """
 #pragma usings
 #pragma lib "Microsoft.Extensions.Logging.Abstractions"
@@ -363,12 +360,12 @@ done:;
 });
 
         Cancellation.Token.Register(() => {
-            _ = Torrent.Owner?.PluginHost?.AttachedDaemonService?.QueueScriptCancellation(script);
+            _ = Torrent?.DataOwner?.Host?.AttachedDaemonService?.QueueScriptCancellation(script);
         });
 
         List<string> paths = [];
 
-        await Torrent.Owner.PluginHost.AttachedDaemonService.GetScriptProgress(script, progress => {
+        await Torrent.DataOwner.Host.AttachedDaemonService.GetScriptProgress(script, progress => {
             if (progress.State == TASK_STATE.DONE) {
                 paths = [.. progress.StateData!.Split('\x00', StringSplitOptions.RemoveEmptyEntries)];
                 Dispatcher.UIThread.Invoke(() => {
@@ -401,7 +398,7 @@ done:;
         });
 
         foreach (var path in paths) {
-            var info = await Torrent.Owner.PluginHost.AttachedDaemonService.GetDirectoryInfo(path);
+            var info = await Torrent.DataOwner.Host.AttachedDaemonService.GetDirectoryInfo(path);
             if (info.Size == (ulong)File.File.FileSize) {
                 if (File.PieceHashes.Length != 0) {
                     var verifyPieces = await VerifyPieces(File, path);
@@ -429,14 +426,14 @@ done:;
 
     private async Task<bool> VerifyPieces(FileInfo file, string resolvedPath)
     {
-        var startPiece = await Torrent.Owner.PluginHost.AttachedDaemonService!.HashFileBlock(resolvedPath, file.PieceHashes[0].Start, file.PieceHashes[0].End, HashAlgorithmName.SHA1);
+        var startPiece = await Torrent.DataOwner.Host.AttachedDaemonService!.HashFileBlock(resolvedPath, file.PieceHashes[0].Start, file.PieceHashes[0].End, HashAlgorithmName.SHA1);
         if (!startPiece.SequenceEqual(file.PieceHashes[0].Hash)) {
             return false;
         }
 
         if (file.PieceHashes.Length > 1) {
             var lastPiece = file.PieceHashes.Last();
-            var hash = await Torrent.Owner.PluginHost.AttachedDaemonService!.HashFileBlock(resolvedPath, lastPiece.Start, lastPiece.End, HashAlgorithmName.SHA1);
+            var hash = await Torrent.DataOwner.Host.AttachedDaemonService!.HashFileBlock(resolvedPath, lastPiece.Start, lastPiece.End, HashAlgorithmName.SHA1);
             if (!hash.SequenceEqual(lastPiece.Hash)) {
                 return false;
             }
@@ -444,7 +441,7 @@ done:;
 
         for (var x = 0; x < Math.Min(RandomPiecesToCheck, file.PieceHashes.Length - 2);x++) {
             var piece = file.PieceHashes[Random.Shared.Next(1, file.PieceHashes.Length - 2)];
-            var hash = await Torrent.Owner.PluginHost.AttachedDaemonService!.HashFileBlock(resolvedPath, piece.Start, piece.End, HashAlgorithmName.SHA1);
+            var hash = await Torrent.DataOwner.Host.AttachedDaemonService!.HashFileBlock(resolvedPath, piece.Start, piece.End, HashAlgorithmName.SHA1);
             if (!hash.SequenceEqual(piece.Hash)) {
                 return false;
             }
@@ -455,7 +452,7 @@ done:;
 
     private async Task AssignHashesToPieces()
     {
-        var dotTorrent = await Torrent.Owner.GetDotTorrents([ Torrent ]);
+        var dotTorrent = await Torrent.DataOwner.GetDotTorrents([ Torrent ]);
         using var mem = new System.IO.MemoryStream(dotTorrent.Single().Value);
 
         BencodeNET.Torrents.Torrent btorrent;
@@ -592,18 +589,18 @@ done:;
     public async Task ActionButton()
     {
         if (PendingLinks.Count != 0) {
-            await Torrent.Owner.PluginHost.AttachedDaemonService!.LinkFiles([.. PendingLinks], Reflink, Hardlink);
+            await Torrent.DataOwner.Host.AttachedDaemonService!.LinkFiles([.. PendingLinks], Reflink, Hardlink);
         } else {
-            var id = await Torrent.Owner.ForceRecheck([ Torrent.Hash ]);
+            var id = await Torrent.DataOwner.ForceRecheck([ Torrent.Hash ]);
 
             Dispatcher.UIThread.Invoke(() => {
                 ProgressText = $"Waiting for recheck...";
                 ProgressDialogShown = true;
             });
 
-            await Torrent.Owner.PluginHost.AttachedDaemonService!.GetScriptProgress(id, null);
+            await Torrent.DataOwner.Host.AttachedDaemonService!.GetScriptProgress(id, null);
 
-            Torrent = await Torrent.Owner.GetTorrent(Torrent.Hash);
+            Torrent = await Torrent.DataOwner.GetTorrent(Torrent.Hash);
 
             Dispatcher.UIThread.Invoke(() => {
                 ProgressText = $"Done";

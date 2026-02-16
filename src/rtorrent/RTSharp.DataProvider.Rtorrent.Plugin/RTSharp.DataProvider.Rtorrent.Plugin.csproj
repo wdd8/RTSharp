@@ -6,6 +6,9 @@
         <OutputPath>$(SolutionDir)src\RTSharp\bin\$(Configuration)\$(TargetFramework)\plugins\DataProvider.Rtorrent</OutputPath>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     </PropertyGroup>
+    <PropertyGroup Label="Avalonia">
+      <AvaloniaUseCompiledBindingsByDefault>True</AvaloniaUseCompiledBindingsByDefault>
+    </PropertyGroup>
 
     <ItemGroup>
         <Compile Update="**\*.xaml.cs">
@@ -18,11 +21,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.11" />
+        <PackageReference Include="Avalonia" Version="11.3.12" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.12" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.12" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
         <PackageReference Include="Grpc.Net.ClientFactory" Version="2.76.0" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.2" />

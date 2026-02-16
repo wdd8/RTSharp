@@ -11,6 +11,7 @@
         Name="window"
         MinWidth="592"
         x:Class="RTSharp.Views.Tools.TorrentCreatorWindow"
+		x:DataType="vm:TorrentCreatorWindowViewModel"
         Title="RT# - Torrent Creator"
         SizeToContent="WidthAndHeight">
 
@@ -100,12 +101,12 @@
                     <CheckBox IsChecked="{Binding PrivateTorrent}">Private torrent (Won't distribute on DHT network)</CheckBox>
                     <CheckBox IsChecked="{Binding Entropy}">Add entropy (Makes torrent unique)</CheckBox>
                     <CheckBox IsChecked="{Binding EmitCreationDate}">Emit creation date</CheckBox>
-                    <views:GroupBox CheckBoxEnabled="True" IsCheckBoxChecked="{Binding OptimiseAlignment}" Label="Optimise alignment" IsEnabled="False">
+                    <!--<views:GroupBox CheckBoxEnabled="True" IsCheckBoxChecked="{Binding OptimiseAlignment}" Label="Optimise alignment" IsEnabled="False">
                         <StackPanel Orientation="Horizontal" Margin="4" IsEnabled="{Binding OptimiseAlignment}">
                             <TextBlock VerticalAlignment="Center">Align to piece boundary for files larger than:</TextBlock>
                             <NumericUpDown Margin="4 0 0 0" Value="0" Increment="1" />
                         </StackPanel>
-                    </views:GroupBox>
+                    </views:GroupBox>-->
                 </StackPanel>
             </views:GroupBox>
             <views:GroupBox Label="Fields">

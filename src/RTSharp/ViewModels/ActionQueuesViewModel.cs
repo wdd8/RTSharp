@@ -9,20 +9,19 @@ using NP.UniDockService;
 
 using RTSharp.Core;
 using RTSharp.Models;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 
-namespace RTSharp.ViewModels
+namespace RTSharp.ViewModels;
+
+public class DockActionQueuesViewModel : DockItemViewModel<ActionQueuesViewModel> { }
+
+public class ActionQueuesViewModel : ObservableObject, IDockable
 {
-    public class DockActionQueuesViewModel : DockItemViewModel<ActionQueuesViewModel> { }
+    public ObservableCollection<ActionQueueEntry> ActionQueue => Core.ActionQueue.ActionQueues;
 
-    public class ActionQueuesViewModel : ObservableObject, IDockable
-    {
-        public ObservableCollection<ActionQueueEntry> ActionQueue => Core.ActionQueue.ActionQueues;
+    public ObservableCollection<StyledElement> QueueDisplay => new ObservableCollection<StyledElement>(ActionQueue.Select(x => x.Queue.Display));
 
-        public ObservableCollection<StyledElement> QueueDisplay => new ObservableCollection<StyledElement>(ActionQueue.Select(x => x.Queue.Display));
+    public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-bolt");
 
-        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-bolt");
-
-        public string HeaderName => "Action queue";
-    }
+    public string HeaderName => "Action queue";
 }

@@ -16,10 +16,10 @@ namespace RTSharp.Models
         /// Icon representing <see cref="Origin"/>
         /// </summary>
         [ObservableProperty]
-        public IImage? icon;
+        public partial IImage? Icon { get; set; }
 
         [ObservableProperty]
-        public string? origin;
+        public partial string? Origin { get; set; }
 
         /// <summary>
         /// Peer IP:Port
@@ -35,46 +35,44 @@ namespace RTSharp.Models
         /// Peer flags
         /// </summary>
         [ObservableProperty]
-        public string flags;
-
+        public partial string Flags { get; set; }
         private PEER_FLAGS FlagsInternal { get; set; }
 
         /// <summary>
         /// Done percentage
         /// </summary>
         [ObservableProperty]
-        public float done;
+        public partial float Done { get; set; }
 
         /// <summary>
         /// Downloaded bytes from peer
         /// </summary>
         [ObservableProperty]
-        public ulong downloaded;
+        public partial ulong Downloaded { get; set; }
 
         /// <summary>
         /// Uploaded bytes to peer
         /// </summary>
         [ObservableProperty]
-        public ulong uploaded;
+        public partial ulong Uploaded { get; set; }
 
         /// <summary>
         /// Download speed from peer
         /// </summary>
         [ObservableProperty]
-        public ulong dLSpeed;
+        public partial ulong DLSpeed { get; set; }
 
         /// <summary>
         /// Upload speed to peer
         /// </summary>
         [ObservableProperty]
-        public ulong uPSpeed;
+        public partial ulong UPSpeed { get; set; }
 
         /// <summary>
         /// Estimated peers' download speed
         /// </summary>
         [ObservableProperty]
-        public ulong peerDLSpeed;
-
+        public partial ulong PeerDLSpeed { get; set; }
         public DateTime ObservedOn { get; set; }
 
         public void UpdateFromPluginModel(Shared.Abstractions.Peer In)

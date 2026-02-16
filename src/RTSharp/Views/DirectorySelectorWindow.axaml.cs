@@ -1,5 +1,3 @@
-using Avalonia;
-
 using RTSharp.ViewModels;
 
 using System;
@@ -8,7 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Nito.AsyncEx;
 using RTSharp.Models;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.Views
 {

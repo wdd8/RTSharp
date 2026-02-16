@@ -123,28 +123,30 @@ namespace RTSharp.Models
         /// </summary>
         public byte[] Hash { get; set; }
 
-        public Plugin.DataProvider Owner { get; set; }
+        public Plugin.RTSharpDataProvider DataOwner { get; set; }
+
+        public Plugin.RTSharpPlugin Plugin { get; set; }
 
         /// <summary>
         /// Torrent name
         /// </summary>
         [ObservableProperty]
-        public string name;
+        public partial string Name { get; set; }
 
         [ObservableProperty]
-        public TORRENT_STATE internalState;
+        public partial TORRENT_STATE InternalState { get; set; }
 
         /// <summary>
         /// State
         /// </summary>
         [ObservableProperty]
-        public string state;
+        public partial string State { get; set; }
 
         /// <summary>
         /// Is torrent private? (no DHT/PeX/LSD)
         /// </summary>
         [ObservableProperty]
-        public bool? isPrivate;
+        public partial bool? IsPrivate { get; set; }
 
         /// <summary>
         /// Size in bytes
@@ -158,13 +160,13 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string sizeDisplay;
+        public partial string SizeDisplay { get; set; }
 
         /// <summary>
         /// Size we want to download (in case of 0 priority files)
         /// </summary>
         [ObservableProperty]
-        public ulong wantedSize;
+        public partial ulong WantedSize { get; set; }
 
         /// <summary>
         /// Piece size
@@ -175,13 +177,13 @@ namespace RTSharp.Models
         /// Wasted bytes
         /// </summary>
         [ObservableProperty]
-        public ulong? wasted;
+        public partial ulong? Wasted { get; set; }
 
         /// <summary>
         /// Done percentage
         /// </summary>
         [ObservableProperty]
-        public float done;
+        public partial float Done { get; set; }
 
         /// <summary>
         /// Downloaded bytes
@@ -195,7 +197,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string downloadedDisplay;
+        public partial string DownloadedDisplay { get; set; }
 
         /// <summary>
         /// Completed bytes
@@ -209,7 +211,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string completedSizeDisplay;
+        public partial string CompletedSizeDisplay { get; set; }
 
         /// <summary>
         /// Uploaded bytes
@@ -223,7 +225,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string uploadedDisplay;
+        public partial string UploadedDisplay { get; set; }
 
         /// <summary>
         /// Share ratio
@@ -237,7 +239,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string ratioDisplay;
+        public partial string RatioDisplay { get; set; }
 
         /// <summary>
         /// Download speed, B/s
@@ -251,7 +253,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string dLSpeedDisplay;
+        public partial string DLSpeedDisplay { get; set; }
 
         /// <summary>
         /// Upload speed, B/S
@@ -265,7 +267,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string uPSpeedDisplay;
+        public partial string UPSpeedDisplay { get; set; }
 
         /// <summary>
         /// ETA, <c>0</c> if already at 100%
@@ -280,7 +282,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string eTADisplay;
+        public partial string ETADisplay { get; set; }
 
         /// <summary>
         /// Torrent label
@@ -294,7 +296,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string labelsDisplay;
+        public partial string LabelsDisplay { get; set; }
 
         /// <summary>
         /// Torrent peers. Connected, Total
@@ -308,7 +310,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string peersDisplay;
+        public partial string PeersDisplay { get; set; }
 
         /// <summary>
         /// Torrent seeders. Connected, Total
@@ -322,7 +324,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string seedersDisplay;
+        public partial string SeedersDisplay { get; set; }
 
         private TORRENT_PRIORITY InternalPriority;
 
@@ -330,7 +332,7 @@ namespace RTSharp.Models
         /// Torrent priority
         /// </summary>
         [ObservableProperty]
-        public string priority;
+        public partial string Priority { get; set; }
 
         /// <summary>
         /// Unix timestamp of when .torrent file was created
@@ -359,7 +361,7 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string remainingSizeDisplay;
+        public partial string RemainingSizeDisplay { get; set; }
 
         /// <summary>
         /// Date when torrent finished downloading
@@ -373,14 +375,14 @@ namespace RTSharp.Models
         }
 
         [ObservableProperty]
-        public string finishedOnDateDisplay;
+        public partial string FinishedOnDateDisplay { get; set; }
 
         /// <summary>
         /// Time elapsed when downloading torrent.
         /// This can be provider specific, for example elapsed time can be counted from the moment torrent connects to a seeder, or from a moment it was added.
         /// </summary>
         [ObservableProperty]
-        public TimeSpan timeElapsed;
+        public partial TimeSpan TimeElapsed { get; set; }
 
         /// <summary>
         /// Unix timestamp of when torrent was added
@@ -399,19 +401,19 @@ namespace RTSharp.Models
         /// Primary tracker URI
         /// </summary>
         [ObservableProperty]
-        public string? trackerSingle;
+        public partial string? TrackerSingle { get; set; }
 
         [ObservableProperty]
-        public IImage? trackerIcon;
+        public partial IImage? TrackerIcon { get; set; }
 
         [ObservableProperty]
-        public string? trackerDisplayName;
+        public partial string? TrackerDisplayName { get; set; }
 
         /// <summary>
         /// Status message
         /// </summary>
         [ObservableProperty]
-        public string statusMsg;
+        public partial string StatusMsg { get; set; }
 
         /// <summary>
         /// Torrent comment
@@ -422,18 +424,18 @@ namespace RTSharp.Models
         /// Remote path of torrent data
         /// </summary>
         [ObservableProperty]
-        public string remotePath;
+        public partial string RemotePath { get; set; }
 
         /// <summary>
         /// Is torrent a magnet link dummy waiting to be resolved?
         /// </summary>
         [ObservableProperty]
-        public bool magnetDummy;
+        public partial bool MagnetDummy { get; set; }
 
-        public Torrent(byte[] Hash, Plugin.DataProvider Owner)
+        public Torrent(byte[] Hash, Plugin.RTSharpDataProvider Owner)
         {
             this.Hash = Hash;
-            this.Owner = Owner;
+            this.DataOwner = Owner;
         }
 
         public async ValueTask UpdateFromPluginModel(Shared.Abstractions.Torrent In, bool updateTracker = true)
@@ -498,7 +500,7 @@ namespace RTSharp.Models
         {
             return new Shared.Abstractions.Torrent(Hash) {
                 Name = Name,
-                Owner = Owner.Instance,
+                DataOwner = DataOwner.Instance,
                 State = InternalState,
                 Size = Size,
                 WantedSize = Size, // TODO: ??????????
@@ -524,7 +526,8 @@ namespace RTSharp.Models
                 StatusMessage = StatusMsg,
                 Comment = Comment,
                 RemotePath = RemotePath,
-                MagnetDummy = MagnetDummy
+                MagnetDummy = MagnetDummy,
+                IsPrivate = null,
             };
         }
     }

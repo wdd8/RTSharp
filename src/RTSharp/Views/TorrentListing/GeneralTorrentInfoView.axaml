@@ -6,6 +6,7 @@
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:views="using:RTSharp.Shared.Controls.Views"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
+			 x:DataType="torrentListing:GeneralTorrentInfoViewModel"
              d:DesignWidth="1500" d:DesignHeight="450">
 
     <Control.Resources>
@@ -31,7 +32,7 @@
         </Grid>
         <views:GroupBox Label="Transfer">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*">
-                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Time elapsed:" Text="{Binding Torrent.TimeElapsedDisplay}" />
+                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Time elapsed:" Text="{Binding Torrent.TimeElapsed}" />
                 <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Downloaded:" Text="{Binding Torrent.DownloadedDisplay}" />
                 <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Uploaded:" Text="{Binding Torrent.UploadedDisplay}" />
                 <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Seeders:" Text="{Binding Torrent.SeedersDisplay}" />

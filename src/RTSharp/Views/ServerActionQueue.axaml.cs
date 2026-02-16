@@ -1,13 +1,12 @@
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels;
 
-namespace RTSharp.Views
+namespace RTSharp.Views;
+
+public partial class ServerActionQueue : VmUserControl<ServerActionQueueViewModel>
 {
-    public partial class ServerActionQueue : VmUserControl<ServerActionQueueViewModel>
+    public ServerActionQueue()
     {
-        public ServerActionQueue()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

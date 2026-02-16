@@ -154,7 +154,6 @@
                       CellPrepared="EvCellPrepared"
                       CanUserResizeColumns="true">
                 <TreeDataGrid.Resources>
-
                     <DataTemplate x:Key="DoneCell" x:DataType="models:Torrent">
                         <ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Name="TorrentProgressBar" />
                     </DataTemplate>
@@ -164,11 +163,9 @@
                             <TextBlock Text="{Binding TrackerDisplayName, Mode=OneWay}" VerticalAlignment="Center" />
                         </StackPanel>
                     </DataTemplate>
-
                 </TreeDataGrid.Resources>
 
                 <TreeDataGrid.ContextMenu>
-                    <!-- Single ContextMenu on the grid; items come from the mutable AvaloniaList resource -->
                     <ContextMenu x:Name="gridCtxMenu" DataContext="{Binding}" ItemsSource="{StaticResource GridContextMenuItems}" />
                 </TreeDataGrid.ContextMenu>
             </TreeDataGrid>

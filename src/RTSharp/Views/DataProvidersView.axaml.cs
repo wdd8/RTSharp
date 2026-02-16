@@ -1,15 +1,12 @@
-using Avalonia.Controls;
-
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels;
 
-namespace RTSharp.Views
+namespace RTSharp.Views;
+
+public partial class DataProvidersView : VmUserControl<DataProvidersViewModel>
 {
-    public partial class DataProvidersView : VmUserControl<DataProvidersViewModel>
+    public DataProvidersView()
     {
-        public DataProvidersView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

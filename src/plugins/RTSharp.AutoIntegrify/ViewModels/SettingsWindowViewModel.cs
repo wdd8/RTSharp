@@ -3,8 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Microsoft.Extensions.Configuration;
 
-using RTSharp.Shared.Abstractions;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

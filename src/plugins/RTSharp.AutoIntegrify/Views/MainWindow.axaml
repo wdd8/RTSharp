@@ -5,8 +5,11 @@
 		xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
 		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
 		xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+		xmlns:vm="using:RTSharp.AutoIntegrify.Plugin.ViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+		x:Name="window"
         x:Class="RTSharp.AutoIntegrify.Plugin.MainWindow"
+		x:DataType="vm:MainWindowViewModel"
 		Icon="avares://RTSharp/Assets/rtsharp.ico"
         Title="Auto integrify">
     <Window.Resources>

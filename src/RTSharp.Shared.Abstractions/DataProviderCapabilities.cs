@@ -17,11 +17,6 @@
         bool RemoveTorrent,
         bool RemoveTorrentAndData,
         bool AddLabel,
-        bool AddPeer,
-        bool BanPeer,
-        bool KickPeer,
-        bool SnubPeer,
-        bool UnsnubPeer,
         bool SetLabels
     );
 }

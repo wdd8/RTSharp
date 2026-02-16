@@ -22,10 +22,10 @@ namespace RTSharp.Core
 
         public record struct TorrentAddInput(
             IList<(string Source, Shared.Abstractions.AddTorrentsOptions Options)> Sources,
-            IEnumerable<DataProvider> DuplicationTargets,
+            IEnumerable<RTSharpDataProvider> DuplicationTargets,
             START_MODE StartMode);
 
-        public static async Task AddTorrents(DataProvider Primary, TorrentAddInput Input)
+        public static async Task AddTorrents(RTSharpDataProvider Primary, TorrentAddInput Input)
         {
             var tasks = new List<Task<(string? Filename, byte[] Content)>>();
 

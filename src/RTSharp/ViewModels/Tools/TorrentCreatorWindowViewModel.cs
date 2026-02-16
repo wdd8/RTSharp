@@ -25,8 +25,7 @@ namespace RTSharp.ViewModels.Tools
         [NotifyPropertyChangedFor(nameof(IsMultiFileChecked))]
         [NotifyPropertyChangedFor(nameof(IsMultiFileEnabled))]
         [NotifyCanExecuteChangedFor(nameof(CreateTorrentClickCommand))]
-        public string? sourcePath;
-
+        public partial string? SourcePath { get; set; }
         public Func<Task<string?>> SelectFolderDialog { get;  set; }
 
         public Func<Task<string?>> SelectFileDialog { get; set; }
@@ -53,7 +52,7 @@ namespace RTSharp.ViewModels.Tools
         }
 
         [ObservableProperty]
-        public uint numberOfPieces = 0;
+        public partial uint NumberOfPieces { get; set; } = 0;
 
         public bool IsMultiFileEnabled {
             get {
@@ -69,7 +68,7 @@ namespace RTSharp.ViewModels.Tools
         }
 
         [ObservableProperty]
-        public ComboBoxItem strPieceLength;
+        public partial ComboBoxItem StrPieceLength { get; set; }
 
         public int? PieceLength => StrPieceLength.Content switch {
             "Auto" => null,
@@ -89,45 +88,45 @@ namespace RTSharp.ViewModels.Tools
         };
 
         [ObservableProperty]
-        public bool privateTorrent;
+        public partial bool PrivateTorrent { get; set; }
 
         [ObservableProperty]
-        public string trackerUrls;
+        public partial string TrackerUrls { get; set; }
 
         [ObservableProperty]
-        public string webSeedUrls;
+        public partial string WebSeedUrls { get; set; }
 
         [ObservableProperty]
-        public string comments;
+        public partial string Comments { get; set; }
 
         [ObservableProperty]
-        public string source;
+        public partial string Source { get; set; }
 
         [ObservableProperty]
-        public bool entropy;
+        public partial bool Entropy { get; set; }
 
         [ObservableProperty]
-        public bool emitCreationDate = true;
+        public partial bool EmitCreationDate { get; set; } = true;
 
         public partial class ProgressInfo : ObservableObject
         {
             [ObservableProperty]
-            public bool shown;
+            public partial bool Shown { get; set; }
 
             [ObservableProperty]
-            public float hashProgress;
+            public partial float HashProgress { get; set; }
 
             [ObservableProperty]
-            public string currentFile;
+            public partial string CurrentFile { get; set; }
 
             [ObservableProperty]
-            public float fileProgress;
+            public partial float FileProgress { get; set; }
 
             [ObservableProperty]
-            public float fileBuffer;
+            public partial float FileBuffer { get; set; }
 
             [ObservableProperty]
-            public string hashExcerpt;
+            public partial string HashExcerpt { get; set; }
 
             public CancellationTokenSource Cts;
         }

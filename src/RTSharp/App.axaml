@@ -3,8 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:np="https://np.com/visuals"
              xmlns:local="clr-namespace:RTSharp"
+			 xmlns:vm="clr-namespace:RTSharp.ViewModels"
              xmlns:core="clr-namespace:Dock.Model.Core;assembly=Dock.Model"
-			 xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia">
+			 xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+			 x:DataType="vm:AppViewModel">
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>

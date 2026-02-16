@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 
 using RTSharp.Plugin;
-using RTSharp.Shared.Controls;
+using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels;
 
 using System;
@@ -41,6 +41,6 @@ public partial class TorrentDuplicationTargetSelectorWindow : VmWindow<TorrentDu
 
     public async void EvDropDownClosed(object sender, EventArgs e)
     {
-        await this.ViewModel!.ProviderChanged((DataProvider)((ComboBox)sender).SelectedItem);
+        await this.ViewModel!.ProviderChanged((RTSharpDataProvider)((ComboBox)sender).SelectedItem);
     }
 }
