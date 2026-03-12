@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 
 using RTSharp.Plugin;
@@ -77,7 +78,7 @@ namespace RTSharp.Views
             if (clipboardObj == null)
                 return;
 
-            var clipboard = await clipboardObj.GetTextAsync();
+            var clipboard = await clipboardObj.TryGetTextAsync();
             var textPreview = new TextPreviewWindow() {
                 DataContext = clipboard,
                 Title = "Clipboard preview"
@@ -93,7 +94,7 @@ namespace RTSharp.Views
                 return null;
             }
 
-            var clipboard = await clipboardObj.GetTextAsync();
+            var clipboard = await clipboardObj.TryGetTextAsync();
             return clipboard;
         }
     }

@@ -989,6 +989,59 @@ namespace RTSharp.Daemon.Services.transmission
             }
 
             await Client.Client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
+                IDs = TranslateObj([ InfoHash.ToByteArray() ]),
+                TrackerList = string.Join("\r\n", newTrackerList)
+            });
+
+            return new();
+        }
+
+        public async Task<Empty> AddTracker(ByteString InfoHash, string Tracker, CancellationToken CancellationToken)
+        {
+            await Client.Init();
+
+            var id = Translate(InfoHash.Span) ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent translation not found"));
+
+            var torrents = await Client.Client.TorrentGetAsync([ id ], [ TorrentFields.TRACKER_LIST ]);
+            var torrent = torrents?.Torrents.SingleOrDefault();
+
+            if (torrent == default) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
+            }
+
+            var newTrackerList = new List<string>(torrent.TrackerList!.Split([ "\r\n", "\n" ], StringSplitOptions.None)) {
+                Tracker
+            };
+
+            await Client.Client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
+                IDs = TranslateObj([ InfoHash.ToByteArray() ]),
+                TrackerList = string.Join("\r\n", newTrackerList)
+            });
+
+            return new();
+        }
+
+        public async Task<Empty> RemoveTracker(ByteString InfoHash, string Tracker, CancellationToken CancellationToken)
+        {
+            await Client.Init();
+
+            var id = Translate(InfoHash.Span) ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent translation not found"));
+
+            var torrents = await Client.Client.TorrentGetAsync([id], [TorrentFields.TRACKER_LIST]);
+            var torrent = torrents?.Torrents.SingleOrDefault();
+
+            if (torrent == default) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
+            }
+
+            var newTrackerList = new List<string>(torrent.TrackerList!.Split(["\r\n", "\n"], StringSplitOptions.None));
+
+            if (newTrackerList.RemoveAll(x => x == Tracker) == 0) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Tracker not found"));
+            }
+
+            await Client.Client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
+                IDs = TranslateObj([InfoHash.ToByteArray()]),
                 TrackerList = string.Join("\r\n", newTrackerList)
             });
 

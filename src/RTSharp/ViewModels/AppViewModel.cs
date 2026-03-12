@@ -51,8 +51,8 @@ namespace RTSharp.ViewModels
                 return;
             }
 
-            var upSpeed = (string)SIDataSpeedConverterInstance.Convert(TorrentPolling.Torrents.Items.Sum(x => (long)x.UPSpeed), typeof(string), null, CultureInfo.InvariantCulture);
-            var dlSpeed = (string)SIDataSpeedConverterInstance.Convert(TorrentPolling.Torrents.Items.Sum(x => (long)x.DLSpeed), typeof(string), null, CultureInfo.InvariantCulture);
+            var upSpeed = (string)SIDataSpeedConverterInstance.Convert(TorrentPolling.Torrents.Sum(x => (long)x.UPSpeed), typeof(string), null, CultureInfo.InvariantCulture);
+            var dlSpeed = (string)SIDataSpeedConverterInstance.Convert(TorrentPolling.Torrents.Sum(x => (long)x.DLSpeed), typeof(string), null, CultureInfo.InvariantCulture);
             TrayIconText = $"RT# - 🠉 {upSpeed} 🠋 {dlSpeed}";
         }
     }

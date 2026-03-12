@@ -22,7 +22,7 @@ public partial class PieceProgressBar : UserControl
             (o, v) => o.Pieces = v);
 
     /// <summary>
-    /// Gets or sets pieaces list
+    /// Gets or sets pieces list
     /// </summary>
     public IList<PieceState> Pieces {
         get { return _pieces; }

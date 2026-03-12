@@ -210,8 +210,6 @@ namespace RTSharp.ViewModels.TorrentListing
             try {
                 Dictionary<IPEndPoint, Peer>? previousPeers = null;
 
-                PeersViewModel.CurrentlySelectedTorrent = current;
-
                 while (!SelectionChange.IsCancellationRequested) {
                     using var scope = Core.ServiceProvider.CreateScope();
                     var config = scope.ServiceProvider.GetRequiredService<Config>();

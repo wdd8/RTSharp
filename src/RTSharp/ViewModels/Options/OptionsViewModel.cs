@@ -38,9 +38,9 @@ namespace RTSharp.ViewModels.Options
             CurrentlySelectedItem = Items[1];
         }
 
-        partial void OnCurrentlySelectedItemChanged(OptionsItem item)
+        partial void OnCurrentlySelectedItemChanged(OptionsItem value)
         {
-            this.SettingsContent = GetPage(item.Path);
+            this.SettingsContent = GetPage(value.Path);
         }
 
         public object? GetPage(string Path)

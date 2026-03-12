@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using RTSharp.Shared.Abstractions;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -55,13 +56,12 @@ namespace RTSharp.ViewModels.Statistics
 
         public async Task RefreshStats()
         {
-            var snap = Core.TorrentPolling.TorrentPolling.Torrents.Items.ToArray();
+            IReadOnlyCollection<Models.Torrent> snap = [.. Core.TorrentPolling.TorrentPolling.Torrents];
 
             var total = 0;
             ulong totalSeedingSize = 0, totalUploaded = 0, totalDownloaded = 0;
 
-            // Per-owner snapshot totals: key is the owner object (same as grouping key)
-            var perOwnerSnapshotTotals = new System.Collections.Generic.Dictionary<object, (ulong Uploaded, ulong Downloaded)>();
+            var perOwnerSnapshotTotals = new Dictionary<object, (ulong Uploaded, ulong Downloaded)>();
 
             foreach (var torrent in snap) {
                 total++;
@@ -88,21 +88,9 @@ namespace RTSharp.ViewModels.Statistics
                 ShareRatio = totalDownloaded == 0 ? 0f : (float)totalUploaded / totalDownloaded;
             });
 
-            // Log per-owner snapshot totals
-            foreach (var kv in perOwnerSnapshotTotals) {
-                var ownerKey = kv.Key;
-                var up = kv.Value.Uploaded;
-                var dl = kv.Value.Downloaded;
-                try {
-                    Debug.WriteLine($"[Stats][Snapshot][Owner:{ownerKey}] UP={up} DL={dl}");
-                } catch {
-                    // Swallow any logging exceptions to avoid breaking stats refresh
-                }
-            }
-
             var owners = snap.GroupBy(x => x.DataOwner).ToArray();
 
-            if (owners.Count() != owners.Count(x => x.Key.Instance.Stats.Capabilities.GetAllTimeDataStats) && !SomeDontSupport) {
+            if (owners.Length != owners.Count(x => x.Key.Instance.Stats.Capabilities.GetAllTimeDataStats) && !SomeDontSupport) {
                 await Dispatcher.UIThread.InvokeAsync(() => {
                     SomeDontSupport = true;
                 });
@@ -131,17 +119,6 @@ namespace RTSharp.ViewModels.Statistics
                 }
                 AllTimeShareRatio = AllTimeDownload == 0 ? 0f : (float)AllTimeUpload / AllTimeDownload;
             });
-
-            // Log per-owner all-time totals; owners and allTimeStats preserve order from Select/WhenAll
-            for (int i = 0; i < owners.Length && i < allTimeStats.Length; i++) {
-                var owner = owners[i].Key;
-                var stats = allTimeStats[i];
-                try {
-                    Debug.WriteLine($"[Stats][AllTime][Owner:{owner}] UP={stats.BytesUploaded} DL={stats.BytesDownloaded}");
-                } catch {
-                    // Ignore logging errors
-                }
-            }
         }
     }
 }

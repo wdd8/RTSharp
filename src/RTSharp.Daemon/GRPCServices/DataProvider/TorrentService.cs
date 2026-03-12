@@ -207,5 +207,27 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
+
+        public override async Task<Empty> AddTracker(SingleTrackerArgs Req, ServerCallContext Ctx)
+        {
+            var dp = RegisteredDataProviders.GetDataProvider(Ctx);
+            return dp.Type switch {
+                DataProviderType.rtorrent => throw new RpcException(new Grpc.Core.Status(StatusCode.Unimplemented, "")),//await dp.Resolve<Services.rtorrent.Grpc>().AddTracker(Req.InfoHash, Req.Tracker, Ctx.CancellationToken),
+                DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().AddTracker(Req.InfoHash, Req.Tracker, Ctx.CancellationToken),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().AddTracker(Req.InfoHash, Req.Tracker, Ctx.CancellationToken),
+                _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
+            };
+        }
+
+        public override async Task<Empty> RemoveTracker(SingleTrackerArgs Req, ServerCallContext Ctx)
+        {
+            var dp = RegisteredDataProviders.GetDataProvider(Ctx);
+            return dp.Type switch {
+                DataProviderType.rtorrent => throw new RpcException(new Grpc.Core.Status(StatusCode.Unimplemented, "")),//await dp.Resolve<Services.rtorrent.Grpc>().RemoveTracker(Req.InfoHash, Req.Tracker, Ctx.CancellationToken),
+                DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().RemoveTracker(Req.InfoHash, Req.Tracker, Ctx.CancellationToken),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().RemoveTracker(Req.InfoHash, Req.Tracker, Ctx.CancellationToken),
+                _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
+            };
+        }
     }
 }

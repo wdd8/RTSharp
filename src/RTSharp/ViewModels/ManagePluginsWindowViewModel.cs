@@ -34,7 +34,7 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
 
     public ManagePluginsWindowViewModel()
     {
-        UnloadedPluginDirs.AddRange(Plugins.ListUnloadedPluginDirs().Select(Path.GetFileName));
+        UnloadedPluginDirs.AddRange(Plugins.ListUnloadedPluginDirs().Select(x => Path.GetFileName(x)!));
     }
 
     public bool CanExecuteLoad() => !String.IsNullOrEmpty(SelectedUnloadedDir);

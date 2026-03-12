@@ -1,26 +1,26 @@
 ﻿using Avalonia.Controls;
+using Avalonia.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-using MsBox.Avalonia.Enums;
-
 using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
+using MsBox.Avalonia.Models;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Policy;
 using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using System.Security.Cryptography;
 using System.Threading;
-using Avalonia.Threading;
-using MsBox.Avalonia.Models;
+using System.Threading.Tasks;
 
 namespace RTSharp.Core.Services.Daemon
 {
@@ -73,11 +73,10 @@ namespace RTSharp.Core.Services.Daemon
 
         public static void AddDaemonServices(this IServiceCollection services, Dictionary<string, Config.Models.Server> servers)
         {
-            var publicPem = File.ReadAllText(CertPath);
-            var privatePem = File.ReadAllText(KeyPath);
-            var x509 = X509Certificate2.CreateFromPem(publicPem, privatePem);
+            var x509 = X509Certificate2.CreateFromPemFile(CertPath, KeyPath);
+            var pkcs12 = X509CertificateLoader.LoadPkcs12(x509.Export(X509ContentType.Pkcs12), null);
 
-            void register<T>(string name, Config.Models.Server server)
+            void register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(string name, Config.Models.Server server)
                 where T : class
             {
                 services
@@ -90,7 +89,7 @@ namespace RTSharp.Core.Services.Daemon
                     .ConfigurePrimaryHttpMessageHandler((provider) => {
                         var handler = new SocketsHttpHandler();
                         handler.SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
-                            ClientCertificates = [ new X509Certificate2(x509.Export(X509ContentType.Pkcs12)) ],
+                            ClientCertificates = [ pkcs12 ],
 
                             RemoteCertificateValidationCallback = (httpRequestMessage, cert, certChain, policyErrors) => {
                                 if (server.VerifyNative ?? true) {

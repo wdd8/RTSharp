@@ -22,7 +22,8 @@ namespace RTSharp.ViewModels.TorrentListing
     {
         public ObservableCollection<Peer> Peers { get; } = new();
 
-        public Models.Torrent CurrentlySelectedTorrent { get; set; }
+        [ObservableProperty]
+        public partial Models.Torrent Torrent { get; set; }
 
         static readonly FrozenDictionary<string, Func<DataProviderPeerCapabilities, bool>> StrToCap = new Dictionary<string, Func<DataProviderPeerCapabilities, bool>>() {
             { "Add peers", x => x.AddPeer },
@@ -36,7 +37,7 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             Debug.Assert(StrToCap.ContainsKey(Action));
 
-            return StrToCap[Action](CurrentlySelectedTorrent.DataOwner.Instance.Peer.Capabilities);
+            return StrToCap[Action](Torrent.DataOwner.Instance.Peer.Capabilities);
         }
 
         public bool CanExecuteAddPeers() => CanExecuteAction("Add peers");

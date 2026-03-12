@@ -61,6 +61,20 @@
                 </Button>
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
+	<dialogHost:DialogHost Name="DialogHostAddNew" Identifier="AddNewTrackerHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
+        <dialogHost:DialogHost.DialogContent>
+            <StackPanel>
+                <TextBlock FontWeight="Bold">Add new tracker</TextBlock>
+                <TextBox Name="AddNewTrackerText" />
+                <Button
+                    Margin="0 -6 0 -7"
+                    Width="0"
+                    IsDefault="True"
+                    Command="{Binding AddNewTrackerCommand}"
+					CommandParameter="{Binding #AddNewTrackerText.Text}"
+                />
+            </StackPanel>
+        </dialogHost:DialogHost.DialogContent>
 
         <DataGrid Name="grid"
                       ItemsSource="{Binding Trackers}"
@@ -73,8 +87,7 @@
             <DataGrid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Add a new tracker..."
-                              Command="{Binding AddNewTrackerCommand}"
-                              CommandParameter="{Binding #grid.SelectedItems}"
+                              Command="{Binding #DialogHostAddNew.OpenDialogCommand}"
                     />
                     <Separator />
                     <MenuItem Header="Enable"
@@ -134,5 +147,6 @@
             </DataGrid.Columns>
         </DataGrid>
     </dialogHost:DialogHost>
+	</dialogHost:DialogHost>
 	</dialogHost:DialogHost>
 </UserControl>

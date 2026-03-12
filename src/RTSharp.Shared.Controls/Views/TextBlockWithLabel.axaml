@@ -10,7 +10,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate>
-                        <StackPanel Orientation="Horizontal">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
                             <TextBlock Text="{TemplateBinding Label, Mode=OneWay}" Margin="0 0 4 0" />
                             <TextBlock Text="{TemplateBinding Text}" />
                         </StackPanel>

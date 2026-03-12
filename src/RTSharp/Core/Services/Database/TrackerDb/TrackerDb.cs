@@ -57,6 +57,8 @@ namespace RTSharp.Core.Services.Cache.TrackerDb
             return d;
         }
 
+        //https://github.com/DapperLib/DapperAOT/issues/160
+        [DapperAot(false)]
         public async Task<IEnumerable<TrackerInfo>> GetTrackerInfo(IEnumerable<string> Domain)
         {
             await using var conn = await New();

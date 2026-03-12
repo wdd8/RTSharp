@@ -2,6 +2,7 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:dgh="using:Avalonia.Controls.DataGridHierarchical"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
@@ -16,29 +17,47 @@
         <torrentListing:TorrentFilesViewModel />
     </Design.DataContext>
 
-    <TreeDataGrid
-        Source="{Binding Source}"
-        CanUserResizeColumns="True"
-        CanUserSortColumns="True"
+    <DataGrid
+		AutoGenerateColumns="False"
+		HierarchicalModel="{Binding Model}"
+		HierarchicalRowsEnabled="True"
+        ColumnDefinitionsSource="{Binding ColumnDefinitions}"
+		SelectionMode="Extended"
+		UseLogicalScrollable="True"
+		HeadersVisibility="All"
+		IsReadOnly="True"
+        CanUserAddRows="False"
+		CanUserDeleteRows="False"
+		CanUserHideColumns="True"
+		CanUserPaste="False"
+		CanUserReorderColumns="True"
+		CanUserReorderRows="False"
+		CanUserResizeColumns="True"
+		CanUserSortColumns="True"
     >
-        <TreeDataGrid.Resources>
-            <DataTemplate x:Key="SizeCell" DataType="models:File">
-                <TextBlock Text="{Binding Size, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
+        <DataGrid.Resources>
+			<DataTemplate x:Key="FileNameTemplate" x:DataType="models:File">
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+		      </StackPanel>
             </DataTemplate>
-            <DataTemplate x:Key="DownloadedCell" DataType="models:File">
-                <TextBlock Text="{Binding Downloaded, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
+            <DataTemplate x:Key="FileSizeTemplate" x:DataType="dgh:HierarchicalNode">
+                <TextBlock Text="{Binding ((models:File)Item).Size, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
             </DataTemplate>
-            <DataTemplate x:Key="DoneCell" DataType="models:File">
-                <ProgressBar Value="{Binding Done, Mode=OneWay}" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" Minimum="0" Maximum="100" VerticalAlignment="Stretch" />
+            <DataTemplate x:Key="FileDownloadedTemplate" x:DataType="dgh:HierarchicalNode">
+                <TextBlock Text="{Binding ((models:File)Item).Downloaded, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
             </DataTemplate>
-        </TreeDataGrid.Resources>
-        <TreeDataGrid.ContextMenu>
+            <DataTemplate x:Key="FileDoneTemplate" x:DataType="dgh:HierarchicalNode">
+                <ProgressBar Value="{Binding ((models:File)Item).Done}" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" Minimum="0" Maximum="100" VerticalAlignment="Stretch" />
+            </DataTemplate>
+        </DataGrid.Resources>
+        <DataGrid.ContextMenu>
             <ContextMenu>
                 <MenuItem Header="_Mediainfo"
                           Command="{Binding MediaInfoCommand}"
-                          CommandParameter="{Binding Source.RowSelection.SelectedItems}"
+                          CommandParameter="{Binding}"
                         />
             </ContextMenu>
-        </TreeDataGrid.ContextMenu>
-    </TreeDataGrid>
+        </DataGrid.ContextMenu>
+    </DataGrid>
 </UserControl>

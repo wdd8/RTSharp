@@ -913,5 +913,31 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 ShareRatio = (float)stats.ServerState.AllTimeDownloaded.Value / stats.ServerState.AllTimeDownloaded.Value
             };
         }
+
+        public async Task<Empty> AddTracker(ByteString InfoHash, string Tracker, CancellationToken cancellationToken)
+        {
+            await Client.Init();
+
+            if (!Uri.TryCreate(Tracker, UriKind.Absolute, out var tracker)) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "Tracker is not an Uri"));
+            }
+
+            await Client.Client.AddTrackerAsync(Convert.ToHexString(InfoHash.Span), tracker, cancellationToken);
+
+            return new();
+        }
+
+        public async Task<Empty> RemoveTracker(ByteString InfoHash, string Tracker, CancellationToken cancellationToken)
+        {
+            await Client.Init();
+
+            if (!Uri.TryCreate(Tracker, UriKind.Absolute, out var tracker)) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "Tracker is not an Uri"));
+            }
+
+            await Client.Client.DeleteTrackerAsync(Convert.ToHexString(InfoHash.Span), tracker, cancellationToken);
+
+            return new();
+        }
     }
 }

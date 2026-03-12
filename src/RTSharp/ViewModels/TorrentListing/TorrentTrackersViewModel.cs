@@ -35,7 +35,8 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public TorrentListingViewModel Parent { get; init; }
 
-        public Models.Torrent CurrentlySelectedTorrent { get; set; }
+        [ObservableProperty]
+        public partial Models.Torrent Torrent { get; set; }
 
         public TorrentTrackersViewModel()
         {
@@ -59,14 +60,20 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             Debug.Assert(StrToCap.ContainsKey(Action));
 
-            return StrToCap[Action](CurrentlySelectedTorrent.DataOwner.Instance.Tracker.Capabilities);
+            return StrToCap[Action](Torrent.DataOwner.Instance.Tracker.Capabilities);
         }
 
         public bool CanExecuteAddNewTracker() => CanExecuteAction("Add new tracker");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddNewTracker))]
-        public async Task AddNewTracker(IList In)
+        public async Task AddNewTracker(string Text)
         {
-
+            try {
+                await Torrent.DataOwner.Instance.Tracker.AddNewTracker(Torrent.ToPluginModel(), Text);
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, "Adding new tracker failed");
+            } finally {
+                DialogHost.GetDialogSession("AddNewTrackerHost")!.Close(false);
+            }
         }
 
         public bool CanExecuteEnable() => CanExecuteAction("Enable");
@@ -87,7 +94,18 @@ namespace RTSharp.ViewModels.TorrentListing
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteRemove))]
         public async Task Remove(IList In)
         {
+            var trackers = In.Cast<Models.Tracker>().ToArray();
 
+            if (trackers.Length != 1)
+                return;
+
+            var oldTracker = trackers[0].Uri;
+
+            try {
+                await Torrent.DataOwner.Instance.Tracker.RemoveTracker(Torrent.ToPluginModel(), oldTracker);
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, "Removing tracker failed");
+            }
         }
 
         public bool CanExecuteReannounce() => CanExecuteAction("Reannounce");
@@ -185,7 +203,7 @@ namespace RTSharp.ViewModels.TorrentListing
             var oldTracker = trackers[0].Uri;
 
             try {
-                await CurrentlySelectedTorrent.DataOwner.Instance.Tracker.ReplaceTracker(CurrentlySelectedTorrent.ToPluginModel(), oldTracker, In.Text);
+                await Torrent.DataOwner.Instance.Tracker.ReplaceTracker(Torrent.ToPluginModel(), oldTracker, In.Text);
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Replacing tracker failed");
             } finally {

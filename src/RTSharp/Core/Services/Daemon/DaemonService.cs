@@ -10,24 +10,34 @@ using Microsoft.Extensions.Hosting;
 using RTSharp.Daemon.Protocols;
 using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Daemon;
+using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Utils;
+
+using Serilog;
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using RTSharp.Shared.Abstractions.Daemon;
-using ScriptProgressState = RTSharp.Shared.Abstractions.ScriptProgressState;
-using Serilog;
-using System.Threading.Channels;
 using System.Security.Cryptography;
-using RTSharp.Shared.Abstractions.DataProvider;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Channels;
+using System.Threading.Tasks;
+
+using ScriptProgressState = RTSharp.Shared.Abstractions.ScriptProgressState;
 
 namespace RTSharp.Core.Services.Daemon;
+
+record RequestReceivePaths(string StorePath, string RemoteSourcePath, ulong TotalSize);
+
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(RequestReceivePaths))]
+internal partial class RequestReceivePathsContext : JsonSerializerContext { }
 
 public class DaemonService : IDaemonService
 {
@@ -86,8 +96,6 @@ public class DaemonService : IDaemonService
     {
         await ServerClient.TestAsync(new Empty(), cancellationToken: cancellationToken);
     }
-
-    record Path(string StorePath, string RemoteSourcePath, ulong TotalSize);
 
     public async Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, Action<(string File, float Progress)> Progress)
     {
@@ -150,7 +158,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             Name = "RequstReceiveFiles",
             Variables = {
                 { "Uri", senderServer.ToString() },
-                { "Paths", JsonSerializer.Serialize(Paths.Select(x => new Path(x.StoreTo, x.RemoteSource, x.TotalSize))) }
+                { "Paths", JsonSerializer.Serialize(Paths.Select(x => new RequestReceivePaths(x.StoreTo, x.RemoteSource, x.TotalSize)), RequestReceivePathsContext.Default.RequestReceivePaths) }
             }
         });
 
@@ -368,7 +376,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         });
     }
 
-    public T GetGrpcService<T>()
+    public T GetGrpcService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>()
         where T : ClientBase<T>
     {
         using var scope = Core.ServiceProvider.CreateScope();

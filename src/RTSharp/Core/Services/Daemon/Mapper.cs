@@ -1,5 +1,7 @@
 ﻿using Avalonia.Threading;
 
+using Ben.Collections.Specialized;
+
 using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Utils;
 
@@ -88,7 +90,7 @@ public static class Mapper
                 DLSpeed = In.DLSpeed,
                 UPSpeed = In.UPSpeed,
                 ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
-                Labels = In.Labels.Select(StringCache.Reuse).ToHashSet(),
+                Labels = In.Labels.Select(StringCache.Intern).ToHashSet(),
                 Peers = (In.PeersConnected, In.PeersTotal),
                 Seeders = (In.SeedersConnected, In.SeedersTotal),
                 Priority = MapFromProto(In.Priority),
@@ -98,9 +100,9 @@ public static class Mapper
                 TimeElapsed = (In.FinishedOn == null || In.FinishedOn.ToDateTime() == DateTime.UnixEpoch) ? DateTime.UtcNow - In.AddedOn.ToDateTime() : In.FinishedOn.ToDateTime() - In.AddedOn.ToDateTime(),
                 AddedOnDate = In.AddedOn.ToDateTime(),
                 TrackerSingle = In.PrimaryTracker == null ? null : In.PrimaryTracker.Uri,
-                StatusMessage = StringCache.Reuse(In.StatusMessage),
-                Comment = StringCache.Reuse(In.Comment),
-                RemotePath = StringCache.Reuse(In.RemotePath),
+                StatusMessage = StringCache.Intern(In.StatusMessage),
+                Comment = StringCache.Intern(In.Comment),
+                RemotePath = StringCache.Intern(In.RemotePath),
                 MagnetDummy = In.MagnetDummy
             };
         } catch {
@@ -126,7 +128,7 @@ public static class Mapper
             DLSpeed = In.DLSpeed,
             UPSpeed = In.UPSpeed,
             ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
-            Labels = In.Labels.Select(StringCache.Reuse).ToHashSet(),
+            Labels = In.Labels.Select(StringCache.Intern).ToHashSet(),
             Peers = (In.PeersConnected, In.PeersTotal),
             Seeders = (In.SeedersConnected, In.SeedersTotal),
             Priority = MapFromProto(In.Priority),
@@ -136,9 +138,9 @@ public static class Mapper
             TimeElapsed = DateTime.UtcNow - Torrent.AddedOnDate,
             AddedOnDate = Torrent.AddedOnDate,
             TrackerSingle = In.PrimaryTracker != null ? In.PrimaryTracker.Uri : null,
-            StatusMessage = StringCache.Reuse(In.StatusMessage),
-            Comment = StringCache.Reuse(Torrent.Comment),
-            RemotePath = StringCache.Reuse(In.RemotePath),
+            StatusMessage = StringCache.Intern(In.StatusMessage),
+            Comment = StringCache.Intern(Torrent.Comment),
+            RemotePath = StringCache.Intern(In.RemotePath),
             MagnetDummy = In.MagnetDummy
         };
     }
@@ -157,21 +159,21 @@ public static class Mapper
             Torrent.DLSpeed = In.DLSpeed;
             Torrent.UPSpeed = In.UPSpeed;
             Torrent.ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan();
-            Torrent.Labels = In.Labels.Select(StringCache.Reuse).ToArray();
+            Torrent.SetLabels([.. In.Labels.Select(StringCache.Intern)]);
             Torrent.Peers = new(In.PeersConnected, In.PeersTotal);
             Torrent.Seeders = new(In.SeedersConnected, In.SeedersTotal);
-            Torrent.Priority = Shared.Abstractions.EnumExt.ToString(MapFromProto(In.Priority));
+            Torrent.Priority = StringCache.Intern(Shared.Abstractions.EnumExt.ToString(MapFromProto(In.Priority)));
             Torrent.RemainingSize = Torrent.WantedSize - In.CompletedSize;
             Torrent.FinishedOnDate = null;
             Torrent.TimeElapsed = DateTime.UtcNow - Torrent.AddedOnDate;
             var oldTracker = Torrent.TrackerSingle;
-            Torrent.TrackerSingle = In.PrimaryTracker != null ? In.PrimaryTracker.Uri : null;
+            Torrent.TrackerSingle = In.PrimaryTracker != null ? StringCache.Intern(In.PrimaryTracker.Uri) : null;
             if (oldTracker != Torrent.TrackerSingle) {
                 Torrent.TrackerDisplayName = null;
                 Torrent.TrackerIcon = null;
             }
-            Torrent.StatusMsg = StringCache.Reuse(In.StatusMessage);
-            Torrent.RemotePath = StringCache.Reuse(In.RemotePath);
+            Torrent.StatusMsg = StringCache.Intern(In.StatusMessage);
+            Torrent.RemotePath = StringCache.Intern(In.RemotePath);
             Torrent.MagnetDummy = In.MagnetDummy;
         });
     }
@@ -194,7 +196,7 @@ public static class Mapper
             DLSpeed = Torrent.DLSpeed,
             UPSpeed = In.UPSpeed,
             ETA = Torrent.ETA,
-            Labels = In.Labels.Select(StringCache.Reuse).ToHashSet(),
+            Labels = In.Labels.Select(StringCache.Intern).ToHashSet(),
             Peers = (In.PeersConnected, In.PeersTotal),
             Seeders = (Torrent.Seeders.Connected, In.SeedersTotal),
             Priority = MapFromProto(In.Priority),
@@ -203,10 +205,10 @@ public static class Mapper
             FinishedOnDate = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : In.FinishedOn.ToDateTime(),
             TimeElapsed = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? TimeSpan.Zero : In.FinishedOn.ToDateTime() - Torrent.AddedOnDate,
             AddedOnDate = Torrent.AddedOnDate,
-            TrackerSingle = In.PrimaryTracker != null ? In.PrimaryTracker.Uri : null,
-            StatusMessage = StringCache.Reuse(In.StatusMessage),
-            Comment = StringCache.Reuse(Torrent.Comment),
-            RemotePath = StringCache.Reuse(In.RemotePath),
+            TrackerSingle = In.PrimaryTracker != null ? StringCache.Intern(In.PrimaryTracker.Uri) : null,
+            StatusMessage = StringCache.Intern(In.StatusMessage),
+            Comment = StringCache.Intern(Torrent.Comment),
+            RemotePath = StringCache.Intern(In.RemotePath),
             MagnetDummy = Torrent.MagnetDummy
         };
     }
@@ -220,20 +222,20 @@ public static class Mapper
             Torrent.WantedSize = In.WantedSize;
             Torrent.Uploaded = In.Uploaded;
             Torrent.UPSpeed = In.UPSpeed;
-            Torrent.Labels = In.Labels.Select(StringCache.Reuse).ToArray();
+            Torrent.SetLabels([.. In.Labels.Select(StringCache.Intern)]);
             Torrent.Peers = new(In.PeersConnected, In.PeersTotal);
             Torrent.Seeders = new(Torrent.Seeders.Connected, In.SeedersTotal);
             Torrent.Priority = Shared.Abstractions.EnumExt.ToString(MapFromProto(In.Priority));
             Torrent.FinishedOnDate = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : In.FinishedOn.ToDateTime();
             Torrent.TimeElapsed = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? TimeSpan.Zero : In.FinishedOn.ToDateTime() - Torrent.AddedOnDate;
             var oldTracker = Torrent.TrackerSingle;
-            Torrent.TrackerSingle = In.PrimaryTracker != null ? In.PrimaryTracker.Uri : null;
+            Torrent.TrackerSingle = In.PrimaryTracker != null ? StringCache.Intern(In.PrimaryTracker.Uri) : null;
             if (oldTracker != Torrent.TrackerSingle) {
                 Torrent.TrackerDisplayName = null;
                 Torrent.TrackerIcon = null;
             }
-            Torrent.StatusMsg = StringCache.Reuse(In.StatusMessage);
-            Torrent.RemotePath = StringCache.Reuse(In.RemotePath);
+            Torrent.StatusMsg = StringCache.Intern(In.StatusMessage);
+            Torrent.RemotePath = StringCache.Intern(In.RemotePath);
         });
     }
 

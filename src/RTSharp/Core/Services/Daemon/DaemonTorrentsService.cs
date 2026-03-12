@@ -83,7 +83,7 @@ namespace RTSharp.Core.Services.Daemon
                                 throw;
                             }
                         });
-                        changes.AddRange(incomplete.Where(x => x != null));
+                        changes.AddRange(incomplete.Where(x => x != null)!);
 
                         var complete = update.Complete.Select(x => {
                             var hash = x.Hash.ToByteArray();
@@ -99,12 +99,12 @@ namespace RTSharp.Core.Services.Daemon
                                 throw;
                             }
                         });
-                        changes.AddRange(complete.Where(x => x != null));
+                        changes.AddRange(complete.Where(x => x != null)!);
 
                         fullUpdate.AddRange([ ..update.FullUpdate.Select(x => Mapper.MapFromProto(x, DataProvider.Instance)) ]);
 
                         if (changes.Count != 0 || fullUpdate.Count != 0 || update.Removed.Count != 0)
-                            await channel.Writer.WriteAsync(new ListingChanges<Shared.Abstractions.Torrent, T, byte[]>(fullUpdate, changes, update.Removed.Select(x => x.ToByteArray())), CancellationToken);
+                            await channel.Writer.WriteAsync(new ListingChanges<Shared.Abstractions.Torrent, T, byte[]>(fullUpdate, changes, [.. update.Removed.Select(x => x.ToByteArray())]), CancellationToken);
                     }
 
                     channel.Writer.Complete();
@@ -123,7 +123,7 @@ namespace RTSharp.Core.Services.Daemon
         {
             var ret = new TorrentStatuses();
             foreach (var torrent in In.Torrents) {
-                ret.Add((torrent.InfoHash.ToByteArray(), torrent.Status.Select(x => x.FaultCode is null or "0" ? null : new Exception(x.Command + ": Code " + x.FaultCode + " - " + x.FaultString)).Where(x => x != null).ToList()));
+                ret.Add((torrent.InfoHash.ToByteArray(), torrent.Status.Select(x => x.FaultCode is null or "0" ? null : new Exception(x.Command + ": Code " + x.FaultCode + " - " + x.FaultString)).Where(x => x != null).ToList()!));
             }
             
             return ret;
@@ -459,6 +459,22 @@ namespace RTSharp.Core.Services.Daemon
                 InfoHash = Hash.ToByteString(),
                 Existing = Existing,
                 New = New
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        }
+
+        public async Task AddNewTracker(byte[] Hash, string New, CancellationToken cancellationToken)
+        {
+            await TorrentClient.AddTrackerAsync(new SingleTrackerArgs {
+                InfoHash = Hash.ToByteString(),
+                Tracker = New
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        }
+
+        public async Task RemoveTracker(byte[] Hash, string Existing, CancellationToken cancellationToken)
+        {
+            await TorrentClient.RemoveTrackerAsync(new SingleTrackerArgs {
+                InfoHash = Hash.ToByteString(),
+                Tracker = Existing
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
         }
     }

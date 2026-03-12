@@ -72,15 +72,15 @@ public partial class TorrentListingViewModel
 
     bool CanExecuteAction(string Action)
     {
-        var dps = CurrentlySelectedItems.Items.GroupBy(x => x.DataOwner).DistinctBy(x => x.Key.PluginInstance.Instance.GUID).Select(x => x.Key);
+        var dps = SelectedItems.GroupBy(x => x.DataOwner).DistinctBy(x => x.Key.PluginInstance.Instance.GUID).Select(x => x.Key);
         bool startTorrentCap = dps.All(x => x.Instance.Capabilities.StartTorrent);
         bool pauseTorrentCap = dps.All(x => x.Instance.Capabilities.PauseTorrent);
         bool stopTorrentCap = dps.All(x => x.Instance.Capabilities.StopTorrent);
 
         Debug.Assert(StrToCap.ContainsKey(Action));
 
-        if (CurrentlySelectedItems.Count == 1) {
-            var currentlySelectedTorrent = (Torrent)CurrentlySelectedItems.Items[0]!;
+        if (SelectedItems.Count == 1) {
+            var currentlySelectedTorrent = SelectedItems[0];
             return Action switch {
                 "Start" => currentlySelectedTorrent.InternalState != TORRENT_STATE.DOWNLOADING &&
                             currentlySelectedTorrent.InternalState != TORRENT_STATE.SEEDING &&
@@ -250,18 +250,18 @@ public partial class TorrentListingViewModel
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteRemoveTorrentsAndData))]
     public async Task RemoveTorrentsAndData(IReadOnlyList<Torrent> In)
     {
-        var serverIds = In.Select(x => x.DataOwner.DataProviderInstanceConfig.ServerId).Distinct();
+        var serverIds = In.Select(x => x.DataOwner.DataProviderInstanceConfig!.ServerId).Distinct();
 
         var references = new InfoHashDictionary<Torrent[]>();
-        var allTorrents = TorrentPolling.Torrents.Items.Where(x => {
-            var selectedOnly = In.Where(i => i.Hash.SequenceEqual(x.Hash)).Select(x => x.DataOwner.DataProviderInstanceConfig.ServerId);
+        var allTorrents = TorrentPolling.Torrents.Where(x => {
+            var selectedOnly = In.Where(i => i.Hash.SequenceEqual(x.Hash)).Select(x => x.DataOwner.DataProviderInstanceConfig!.ServerId);
             
-            return selectedOnly.Contains(x.DataOwner.DataProviderInstanceConfig.ServerId);
+            return selectedOnly.Contains(x.DataOwner.DataProviderInstanceConfig!.ServerId);
         }).ToImmutableArray();
         bool multiReference = false;
 
         foreach (var torrentGroup in allTorrents.GroupBy(x => x.Hash, new HashEqualityComparer())) {
-            var found = torrentGroup.GroupBy(x => x.DataOwner.DataProviderInstanceConfig.ServerId + "_" + x.RemotePath).Where(x => x.Count() > 1);
+            var found = torrentGroup.GroupBy(x => x.DataOwner.DataProviderInstanceConfig!.ServerId + "_" + x.RemotePath).Where(x => x.Count() > 1);
             foreach (var torrentsInServer in found) {
 
                 if (torrentsInServer.Select(x => x.DataOwner.PluginInstance.InstanceId).Except(In.Where(x => x.Hash.SequenceEqual(torrentGroup.Key)).Select(x => x.DataOwner.PluginInstance.InstanceId)).Count() != 0) {

@@ -1,26 +1,38 @@
-using System;
-using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Data;
+using Avalonia.Markup.Xaml.MarkupExtensions;
+using Avalonia.Markup.Xaml.MarkupExtensions.CompiledBindings;
 using Avalonia.Media;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 
-using RTSharp.ViewModels;
-using RTSharp.ViewModels.TorrentListing;
+using CommunityToolkit.Mvvm.Input;
 
-using System.Threading.Tasks;
 using DialogHostAvalonia;
-using RTSharp.Shared.Utils;
-using Torrent = RTSharp.Models.Torrent;
+
+using Microsoft.Extensions.DependencyInjection;
+
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
-using Avalonia;
-using Microsoft.Extensions.DependencyInjection;
-using Avalonia.Controls.Primitives;
-using Avalonia.Controls.Models.TreeDataGrid;
-using System.Collections.ObjectModel;
-using System.Reactive.Linq;
-using Avalonia.Data;
-using RTSharp.Views.Util;
+
+using System.Reactive;
+
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Utils;
+using RTSharp.ViewModels;
+using RTSharp.ViewModels.TorrentListing;
+using RTSharp.Views.Util;
+
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Reactive.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Torrent = RTSharp.Models.Torrent;
 
 namespace RTSharp.Views.TorrentListing;
 
@@ -44,8 +56,16 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             vm!.SelectRemoteDirectoryDialog = ShowSelectRemoteDirectoryDialog;
             vm!.ShowAddLabelDialog = ShowAddLabelDialog;
             vm!.CloseAddLabelDialog = CloseAddLabelDialog;
-            vm!.OnViewModelAttached(this);
+            vm!.CaptureGridState = CaptureGridState;
+            vm!.ScrollToItem = grid_ScrollToItem;
         }, null);
+
+        grid.Initialized += (sender, e) => {
+            using var scope = Core.ServiceProvider.CreateScope();
+            var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
+
+            RestoreGridState(config.UIState.Value.TorrentGridState);
+        };
 
         MenuItemInserts.CollectionChanged += MenuItemInserts_CollectionChanged;
         HandleInserts(MenuItemInserts);
@@ -56,8 +76,75 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         using var scope = Core.ServiceProvider.CreateScope();
         var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
 
-        RowHeight = config.Look.Value.TorrentListing?.RowHeight ?? 32;
+        grid.TemplateApplied += (_, __) => {
+            var scrollViewer = grid.FindDescendantOfType<ScrollViewer>();
+            if (scrollViewer != null) {
+                scrollViewer.VerticalSnapPointsType = SnapPointsType.MandatorySingle;
+                scrollViewer.VerticalSnapPointsAlignment = SnapPointsAlignment.Near;
+            }
+        };
+        grid.CopyingRowClipboardContent += (_, e) => ViewModel!.EvCopyingRowClipboardContent(e);
+
+        RowHeight = config.Look.Value.TorrentListing?.RowHeight ?? 20;
+        grid.RowHeight = RowHeight;
     }
+
+    private void grid_ScrollToItem(object item)
+    {
+        grid.SelectedItem = item;
+        grid.ScrollIntoView(item, null);
+    }
+
+    private string? CaptureGridState()
+    {
+        string? serialized = null;
+        var @lock = new ManualResetEvent(false);
+        var stateOpts = new DataGridStateOptions { };
+
+        Dispatcher.UIThread.Invoke(() => {
+            try {
+                serialized = DataGridStatePersistence.SerializeStateToString(
+                    grid,
+                    DataGridStateSections.Columns | DataGridStateSections.Sorting | DataGridStateSections.Filtering /*| DataGridStateSections.Grouping TODO: */,
+                    stateOpts,
+                    new SystemTextJsonDataGridStateSerializer(),
+                    new DataGridStatePersistenceOptions {
+                        TokenProvider = new TorrentListingViewModel.DataGridStatePersistenceTokenProvider()
+                    }
+                );
+            } catch { }
+            @lock.Set();
+        });
+
+        @lock.WaitOne();
+        return serialized;
+    }
+
+    private void RestoreGridState(string In)
+    {
+        try {
+            DataGridStatePersistence.RestoreStateFromString(
+                grid,
+                In,
+                DataGridStateSections.Columns | DataGridStateSections.Sorting | DataGridStateSections.Filtering /*| DataGridStateSections.Grouping TODO: */,
+                new DataGridStateOptions { },
+                new SystemTextJsonDataGridStateSerializer(),
+                new DataGridStatePersistenceOptions {
+                    TokenResolver = new TorrentListingViewModel.DataGridStatePersistenceTokenResolver()
+                }
+            );
+
+            ViewModel!.PostGridStateRestore();
+        } catch { }
+    }
+
+    public void StateFilterFlyoutOpening(object? sender, EventArgs e) => ViewModel!.StateFilterFlyoutOpening();
+
+    public void LabelsFilterFlyoutOpening(object? sender, EventArgs e) => ViewModel!.LabelsFilterFlyoutOpening();
+
+    public void ConnectionFilterFlyoutOpening(object? sender, EventArgs e) => ViewModel!.ConnectionFilterFlyoutOpening();
+
+    public void TrackerFilterFlyoutOpening(object? sender, EventArgs e) => ViewModel!.TrackerFilterFlyoutOpening();
 
     private void MenuItemInserts_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
@@ -78,10 +165,10 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         if (this.Resources.TryGetResource("GridContextMenuItems", null, out var obj) && obj is System.Collections.IList list) {
             foreach (var fx in List.OfType<Func<System.Collections.IList, MenuItem>>()) {
                 var menuItem = fx(list);
-                menuItem.Bind(MenuItem.CommandParameterProperty, new Binding("RowSelection.SelectedItems") {
-                    Source = grid,
-                    Mode = BindingMode.OneWay,
-                    Converter = SelectedItemsToPluginModelConverter.Instance
+
+                var oldCommand = menuItem.Command;
+                menuItem.Command = new RelayCommand(() => {
+                    oldCommand.Execute(SelectedItemsToPluginModelConverter.Instance.Convert(grid.SelectedItems, null!, null, null!));
                 });
             }
         }
@@ -111,7 +198,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         DialogHost.GetDialogSession(AddLabelDialogHost.Identifier)!.Close(false);
     }
 
-    public void EvRowPrepared(object sender, TreeDataGridRowEventArgs e)
+    public void EvLoadingRow(object sender, DataGridRowEventArgs e)
     {
         var torrent = (Torrent)e.Row.DataContext!;
         if (Color.TryParse(torrent!.DataOwner.PluginInstance.PluginInstanceConfig.Color, out var color)) {
@@ -122,41 +209,22 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
                 e.Row.Foreground = Brushes.White;
             }
         }
-        e.Row.BorderThickness = GridBorderThickness;
-        e.Row.BorderBrush = Brushes.DarkGray;
-        e.Row.Height = RowHeight;
 
-        var hooks = Plugin.Plugins.GetHook<object, TreeDataGridRowEventArgs>(Plugin.Plugins.HookType.TorrentListing_EvRowPrepared);
-        foreach (var hook in hooks) {
-            hook(sender, e);
-        }
-    }
+        var loadingCellHooks = Plugin.Plugins.GetHook<object, string, DataGridCell>(Plugin.Plugins.HookType.TorrentListing_EvLoadingCell);
 
-    public void EvCellPrepared(object sender, TreeDataGridCellEventArgs e)
-    {
-        Torrent torrent;
-        if (e.Cell.DataContext is TemplateCell template) {
-            torrent = (Torrent)template.Value;
-        } else {
-            torrent = (Torrent)e.Cell.DataContext!;
-        }
-        
-        var cell = (TreeDataGridCell)e.Cell;
+        if (loadingCellHooks.Any()) {
+            for (var x = 0;x < e.Row.Cells.Count;x++) {
+                var cell = e.Row.Cells[x];
+                var columnKey = (string)cell.OwningColumn.ColumnKey;
 
-        // Guard against cell recycling. If plugins modify properties of some cells, others might get recycled from before and jumbled
-        cell.Background = null;
-        if (Color.TryParse(torrent!.DataOwner.PluginInstance.PluginInstanceConfig.Color, out var color)) {
-            if (color.R * 0.299 + color.G * 0.587 + color.B * 0.114 > 186) {
-                cell.Foreground = Brushes.Black;
-            } else {
-                cell.Foreground = Brushes.White;
+                foreach (var hook in loadingCellHooks) {
+                    hook(torrent, columnKey, cell);
+                }
             }
         }
-        cell.BorderThickness = GridBorderThickness;
-        cell.BorderBrush = Brushes.DarkGray;
 
-        var hooks = Plugin.Plugins.GetHook<object, TreeDataGridCellEventArgs>(Plugin.Plugins.HookType.TorrentListing_EvCellPrepared);
-        foreach (var hook in hooks) {
+        var loadingRowHooks = Plugin.Plugins.GetHook<object, DataGridRowEventArgs>(Plugin.Plugins.HookType.TorrentListing_EvLoadingRow);
+        foreach (var hook in loadingRowHooks) {
             hook(sender, e);
         }
     }
@@ -226,4 +294,6 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         var result = await dialog.ShowDialog<string?>(Input.Owner);
         return result;
     }
+
+    public void grid_KeyUp(object? sender, Avalonia.Input.KeyEventArgs e) => ViewModel!.EvGridKeyUp(e);
 }

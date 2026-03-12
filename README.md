@@ -61,17 +61,29 @@ See [setting up data providers](setup-dataproviders.md)
 |Pieces progress bar|🟢Supported|🟢Supported|🟢Supported|
 |Extended statistics|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Partial downloads|🔴Not implemented|🔴Not implemented|🔴Not implemented|
-|Add new tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Add new tracker|🔴Not implemented|🟢Supported|🟢Supported|
 |Enable tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Disable tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
-|Remove tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Remove tracker|🔴Not implemented|🟢Supported|🟢Supported|
 |Reannounce tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Replace tracker|🟡Hacky workaround*|🟢Supported|🟢Supported|
 |Global download statistics|🟡Workaround*|🟢Supported|🟢Supported|
 |Global upload statistics|🟡Workaround*|🟢Supported|🟢Supported|
 |Global ratio statistics|🟡Workaround*|🟢Supported|🟢Supported|
+|Sequential downloads|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|File renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Torrent renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 
 _* - not directly supported by torrent daemon_
+
+### Other features
+
+|Feature|Support|
+|-|-|
+|SHA256 infohashes|🔴Not implemented|
+|File previews|🔴Not implemented|
+|File icons (as determined by OS)|🔴Not implemented|
+|Native AOT|🔴https://github.com/DapperLib/DapperAOT/issues/160|
 
 ### Configuration
 

@@ -13,7 +13,8 @@ namespace RTSharp
 
         public Control Build(object data)
         {
-            var name = data.GetType().FullName!.Replace("ViewModel", "View");
+            throw null;
+            /*var name = data.GetType().FullName!.Replace("ViewModel", "View");
             var type = data.GetType().Assembly.GetType(name);
 
             if (type != null)
@@ -26,7 +27,7 @@ namespace RTSharp
             else
             {
                 return new TextBlock { Text = "Not Found: " + name };
-            }
+            }*/
         }
 
         public bool Match(object data)

@@ -12,6 +12,7 @@ using Mono.Unix.Native;
 using RTSharp.Daemon.Protocols;
 
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 using Path = System.IO.Path;
 
@@ -355,15 +356,15 @@ namespace RTSharp.Daemon.GRPCServices
                 try {
                     if (Req.Type.HasFlag(LinkFilesInput.Types.LinkType.Reflink)) {
                         try {
-                            hSrcFile = Syscall.open(src, OpenFlags.O_RDONLY, 0);
+                            hSrcFile = Syscall.open(src, OpenFlags.O_RDONLY);
                             if (hSrcFile == -1) {
                                 var errno = Syscall.GetLastError();
                                 if (errno == Errno.EACCES || errno == Errno.EPERM) {
                                     throw new RpcException(new Status(StatusCode.PermissionDenied, $"Cannot open {src}"));
                                 } else if (errno == Errno.ENOENT) {
-                                    throw new RpcException(new Status(StatusCode.InvalidArgument, $"{dst} doesn't exist"));
+                                    throw new RpcException(new Status(StatusCode.InvalidArgument, $"{src} doesn't exist"));
                                 } else {
-                                    throw new RpcException(new Status(StatusCode.Internal, $"open {dst}: {errno}"));
+                                    throw new RpcException(new Status(StatusCode.Internal, $"open {src}: {errno}"));
                                 }
                             }
                         } catch (Exception ex) {
@@ -375,9 +376,9 @@ namespace RTSharp.Daemon.GRPCServices
                             if (errno == Errno.EACCES || errno == Errno.EPERM) {
                                 throw new RpcException(new Status(StatusCode.PermissionDenied, $"Cannot stat {src}"));
                             } else if (errno == Errno.ENOENT) {
-                                throw new RpcException(new Status(StatusCode.InvalidArgument, $"{dst} doesn't exist"));
+                                throw new RpcException(new Status(StatusCode.InvalidArgument, $"{src} doesn't exist"));
                             } else {
-                                throw new RpcException(new Status(StatusCode.Internal, $"stat {dst}: {errno}"));
+                                throw new RpcException(new Status(StatusCode.Internal, $"stat {src}: {errno}"));
                             }
                         }
 
@@ -413,16 +414,21 @@ namespace RTSharp.Daemon.GRPCServices
                     }
 
                     if (Req.Type.HasFlag(LinkFilesInput.Types.LinkType.Hardlink) && !created) {
-                        var resp = Syscall.link(src, dst);
-                        if (resp != 0) {
-                            var errno = Syscall.GetLastError();
-                            if (errno == Errno.EACCES || errno == Errno.EPERM) {
-                                throw new RpcException(new Status(StatusCode.PermissionDenied, $"Cannot open {dst}"));
-                            } else if (errno == Errno.EEXIST) {
-                                throw new RpcException(new Status(StatusCode.InvalidArgument, $"{dst} already exists"));
-                            } else {
-                                throw new RpcException(new Status(StatusCode.Internal, $"{dst}: {errno}"));
-                            }
+                        for (var x = 0;x < 2;x++) {
+                            var resp = Syscall.link(src, dst);
+                            if (resp != 0) {
+                                var errno = Syscall.GetLastError();
+                                if (errno == Errno.ENOENT) {
+                                    Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
+                                } else if (errno == Errno.EACCES || errno == Errno.EPERM) {
+                                    throw new RpcException(new Status(StatusCode.PermissionDenied, $"Cannot open {dst}"));
+                                } else if (errno == Errno.EEXIST) {
+                                    throw new RpcException(new Status(StatusCode.InvalidArgument, $"{dst} already exists"));
+                                } else {
+                                    throw new RpcException(new Status(StatusCode.Internal, $"{dst}: {errno}"));
+                                }
+                            } else
+                                break;
                         }
                     }
                 } finally {

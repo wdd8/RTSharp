@@ -77,7 +77,7 @@ namespace RTSharp.Models
             this.DownloadStrategyInternal = file.DownloadStrategyInternal;
         }
 
-        private static ObservableCollection<File> FromModel<T>(string TorrentName, bool MultiFile, IList<T> In, Func<T, File> MapFx, Func<T, string> PathSelector)
+        private static File FromModel<T>(string TorrentName, bool MultiFile, IList<T> In, Func<T, File> MapFx, Func<T, string> PathSelector)
         {
             var files = In.ToDictionary(x => PathSelector(x), x => x);
             var tree = TreeBuilder.Build(In.Select(x => PathSelector(x)));
@@ -104,15 +104,13 @@ namespace RTSharp.Models
 
             var rootPath = MultiFile ? TorrentName : "./";
 
-            var ret = new ObservableCollection<File> {
-                new File {
-                    Path = rootPath,
-                    Name = rootPath,
-                    IsExpanded = true,
-                    IsDirectory = true,
-                }
+            var ret = new File {
+                Path = rootPath,
+                Name = rootPath,
+                IsExpanded = true,
+                IsDirectory = true,
             };
-            add(ret[0].Children, tree);
+            add(ret.Children, tree);
 
             void sumForFolder(File file)
             {
@@ -150,13 +148,13 @@ namespace RTSharp.Models
                 }
             }
 
-            sumForFolder(ret[0]);
-            ret[0].Done = (float)ret[0].Downloaded / ret[0].Size * 100;
+            sumForFolder(ret);
+            ret.Done = (float)ret.Downloaded / ret.Size * 100;
 
             return ret;
         }
 
-        public static ObservableCollection<File> FromPluginModel(string TorrentName, bool MultiFile, IList<Shared.Abstractions.File> In)
+        public static File FromPluginModel(string TorrentName, bool MultiFile, IList<Shared.Abstractions.File> In)
         {
             File map(Shared.Abstractions.File In)
             {
@@ -193,7 +191,7 @@ namespace RTSharp.Models
             return FromModel(TorrentName, MultiFile, In, map, x => x.Path);
         }
 
-        public static ObservableCollection<File> FromCache(Models.Torrent torrent, bool IsMultiFile, IList<CachedTorrentPath> In, bool FullyDownloaded)
+        public static File FromCache(Models.Torrent torrent, bool IsMultiFile, IList<CachedTorrentPath> In, bool FullyDownloaded)
         {
             File map(CachedTorrentPath In)
             {

@@ -42,7 +42,7 @@ namespace RTSharp.ViewModels.TorrentListing
             var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
             var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
-            foreach (var torrent in Torrents.Items) {
+            foreach (var torrent in Torrents) {
                 var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle);
 
                 if (!infos.TryGetValue(domain, out var trackerInfo))
@@ -168,8 +168,6 @@ namespace RTSharp.ViewModels.TorrentListing
         private async Task GetTrackersChanges(Models.Torrent current, CancellationToken SelectionChange)
         {
             try {
-                TrackersViewModel.CurrentlySelectedTorrent = current;
-
                 while (!SelectionChange.IsCancellationRequested) {
                     using var scope = Core.ServiceProvider.CreateScope();
                     var config = scope.ServiceProvider.GetRequiredService<Config>();

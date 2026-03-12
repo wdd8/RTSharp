@@ -34,7 +34,7 @@ namespace RTSharp.Core.TorrentPolling
             SingleWriter = true
         });
 
-        public static SourceList<Models.Torrent> Torrents { get; } = new();
+        public static ObservableRangeCollection<Models.Torrent> Torrents { get; } = new();
         public static ConcurrentInfoHashOwnerDictionary<Models.Torrent> TorrentsLookup { get; } = new();
         public static event Action<List<NotifyCollectionChangedEventArgs>> TorrentBatchChange;
 
@@ -66,7 +66,7 @@ namespace RTSharp.Core.TorrentPolling
                 var changeSet = new List<NotifyCollectionChangedEventArgs>();
 
                 // Since it is possible to remove torrent and add it right after in same change, we must handle removals first
-                foreach (var torrent in Torrents.Items)
+                foreach (var torrent in Torrents)
                 {
                     if (removed.Contains(torrent.Hash) && torrent.DataOwner == dp)
                     {
@@ -74,13 +74,12 @@ namespace RTSharp.Core.TorrentPolling
                     }
                 }
 
-                if (toRemove.Count > 0)
+                if (toRemove.Count > 0) {
                     changeSet.Add(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, toRemove));
-
-                foreach (var remove in toRemove)
-                {
-                    Torrents.Remove(remove);
-                    TorrentsLookup.Remove((remove.Hash, remove.DataOwner.PluginInstance.InstanceId), out var _);
+                    Torrents.RemoveRange(toRemove);
+                    foreach (var remove in toRemove) {
+                        TorrentsLookup.Remove((remove.Hash, remove.DataOwner.PluginInstance.InstanceId), out var _);
+                    }
                 }
 
                 bool labelsChanged = false;
@@ -128,13 +127,13 @@ namespace RTSharp.Core.TorrentPolling
                 }
 
                 foreach (var change in changes.Values) {
-                    var idx = Torrents.Items.IndexOf(change);
+                    var idx = Torrents.IndexOf(change);
                     changeSet.Add(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, change, null, idx));
                 }
                 await Models.TorrentUpdateExt.UpdateMulti(changes.Values);
 
                 // Modified fullUpdate
-                var updated = await Models.TorrentUpdateExt.UpdateFromPluginModelMulti([.. Torrents.Items.Where(x => x.DataOwner == dp)], fullUpdate);
+                var updated = await Models.TorrentUpdateExt.UpdateFromPluginModelMulti([.. Torrents.Where(x => x.DataOwner == dp)], fullUpdate);
                 foreach (var change in updated) {
                     changeSet.Add(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, change.Obj, null, change.Index));
                 }

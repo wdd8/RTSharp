@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
+			 xmlns:sharedConverters="using:RTSharp.Shared.Controls.Converters"
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:views="using:RTSharp.Shared.Controls.Views"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
@@ -10,10 +11,10 @@
              d:DesignWidth="1500" d:DesignHeight="450">
 
     <Control.Resources>
-        <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
-        <converters:SIDataSpeedConverter x:Key="SIDataSpeedConverter"/>
-        <converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter"/>
-        <converters:ByteArrayToHexStringConverter x:Key="ByteArrayToHexStringConverter"/>
+        <converters:SIDataSizeConverter x:Key="SIDataSizeConverter" />
+        <converters:SIDataSpeedConverter x:Key="SIDataSpeedConverter" />
+        <converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter" />
+        <sharedConverters:ToHexStringConverter x:Key="ToHexStringConverter" />
     </Control.Resources>
     <Design.DataContext>
         <torrentListing:GeneralTorrentInfoViewModel />
@@ -51,7 +52,7 @@
                 <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Remote path:" Text="{Binding Torrent.RemotePath}" />
                 <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Created on:" Text="{Binding Torrent.CreatedOnDate}" />
                 <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Added on:" Text="{Binding Torrent.AddedOnDate}" />
-                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Info hash:" Text="{Binding Torrent.Hash, Converter={StaticResource ByteArrayToHexStringConverter}}">
+                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Info hash:" Text="{Binding Torrent.Hash, Converter={StaticResource ToHexStringConverter}}">
                     <views:TextBlockWithLabel.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="_Copy" Command="{Binding CopyInfoHashCommand}" />

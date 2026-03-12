@@ -1,3 +1,7 @@
 [submodule "src/RTSharp.Daemon/Services/transmission/Transmission.Net"]
 	path = src/RTSharp.Daemon/Services/transmission/Transmission.Net
 	url = https://github.com/wdd8/Transmission.Net.git
+[submodule "src/ProDataGrid"]
+	path = src/ProDataGrid
+	url = git@github.com:TETYYS/ProDataGrid.git
+	branch = workingBranch

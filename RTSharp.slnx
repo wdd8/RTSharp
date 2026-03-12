@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/plugins/">
-    <Project Path="src/plugins/RTSharp.ColoredRatio/RTSharp.ColoredRatio.Plugin.csproj" />
-    <Project Path="src/plugins/RTSharp.AutoIntegrify/RTSharp.AutoIntegrify.Plugin.csproj" />
+    <Project Path="src/plugins/RTSharp.ColoredRatio.Plugin/RTSharp.ColoredRatio.Plugin.csproj" />
+    <Project Path="src/plugins/RTSharp.AutoIntegrify.Plugin/RTSharp.AutoIntegrify.Plugin.csproj" />
     <Project Path="src/plugins/RTSharp.MassTrackerRewrite.Plugin/RTSharp.MassTrackerRewrite.Plugin.csproj" />
   </Folder>
   <Folder Name="/qbittorrent/">
@@ -21,11 +21,13 @@
     <Project Path="src/transmission/RTSharp.DataProvider.Transmission.Plugin/RTSharp.DataProvider.Transmission.Plugin.csproj" />
     <Project Path="src/RTSharp.Daemon/Services/transmission/Transmission.Net/Transmission.Net/Transmission.Net.csproj" />
   </Folder>
-  <Project Path="src/Avalonia.Controls.TreeDataGrid/src/Avalonia.Controls.TreeDataGrid/Avalonia.Controls.TreeDataGrid.csproj" />
+  <Project Path="src/ProDataGrid/src/Avalonia.Controls.DataGrid/Avalonia.Controls.DataGrid.csproj" />
+  <Project Path="src/ProDataGrid/src/ProDataGrid.FormulaEngine.Excel/ProDataGrid.FormulaEngine.Excel.csproj" />
+  <Project Path="src/ProDataGrid/src/ProDataGrid.FormulaEngine/ProDataGrid.FormulaEngine.csproj" />
   <Project Path="src/RTSharp.Daemon.Protocols/RTSharp.Daemon.Protocols.csproj" />
   <Project Path="src/RTSharp.Daemon/RTSharp.Daemon.csproj" />
   <Project Path="src/RTSharp.Shared.Abstractions/RTSharp.Shared.Abstractions.csproj" />
-  <Project Path="src/RTSharp.Shared.Abstractions.Client/RTSharp.Shared.Abstractions.UI.csproj" />
+  <Project Path="src/RTSharp.Shared.Abstractions.Client/RTSharp.Shared.Abstractions.Client.csproj" />
   <Project Path="src/RTSharp.Shared.Controls/RTSharp.Shared.Controls.csproj" />
   <Project Path="src/RTSharp.Shared.Utils/RTSharp.Shared.Utils.csproj" />
   <Project Path="src/RTSharp/RTSharp.csproj" />

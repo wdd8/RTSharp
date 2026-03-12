@@ -79,7 +79,7 @@ public partial class TorrentCreatorWindow : VmWindow<TorrentCreatorWindowViewMod
 
     public async void EvDragDrop(object? sender, DragEventArgs e)
     {
-        var files = e.Data.GetFiles();
+        var files = e.DataTransfer.TryGetFiles();
         if (files?.Any() == false)
             return;
 

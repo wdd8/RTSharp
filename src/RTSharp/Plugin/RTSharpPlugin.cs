@@ -154,8 +154,8 @@ public class RTSharpPlugin : IPluginHost
         });
     }
 
-    public IDisposable HookTorrentListingEvRowPrepared(Action<object, TreeDataGridRowEventArgs> fx) => Plugins.Hook(Plugins.HookType.TorrentListing_EvRowPrepared, fx);
-    public IDisposable HookTorrentListingEvCellPrepared(Action<object, TreeDataGridCellEventArgs> fx) => Plugins.Hook(Plugins.HookType.TorrentListing_EvCellPrepared, fx);
+    public IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx) => Plugins.Hook(Plugins.HookType.TorrentListing_EvLoadingRow, fx);
+    public IDisposable HookTorrentListingEvLoadingCell(Action<object, string, DataGridCell> fx) => Plugins.Hook(Plugins.HookType.TorrentListing_EvLoadingCell, fx);
 
     /// <summary>
     /// ViewModels.AddTorrentViewModel
@@ -171,7 +171,7 @@ public class RTSharpPlugin : IPluginHost
             .ForContext("PluginColor", PluginInstanceConfig.Color)
             .ForContext("PluginDisplayName", PluginInstanceConfig.Name);
 
-    public IReadOnlyCollection<Torrent> Torrents => Core.TorrentPolling.TorrentPolling.Torrents.Items.Select(x => x.ToPluginModel()).ToArray();
+    public IReadOnlyCollection<Torrent> Torrents => [.. Core.TorrentPolling.TorrentPolling.Torrents.Select(x => x.ToPluginModel())];
 
     public HttpClient HttpClient => Core.Http.Client;
 

@@ -1,201 +1,341 @@
 <UserControl x:Class="RTSharp.Views.TorrentListing.TorrentListingView"
-             xmlns="https://github.com/avaloniaui"
-             xmlns:dataGridEx="using:RTSharp.Views.DataGridEx"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
-             xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
-             xmlns:torrentListingVm="clr-namespace:RTSharp.ViewModels.TorrentListing;assembly=RTSharp"
-             xmlns:views="clr-namespace:RTSharp.Views.TorrentListing;assembly=RTSharp"
-             xmlns:models="clr-namespace:RTSharp.Models"
-             xmlns:abstractions="clr-namespace:RTSharp.Shared.Abstractions;assembly=RTSharp.Shared.Abstractions"
-             xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
-             xmlns:acol="clr-namespace:Avalonia.Collections;assembly=Avalonia.Base"
-             xmlns:controls="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
-             d:DataContext="{x:Static torrentListingVm:ExampleTorrentListingViewModel.ViewModel}"
-             x:DataType="torrentListingVm:TorrentListingViewModel"
-             x:CompileBindings="False"
-             d:DesignWidth="600" d:DesignHeight="450">
+			 xmlns="https://github.com/avaloniaui"
+			 xmlns:dataGridEx="using:RTSharp.Views.DataGridEx"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+			 xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
+			 xmlns:sharedConverters="using:RTSharp.Shared.Controls.Converters"
+			 xmlns:torrentListingVm="clr-namespace:RTSharp.ViewModels.TorrentListing;assembly=RTSharp"
+			 xmlns:views="clr-namespace:RTSharp.Views.TorrentListing;assembly=RTSharp"
+			 xmlns:models="clr-namespace:RTSharp.Models"
+			 xmlns:abstractions="clr-namespace:RTSharp.Shared.Abstractions;assembly=RTSharp.Shared.Abstractions"
+			 xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+			 xmlns:acol="clr-namespace:Avalonia.Collections;assembly=Avalonia.Base"
+			 xmlns:controls="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
+			 xmlns:filters="using:RTSharp.Shared.Controls.DataGridFilters"
+			 xmlns:filtering="using:Avalonia.Controls.DataGridFiltering"
+			 xmlns:shared="using:RTSharp.Shared.Controls.Views"
+			 d:DataContext="{x:Static torrentListingVm:ExampleTorrentListingViewModel.ViewModel}"
+			 x:DataType="torrentListingVm:TorrentListingViewModel"
+			 x:CompileBindings="False"
+			 d:DesignWidth="600" d:DesignHeight="450">
 
-    <Control.Resources>
-        <converters:SIDataSizeConverter x:Key="SIDataSizeConverter" />
-        <converters:SIDataSpeedConverter x:Key="SIDataSpeedConverter" />
-        <converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter" />
-        <converters:ItemsParamConverter x:Key="ItemsParamConverter" />
+	<Control.Resources>
+		<converters:SIDataSizeConverter x:Key="SIDataSizeConverter" />
+		<converters:SIDataSpeedConverter x:Key="SIDataSpeedConverter" />
+		<converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter" />
+		<converters:ItemsParamConverter x:Key="ItemsParamConverter" />
+		<sharedConverters:ToHexStringConverter x:Key="ToHexStringConverter" />
 
-        <converters:ValueConverterGroup x:Key="NotEnumValue">
-            <converters:EqualsConverter />
-            <converters:NotConverter />
-        </converters:ValueConverterGroup>
-        <converters:StringJoiner x:Key="StringJoiner"/>
+		<converters:ValueConverterGroup x:Key="NotEnumValue">
+			<converters:EqualsConverter />
+			<converters:NotConverter />
+		</converters:ValueConverterGroup>
+		<converters:StringJoiner x:Key="StringJoiner"/>
 
-        <acol:AvaloniaList x:Key="GridContextMenuItems" x:TypeArguments="Control">
-            <MenuItem
-                Header="_Start"
-                Command="{Binding StartTorrentsCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-            <MenuItem
-                Header="_Pause"
-                Command="{Binding PauseTorrentsCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-            <MenuItem
-                Header="S_top"
-                Command="{Binding StopTorrentsCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-            <Separator />
-            <MenuItem
-                Header="Force _recheck"
-                Command="{Binding ForceRecheckTorrentsCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-            <MenuItem
-                Header="Reannounce to all trackers"
-                Command="{Binding ReannounceToAllTrackersCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-            <MenuItem Header="_Add peer..." IsEnabled="False" />
-            <Separator />
-            <MenuItem
-                Header="Set _label..."
-                ItemsSource="{Binding LabelsWithAdd}"/>
-            <MenuItem IsEnabled="False" Header="_Set priority...">
-                <MenuItem Header="yoo" />
-                <MenuItem Header="yoo" />
-                <MenuItem Header="yoo" />
-            </MenuItem>
-            <MenuItem
-                Header="Move download directory..."
-                Command="{Binding MoveDownloadDirectoryCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-            <Separator />
-            <MenuItem
-                Header="Remove torrent"
-                Command="{Binding RemoveTorrentsCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-            <MenuItem
-                Header="Remove torrent &amp; data"
-                Command="{Binding RemoveTorrentsAndDataCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-            <Separator />
-            <MenuItem
-                Header="Get .torrent"
-                Command="{Binding GetDotTorrentsCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-            <MenuItem Header="Edit torrent..." IsEnabled="False" />
-            <MenuItem
-                Header="Duplicate torrent &amp; data to..."
-                Command="{Binding DuplicateTorrentToCommand}"
-                CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"/>
-        </acol:AvaloniaList>
-    </Control.Resources>
-    
-    <dialogHost:DialogHost Name="AddLabelDialogHost" Identifier="AddLabelDialog" CloseOnClickAway="True">
-        <dialogHost:DialogHost.DialogContent>
-            <StackPanel>
-                <TextBlock FontWeight="Bold" Margin="0 0 0 10">Add label</TextBlock>
-                <TextBox Name="LabelName" />
-                <Button
-                    Margin="0 -6 0 -7"
-                    Width="0"
-                    IsDefault="True"
-                    Command="{Binding AddLabelCommand}"
-                >
-                    <Button.CommandParameter>
-                        <MultiBinding Converter="{StaticResource ItemsParamConverter}">
-                            <Binding Path="#grid.Source.RowSelection.SelectedItems" />
-                            <Binding Path="#LabelName.Text" />
-                        </MultiBinding>
-                    </Button.CommandParameter>
-                </Button>
+		<acol:AvaloniaList x:Key="GridContextMenuItems" x:TypeArguments="Control">
+			<MenuItem
+				Header="_Start"
+				Command="{Binding StartTorrentsCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+			<MenuItem
+				Header="_Pause"
+				Command="{Binding PauseTorrentsCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+			<MenuItem
+				Header="S_top"
+				Command="{Binding StopTorrentsCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+			<Separator />
+			<MenuItem
+				Header="Force _recheck"
+				Command="{Binding ForceRecheckTorrentsCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+			<MenuItem
+				Header="Reannounce to all trackers"
+				Command="{Binding ReannounceToAllTrackersCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+			<MenuItem Header="_Add peer..." IsEnabled="False" />
+			<Separator />
+			<MenuItem
+				Header="Set _label..."
+				ItemsSource="{Binding LabelsWithAdd}" />
+			<MenuItem IsEnabled="False" Header="_Set priority...">
+				<MenuItem Header="yoo" />
+				<MenuItem Header="yoo" />
+				<MenuItem Header="yoo" />
+			</MenuItem>
+			<MenuItem
+				Header="Move download directory..."
+				Command="{Binding MoveDownloadDirectoryCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+			<Separator />
+			<MenuItem
+				Header="Remove torrent"
+				Command="{Binding RemoveTorrentsCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+			<MenuItem
+				Header="Remove torrent &amp; data"
+				Command="{Binding RemoveTorrentsAndDataCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+			<Separator />
+			<MenuItem
+				Header="Get .torrent"
+				Command="{Binding GetDotTorrentsCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+			<MenuItem Header="Edit torrent..." IsEnabled="False" />
+			<MenuItem
+				Header="Duplicate torrent &amp; data to..."
+				Command="{Binding DuplicateTorrentToCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
+		</acol:AvaloniaList>
+
+		<DataTemplate x:Key="DataGridFilterSetEqualsTemplate" x:DataType="{x:Type filters:SetFilterContext, x:TypeArguments=x:String}">
+		  <StackPanel Spacing="{DynamicResource DataGridFilterEditorSpacing}"
+                      Width="{DynamicResource DataGridFilterEnumEditorWidth}">
+            <TextBlock Text="{Binding Label, FallbackValue=Options}" FontWeight="SemiBold" />
+            <ItemsControl ItemsSource="{Binding Options}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="2" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="{x:Type filters:SelectedOption, x:TypeArguments=x:String}">
+                  <CheckBox Content="{Binding Display}"
+                            IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal"
+                      Spacing="{DynamicResource DataGridFilterEditorActionSpacing}">
+              <Button Content="Clear" Command="{Binding ClearCommand}" />
+              <Button Content="Apply" Command="{Binding ApplyCommand}" IsDefault="True" />
             </StackPanel>
-        </dialogHost:DialogHost.DialogContent>
-        
-        <Grid RowDefinitions="Auto,*,4,*">
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Orientation="Horizontal">
-                    <Button
-                        i:Attached.Icon="fa-solid fa-play"
-                        Command="{Binding StartTorrentsCommand}"
-                        CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        Background="Transparent"
-                        ToolTip.Tip="Start"
-                    />
-                    <Button
-                        i:Attached.Icon="fa-solid fa-pause"
-                        Command="{Binding PauseTorrentsCommand}"
-                        CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        Background="Transparent"
-                        ToolTip.Tip="Pause"
-                    />
-                    <Button
-                        i:Attached.Icon="fa-solid fa-stop"
-                        Command="{Binding StopTorrentsCommand}"
-                        CommandParameter="{Binding #grid.Source.RowSelection.SelectedItems}"
-                        Background="Transparent"
-                        ToolTip.Tip="Stop"
-                    />
-                    <Panel Margin="-5 0 -30 0">
-                        <Separator RenderTransformOrigin="0 0" VerticalAlignment="Top">
-                            <Separator.RenderTransform>
-                                <RotateTransform Angle="90" />
-                            </Separator.RenderTransform>
-                        </Separator>
-                    </Panel>
-                    <Button
-                        i:Attached.Icon="fa-solid fa-gear"
-                        Background="Transparent"
-                        Command="{Binding ShowOptionsCommand}"
-                    />
-                </StackPanel>
-                <TextBox Name="FilterTextBox" Grid.Column="1" Width="150" Watermark="Filter..." Text="{Binding StringFilter}" />
-            </Grid>
-            <TreeDataGrid Grid.Row="1"
-                      Name="grid"
-                      Source="{Binding Source}"
-                      RowPrepared="EvRowPrepared"
-                      CellPrepared="EvCellPrepared"
-                      CanUserResizeColumns="true">
-                <TreeDataGrid.Resources>
-                    <DataTemplate x:Key="DoneCell" x:DataType="models:Torrent">
-                        <ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Name="TorrentProgressBar" />
-                    </DataTemplate>
-                    <DataTemplate x:Key="TrackerCell" x:DataType="models:Torrent">
-                        <StackPanel Orientation="Horizontal">
-                            <Image Source="{Binding TrackerIcon, Mode=OneWay}" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" Margin="0 0 4 0" />
-                            <TextBlock Text="{Binding TrackerDisplayName, Mode=OneWay}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </DataTemplate>
-                </TreeDataGrid.Resources>
+          </StackPanel>
+		</DataTemplate>
+		<DataTemplate x:Key="DataGridFilterTrackerEqualsTemplate" x:DataType="{x:Type filters:SetFilterContext, x:TypeArguments=torrentListingVm:TrackerFilterContext}">
+		  <StackPanel Spacing="{DynamicResource DataGridFilterEditorSpacing}"
+                      Width="{DynamicResource DataGridFilterEnumEditorWidth}">
+            <TextBlock Text="{Binding Label, FallbackValue=Options}" FontWeight="SemiBold" />
+            <ItemsControl ItemsSource="{Binding Options}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="{x:Type filters:SelectedOption, x:TypeArguments=torrentListingVm:TrackerFilterContext}">
+				  <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
+					<StackPanel Orientation="Horizontal">
+					  <Image Source="{Binding Display.Icon, Mode=OneWay}" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" Margin="0 0 4 0" />
+					  <TextBlock Text="{Binding Display.Name, Mode=OneWay}" VerticalAlignment="Center" />
+					</StackPanel>
+				  </CheckBox>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal"
+                        Spacing="{DynamicResource DataGridFilterEditorActionSpacing}">
+              <Button Content="Clear" Command="{Binding ClearCommand}" />
+              <Button Content="Apply" Command="{Binding ApplyCommand}" IsDefault="True" />
+            </StackPanel>
+          </StackPanel>
+		</DataTemplate>
 
-                <TreeDataGrid.ContextMenu>
-                    <ContextMenu x:Name="gridCtxMenu" DataContext="{Binding}" ItemsSource="{StaticResource GridContextMenuItems}" />
-                </TreeDataGrid.ContextMenu>
-            </TreeDataGrid>
-            <GridSplitter Grid.Row="2" ResizeDirection="Rows" />
-            <TabControl Grid.Row="3">
-                <TabControl.Styles>
-                    <Style Selector="TabItem">
-                        <Setter Property="Margin" Value="0,-10,0,-10" />
-                    </Style>
-                    <Style Selector="Border#PART_SelectedPipe">
-                        <Setter Property="Margin" Value="0,0,0,10" />
-                    </Style>
-                </TabControl.Styles>
-                
-                <TabItem Header="General" VerticalContentAlignment="Center">
-                    <views:GeneralTorrentInfoView DataContext="{Binding GeneralInfoViewModel}" />
-                </TabItem>
-                
-                <TabItem Header="Files" VerticalContentAlignment="Center">
-                    <views:TorrentFilesView DataContext="{Binding FilesViewModel}" />
-                </TabItem>
-                
-                <TabItem Header="Peers" VerticalContentAlignment="Center">
-                    <views:TorrentPeersView DataContext="{Binding PeersViewModel}" />
-                </TabItem>
-                
-                <TabItem Header="Trackers" VerticalContentAlignment="Center">
-                    <views:TorrentTrackersView DataContext="{Binding TrackersViewModel}" />
-                </TabItem>
-            </TabControl>
-        </Grid>
-    </dialogHost:DialogHost>
+		<Flyout x:Key="ConnectionFilterFlyout"
+		    Placement="Bottom"
+            FlyoutPresenterTheme="{StaticResource DataGridFilterFlyoutPresenterTheme}"
+			Opening="ConnectionFilterFlyoutOpening"
+            Content="{Binding ConnectionFilter}"
+            ContentTemplate="{StaticResource DataGridFilterSetEqualsTemplate}" />
+		<Flyout x:Key="HashFilterFlyout"
+		    Placement="Bottom"
+            FlyoutPresenterTheme="{StaticResource DataGridFilterFlyoutPresenterTheme}"
+            Content="{Binding HashFilter}"
+            ContentTemplate="{StaticResource DataGridFilterTextEditorTemplate}" />
+		<Flyout x:Key="NameFilterFlyout"
+            Placement="Bottom"
+            FlyoutPresenterTheme="{StaticResource DataGridFilterFlyoutPresenterTheme}"
+            Content="{Binding NameFilter}"
+            ContentTemplate="{StaticResource DataGridFilterTextEditorTemplate}" />
+		<Flyout x:Key="StateFilterFlyout"
+		    Placement="Bottom"
+            FlyoutPresenterTheme="{StaticResource DataGridFilterFlyoutPresenterTheme}"
+			Opening="StateFilterFlyoutOpening"
+            Content="{Binding StateFilter}"
+            ContentTemplate="{StaticResource DataGridFilterSetEqualsTemplate}" />
+		<Flyout x:Key="LabelsFilterFlyout"
+		    Placement="Bottom"
+            FlyoutPresenterTheme="{StaticResource DataGridFilterFlyoutPresenterTheme}"
+			Opening="LabelsFilterFlyoutOpening"
+            Content="{Binding LabelsFilter}"
+            ContentTemplate="{StaticResource DataGridFilterSetEqualsTemplate}" />
+		<Flyout x:Key="TrackerFilterFlyout"
+		    Placement="Bottom"
+            FlyoutPresenterTheme="{StaticResource DataGridFilterFlyoutPresenterTheme}"
+			Opening="TrackerFilterFlyoutOpening"
+            Content="{Binding TrackerFilter}"
+            ContentTemplate="{StaticResource DataGridFilterTrackerEqualsTemplate}" />
+	</Control.Resources>
+
+	<dialogHost:DialogHost Name="AddLabelDialogHost" Identifier="AddLabelDialog" CloseOnClickAway="True">
+		<dialogHost:DialogHost.DialogContent>
+			<StackPanel>
+				<TextBlock FontWeight="Bold" Margin="0 0 0 10">Add label</TextBlock>
+				<TextBox Name="LabelName" />
+				<Button
+					Margin="0 -6 0 -7"
+					Width="0"
+					IsDefault="True"
+					Command="{Binding AddLabelCommand}">
+					<Button.CommandParameter>
+						<MultiBinding Converter="{StaticResource ItemsParamConverter}">
+							<Binding Path="#grid.SelectedItems" />
+							<Binding Path="#LabelName.Text" />
+						</MultiBinding>
+					</Button.CommandParameter>
+				</Button>
+			</StackPanel>
+		</dialogHost:DialogHost.DialogContent>
+
+		<Grid RowDefinitions="Auto,*,4,*">
+			<StackPanel Orientation="Horizontal">
+				<Button
+					i:Attached.Icon="fa-solid fa-play"
+					Command="{Binding StartTorrentsCommand}"
+					CommandParameter="{Binding #grid.SelectedItems}"
+					Background="Transparent"
+					ToolTip.Tip="Start" />
+				<Button
+					i:Attached.Icon="fa-solid fa-pause"
+					Command="{Binding PauseTorrentsCommand}"
+					CommandParameter="{Binding #grid.SelectedItems}"
+					Background="Transparent"
+					ToolTip.Tip="Pause" />
+				<Button
+					i:Attached.Icon="fa-solid fa-stop"
+					Command="{Binding StopTorrentsCommand}"
+					CommandParameter="{Binding #grid.SelectedItems}"
+					Background="Transparent"
+					ToolTip.Tip="Stop" />
+				<Panel Margin="-5 0 -30 0">
+					<Separator RenderTransformOrigin="0 0" VerticalAlignment="Top">
+						<Separator.RenderTransform>
+							<RotateTransform Angle="90" />
+						</Separator.RenderTransform>
+					</Separator>
+				</Panel>
+				<Button
+					i:Attached.Icon="fa-solid fa-gear"
+					Background="Transparent"
+					Command="{Binding ShowOptionsCommand}" />
+			</StackPanel>
+			<DataGrid Grid.Row="1"
+					  Name="grid"
+					  ItemsSource="{Binding View}"
+					  Selection="{Binding SelectionModel}"
+					  SelectedItems="{Binding SelectedItems, Mode=TwoWay}"
+					  SelectionMode="Extended"
+					  ColumnDefinitionsSource="{Binding ColumnDefinitions}"
+					  SortingModel="{Binding SortingModel}"
+					  FilteringModel="{Binding FilteringModel}"
+					  KeyUp="grid_KeyUp"
+					  IsReadOnly="True"
+					  IsMultiSortEnabled="True"
+					  SortCycleMode="AscendingDescendingNone"
+					  OwnsSortDescriptions="True"
+					  LoadingRow="EvLoadingRow"
+					  UseLogicalScrollable="True"
+					  KeepRecycledContainersInVisualTree="True"
+				      RecycledContainerHidingMode="SetIsVisibleOnly"
+					  CanUserResizeColumns="true"
+					  ClipboardCopyMode="ExcludeHeader"
+					  CanUserAddRows="False"
+					  CanUserDeleteRows="False"
+					  CanUserHideColumns="True"
+					  CanUserPaste="False"
+					  CanUserReorderColumns="True"
+					  CanUserReorderRows="False"
+					  CanUserSortColumns="True">
+				<DataGrid.FastPathOptions>
+					<DataGridFastPathOptions
+						UseAccessorsOnly="True"
+						EnableHighPerformanceSearching="True"
+						HighPerformanceSearchTrackItemChanges="True"
+						StrictMode="True"
+						ThrowOnMissingAccessor="True" />
+				</DataGrid.FastPathOptions>
+				<DataGrid.RowHeightEstimator>
+					<DefaultRowHeightEstimator />
+				</DataGrid.RowHeightEstimator>
+				<DataGrid.ColumnHeaderContextMenu>
+				  <ContextMenu x:DataType="torrentListingVm:TorrentListingViewModel"
+							 DataContext="{Binding $parent[DataGrid].DataContext}">
+				  <MenuItem Header="Columns"
+							ItemsSource="{Binding $parent[DataGrid].Columns}">
+					<MenuItem.ItemContainerTheme>
+					  <ControlTheme x:DataType="DataGridColumn"
+									TargetType="MenuItem"
+									BasedOn="{StaticResource {x:Type MenuItem}}">
+						<Setter Property="Header"
+								Value="{Binding Header}" />
+						<Setter Property="IsChecked"
+								Value="{Binding IsVisible, Mode=TwoWay}" />
+						<Setter Property="ToggleType"
+								Value="CheckBox" />
+					  </ControlTheme>
+					</MenuItem.ItemContainerTheme>
+				  </MenuItem>
+				</ContextMenu>
+			  </DataGrid.ColumnHeaderContextMenu>
+			  <DataGrid.Resources>
+				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentDoneTemplate">
+				  <ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Name="TorrentProgressBar" />
+				</DataTemplate>
+				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentTrackerTemplate">
+				  <StackPanel Orientation="Horizontal">
+					<Image Source="{Binding TrackerIcon, Mode=OneWay}" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" Margin="0 0 4 0" />
+					<TextBlock Text="{Binding TrackerDisplayName, Mode=OneWay}" VerticalAlignment="Center" />
+				  </StackPanel>
+				</DataTemplate>
+				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentHashTemplate">
+				  <shared:BytesToImage Bytes="{Binding Hash, Mode=OneWay}" Width="16" Height="16" />
+				</DataTemplate>
+			  </DataGrid.Resources>
+			  <DataGrid.ContextMenu>
+				<ContextMenu x:Name="gridCtxMenu" DataContext="{Binding}" ItemsSource="{StaticResource GridContextMenuItems}" />
+			  </DataGrid.ContextMenu>
+			  <DataGrid.Styles>
+				<Style Selector="DataGridRow">
+				  <Setter Property="BorderThickness" Value="1 0 0 0" />
+				  <Setter Property="BorderBrush" Value="DarkGray" />
+				</Style>
+			  </DataGrid.Styles>
+			</DataGrid>
+			<GridSplitter Grid.Row="2" ResizeDirection="Rows" />
+			<TabControl Grid.Row="3">
+				<TabControl.Styles>
+					<Style Selector="TabItem">
+						<Setter Property="Margin" Value="0,-10,0,-10" />
+					</Style>
+					<Style Selector="Border#PART_SelectedPipe">
+						<Setter Property="Margin" Value="0,0,0,10" />
+					</Style>
+				</TabControl.Styles>
+
+				<TabItem Header="General" VerticalContentAlignment="Center">
+					<views:GeneralTorrentInfoView DataContext="{Binding GeneralInfoViewModel}" />
+				</TabItem>
+
+				<TabItem Header="Files" VerticalContentAlignment="Center">
+					<views:TorrentFilesView DataContext="{Binding FilesViewModel}" />
+				</TabItem>
+
+				<TabItem Header="Peers" VerticalContentAlignment="Center">
+					<views:TorrentPeersView DataContext="{Binding PeersViewModel}" />
+				</TabItem>
+
+				<TabItem Header="Trackers" VerticalContentAlignment="Center">
+					<views:TorrentTrackersView DataContext="{Binding TrackersViewModel}" />
+				</TabItem>
+			</TabControl>
+		</Grid>
+	</dialogHost:DialogHost>
 </UserControl>

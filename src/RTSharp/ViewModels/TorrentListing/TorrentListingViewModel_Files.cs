@@ -17,13 +17,13 @@ namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
-        private Channel<(Models.Torrent, IList<Models.File>)> FilesChanges;
+        private Channel<(Models.Torrent, Models.File)> FilesChanges;
 
         private Channel<(Models.Torrent, IList<PieceState>)> PiecesChanges;
 
         private async Task FilesTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
-            FilesChanges = Channel.CreateUnbounded<(Models.Torrent, IList<Models.File>)>(new UnboundedChannelOptions() {
+            FilesChanges = Channel.CreateUnbounded<(Models.Torrent, Models.File)>(new UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
@@ -55,16 +55,14 @@ namespace RTSharp.ViewModels.TorrentListing
         private async Task FilesModelUpdates()
         {
             Models.Torrent? lastFetchedFor = null;
-            FilesViewModel.Files.Clear();
+            FilesViewModel.ClearRoot();
 
-            await foreach (var (fetchedFor, files) in FilesChanges.Reader.ReadAllAsync()) {
+            await foreach (var (fetchedFor, file) in FilesChanges.Reader.ReadAllAsync()) {
                 if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner)
-                    FilesViewModel.Files.Clear();
+                    FilesViewModel.ClearRoot();
 
-                if (FilesViewModel.Files.Count == 0) {
-                    foreach (var file in files) {
-                        FilesViewModel.Files.Add(file);
-                    }
+                if (FilesViewModel.File == null) {
+                    FilesViewModel.SetRoot(file);
                 } else {
                     void update(ObservableCollection<Models.File> Target, IList<Models.File> Source)
                     {
@@ -79,7 +77,8 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
                     }
 
-                    update(FilesViewModel.Files, files);
+                    FilesViewModel.File.Update(file);
+                    update(FilesViewModel.File.Children, file.Children);
                 }
 
                 lastFetchedFor = fetchedFor;

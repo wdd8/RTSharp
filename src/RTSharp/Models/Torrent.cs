@@ -248,7 +248,7 @@ namespace RTSharp.Models
             get;
             set {
                 field = value;
-                DLSpeedDisplay = Converters.GetSIDataSize(value);
+                DLSpeedDisplay = Converters.GetSIDataSize(value) + "/s";
             }
         }
 
@@ -262,7 +262,7 @@ namespace RTSharp.Models
             get;
             set {
                 field = value;
-                UPSpeedDisplay = Converters.GetSIDataSize(value);
+                UPSpeedDisplay = Converters.GetSIDataSize(value) + "/s";
             }
         }
 
@@ -289,10 +289,16 @@ namespace RTSharp.Models
         /// </summary>
         public string[] Labels {
             get;
-            set {
+            private set {
                 field = value;
                 LabelsDisplay = String.Join(", ", value);
             }
+        }
+
+        public void SetLabels(string[] Labels)
+        {
+            this.Labels = Labels;
+            this.OnPropertyChanged(nameof(Labels));
         }
 
         [ObservableProperty]
@@ -459,7 +465,7 @@ namespace RTSharp.Models
             this.DLSpeed = In.DLSpeed;
             this.UPSpeed = In.UPSpeed;
             this.ETA = In.ETA;
-            this.Labels = In.Labels.ToArray();
+            SetLabels([.. In.Labels]);
             this.Peers = new ConnectedTotalPair(In.Peers.Connected, In.Peers.Total);
             this.Seeders = new ConnectedTotalPair(In.Seeders.Connected, In.Seeders.Total);
 

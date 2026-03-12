@@ -5,4 +5,8 @@ public interface IDataProviderTracker : IDataProviderBase<DataProviderTrackerCap
     public Task<IList<(Uri Uri, IList<Exception> Exceptions)>> Reannounce(byte[] TorrentHash, IList<Uri> TargetUris);
 
     Task ReplaceTracker(Torrent Torrent, string Existing, string New, CancellationToken cancellationToken = default);
+
+    Task AddNewTracker(Torrent Torrent, string New, CancellationToken cancellationToken = default);
+
+    Task RemoveTracker(Torrent Torrent, string Existing, CancellationToken cancellationToken = default);
 }

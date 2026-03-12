@@ -37,8 +37,8 @@ namespace RTSharp.Plugin
 
         public enum HookType
         {
-            TorrentListing_EvRowPrepared,
-            TorrentListing_EvCellPrepared,
+            TorrentListing_EvLoadingRow,
+            TorrentListing_EvLoadingCell,
             AddTorrent_EvDragDrop,
         }
 
@@ -49,8 +49,8 @@ namespace RTSharp.Plugin
         {
             Hooks = new object[Enum.GetValues<HookType>().Length][];
 
-            Hooks[(int)HookType.TorrentListing_EvRowPrepared] = Array.Empty<Action<object, TreeDataGridRowEventArgs>>();
-            Hooks[(int)HookType.TorrentListing_EvCellPrepared] = Array.Empty<Action<object, TreeDataGridCellEventArgs>>();
+            Hooks[(int)HookType.TorrentListing_EvLoadingRow] = Array.Empty<Action<object, DataGridRowEventArgs>>();
+            Hooks[(int)HookType.TorrentListing_EvLoadingCell] = Array.Empty<Action<object, string, DataGridCell>>();
             Hooks[(int)HookType.AddTorrent_EvDragDrop] = Array.Empty<Func<object, ValueTask>>();
 
             HookLocks = Enum.GetValues<HookType>().ToDictionary(x => x, _ => new Lock()).ToFrozenDictionary();
@@ -94,6 +94,25 @@ namespace RTSharp.Plugin
             });
         }
 
+        public static IDisposable Hook<T, T2, T3>(HookType type, Action<T, T2, T3> fx)
+        {
+            lock (HookLocks[type]) {
+                var list = (Action<T, T2, T3>[])Hooks[(int)type];
+                var newList = list.ToList();
+                newList.Add(fx);
+                Hooks[(int)type] = [.. newList];
+            }
+
+            return Disposable.Create(() => {
+                lock (HookLocks[type]) {
+                    var list = (Action<T, T2, T3>[])Hooks[(int)type];
+                    var newList = list.ToList();
+                    newList.Remove(fx);
+                    Hooks[(int)type] = [.. newList];
+                }
+            });
+        }
+
         public static IDisposable Hook<T>(HookType type, Action<T> fx)
         {
             lock (HookLocks[type]) {
@@ -121,6 +140,11 @@ namespace RTSharp.Plugin
         internal static IEnumerable<Action<T, T2>> GetHook<T, T2>(HookType type)
         {
             return Hooks[(int)type].Cast<Action<T, T2>>();
+        }
+
+        internal static IEnumerable<Action<T, T2, T3>> GetHook<T, T2, T3>(HookType type)
+        {
+            return Hooks[(int)type].Cast<Action<T, T2, T3>>();
         }
 
         internal static IEnumerable<Func<T, ValueTask>> GetHookAsync<T>(HookType type)

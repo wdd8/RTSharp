@@ -233,6 +233,42 @@ public static class EnumExt
         return stateStr;
     }
 
+    public static TORRENT_STATE ToTorrentState(string Option)
+    {
+        TORRENT_STATE ret = 0;
+        if (Option == "Seeding")
+            ret |= TORRENT_STATE.SEEDING;
+        if (Option == "Stopped")
+            ret |= TORRENT_STATE.STOPPED;
+        if (Option == "Complete")
+            ret |= TORRENT_STATE.COMPLETE;
+        if (Option == "Downloading")
+            ret |= TORRENT_STATE.DOWNLOADING;
+        if (Option == "Paused")
+            ret |= TORRENT_STATE.PAUSED;
+        if (Option == "Hashing")
+            ret |= TORRENT_STATE.HASHING;
+        if (Option == "Errored")
+            ret |= TORRENT_STATE.ERRORED;
+        if (Option == "Active")
+            ret |= TORRENT_STATE.ACTIVE;
+        return ret;
+    }
+
+    public static string[] GetAllTorrentStateOptions()
+    {
+        return [
+            "Seeding",
+            "Stopped",
+            "Complete",
+            "Downloading",
+            "Paused",
+            "Hashing",
+            "Errored",
+            "Active"
+        ];
+    }
+
     public static string ToString(this TORRENT_PRIORITY In)
     {
         if (In == TORRENT_PRIORITY.HIGH)

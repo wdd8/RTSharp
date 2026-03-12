@@ -28,6 +28,13 @@ service GRPCTorrentService {
     rpc SetLabels (SetLabelsArgs) returns (TorrentsReply);
     rpc QueueTorrentUpdate (Torrents) returns (google.protobuf.Empty);
     rpc EditTracker (EditTrackerArgs) returns (google.protobuf.Empty);
+    rpc AddTracker (SingleTrackerArgs) returns (google.protobuf.Empty);
+    rpc RemoveTracker (SingleTrackerArgs) returns (google.protobuf.Empty);
+}
+
+message SingleTrackerArgs {
+    bytes InfoHash = 1;
+    string Tracker = 2;
 }
 
 message EditTrackerArgs {

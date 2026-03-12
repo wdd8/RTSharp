@@ -119,18 +119,18 @@ public interface IPluginHost
     IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove);
 
     /// <summary>
-    /// Hooks TorrentListing EvRowPrepared event, which then allows to modify appearance or behavior of a row
+    /// Hooks TorrentListing EvLoadingRow event, which then allows to modify appearance or behavior of a row
     /// </summary>
     /// <param name="fx">Hook function</param>
     /// <returns>Unhook</returns>
-    IDisposable HookTorrentListingEvRowPrepared(Action<object, TreeDataGridRowEventArgs> fx);
+    IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx);
 
     /// <summary>
-    /// Hooks TorrentListing EvRowPrepared event, which then allows to modify appearance or behavior of a cell
+    /// Hooks TorrentListing EvLoadingCell event, which then allows to modify appearance or behavior of a cell. First argument is <c>RTSharp.Models.Torrent</c>, second is <c>ColumnKey</c>.
     /// </summary>
     /// <param name="fx">Hook function</param>
     /// <returns>Unhook</returns>
-    IDisposable HookTorrentListingEvCellPrepared(Action<object, TreeDataGridCellEventArgs> fx);
+    IDisposable HookTorrentListingEvLoadingCell(Action<object, string, DataGridCell> fx);
 
     /// <summary>
     /// Hooks AddTorrent EvDragDrop event, which allows to modify AddTorrent window ViewModel

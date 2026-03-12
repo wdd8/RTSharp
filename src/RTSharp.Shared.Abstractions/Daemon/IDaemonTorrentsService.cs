@@ -49,4 +49,8 @@ public interface IDaemonTorrentsService
     Task QueueTorrentUpdate(IList<byte[]> Hashes);
 
     Task ReplaceTracker(byte[] Hash, string Existing, string New, CancellationToken cancellationToken);
+
+    Task AddNewTracker(byte[] Hash, string New, CancellationToken cancellationToken);
+
+    Task RemoveTracker(byte[] Hash, string Existing, CancellationToken cancellationToken);
 }

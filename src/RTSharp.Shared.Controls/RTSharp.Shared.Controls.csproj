@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Version>1.0.0.0</Version>
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <LangVersion>preview</LangVersion>
     </PropertyGroup>
 
     <PropertyGroup Label="Avalonia">
@@ -13,9 +14,7 @@
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.12" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.12" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.12" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
         <PackageReference Include="MessageBox.Avalonia" Version="3.3.1.1" />
         <PackageReference Include="NP.Ava.UniDock" Version="1.0.19" />
@@ -31,6 +30,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\ProDataGrid\src\Avalonia.Controls.DataGrid\Avalonia.Controls.DataGrid.csproj" />
       <ProjectReference Include="..\RTSharp.Shared.Abstractions.Client\RTSharp.Shared.Abstractions.Client.csproj" />
       <ProjectReference Include="..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj" />
     </ItemGroup>

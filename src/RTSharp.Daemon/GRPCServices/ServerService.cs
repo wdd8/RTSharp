@@ -119,9 +119,14 @@ namespace RTSharp.Daemon.GRPCServices
                     break;
                 }
 
-                await session.EvProgressChanged.WaitAsync(Ctx.CancellationToken);
+                var task = await Task.WhenAny(session.Execution!, session.EvProgressChanged.WaitAsync(Ctx.CancellationToken));
+
                 Logger.LogInformation($"ScriptStatus: Session {id} progress changed, sending");
                 await Res.WriteAsync(MapProgressState(Req.Value, session.Progress), Ctx.CancellationToken);
+
+                if (task == session.Execution) {
+                    return;
+                }
             }
         }
 

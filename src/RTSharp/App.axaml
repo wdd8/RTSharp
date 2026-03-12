@@ -16,15 +16,18 @@
         <StyleInclude Source="avares://NP.Ava.Visuals/Themes/TextStyles.axaml"/>
         <StyleInclude Source="avares://NP.Ava.UniDock/Themes/DockStyles.axaml"/>
         <StyleInclude Source="avares://RTSharp/CustomWindowStyles.axaml"/>
-        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
-        <StyleInclude Source="avares://Avalonia.Controls.TreeDataGrid/Themes/Fluent.axaml"/>
         <dialogHostAvalonia:DialogHostStyles />
+		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.v2.xaml" />
 
         <Style Selector="TextBlock">
             <Setter Property="FontSize" Value="12" />
         </Style>
 
         <Style Selector="AccessText">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+		<Style Selector="DataGridSearchTextBlock">
             <Setter Property="FontSize" Value="12" />
         </Style>
 

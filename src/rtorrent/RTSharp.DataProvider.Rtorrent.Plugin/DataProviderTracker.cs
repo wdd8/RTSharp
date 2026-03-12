@@ -42,4 +42,18 @@ public class DataProviderTracker : IDataProviderTracker
 
         await client.ReplaceTracker(Torrent.Hash, Existing, New, cancellationToken);
     }
+
+    public async Task AddNewTracker(Torrent Torrent, string New, CancellationToken cancellationToken = default)
+    {
+        var client = PluginHost.AttachedDaemonService.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+
+        await client.AddNewTracker(Torrent.Hash, New, cancellationToken);
+    }
+
+    public async Task RemoveTracker(Torrent Torrent, string Existing, CancellationToken cancellationToken = default)
+    {
+        var client = PluginHost.AttachedDaemonService.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+
+        await client.RemoveTracker(Torrent.Hash, Existing, cancellationToken);
+    }
 }
