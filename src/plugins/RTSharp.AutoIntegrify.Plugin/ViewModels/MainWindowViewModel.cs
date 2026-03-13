@@ -193,10 +193,8 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
                 Dispatcher.UIThread.Invoke(() => {
                     StatusText = "Failed to find files";
                     ActionButtonText = "Retry";
-
                 });
-            }
-            if (PendingLinks.Count == 0) {
+            } else if (PendingLinks.Count == 0) {
                 Dispatcher.UIThread.Invoke(() => {
                     StatusText = "All files resolved";
                     ActionButtonText = "Force recheck";
@@ -309,26 +307,11 @@ public class Main(ILogger<Main> Logger) : IScript
                 var dir = new DirectoryInfo(path);
                 foreach (var info in dir.EnumerateFileSystemInfos()) {
                     if (info.Attributes.HasFlag(FileAttributes.Directory)) {
-                        if (isMultiFile) {
-                            if (info.Name == torrentName || wideSearch) {
-                                Logger.LogInformation($"Considering {info.FullName}...");
-                                if (matchFolder(info.FullName)) {
-                                    // Got a strong match, I don't think we will need other folders...
-                                    goto done;
-                                }
-                            }
-                        } else {
-                            if (info.Name == torrentName || wideSearch) {
-                                try {
-                                    var thisFile = new FileInfo(info.FullName);
-                                    if (thisFile.Length == size) {
-                                        append(info.FullName);
-                                        // Got a strong match, I don't think we will need other than this...
-                                        goto done;
-                                    }
-                                } catch {
-                                    Logger.LogWarning($"AutoIntegrify: Cannot query file {info.FullName}");
-                                }
+                        if (info.Name == torrentName || wideSearch) {
+                            Logger.LogInformation($"Considering {info.FullName}...");
+                            if (matchFolder(info.FullName)) {
+                                // Got a strong match, I don't think we will need other folders...
+                                goto done;
                             }
                         }
                     } else {
@@ -395,9 +378,7 @@ done:;
 
         if (paths.Count == 0) {
             Dispatcher.UIThread.Invoke(() => {
-                Dispatcher.UIThread.Invoke(() => {
-                    ProgressText = $"No files found for {File.File.FullPath}";
-                });
+                ProgressText = $"No files found for {File.File.FullPath}";
                 File.Resolved = RESOLVE_STATE.UNRESOLVED;
                 RefreshPieces(File, SelectedFile);
             });

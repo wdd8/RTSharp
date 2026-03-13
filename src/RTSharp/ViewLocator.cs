@@ -13,7 +13,7 @@ namespace RTSharp
 
         public Control Build(object data)
         {
-            throw null;
+            return null!;
             /*var name = data.GetType().FullName!.Replace("ViewModel", "View");
             var type = data.GetType().Assembly.GetType(name);
 
