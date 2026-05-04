@@ -171,7 +171,7 @@ public partial class TorrentFilesViewModel : ObservableObject
 
     }
 
-    public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-file");
+    public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-file");
 
     public bool CanExecuteMediaInfo() => true;
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteMediaInfo))]

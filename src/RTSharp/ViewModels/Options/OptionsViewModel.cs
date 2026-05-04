@@ -24,10 +24,10 @@ namespace RTSharp.ViewModels.Options
         public OptionsViewModel()
         {
             Items = new List<OptionsItem> {
-                new OptionsItem("fa-solid fa-gears", "Behavior", "Behavior", new[] {
-                    new OptionsItem("fa-solid fa-gears", "Behavior > Behavior", "Behavior", Array.Empty<OptionsItem>())
+                new OptionsItem("fa7-solid fa7-gears", "Behavior", "Behavior", new[] {
+                    new OptionsItem("fa7-solid fa7-gears", "Behavior > Behavior", "Behavior", Array.Empty<OptionsItem>())
                 }),
-                new OptionsItem("fa-solid fa-book-bookmark", "Caching", "Caching", Array.Empty<OptionsItem>())
+                new OptionsItem("fa7-solid fa7-book-bookmark", "Caching", "Caching", Array.Empty<OptionsItem>())
             };
 
             PageMap = new Dictionary<string, Type>() {

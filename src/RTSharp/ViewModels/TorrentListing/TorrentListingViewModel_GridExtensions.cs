@@ -5,8 +5,6 @@ using Avalonia.Controls.DataGridSearching;
 using Avalonia.Controls.DataGridSorting;
 using Avalonia.Data.Converters;
 
-using Google.Protobuf.WellKnownTypes;
-
 using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Core.TorrentPolling;
@@ -23,8 +21,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-
-using static System.Net.Mime.MediaTypeNames;
 
 namespace RTSharp.ViewModels.TorrentListing;
 
@@ -102,17 +98,9 @@ public partial class TorrentListingViewModel
         public bool TryGetSortingComparerToken(SortingDescriptor descriptor, out string token)
         {
             var columnKey = (string)descriptor.ColumnId;
-            if (columnKey == nameof(Torrent.AddedOnDate)) {
-                token = "Sorting:AddedOnDate";
-                return true;
-            } else if (columnKey == "Connection") {
-                /*token = "Sorting:Connection";
-                return true;*/
-            }
 
-            Debugger.Break();
-            token = null!;
-            return false;
+            token = "Sorting:" + columnKey;
+            return true;
         }
     }
 
@@ -150,7 +138,7 @@ public partial class TorrentListingViewModel
 
             Debugger.Break();
             predicate = null;
-            return true;
+            return false;
         }
 
         public bool TryResolveFilteringValue(string token, out object value)
@@ -199,16 +187,6 @@ public partial class TorrentListingViewModel
 
         public bool TryResolveSortingComparer(string token, out IComparer comparer)
         {
-            if (token == "Sorting:AddedOnDate") {
-                comparer = new DataGridColumnValueAccessorComparer<Models.Torrent, string>(new DataGridColumnValueAccessor<Models.Torrent, string>(x => x.AddedOnDateDisplay));
-                return true;
-            } else if (token == "Sorting:Connection") {
-                //comparer = new DataGridColumnValueAccessorComparer<Models.Torrent, string>(new DataGridColumnValueAccessor<Models.Torrent, string>(x => x.))
-            } else if (token == "Sorting:Name") {
-                //comparer = new DataGridColumnValueAccessorComparer<Models.Torrent, string>(NameColumn.ValueAccessor);
-            }
-
-            Debugger.Break();
             comparer = null;
             return false;
         }
@@ -317,8 +295,8 @@ public partial class TorrentListingViewModel
 
     public void StateFilterFlyoutOpening() => RepopulateOptions(StateFilter, Shared.Abstractions.EnumExt.GetAllTorrentStateOptions(), x => x);
     public void LabelsFilterFlyoutOpening() => RepopulateOptions(LabelsFilter, TorrentPolling.AllLabelReferences.Keys, x => x);
-    public void ConnectionFilterFlyoutOpening() => RepopulateOptions(ConnectionFilter, Torrents, x => x.DataOwner.PluginInstance.PluginInstanceConfig.Name);
-    public void TrackerFilterFlyoutOpening() => RepopulateOptions(TrackerFilter, Torrents, x => new TrackerFilterContext { Name = x.TrackerDisplayName!, Icon = x.TrackerIcon });
+    public void ConnectionFilterFlyoutOpening() => RepopulateOptions(ConnectionFilter, TorrentPolling.Torrents.GetSnapshot(), x => x.DataOwner.PluginInstance.PluginInstanceConfig.Name);
+    public void TrackerFilterFlyoutOpening() => RepopulateOptions(TrackerFilter, TorrentPolling.Torrents.GetSnapshot(), x => new TrackerFilterContext { Name = x.TrackerDisplayName!, Icon = x.TrackerIcon });
     public static void RepopulateOptions<TInput, TProp>(SetFilterContext<TProp> FilterContext, IEnumerable<TInput> Input, Func<TInput, TProp> FxProperty)
         where TProp : IComparable
     {

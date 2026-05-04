@@ -75,9 +75,9 @@ public partial class MainWindowViewModel : ObservableObject
     public bool AdvancedSelected => CurrentlySelectedCategory?.Name == "Advanced";
 
     public Category[] Categories { get; set; } = new Category[] {
-        new Category("General", "fas fa-wrench"),
-        new Category("Peers", "fas fa-download"),
-        new Category("Connection", "fas fa-signal"),
-        new Category("Advanced", "fas fa-tools")
+        new Category("General", "fa7-solid fa7-wrench"),
+        new Category("Peers", "fa7-solid fa7-download"),
+        new Category("Connection", "fa7-solid fa7-signal"),
+        new Category("Advanced", "fa7-solid fa7-tools")
     };
 }

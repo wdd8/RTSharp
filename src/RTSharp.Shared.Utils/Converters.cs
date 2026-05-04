@@ -5,8 +5,13 @@ namespace RTSharp.Shared.Utils
 {
     public static class Converters
     {
+        public const string ZeroBytes = "0 B";
+        public const string ZeroBytesPerSec = "0 B/s";
+
         public static string GetSIDataSize(ulong In)
         {
+            if (In == 0)
+                return ZeroBytes;
             if (In < 1024)
                 return In + " B";
             if (In < 1024 * 1024)
@@ -20,6 +25,23 @@ namespace RTSharp.Shared.Utils
             if (In < (ulong)1024 * 1024 * 1024 * 1024 * 1024 * 1024)
                 return Math.Round((float)In / 1024 / 1024 / 1024 / 1024 / 1024, 3) + " PiB";
             return Math.Round((float)In / 1024 / 1024 / 1024 / 1024 / 1024 / 1024, 3) + " EiB";
+        }
+
+        public static string GetSIDataSpeed(ulong In)
+        {
+            if (In == 0)
+                return ZeroBytesPerSec;
+            if (In < 1024)
+                return In + " B/s";
+            if (In < 1024 * 1024)
+                return Math.Round((float)In / 1024, 3) + " KiB/s";
+            if (In < 1024 * 1024 * 1024)
+                return Math.Round((float)In / 1024 / 1024, 3) + " MiB/s";
+            if (In < (ulong)1024 * 1024 * 1024 * 1024)
+                return Math.Round((float)In / 1024 / 1024 / 1024, 3) + " GiB/s";
+            if (In < (ulong)1024 * 1024 * 1024 * 1024 * 1024)
+                return Math.Round((float)In / 1024 / 1024 / 1024 / 1024, 3) + " TiB/s";
+            return Math.Round((float)In / 1024 / 1024 / 1024 / 1024 / 1024, 3) + " PiB/s";
         }
 
         public static bool TryParseSISpeed(string In, bool TreatAs1024, out ulong Ret)
@@ -76,7 +98,7 @@ namespace RTSharp.Shared.Utils
             var unit = In[units..].TrimStart();
             if (!unit.EndsWith("/s"))
                 throw new NotImplementedException("non-second time not supported");
-            
+
             unit = unit[..^2];
 
             var mult = TreatAs1024 ? 1024 : 1000;
@@ -103,14 +125,95 @@ namespace RTSharp.Shared.Utils
         {
             if (In == TimeSpan.MaxValue)
                 return "∞";
+            if (In == TimeSpan.Zero)
+                return "0 ms";
+
             var days = (int)In.TotalDays;
 
             if (In < TimeSpan.FromMilliseconds(1)) {
-                 return In.Nanoseconds + "ns";
+                var ns = In.Nanoseconds;
+                return string.Create(CountDigits(ns) + 2, ns, static (span, n) => {
+                    n.TryFormat(span, out int w);
+                    span[w] = 'n';
+                    span[w + 1] = 's';
+                });
             }
 
-            return (days != 0 ? (days + "d ") : "") + (In.Hours != 0 ? (In.Hours + "h ") : "") + (In.Minutes != 0 ? (In.Minutes + "m ") : "") + (In.Seconds != 0 ? (In.Seconds + "s") : "") + (In.Milliseconds + "ms");
+            var hours = In.Hours;
+            var minutes = In.Minutes;
+            var seconds = In.Seconds;
+            var ms = In.Milliseconds;
+            var showMs = ms != 0 || (days == 0 && hours == 0 && minutes == 0 && seconds == 0);
+
+            int shownCount = 0;
+            int len = 0;
+            if (days != 0) {
+                len += CountDigits(days) + 1;
+                shownCount++;
+            }
+            if (hours != 0) {
+                len += CountDigits(hours) + 1;
+                shownCount++;
+            }
+            if (minutes != 0) {
+                len += CountDigits(minutes) + 1;
+                shownCount++;
+            }
+            if (seconds != 0) {
+                len += CountDigits(seconds) + 1;
+                shownCount++;
+            }
+            if (showMs) {
+                len += CountDigits(ms) + 2;
+                shownCount++;
+            }
+            len += shownCount - 1;
+
+            return string.Create(len, (days, hours, minutes, seconds, ms, showMs), static (span, t) => {
+                int pos = 0;
+                bool needSpace = false;
+                if (t.days != 0) {
+                    t.days.TryFormat(span[pos..], out int written);
+                    pos += written;
+                    span[pos++] = 'd';
+                    needSpace = true;
+                }
+                if (t.hours != 0) {
+                    if (needSpace)
+                        span[pos++] = ' ';
+                    t.hours.TryFormat(span[pos..], out int written);
+                    pos += written;
+                    span[pos++] = 'h';
+                    needSpace = true;
+                }
+                if (t.minutes != 0) {
+                    if (needSpace)
+                        span[pos++] = ' ';
+                    t.minutes.TryFormat(span[pos..], out int written);
+                    pos += written;
+                    span[pos++] = 'm';
+                    needSpace = true;
+                }
+                if (t.seconds != 0) {
+                    if (needSpace)
+                        span[pos++] = ' ';
+                    t.seconds.TryFormat(span[pos..], out int written);
+                    pos += written;
+                    span[pos++] = 's';
+                    needSpace = true;
+                }
+                if (t.showMs) {
+                    if (needSpace)
+                        span[pos++] = ' ';
+                    t.ms.TryFormat(span[pos..], out int written);
+                    pos += written;
+                    span[pos++] = 'm';
+                    span[pos] = 's';
+                }
+            });
         }
+
+        private static int CountDigits(int n) => n == 0 ? 1 : (int)Math.Log10(n) + 1;
 
         /// <summary>
         /// Accepts hours greater than 23

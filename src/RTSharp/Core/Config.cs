@@ -19,7 +19,7 @@ namespace RTSharp.Core;
 [JsonSerializable(typeof(Config.Models.Behavior))]
 [JsonSerializable(typeof(Config.Models.Caching))]
 [JsonSerializable(typeof(Config.Models.UIState))]
-[JsonSerializable(typeof(Config.Models.Server))]
+[JsonSerializable(typeof(Dictionary<string, Config.Models.Server>))]
 [JsonSerializable(typeof(Config.Models.Look))]
 internal partial class SourceGenerationContext : JsonSerializerContext { }
 
@@ -56,6 +56,12 @@ public class Config
             public string DockState { get; set; }
 
             public string DockVMState { get; set; }
+
+            public int? LastPosX { get; set; }
+
+            public int? LastPosY { get; set; }
+
+            public bool Maximized { get; set; }
 
             public bool TrayIconVisible { get; set; }
         }
@@ -125,7 +131,7 @@ public class Config
             json[nameof(Behavior)] = JsonSerializer.SerializeToNode(Behavior.Value, SourceGenerationContext.Default.Behavior);
             json[nameof(Caching)] = JsonSerializer.SerializeToNode(Caching.Value, SourceGenerationContext.Default.Caching);
             json[nameof(UIState)] = JsonSerializer.SerializeToNode(UIState.Value, SourceGenerationContext.Default.UIState);
-            json[nameof(Servers)] = JsonSerializer.SerializeToNode(Servers.Value, SourceGenerationContext.Default.Server);
+            json[nameof(Servers)] = JsonSerializer.SerializeToNode(Servers.Value, SourceGenerationContext.Default.DictionaryStringServer);
             json[nameof(Look)] = JsonSerializer.SerializeToNode(Look.Value, SourceGenerationContext.Default.Look);
             await File.WriteAllTextAsync(ConfigPath, json.ToJsonString(new JsonSerializerOptions() {
                 WriteIndented = true

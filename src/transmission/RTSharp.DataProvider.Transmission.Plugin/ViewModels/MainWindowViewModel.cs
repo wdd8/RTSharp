@@ -78,10 +78,10 @@ public partial class MainWindowViewModel : ObservableObject
     public bool QueueSelected => CurrentlySelectedCategory?.Name == "Queue";
 
     public Category[] Categories { get; set; } = new Category[] {
-        new Category("Download", "fas fa-download"),
-        new Category("Network (WAN)", "fas fa-network-wired"),
-        new Category("Bandwidth", "fas fa-signal"),
-        new Category("Queue", "fas fa-lines-leaning")
+        new Category("Download", "fa7-solid fa7-download"),
+        new Category("Network (WAN)", "fa7-solid fa7-network-wired"),
+        new Category("Bandwidth", "fa7-solid fa7-signal"),
+        new Category("Queue", "fa7-solid fa7-lines-leaning")
     };
 
     [ObservableProperty]

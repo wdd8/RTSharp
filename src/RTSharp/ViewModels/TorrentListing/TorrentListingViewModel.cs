@@ -15,11 +15,9 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-using NP.UniDockService;
-using NP.Utilities;
-
 using RTSharp.Core;
 using RTSharp.Core.TorrentPolling;
+using RTSharp.Models;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Controls.DataGridFilters;
@@ -33,12 +31,8 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Linq;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,8 +40,6 @@ using System.Threading.Tasks;
 using Torrent = RTSharp.Models.Torrent;
 
 namespace RTSharp.ViewModels.TorrentListing;
-
-public class DockTorrentListingViewModel : DockItemViewModel<TorrentListingViewModel> { }
 
 public readonly struct TrackerFilterContext : IComparable
 {
@@ -67,11 +59,13 @@ public readonly struct TrackerFilterContext : IComparable
     public override int GetHashCode() => String.GetHashCode(Name);
 }
 
-public partial class TorrentListingViewModel : ObservableObject, IContextPopulatedNotifyable, IDockable
+public partial class TorrentListingViewModel : ObservableObject, IContextPopulatedNotifyable
 {
-    public ObservableRangeCollection<Torrent> Torrents { get; } = TorrentPolling.Torrents;
+    public ReadOnlyObservableCollection<Torrent> VisibleTorrents;
 
-    public DataGridCollectionView View { get; }
+    [ObservableProperty]
+    public partial DataGridCollectionView View { get; set; }
+
     public SearchModel SearchModel { get; } = new SearchModel {
         HighlightMode = SearchHighlightMode.None,
         HighlightCurrent = false,
@@ -81,7 +75,8 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
     public SortingModel SortingModel { get; } = new SortingModel {
         MultiSort = true,
         CycleMode = SortCycleMode.AscendingDescendingNone,
-        OwnsViewSorts = true
+        OwnsViewSorts = true,
+        KeepSecondarySorts = true
     };
     public SelectionModel<Torrent> SelectionModel { get; } = new SelectionModel<Torrent> {
         SingleSelect = false
@@ -89,6 +84,8 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
     public FilteringModel FilteringModel { get; } = new() {
         OwnsViewFilter = true
     };
+    public TorrentSortingAdapterFactory SortingAdapterFactory { get; }
+    public TorrentFilteringAdapterFactory FilteringAdapterFactory { get; }
     public ObservableCollection<DataGridColumnDefinition> ColumnDefinitions { get; }
 
     public ObservableCollection<Torrent> SelectedItems { get; } = new();
@@ -106,8 +103,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
     public TimeSpan SearchAsYouGoDelay { get; private set; }
     public string CurrentSearchText { get; set; }
 
-    [ObservableProperty]
-    public partial TemplatedControl[] LabelsWithAdd { get; set; }
+    public ObservableCollection<TemplatedControl> LabelsWithAdd { get; } = new();
     public GeneralTorrentInfoViewModel GeneralInfoViewModel { get; } = new();
 
     public TorrentFilesViewModel FilesViewModel { get; } = new();
@@ -131,14 +127,17 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
     {
         DefaultImage = new DrawingImage() {
             Drawing = new GeometryDrawing() {
-                Geometry = FontAwesomeIcons.Get("fa-solid fa-globe"),
+                Geometry = FontAwesomeIcons.Get("fa7-solid fa7-globe"),
                 Brush = Brushes.White
             }
         };
     }
 
     private List<IDisposable> VMDisposables = new();
-    private List<IDisposable> SelectionDisposables = new();
+
+    private readonly Dictionary<string, (MenuItem Container, CheckBox Icon)> LabelControlCache = new();
+    private readonly Separator LabelSeparator = new();
+    private readonly MenuItem AddLabelMenuItem;
 
     public TorrentListingViewModel()
     {
@@ -149,7 +148,11 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
             SearchAsYouGoDelay = config.Value.SearchAsYouGoDelay;
         }
 
-        View = new DataGridCollectionView(Torrents);
+        VisibleTorrents = TorrentPolling.Torrents.VisibleItems;
+
+        SortingAdapterFactory = new TorrentSortingAdapterFactory((comparer, hasSort) => TorrentPolling.Torrents.ApplySort(comparer, hasSort));
+        FilteringAdapterFactory = new TorrentFilteringAdapterFactory(predicate => TorrentPolling.Torrents.ApplyFilter(predicate));
+
         var builder = DataGridColumnDefinitionBuilder.For<Torrent>();
         DataGridColumnDefinition connectionColumn, hashColumn, stateColumn, priorityColumn;
 
@@ -175,6 +178,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                     c.ColumnKey = nameof(Torrent.Hash);
                     c.ValueAccessor = new DataGridColumnValueAccessor<Torrent, byte[]>(x => x.Hash);
                     c.FilterFlyoutKey = "HashFilterFlyout";
+                    c.CustomSortComparer = Comparer<byte[]>.Default;
                     c.ReuseCellContent = true;
                 }
             )),
@@ -188,6 +192,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                     c.Width = new DataGridLength(600);
                     c.ColumnKey = nameof(Torrent.Name);
                     c.FilterFlyoutKey = "NameFilterFlyout";
+                    c.CustomSortComparer = Comparer<string>.Default;
                 }
             )),
             (stateColumn = builder.Text(
@@ -200,6 +205,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                     c.Width = new DataGridLength(60);
                     c.ColumnKey = nameof(Torrent.State);
                     c.FilterFlyoutKey = "StateFilterFlyout";
+                    c.CustomSortComparer = Comparer<string>.Default;
                 }
             )),
             builder.Text(
@@ -211,6 +217,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(70);
                     c.ColumnKey = nameof(Torrent.Size);
+                    c.CustomSortComparer = Comparer<ulong>.Default;
                 }
             ),
             builder.Template(
@@ -221,6 +228,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                     c.ColumnKey = nameof(Torrent.Done);
                     c.ValueAccessor = new DataGridColumnValueAccessor<Torrent, float>(x => x.Done);
                     c.ReuseCellContent = true;
+                    c.CustomSortComparer = Comparer<float>.Default;
                 }
             ),
             builder.Text(
@@ -232,6 +240,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(70);
                     c.ColumnKey = nameof(Torrent.Downloaded);
+                    c.CustomSortComparer = Comparer<ulong>.Default;
                 }
             ),
             builder.Text(
@@ -243,6 +252,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(70);
                     c.ColumnKey = nameof(Torrent.CompletedSize);
+                    c.CustomSortComparer = Comparer<ulong>.Default;
                 }
             ),
             builder.Text(
@@ -254,6 +264,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(70);
                     c.ColumnKey = nameof(Torrent.Uploaded);
+                    c.CustomSortComparer = Comparer<ulong>.Default;
                 }
             ),
             builder.Text(
@@ -265,6 +276,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(70);
                     c.ColumnKey = nameof(Torrent.RemainingSize);
+                    c.CustomSortComparer = Comparer<ulong>.Default;
                 }
             ),
             builder.Text(
@@ -276,6 +288,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(70);
                     c.ColumnKey = nameof(Torrent.DLSpeed);
+                    c.CustomSortComparer = Comparer<ulong>.Default;
                 }
             ),
             builder.Text(
@@ -287,6 +300,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(70);
                     c.ColumnKey = nameof(Torrent.UPSpeed);
+                    c.CustomSortComparer = Comparer<ulong>.Default;
                 }
             ),
             builder.Text(
@@ -298,6 +312,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(43);
                     c.ColumnKey = nameof(Torrent.Peers);
+                    c.CustomSortComparer = Comparer<uint>.Default;
                 }
             ),
             builder.Text(
@@ -309,6 +324,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(43);
                     c.ColumnKey = nameof(Torrent.Seeders);
+                    c.CustomSortComparer = Comparer<uint>.Default;
                 }
             ),
             (LabelsColumn = builder.Text(
@@ -319,8 +335,9 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 configure: c =>
                 {
                     c.Width = new DataGridLength(70);
-                    c.ColumnKey = nameof(Torrent.Labels);
+                    c.ColumnKey = nameof(Torrent.LabelsDisplay);
                     c.FilterFlyoutKey = "LabelsFilterFlyout";
+                    c.CustomSortComparer = Comparer<string>.Default;
                 }
             )),
             builder.Text(
@@ -332,6 +349,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(70);
                     c.ColumnKey = nameof(Torrent.ETA);
+                    c.CustomSortComparer = Comparer<TimeSpan>.Default;
                 }
             ),
             builder.Text(
@@ -343,6 +361,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(120);
                     c.ColumnKey = nameof(Torrent.CreatedOnDate);
+                    c.CustomSortComparer = Comparer<DateTime?>.Default;
                 }
             ),
             builder.Text(
@@ -354,6 +373,8 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(120);
                     c.ColumnKey = nameof(Torrent.AddedOnDate);
+                    c.CustomSortComparer = Comparer<DateTime>.Default;
+                    c.SortMemberPath = nameof(Torrent.AddedOnDate);
                 }
             ),
             builder.Text(
@@ -365,6 +386,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(70);
                     c.ColumnKey = nameof(Torrent.Ratio);
+                    c.CustomSortComparer = Comparer<float>.Default;
                 }
             ),
             builder.Text(
@@ -376,6 +398,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
                 {
                     c.Width = new DataGridLength(120);
                     c.ColumnKey = nameof(Torrent.FinishedOnDate);
+                    c.CustomSortComparer = Comparer<DateTime?>.Default;
                 }
             ),
             (TrackerColumn = builder.Template(
@@ -403,21 +426,6 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
             ))
         ];
 
-        Dispatcher.UIThread.RunJobs();
-
-        var model = new ConditionalFormattingModel();
-        model.Apply(new[]
-        {
-            new ConditionalFormattingDescriptor(
-                ruleId: "row-alert",
-                @operator: ConditionalFormattingOperator.Custom,
-                columnId: nameof(Torrent.Ratio),
-                predicate: x => ((Torrent)x.Item).Ratio > 5,
-                target: ConditionalFormattingTarget.Cell,
-                valueSource: ConditionalFormattingValueSource.Item,
-                themeKey: "RowAlertTheme")
-        });
-
         ConnectionFilter = new SetFilterContext<string>("Connection equals", FilteringModel, connectionColumn, FilteringOperator.In);
 
         HashFilter = new TextFilterContext("Hash is", FilteringModel, hashColumn, FilteringOperator.Custom, (x, opt) => {
@@ -427,12 +435,19 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
         });
         NameFilter = new TextFilterContext("Name contains", FilteringModel, NameColumn, FilteringOperator.Contains);
         StateFilter = new SetFilterContext<string>("State equals", FilteringModel, stateColumn, FilteringOperator.Custom, (x, opts) => opts.Any(i => ((Torrent)x!).InternalState.HasFlag(EnumExt.ToTorrentState((string)i!))));
-        LabelsFilter = new SetFilterContext<string>("Label equals", FilteringModel, LabelsColumn, FilteringOperator.In);
+        LabelsFilter = new SetFilterContext<string>("Label equals", FilteringModel, LabelsColumn, FilteringOperator.Custom, (x, opts) => opts.Any(i => ((Torrent)x!).Labels.Contains((string)i!)));
         TrackerFilter = new SetFilterContext<TrackerFilterContext>("Tracker equals", FilteringModel, TrackerColumn, FilteringOperator.Custom, (x, opts) => opts.Any(i => ((TrackerFilterContext)i!).Name == ((Torrent)x!).TrackerDisplayName));
 
         SelectionModel.SelectionChanged += CurrentlySelectedTorrentsChanged;
 
         App.RegisterOnExit($"{nameof(TorrentListingView)}_{nameof(DataGrid)}_{nameof(SaveGridState)}", SaveGridState);
+
+        AddLabelMenuItem = new MenuItem { Command = ShowAddLabelCommand, Header = "Add..." };
+    }
+
+    public void AttachGridData()
+    {
+        View = new DataGridCollectionView(VisibleTorrents);
     }
 
     ~TorrentListingViewModel() // TODO: this doesn't work
@@ -458,45 +473,56 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
         optionsWindow.Show();
     }
 
-    private TemplatedControl[] GetLabelsWithAdd(string[] AllLabels)
+    private void UpdateLabelsWithAdd(string[] allLabels)
     {
-        var ret = new List<TemplatedControl>();
+        LabelsWithAdd.Remove(AddLabelMenuItem);
+        LabelsWithAdd.Remove(LabelSeparator);
 
-        if (SelectedItems == null)
-            return Array.Empty<TemplatedControl>();
+        var newLabelSet = new HashSet<string>(allLabels);
 
-        var current = SelectedItems.ToArray();
+        foreach (var stale in LabelControlCache.Keys.Where(k => !newLabelSet.Contains(k)).ToList()) {
+            LabelsWithAdd.Remove(LabelControlCache[stale].Container);
+            LabelControlCache.Remove(stale);
+        }
 
-        foreach (var label in AllLabels) {
-            int checkedCount = 0;
-            foreach (var torrent in current) {
-                if (torrent.Labels.Contains(label)) {
-                    checkedCount++;
-                }
-            }
+        for (int i = 0; i < allLabels.Length; i++) {
+            var label = allLabels[i];
 
-            ret.Add(new MenuItem {
-                Icon = new CheckBox() {
+            if (LabelControlCache.TryGetValue(label, out var controls)) {
+                int curIdx = LabelsWithAdd.IndexOf(controls.Container);
+                if (curIdx != i)
+                    LabelsWithAdd.Move(curIdx, i);
+            } else {
+                var cb = new CheckBox {
                     BorderThickness = new Avalonia.Thickness(0),
                     IsHitTestVisible = true,
                     Command = ToggleLabelCommand,
-                    CommandParameter = (current, label, checkedCount != 0),
                     IsThreeState = true,
-                    IsChecked = checkedCount == 0 ? false : (checkedCount == current.Length ? true : null)
-                },
-                Header = label
-            });
+                    IsChecked = false
+                };
+                var mi = new MenuItem { Icon = cb, Header = label };
+                LabelControlCache[label] = (mi, cb);
+                LabelsWithAdd.Insert(i, mi);
+            }
         }
 
-        if (ret.Count > 0)
-            ret.Add(new Separator());
+        if (allLabels.Length > 0)
+            LabelsWithAdd.Add(LabelSeparator);
+        LabelsWithAdd.Add(AddLabelMenuItem);
+    }
 
-        ret.Add(new MenuItem {
-            Command = ShowAddLabelCommand,
-            Header = "Add..."
-        });
-
-        return [.. ret];
+    public void RefreshLabelCheckedState()
+    {
+        var current = SelectedItems.ToArray();
+        foreach (var (label, (_, cb)) in LabelControlCache) {
+            int checkedCount = 0;
+            foreach (var torrent in current) {
+                if (torrent.Labels.Contains(label))
+                    checkedCount++;
+            }
+            cb.IsChecked = checkedCount == 0 ? false : (checkedCount == current.Length ? true : null);
+            cb.CommandParameter = (current, label, checkedCount != 0);
+        }
     }
 
     private void UpdateTorrentInChildViewModels(IReadOnlyList<Torrent>? NewTorrents)
@@ -521,11 +547,12 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
     private Task? TorrentTabsTasks;
     private SemaphoreSlim TorrentTabsSwitch = new(1, 1);
     private CancellationTokenSource? SelectionChange { get; set; }
-    private async Task PollTorrentInfo(IReadOnlyList<Torrent>? NewTorrents)
+
+    private async Task PollTorrentInfo(IReadOnlyList<Torrent> NewTorrents)
     {
+        var newTorrent = NewTorrents.Count != 1 ? null : NewTorrents[0];
         try {
             await TorrentTabsSwitch.WaitAsync();
-            var newTorrent = NewTorrents?.Count != 1 ? null : NewTorrents[0];
 
             if (SelectionChange == null)
                 SelectionChange = new CancellationTokenSource();
@@ -566,47 +593,29 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
 
     public void OnContextPopulated()
     {
-        VMDisposables.Add(TorrentPolling.AllLabelReferencesObservable.Subscribe(x => LabelsWithAdd = GetLabelsWithAdd(x)));
+        VMDisposables.Add(TorrentPolling.AllLabelReferencesObservable.Subscribe(x => UpdateLabelsWithAdd(x)));
     }
 
     private void CurrentlySelectedTorrentsChanged(object? sender, SelectionModelSelectionChangedEventArgs<Torrent> e)
     {
-        foreach (var item in SelectionDisposables)
-            item.Dispose();
-
-        SelectionDisposables.Clear();
-
-#pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
-        IReadOnlyList<Torrent> selection = e.SelectedItems ?? [];
-#pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
-
+        var selection = e.SelectedItems;
         UpdateTorrentInChildViewModels(selection);
         _ = PollTorrentInfo(selection);
+
         this.OnPropertyChanged(nameof(StartTorrentAllowed));
-        StartTorrentsCommand.NotifyCanExecuteChanged();
-        StopTorrentsCommand.NotifyCanExecuteChanged();
-        PauseTorrentsCommand.NotifyCanExecuteChanged();
-        ForceRecheckTorrentsCommand.NotifyCanExecuteChanged();
-        ReannounceToAllTrackersCommand.NotifyCanExecuteChanged();
-        MoveDownloadDirectoryCommand.NotifyCanExecuteChanged();
-        RemoveTorrentsCommand.NotifyCanExecuteChanged();
-        RemoveTorrentsAndDataCommand.NotifyCanExecuteChanged();
-        GetDotTorrentsCommand.NotifyCanExecuteChanged();
-        AddLabelCommand.NotifyCanExecuteChanged();
+        Dispatcher.UIThread.Post(() => {
+            StartTorrentsCommand.NotifyCanExecuteChanged();
+            StopTorrentsCommand.NotifyCanExecuteChanged();
+            PauseTorrentsCommand.NotifyCanExecuteChanged();
+            ForceRecheckTorrentsCommand.NotifyCanExecuteChanged();
+            ReannounceToAllTrackersCommand.NotifyCanExecuteChanged();
+            MoveDownloadDirectoryCommand.NotifyCanExecuteChanged();
+            RemoveTorrentsCommand.NotifyCanExecuteChanged();
+            RemoveTorrentsAndDataCommand.NotifyCanExecuteChanged();
+            GetDotTorrentsCommand.NotifyCanExecuteChanged();
+            AddLabelCommand.NotifyCanExecuteChanged();
+        });
 
-        void TorrentPropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(Torrent.Labels)) {
-                LabelsWithAdd = GetLabelsWithAdd(TorrentPolling.AllLabelReferences.Keys.ToArray());
-            }
-        }
-
-        foreach (var item in selection) {
-            item.PropertyChanged += TorrentPropertyChanged;
-            SelectionDisposables.Add(Disposable.Create(() => {
-                item.PropertyChanged -= TorrentPropertyChanged;
-            }));
-        }
     }
 }
 

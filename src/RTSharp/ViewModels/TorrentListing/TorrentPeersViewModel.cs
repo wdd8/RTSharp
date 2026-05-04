@@ -79,6 +79,6 @@ namespace RTSharp.ViewModels.TorrentListing
         {
         }
 
-        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-user-group");
+        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-user-group");
     }
 }

@@ -8,7 +8,7 @@
         x:DataType="vm:PluginsViewModel"
         x:CompileBindings="True"
         Width="570" Height="250"
-        x:Class="RTSharp.Views.Plugins"
+        x:Class="RTSharp.Views.PluginsView"
         Icon="/Assets/rtsharp.ico"
         Title="RT# - Plugins">
 

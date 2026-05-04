@@ -3,7 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RTSharp.ViewModels.TorrentListing"
-        xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        xmlns:i="https://github.com/projektanker/icons.avalonia"
         mc:Ignorable="d"
         MinHeight="150"
         Width="450" Height="300"
@@ -19,7 +19,7 @@
                     <TextBlock IsEnabled="False" Text="{Binding LeftSide}" />
                 </Border>
                 <GridSplitter Grid.Column="1" Margin="4,0,4,0" />
-                <i:Icon Grid.Column="1" Margin="4,0,4,0" Value="fa-solid fa-arrow-right" />
+                <i:Icon Grid.Column="1" Margin="4,0,4,0" Value="fa7-solid fa7-arrow-right" />
                 <Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" Padding="4">
                     <TextBlock IsEnabled="False" Text="{Binding RightSide}" />
                 </Border>

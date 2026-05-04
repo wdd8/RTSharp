@@ -42,7 +42,7 @@ namespace RTSharp.ViewModels.TorrentListing
             var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
             var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
-            foreach (var torrent in Torrents) {
+            foreach (var torrent in Core.TorrentPolling.TorrentPolling.Torrents.GetSnapshot()) {
                 var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle);
 
                 if (!infos.TryGetValue(domain, out var trackerInfo))

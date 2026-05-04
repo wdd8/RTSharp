@@ -21,6 +21,7 @@
             CanUserSortColumns="True"
             GridLinesVisibility="Horizontal"
             SelectionMode="Extended"
+            CanUserAddRows="False"
             ItemsSource="{Binding Servers}"
             SelectedItem="{Binding SelectedServer}"
         >

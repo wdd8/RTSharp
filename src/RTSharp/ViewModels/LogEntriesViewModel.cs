@@ -10,17 +10,13 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using NP.UniDockService;
-
 using RTSharp.Core;
 using RTSharp.Models;
 using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.ViewModels;
 
-public class DockLogEntriesViewModel : DockItemViewModel<LogEntriesViewModel> { }
-
-public partial class LogEntriesViewModel : ObservableObject, IDockable, IContextPopulatedNotifyable
+public partial class LogEntriesViewModel : ObservableObject, IContextPopulatedNotifyable
 {
     public ObservableCollection<LogEntry> LogEntries => Core.LogWindowSink.LogEntries;
 
@@ -50,10 +46,6 @@ public partial class LogEntriesViewModel : ObservableObject, IDockable, IContext
     {
         LogEntries.CollectionChanged += EvLogEntriesChanged;
     }
-
-    public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-calendar-days");
-
-    public string HeaderName => "Log";
 }
 
 public static class ExampleLogEntriesViewModel

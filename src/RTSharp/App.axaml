@@ -3,19 +3,23 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:np="https://np.com/visuals"
              xmlns:local="clr-namespace:RTSharp"
+			 xmlns:converters="using:RTSharp.Views.Converters"
 			 xmlns:vm="clr-namespace:RTSharp.ViewModels"
-             xmlns:core="clr-namespace:Dock.Model.Core;assembly=Dock.Model"
+             xmlns:dock="clr-namespace:Dock.Model.Core;assembly=Dock.Model"
 			 xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
 			 x:DataType="vm:AppViewModel">
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>
 
+    <Application.Resources>
+        <converters:IconConverter x:Key="IconConverter"/>
+        <x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
-        <StyleInclude Source="avares://NP.Ava.Visuals/Themes/TextStyles.axaml"/>
-        <StyleInclude Source="avares://NP.Ava.UniDock/Themes/DockStyles.axaml"/>
-        <StyleInclude Source="avares://RTSharp/CustomWindowStyles.axaml"/>
+		<DockFluentTheme />
         <dialogHostAvalonia:DialogHostStyles />
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.v2.xaml" />
 
@@ -43,30 +47,18 @@
             <Setter Property="AllowAutoHide" Value="False" />
         </Style>
 
-        <Style Selector="np|TabbedDockGroup">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-
-        <Style Selector="np|DockTabItem.Dock[IsSelected=False]">
-            <Setter Property="Foreground" Value="White" />
-        </Style>
-
-        <Style Selector="np|DockTabItem.Dock[IsSelected=False]">
-            <Setter Property="Foreground" Value="White" />
-        </Style>
-
-        <Style Selector="np|DockTabItem.Dock[IsPointerOver=True][IsSelected=False]">
-            <Setter Property="Background" Value="Gray" />
-        </Style>
-
-        <Style Selector="np|DockItemPresenter">
-            <Setter Property="Background" Value="Black" />
-        </Style>
+        <Style Selector="DocumentControl">
+		  <Setter Property="IconTemplate">
+			<DataTemplate DataType="dock:IDockable">
+				<PathIcon
+					Data="{Binding ., Converter={StaticResource IconConverter}}"
+					Width="16"
+					Height="16"
+					Margin="0" />
+			</DataTemplate>
+		  </Setter>
+		</Style>
     </Application.Styles>
-
-    <Application.Resources>
-        <x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
-    </Application.Resources>
 
     <TrayIcon.Icons>
         <TrayIcons>

@@ -189,35 +189,43 @@ namespace RTSharp.Daemon.Services.rtorrent
             switch (typeof(T)) {
                 case Type strType when strType == typeof(string):
                     SeekFixed(ref In, STRING_TOKEN);
-                    ret = (T)(object)GetUntilNextTag(ref In);
+                    var str = GetUntilNextTag(ref In);
+                    ret = Unsafe.As<string, T>(ref str);
                     break;
                 case Type strType when strType == typeof(int):
                     SeekFixed(ref In, I4_TOKEN);
-                    ret = (T)(object)Int32.Parse(GetUntilNextTag(ref In));
+                    var i32 = Int32.Parse(GetUntilNextTag(ref In));
+                    ret = Unsafe.As<int, T>(ref i32);
                     break;
                 case Type strType when strType == typeof(uint):
                     SeekFixed(ref In, I4_TOKEN);
-                    ret = (T)(object)UInt32.Parse(GetUntilNextTag(ref In));
+                    var u32 = UInt32.Parse(GetUntilNextTag(ref In));
+                    ret = Unsafe.As<uint, T>(ref u32);
                     break;
                 case Type strType when strType == typeof(short):
                     SeekFixed(ref In, 4);
-                    ret = (T)(object)Int16.Parse(GetUntilNextTag(ref In));
+                    var i16 = Int16.Parse(GetUntilNextTag(ref In));
+                    ret = Unsafe.As<short, T>(ref i16);
                     break;
                 case Type strType when strType == typeof(ushort):
                     SeekFixed(ref In, 4);
-                    ret = (T)(object)UInt16.Parse(GetUntilNextTag(ref In));
+                    var u16 = UInt16.Parse(GetUntilNextTag(ref In));
+                    ret = Unsafe.As<ushort, T>(ref u16);
                     break;
                 case Type strType when strType == typeof(long):
                     SeekFixed(ref In, I8_TOKEN);
-                    ret = (T)(object)Int64.Parse(GetUntilNextTag(ref In));
+                    var i64 = Int64.Parse(GetUntilNextTag(ref In));
+                    ret = Unsafe.As<long, T>(ref i64);
                     break;
                 case Type strType when strType == typeof(ulong):
                     SeekFixed(ref In, I8_TOKEN);
-                    ret = (T)(object)UInt64.Parse(GetUntilNextTag(ref In));
+                    var u64 = UInt64.Parse(GetUntilNextTag(ref In));
+                    ret = Unsafe.As<ulong, T>(ref u64);
                     break;
                 case Type strType when strType == typeof(bool):
                     SeekFixed(ref In, 4); // Works for i4 too
-                    ret = (T)(object)(Int64.Parse(GetUntilNextTag(ref In)) == 1);
+                    var @bool = Int64.Parse(GetUntilNextTag(ref In)) == 1;
+                    ret = Unsafe.As<bool, T>(ref @bool);
                     break;
                 default:
                     throw new ArgumentException(nameof(T));

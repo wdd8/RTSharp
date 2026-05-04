@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Core.Services.Cache.Images;
 using RTSharp.Core.Services.Cache.TrackerDb;
+using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
@@ -20,18 +21,19 @@ namespace RTSharp.Models
 {
     public static class TorrentUpdateExt
     {
-        public static async ValueTask<List<(int Index, Torrent Obj)>> UpdateFromPluginModelMulti(IList<Torrent> Domain, InfoHashDictionary<Shared.Abstractions.Torrent> Plugin)
+        public static async ValueTask<List<Torrent>> NewOrUpdateFromPluginModelMulti(ConcurrentInfoHashOwnerDictionary<Torrent> Domain, RTSharpDataProvider DataProvider, InfoHashDictionary<Shared.Abstractions.Torrent> Plugin)
         {
-            var ret = new List<(int Index, Torrent Obj)>();
+            var ret = new List<Torrent>();
             if (Plugin.Count == 0)
-                return ret;
+                return [];
+
+            var dpId = DataProvider.PluginInstance.InstanceId;
 
             var trackers = new HashSet<string>();
-            foreach (var torrent in Domain) {
-                if (Plugin.TryGetValue(torrent.Hash, out var plugin)) {
-                    if (torrent.TrackerSingle != plugin.TrackerSingle && plugin.TrackerSingle != null) {
-                        trackers.Add(plugin.TrackerSingle);
-                    }
+            foreach (var (hash, plugin) in Plugin) {
+                Domain.TryGetValue((hash, dpId), out var domain);
+                if (domain?.TrackerSingle != plugin.TrackerSingle && plugin.TrackerSingle != null) {
+                    trackers.Add(plugin.TrackerSingle);
                 }
             }
 
@@ -44,39 +46,39 @@ namespace RTSharp.Models
                 var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
                 trackerInfo = await trackerDb.GetTrackerInfo(trackers.Select(UriUtils.GetDomainForTracker));
-                var imagesTasks = trackerInfo.Where(x => x.ImageHash != null).ToDictionary(x => x, x => imageCache.GetCachedImage(x.ImageHash).AsTask());
+                var imagesTasks = trackerInfo.Where(x => x.ImageHash != null).ToDictionary(x => x, x => imageCache.GetCachedImage(x.ImageHash!).AsTask());
                 await Task.WhenAll(imagesTasks.Values.ToArray());
 
-                images = imagesTasks.ToDictionary(x => x.Key, x => x.Value.Result);
+                images = imagesTasks.ToDictionary(x => x.Key, x => x.Value.Result!);
             }
 
-            for (var x = 0;x < Domain.Count;x++) {
-                var torrent = Domain[x];
-                if (Plugin.TryGetValue(torrent.Hash, out var plugin)) {
-                    if (plugin.TrackerSingle != torrent.TrackerSingle && plugin.TrackerSingle != null) {
-                        var domain = UriUtils.GetDomainForTracker(plugin.TrackerSingle);
-                        var info = trackerInfo.FirstOrDefault(x => x.Domain == domain);
-
-                        if (info != null) {
-                            if (images.TryGetValue(info, out var image)) {
-                                torrent.TrackerIcon = image;
-                            }
-                            torrent.TrackerDisplayName = info.Name ?? domain;
-                        } else {
-                            torrent.TrackerDisplayName = domain;
-                        }
-                    }
-
-                    await torrent.UpdateFromPluginModel(plugin, false);
-                    Plugin.Remove(torrent.Hash);
-                    ret.Add((x, torrent));
+            foreach (var (hash, plugin) in Plugin) {
+                if (!Domain.TryGetValue((hash, dpId), out var torrent)) {
+                    torrent = new Torrent(hash, DataProvider);
                 }
+
+                if (plugin.TrackerSingle != torrent.TrackerSingle && plugin.TrackerSingle != null) {
+                    var domain = UriUtils.GetDomainForTracker(plugin.TrackerSingle);
+                    var info = trackerInfo.FirstOrDefault(x => x.Domain == domain);
+
+                    if (info != null) {
+                        if (images.TryGetValue(info, out var image)) {
+                            torrent.TrackerIcon = image;
+                        }
+                        torrent.TrackerDisplayName = info.Name ?? domain;
+                    } else {
+                        torrent.TrackerDisplayName = domain;
+                    }
+                }
+
+                await torrent.UpdateFromPluginModel(plugin, false);
+                ret.Add(torrent);
             }
 
             return ret;
         }
 
-        public static async ValueTask UpdateMulti(IEnumerable<Torrent> Domain)
+        public static async ValueTask UpdateTrackersMulti(IEnumerable<Torrent> Domain)
         {
             var torrents = new HashSet<Torrent>();
             foreach (var torrent in Domain) {
@@ -93,15 +95,15 @@ namespace RTSharp.Models
                 var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
                 var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
-                trackerInfo = await trackerDb.GetTrackerInfo(torrents.Select(x => UriUtils.GetDomainForTracker(x.TrackerSingle)));
-                var imagesTasks = trackerInfo.Where(x => x.ImageHash != null).ToDictionary(x => x, x => imageCache.GetCachedImage(x.ImageHash).AsTask());
+                trackerInfo = await trackerDb.GetTrackerInfo(torrents.Select(x => UriUtils.GetDomainForTracker(x.TrackerSingle!)));
+                var imagesTasks = trackerInfo.Where(x => x.ImageHash != null).ToDictionary(x => x, x => imageCache.GetCachedImage(x.ImageHash!).AsTask());
                 await Task.WhenAll(imagesTasks.Values.ToArray());
 
-                images = imagesTasks.ToDictionary(x => x.Key, x => x.Value.Result);
+                images = imagesTasks.ToDictionary(x => x.Key, x => x.Value.Result!);
             }
 
             foreach (var torrent in torrents) {
-                var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle);
+                var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle!);
                 var info = trackerInfo.FirstOrDefault(x => x.Domain == domain);
 
                 if (info != null) {
@@ -130,43 +132,70 @@ namespace RTSharp.Models
         /// <summary>
         /// Torrent name
         /// </summary>
-        [ObservableProperty]
-        public partial string Name { get; set; }
+        private string _name = null!;
+        public string Name
+        {
+            get => _name;
+            set => SetProperty(ref _name, value);
+        }
 
-        [ObservableProperty]
-        public partial TORRENT_STATE InternalState { get; set; }
+        private TORRENT_STATE _internalState;
+        public TORRENT_STATE InternalState
+        {
+            get => _internalState;
+            set => SetProperty(ref _internalState, value);
+        }
 
         /// <summary>
         /// State
         /// </summary>
-        [ObservableProperty]
-        public partial string State { get; set; }
+        private string _state = null!;
+        public string State
+        {
+            get => _state;
+            set => SetProperty(ref _state, value);
+        }
 
         /// <summary>
         /// Is torrent private? (no DHT/PeX/LSD)
         /// </summary>
-        [ObservableProperty]
-        public partial bool? IsPrivate { get; set; }
+        private bool? _isPrivate;
+        public bool? IsPrivate
+        {
+            get => _isPrivate;
+            set => SetProperty(ref _isPrivate, value);
+        }
 
         /// <summary>
         /// Size in bytes
         /// </summary>
-        public ulong Size {
-            get;
+        private ulong _size;
+        public ulong Size
+        {
+            get => _size;
             set {
-                field = value;
+                if (_size == value) return;
+                _size = value;
                 SizeDisplay = Converters.GetSIDataSize(value);
             }
         }
 
-        [ObservableProperty]
-        public partial string SizeDisplay { get; set; }
+        private string _sizeDisplay = null!;
+        public string SizeDisplay
+        {
+            get => _sizeDisplay;
+            set => SetProperty(ref _sizeDisplay, value);
+        }
 
         /// <summary>
         /// Size we want to download (in case of 0 priority files)
         /// </summary>
-        [ObservableProperty]
-        public partial ulong WantedSize { get; set; }
+        private ulong _wantedSize;
+        public ulong WantedSize
+        {
+            get => _wantedSize;
+            set => SetProperty(ref _wantedSize, value);
+        }
 
         /// <summary>
         /// Piece size
@@ -176,363 +205,539 @@ namespace RTSharp.Models
         /// <summary>
         /// Wasted bytes
         /// </summary>
-        [ObservableProperty]
-        public partial ulong? Wasted { get; set; }
+        private ulong? _wasted;
+        public ulong? Wasted
+        {
+            get => _wasted;
+            set => SetProperty(ref _wasted, value);
+        }
 
         /// <summary>
         /// Done percentage
         /// </summary>
-        [ObservableProperty]
-        public partial float Done { get; set; }
+        private float _done;
+        public float Done
+        {
+            get => _done;
+            set => SetProperty(ref _done, value);
+        }
 
         /// <summary>
         /// Downloaded bytes
         /// </summary>
-        public ulong Downloaded {
-            get;
+        private ulong _downloaded;
+        public ulong Downloaded
+        {
+            get => _downloaded;
             set {
-                field = value;
+                if (_downloaded == value) return;
+                _downloaded = value;
                 DownloadedDisplay = Converters.GetSIDataSize(value);
             }
         }
 
-        [ObservableProperty]
-        public partial string DownloadedDisplay { get; set; }
+        private string _downloadedDisplay = null!;
+        public string DownloadedDisplay
+        {
+            get => _downloadedDisplay;
+            set => SetProperty(ref _downloadedDisplay, value);
+        }
 
         /// <summary>
         /// Completed bytes
         /// </summary>
-        public ulong CompletedSize {
-            get;
+        private ulong _completedSize;
+        public ulong CompletedSize
+        {
+            get => _completedSize;
             set {
-                field = value;
+                if (_completedSize == value) return;
+                _completedSize = value;
                 CompletedSizeDisplay = Converters.GetSIDataSize(value);
             }
         }
 
-        [ObservableProperty]
-        public partial string CompletedSizeDisplay { get; set; }
+        private string _completedSizeDisplay = null!;
+        public string CompletedSizeDisplay
+        {
+            get => _completedSizeDisplay;
+            set => SetProperty(ref _completedSizeDisplay, value);
+        }
 
         /// <summary>
         /// Uploaded bytes
         /// </summary>
-        public ulong Uploaded {
-            get;
+        private ulong _uploaded;
+        public ulong Uploaded
+        {
+            get => _uploaded;
             set {
-                field = value;
+                if (_uploaded == value) return;
+                _uploaded = value;
                 UploadedDisplay = Converters.GetSIDataSize(value);
             }
         }
 
-        [ObservableProperty]
-        public partial string UploadedDisplay { get; set; }
+        private string _uploadedDisplay = null!;
+        public string UploadedDisplay
+        {
+            get => _uploadedDisplay;
+            set => SetProperty(ref _uploadedDisplay, value);
+        }
 
         /// <summary>
         /// Share ratio
         /// </summary>
-        public float Ratio {
-            get;
+        private float _ratio;
+        public float Ratio
+        {
+            get => _ratio;
             set {
-                field = value;
+                if (_ratio == value) return;
+                _ratio = value;
                 RatioDisplay = value.ToString("N3");
             }
         }
 
-        [ObservableProperty]
-        public partial string RatioDisplay { get; set; }
+        private string _ratioDisplay = null!;
+        public string RatioDisplay
+        {
+            get => _ratioDisplay;
+            set => SetProperty(ref _ratioDisplay, value);
+        }
 
         /// <summary>
         /// Download speed, B/s
         /// </summary>
-        public ulong DLSpeed {
-            get;
+        private ulong _dlSpeed;
+        public ulong DLSpeed
+        {
+            get => _dlSpeed;
             set {
-                field = value;
-                DLSpeedDisplay = Converters.GetSIDataSize(value) + "/s";
+                if (_dlSpeed == value) return;
+                _dlSpeed = value;
+                DLSpeedDisplay = Converters.GetSIDataSpeed(value);
             }
         }
 
-        [ObservableProperty]
-        public partial string DLSpeedDisplay { get; set; }
+        private string _dlSpeedDisplay = null!;
+        public string DLSpeedDisplay
+        {
+            get => _dlSpeedDisplay;
+            set => SetProperty(ref _dlSpeedDisplay, value);
+        }
 
         /// <summary>
-        /// Upload speed, B/S
+        /// Upload speed, B/s
         /// </summary>
-        public ulong UPSpeed {
-            get;
+        private ulong _upSpeed;
+        public ulong UPSpeed
+        {
+            get => _upSpeed;
             set {
-                field = value;
-                UPSpeedDisplay = Converters.GetSIDataSize(value) + "/s";
+                if (_upSpeed == value) return;
+                _upSpeed = value;
+                UPSpeedDisplay = Converters.GetSIDataSpeed(value);
             }
         }
 
-        [ObservableProperty]
-        public partial string UPSpeedDisplay { get; set; }
+        private string _upSpeedDisplay = null!;
+        public string UPSpeedDisplay
+        {
+            get => _upSpeedDisplay;
+            set => SetProperty(ref _upSpeedDisplay, value);
+        }
 
         /// <summary>
         /// ETA, <c>0</c> if already at 100%
         /// </summary>
         /// <seealso cref="Done"/>
-        public TimeSpan ETA {
-            get;
+        private TimeSpan _eta;
+        public TimeSpan ETA
+        {
+            get => _eta;
             set {
-                field = value;
+                if (_eta == value) return;
+                _eta = value;
                 ETADisplay = Converters.ToAgoString(value);
             }
         }
 
-        [ObservableProperty]
-        public partial string ETADisplay { get; set; }
+        private string _etaDisplay = null!;
+        public string ETADisplay
+        {
+            get => _etaDisplay;
+            set => SetProperty(ref _etaDisplay, value);
+        }
 
         /// <summary>
         /// Torrent label
         /// </summary>
-        public string[] Labels {
-            get;
+        private string[] _labels = [];
+        public string[] Labels
+        {
+            get => _labels;
             private set {
-                field = value;
+                _labels = value;
                 LabelsDisplay = String.Join(", ", value);
             }
         }
 
-        public void SetLabels(string[] Labels)
+        public void SetLabels(string[] labels)
         {
-            this.Labels = Labels;
-            this.OnPropertyChanged(nameof(Labels));
+            Labels = labels;
+            OnPropertyChanged(nameof(Labels));
         }
 
-        [ObservableProperty]
-        public partial string LabelsDisplay { get; set; }
+        private string _labelsDisplay = null!;
+        public string LabelsDisplay
+        {
+            get => _labelsDisplay;
+            set => SetProperty(ref _labelsDisplay, value);
+        }
 
         /// <summary>
         /// Torrent peers. Connected, Total
         /// </summary>
-        public ConnectedTotalPair Peers {
-            get;
+        private ConnectedTotalPair _peers;
+        public ConnectedTotalPair Peers
+        {
+            get => _peers;
             set {
-                field = value;
+                if (_peers == value) return;
+                _peers = value;
                 PeersDisplay = value.ToString();
             }
         }
 
-        [ObservableProperty]
-        public partial string PeersDisplay { get; set; }
+        private string _peersDisplay = null!;
+        public string PeersDisplay
+        {
+            get => _peersDisplay;
+            set => SetProperty(ref _peersDisplay, value);
+        }
 
         /// <summary>
         /// Torrent seeders. Connected, Total
         /// </summary>
-        public ConnectedTotalPair Seeders {
-            get;
+        private ConnectedTotalPair _seeders;
+        public ConnectedTotalPair Seeders
+        {
+            get => _seeders;
             set {
-                field = value;
+                if (_seeders == value) return;
+                _seeders = value;
                 SeedersDisplay = value.ToString();
             }
         }
 
-        [ObservableProperty]
-        public partial string SeedersDisplay { get; set; }
+        private string _seedersDisplay = null!;
+        public string SeedersDisplay
+        {
+            get => _seedersDisplay;
+            set => SetProperty(ref _seedersDisplay, value);
+        }
 
         private TORRENT_PRIORITY InternalPriority;
 
         /// <summary>
         /// Torrent priority
         /// </summary>
-        [ObservableProperty]
-        public partial string Priority { get; set; }
+        private string _priority = null!;
+        public string Priority
+        {
+            get => _priority;
+            set => SetProperty(ref _priority, value);
+        }
 
         /// <summary>
         /// Unix timestamp of when .torrent file was created
         /// </summary>
-        public DateTime? CreatedOnDate {
-            get;
+        private DateTime? _createdOnDate;
+        public DateTime? CreatedOnDate
+        {
+            get => _createdOnDate;
             set {
-                field = value;
+                if (_createdOnDate == value) return;
+                _createdOnDate = value;
                 CreatedOnDateDisplay = value == null ? "" : value.Value.ToString();
             }
         }
 
-        public string CreatedOnDateDisplay;
+        private string _createdOnDateDisplay = null!;
+        public string CreatedOnDateDisplay
+        {
+            get => _createdOnDateDisplay;
+            set => SetProperty(ref _createdOnDateDisplay, value);
+        }
 
         /// <summary>
         /// Remaining size to download
         /// </summary>
         /// <seealso cref="Size"/>
         /// <seealso cref="Downloaded"/>
-        public ulong RemainingSize {
-            get;
+        private ulong _remainingSize;
+        public ulong RemainingSize
+        {
+            get => _remainingSize;
             set {
-                field = value;
+                if (_remainingSize == value) return;
+                _remainingSize = value;
                 RemainingSizeDisplay = Converters.GetSIDataSize(value);
             }
         }
 
-        [ObservableProperty]
-        public partial string RemainingSizeDisplay { get; set; }
+        private string _remainingSizeDisplay = null!;
+        public string RemainingSizeDisplay
+        {
+            get => _remainingSizeDisplay;
+            set => SetProperty(ref _remainingSizeDisplay, value);
+        }
 
         /// <summary>
         /// Date when torrent finished downloading
         /// </summary>
-        public DateTime? FinishedOnDate {
-            get;
+        private DateTime? _finishedOnDate;
+        public DateTime? FinishedOnDate
+        {
+            get => _finishedOnDate;
             set {
-                field = value;
+                if (_finishedOnDate == value) return;
+                _finishedOnDate = value;
                 FinishedOnDateDisplay = value == null ? "" : value.Value.ToString();
             }
         }
 
-        [ObservableProperty]
-        public partial string FinishedOnDateDisplay { get; set; }
+        private string _finishedOnDateDisplay = null!;
+        public string FinishedOnDateDisplay
+        {
+            get => _finishedOnDateDisplay;
+            set => SetProperty(ref _finishedOnDateDisplay, value);
+        }
 
         /// <summary>
         /// Time elapsed when downloading torrent.
         /// This can be provider specific, for example elapsed time can be counted from the moment torrent connects to a seeder, or from a moment it was added.
         /// </summary>
-        [ObservableProperty]
-        public partial TimeSpan TimeElapsed { get; set; }
+        private TimeSpan _timeElapsed;
+        public TimeSpan TimeElapsed
+        {
+            get => _timeElapsed;
+            set => SetProperty(ref _timeElapsed, value);
+        }
 
         /// <summary>
         /// Unix timestamp of when torrent was added
         /// </summary>
-        public DateTime AddedOnDate {
-            get;
+        private DateTime _addedOnDate;
+        public DateTime AddedOnDate
+        {
+            get => _addedOnDate;
             set {
-                field = value;
+                if (_addedOnDate == value) return;
+                _addedOnDate = value;
                 AddedOnDateDisplay = value.ToString();
             }
         }
 
-        public string AddedOnDateDisplay;
+        private string _addedOnDateDisplay = null!;
+        public string AddedOnDateDisplay
+        {
+            get => _addedOnDateDisplay;
+            set => SetProperty(ref _addedOnDateDisplay, value);
+        }
 
         /// <summary>
         /// Primary tracker URI
         /// </summary>
-        [ObservableProperty]
-        public partial string? TrackerSingle { get; set; }
+        private string? _trackerSingle;
+        public string? TrackerSingle
+        {
+            get => _trackerSingle;
+            set => SetProperty(ref _trackerSingle, value);
+        }
 
-        [ObservableProperty]
-        public partial IImage? TrackerIcon { get; set; }
+        private IImage? _trackerIcon;
+        public IImage? TrackerIcon
+        {
+            get => _trackerIcon;
+            set => SetProperty(ref _trackerIcon, value);
+        }
 
-        [ObservableProperty]
-        public partial string? TrackerDisplayName { get; set; }
+        private string? _trackerDisplayName;
+        public string? TrackerDisplayName
+        {
+            get => _trackerDisplayName;
+            set => SetProperty(ref _trackerDisplayName, value);
+        }
 
         /// <summary>
         /// Status message
         /// </summary>
-        [ObservableProperty]
-        public partial string StatusMsg { get; set; }
+        private string _statusMsg = null!;
+        public string StatusMsg
+        {
+            get => _statusMsg;
+            set => SetProperty(ref _statusMsg, value);
+        }
 
         /// <summary>
         /// Torrent comment
         /// </summary>
-        public string Comment { get; set; }
+        public string? Comment { get; set; }
 
         /// <summary>
         /// Remote path of torrent data
         /// </summary>
-        [ObservableProperty]
-        public partial string RemotePath { get; set; }
+        private string _remotePath = null!;
+        public string RemotePath
+        {
+            get => _remotePath;
+            set => SetProperty(ref _remotePath, value);
+        }
 
         /// <summary>
         /// Is torrent a magnet link dummy waiting to be resolved?
         /// </summary>
-        [ObservableProperty]
-        public partial bool MagnetDummy { get; set; }
+        private bool _magnetDummy;
+        public bool MagnetDummy
+        {
+            get => _magnetDummy;
+            set => SetProperty(ref _magnetDummy, value);
+        }
+
+        public void PostAllChanged() => Dispatcher.UIThread.Post(() => base.OnPropertyChanged(new PropertyChangedEventArgs(string.Empty)));
 
         public Torrent(byte[] Hash, Plugin.RTSharpDataProvider Owner)
         {
             this.Hash = Hash;
             this.DataOwner = Owner;
+
+            _sizeDisplay = Converters.ZeroBytes;
+            _downloadedDisplay = Converters.ZeroBytes;
+            _completedSizeDisplay = Converters.ZeroBytes;
+            _uploadedDisplay = Converters.ZeroBytes;
+            _ratioDisplay = "0.000";
+            _dlSpeedDisplay = Converters.ZeroBytesPerSec;
+            _upSpeedDisplay = Converters.ZeroBytesPerSec;
+            _etaDisplay = Converters.ToAgoString(TimeSpan.Zero);
+            _peersDisplay = new ConnectedTotalPair(0, 0).ToString();
+            _seedersDisplay = new ConnectedTotalPair(0, 0).ToString();
+            _createdOnDateDisplay = "";
+            _remainingSizeDisplay = Converters.ZeroBytes;
+            _finishedOnDateDisplay = "";
+            _addedOnDateDisplay = "";
+            _labelsDisplay = "";
+            _name = "";
+            _state = "";
+            _priority = "";
+            _statusMsg = "";
+            _remotePath = "";
         }
 
-        public async ValueTask UpdateFromPluginModel(Shared.Abstractions.Torrent In, bool updateTracker = true)
+        public ValueTask UpdateFromPluginModel(Shared.Abstractions.Torrent In, bool updateTracker = true)
         {
-            this.Name = In.Name;
+            _name = In.Name;
+            _state = EnumExt.ToString(In.State);
+            _internalState = In.State;
+            _size = In.Size; _sizeDisplay = Converters.GetSIDataSize(In.Size);
+            _wantedSize = In.WantedSize;
+            PieceSize = In.PieceSize;
+            _wasted = In.Wasted;
+            _done = In.Done;
+            _downloaded = In.Downloaded;
+            _downloadedDisplay = Converters.GetSIDataSize(In.Downloaded);
+            _completedSize = In.CompletedSize;
+            _completedSizeDisplay = Converters.GetSIDataSize(In.CompletedSize);
+            _uploaded = In.Uploaded;
+            _uploadedDisplay = Converters.GetSIDataSize(In.Uploaded);
+            _ratio = (In.Downloaded == 0 && In.Uploaded == 0) ? 0f : (float)In.Uploaded / In.Downloaded;
+            _ratioDisplay = _ratio.ToString("N3");
+            _dlSpeed = In.DLSpeed;
+            _dlSpeedDisplay = Converters.GetSIDataSpeed(In.DLSpeed);
+            _upSpeed = In.UPSpeed;
+            _upSpeedDisplay = Converters.GetSIDataSpeed(In.UPSpeed);
+            _eta = In.ETA;
+            _etaDisplay = Converters.ToAgoString(In.ETA);
+            _labels = [.. In.Labels];
+            _labelsDisplay = String.Join(", ", _labels);
+            _peers = new ConnectedTotalPair(In.Peers.Connected, In.Peers.Total);
+            _peersDisplay = _peers.ToString();
+            _seeders = new ConnectedTotalPair(In.Seeders.Connected, In.Seeders.Total);
+            _seedersDisplay = _seeders.ToString();
+            _priority = EnumExt.ToString(In.Priority);
+            InternalPriority = In.Priority;
+            _createdOnDate = In.CreatedOnDate;
+            _createdOnDateDisplay = In.CreatedOnDate == null ? "" : In.CreatedOnDate.Value.ToString();
+            _remainingSize = In.RemainingSize;
+            _remainingSizeDisplay = Converters.GetSIDataSize(In.RemainingSize);
+            _finishedOnDate = In.FinishedOnDate;
+            _finishedOnDateDisplay = In.FinishedOnDate == null ? "" : In.FinishedOnDate.Value.ToString();
+            _timeElapsed = In.TimeElapsed;
+            _addedOnDate = In.AddedOnDate;
+            _addedOnDateDisplay = In.AddedOnDate.ToString();
+            _trackerSingle = In.TrackerSingle;
+            _statusMsg = In.StatusMessage;
+            Comment = In.Comment;
+            _remotePath = In.RemotePath;
+            _magnetDummy = In.MagnetDummy;
 
-            this.State = EnumExt.ToString(In.State);
-            this.InternalState = In.State;
-
-            this.Size = In.Size;
-            this.WantedSize = In.WantedSize;
-            this.PieceSize = In.PieceSize;
-            this.Wasted = In.Wasted;
-            this.Done = In.Done;
-            this.Downloaded = In.Downloaded;
-            this.CompletedSize = In.CompletedSize;
-            this.Uploaded = In.Uploaded;
-            this.Ratio = (float)In.Uploaded / In.Downloaded;
-            if (In.Uploaded == 0)
-                this.Ratio = 0;
-            this.DLSpeed = In.DLSpeed;
-            this.UPSpeed = In.UPSpeed;
-            this.ETA = In.ETA;
-            SetLabels([.. In.Labels]);
-            this.Peers = new ConnectedTotalPair(In.Peers.Connected, In.Peers.Total);
-            this.Seeders = new ConnectedTotalPair(In.Seeders.Connected, In.Seeders.Total);
-
-            this.Priority = EnumExt.ToString(In.Priority);
-
-            this.InternalPriority = In.Priority;
-
-            if (updateTracker && this.TrackerSingle != In.TrackerSingle) {
+            async ValueTask updateTrackerValues()
+            {
                 using var scope = Core.ServiceProvider.CreateScope();
                 var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
                 var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
-                var trackerInfo = await trackerDb.GetTrackerInfo(UriUtils.GetDomainForTracker(In.TrackerSingle));
+                var trackerInfo = await trackerDb.GetTrackerInfo(UriUtils.GetDomainForTracker(In.TrackerSingle!));
                 if (trackerInfo != null) {
                     if (trackerInfo.ImageHash != null) {
                         var image = await imageCache.GetCachedImage(trackerInfo.ImageHash);
                         if (image != null)
-                            this.TrackerIcon = image;
+                            _trackerIcon = image;
                     }
-                    this.TrackerDisplayName = trackerInfo.Name ?? UriUtils.GetDomainForTracker(In.TrackerSingle);
+                    _trackerDisplayName = trackerInfo.Name ?? UriUtils.GetDomainForTracker(In.TrackerSingle!);
                 } else
-                    this.TrackerDisplayName = UriUtils.GetDomainForTracker(In.TrackerSingle);
+                    _trackerDisplayName = UriUtils.GetDomainForTracker(In.TrackerSingle!);
             }
 
-            this.CreatedOnDate = In.CreatedOnDate;
-            this.RemainingSize = In.RemainingSize;
-            this.FinishedOnDate = In.FinishedOnDate;
-            this.TimeElapsed = In.TimeElapsed;
-            this.AddedOnDate = In.AddedOnDate;
-            this.TrackerSingle = In.TrackerSingle;
-            this.StatusMsg = In.StatusMessage;
-            this.Comment = In.Comment;
-            this.RemotePath = In.RemotePath;
-            this.MagnetDummy = In.MagnetDummy;
+            if (updateTracker && _trackerSingle != In.TrackerSingle) {
+                return updateTrackerValues();
+            }
+
+            return ValueTask.CompletedTask;
         }
 
         public Shared.Abstractions.Torrent ToPluginModel()
         {
             return new Shared.Abstractions.Torrent(Hash) {
-                Name = Name,
+                Name = _name,
                 DataOwner = DataOwner.Instance,
-                State = InternalState,
-                Size = Size,
-                WantedSize = Size, // TODO: ??????????
+                State = _internalState,
+                Size = _size,
+                WantedSize = _size, // TODO: ??????????
                 PieceSize = PieceSize,
-                Wasted = Wasted,
-                Done = (float)Downloaded / Size * 100, // Maybe get from server?
-                Downloaded = Downloaded,
-                CompletedSize = CompletedSize,
-                Uploaded = Uploaded,
-                DLSpeed = DLSpeed,
-                UPSpeed = UPSpeed,
-                ETA = ETA,
-                Labels = [.. Labels],
-                Peers = (Peers.Connected, Peers.Total),
-                Seeders = (Seeders.Connected, Seeders.Total),
+                Wasted = _wasted,
+                Done = (float)_downloaded / _size * 100, // Maybe get from server?
+                Downloaded = _downloaded,
+                CompletedSize = _completedSize,
+                Uploaded = _uploaded,
+                DLSpeed = _dlSpeed,
+                UPSpeed = _upSpeed,
+                ETA = _eta,
+                Labels = [.. _labels],
+                Peers = (_peers.Connected, _peers.Total),
+                Seeders = (_seeders.Connected, _seeders.Total),
                 Priority = InternalPriority,
-                CreatedOnDate = CreatedOnDate,
-                RemainingSize = Size - Downloaded,
-                FinishedOnDate = FinishedOnDate,
-                TimeElapsed = TimeElapsed,
-                AddedOnDate = AddedOnDate,
-                TrackerSingle = TrackerSingle,
-                StatusMessage = StatusMsg,
+                CreatedOnDate = _createdOnDate,
+                RemainingSize = _size - _downloaded,
+                FinishedOnDate = _finishedOnDate,
+                TimeElapsed = _timeElapsed,
+                AddedOnDate = _addedOnDate,
+                TrackerSingle = _trackerSingle!,
+                StatusMessage = _statusMsg,
                 Comment = Comment,
-                RemotePath = RemotePath,
-                MagnetDummy = MagnetDummy,
+                RemotePath = _remotePath,
+                MagnetDummy = _magnetDummy,
                 IsPrivate = null,
             };
         }

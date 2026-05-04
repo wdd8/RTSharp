@@ -9,14 +9,10 @@
         xmlns:torrentListing="using:RTSharp.Views.TorrentListing"
         xmlns:sharedControls="using:RTSharp.Shared.Controls"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:np="https://np.com/visuals"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:DataType="vm:MainWindowViewModel"
         x:CompileBindings="False"
         Width="800" Height="450" WindowState="Normal"
-        np:DockAttachedProperties.TheDockManager="{DynamicResource MainDockManager}"
-        np:DockAttachedProperties.DockChildWindowOwner="{Binding RelativeSource={RelativeSource Mode=Self}}"
-        np:DockAttachedProperties.WindowId="MainWindow"
         Icon="/Assets/rtsharp.ico"
         Title="{Binding Title}"
         DragDrop.AllowDrop="True">
@@ -26,43 +22,6 @@
     </Design.DataContext>
 
     <Window.Resources>
-        <ResourceDictionary>
-            <np:DockManager x:Key="MainDockManager">
-			</np:DockManager>
-        </ResourceDictionary>
-
-        <DataTemplate x:Key="ContentControlTemplate">
-            <ContentControl Content="{Binding}" />
-        </DataTemplate>
-
-        <root:DocumentWithIconDataTemplate x:Key="TabHeaderTemplate">
-            <DataTemplate x:Key="WithoutIcon">
-                <TextBlock Text="{Binding HeaderName}" VerticalAlignment="Center" />
-            </DataTemplate>
-            <DataTemplate x:Key="WithIcon">
-                <StackPanel Orientation="Horizontal">
-                    <PathIcon
-                        Data="{Binding Icon}"
-                        Width="16"
-                        Height="16"
-                        Margin="0" />
-                    <TextBlock Text="{Binding HeaderName}" VerticalAlignment="Center" Padding="4,0,0,0" />
-                </StackPanel>
-            </DataTemplate>
-        </root:DocumentWithIconDataTemplate>
-        <DataTemplate x:Key="TorrentListingTemplate">
-            <torrentListing:TorrentListingView DataContext="{Binding}" />
-        </DataTemplate>
-        <DataTemplate x:Key="ActionQueueTemplate">
-            <views:ActionQueueView DataContext="{Binding}" />
-        </DataTemplate>
-        <DataTemplate x:Key="LogEntriesTemplate">
-            <views:LogEntriesView DataContext="{Binding}" />
-        </DataTemplate>
-        <DataTemplate x:Key="DataProvidersTemplate">
-            <views:DataProvidersView DataContext="{Binding}" />
-        </DataTemplate>
-
         <MenuItem x:Key="FileMenu" Header="_File">
             <MenuItem Header="_Add torrent..." Command="{Binding AddTorrentClickCommand}" />
             <Separator />
@@ -70,16 +29,7 @@
             <MenuItem Header="About framework" Command="{Binding AboutFrameworkClickCommand}" />
             <MenuItem Header="_Exit" />
         </MenuItem>
-        <MenuItem x:Key="EditMenu" Header="_Edit">
-            <MenuItem Header="uhhh" />
-        </MenuItem>
         <MenuItem x:Key="ViewMenu" Header="_View">
-            <MenuItem Header="Torrent listing" Command="{Binding AddTorrentListingTabClickCommand}" />
-            <MenuItem Header="Action queue" Command="{Binding AddActionQueueTabClickCommand}" />
-            <MenuItem Header="Log" Command="{Binding AddLogTabClickCommand}" />
-            <Separator />
-            <MenuItem Header="Data providers" Command="{Binding AddDataProvidersTabClickCommand}" />
-            <Separator />
             <MenuItem Header="Statistics" Command="{Binding ShowStatisticsWindowCommand}" />
         </MenuItem>
         <MenuItem x:Key="ToolsMenu" Name="ToolsMenu" Header="_Tools">
@@ -93,14 +43,7 @@
 
     <Grid RowDefinitions="Auto, *">
         <Menu Grid.Row="0" Name="RootMenu" ItemsSource="{Binding MenuItems}" />
-        <np:RootDockGroup Grid.Row="1" TheDockManager="{StaticResource MainDockManager}" DockId="RootDock">
-            <np:StackDockGroup InitialSizeCoefficients="* 250">
-                <np:TabbedDockGroup TabStripPlacement="Top" IsStableGroup="True" DockId="MainGroup">
-                </np:TabbedDockGroup>
-                <np:TabbedDockGroup TabStripPlacement="Top" IsStableGroup="True" AutoInvisible="True" DockId="EdgeDock">
-                </np:TabbedDockGroup>
-            </np:StackDockGroup>
-        </np:RootDockGroup>
+        <DockControl Layout="{Binding RootDock}" Grid.Row="1" />
     </Grid>
 
 </Window>

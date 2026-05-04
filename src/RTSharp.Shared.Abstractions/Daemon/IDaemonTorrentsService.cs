@@ -7,8 +7,7 @@ namespace RTSharp.Shared.Abstractions.Daemon;
 
 public interface IDaemonTorrentsService
 {
-    Channel<ListingChanges<Torrent, T, byte[]>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<IncompleteDeltaTorrentResponse, T> Update, Action<CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
-            where T : class;
+    Channel<ListingChanges<Torrent, Torrent, byte[]>> GetTorrentChanges(CancellationToken CancellationToken);
 
     Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In);
     

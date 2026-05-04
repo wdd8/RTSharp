@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -36,13 +37,15 @@ public class Plugin : BasePlugin
         this.Host = Host;
         Progress(("Initializing...", 0f));
 
-        Hook = Host.RegisterToolsMenuItem(new MenuItem() {
-            Header = "Mass tracker rewrite",
-            Command = new RelayCommand(() => {
-                var wnd = new MainWindow();
-                wnd.ViewModel = new ViewModels.MainWindowViewModel(Host, wnd);
-                wnd.Show();
-            })
+        Dispatcher.UIThread.Invoke(() => {
+            Hook = Host.RegisterToolsMenuItem(new MenuItem() {
+                Header = "Mass tracker rewrite",
+                Command = new RelayCommand(() => {
+                    var wnd = new MainWindow();
+                    wnd.ViewModel = new ViewModels.MainWindowViewModel(Host, wnd);
+                    wnd.Show();
+                })
+            });
         });
 
         Progress(("Done", 100f));

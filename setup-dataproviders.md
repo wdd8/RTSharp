@@ -122,7 +122,7 @@ Example:
     "my qbittorrent": {
       "Uri": "http://127.0.0.1:1234/",
       "Username": "admin",
-      "Password": "chageme"
+      "Password": "changeme"
     }
   },
   "transmission": {

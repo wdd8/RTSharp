@@ -38,7 +38,7 @@ public partial class TorrentListingViewModel
 
     public Action CloseAddLabelDialog { get; set; }
 
-    private async Task ActionForMulti(IReadOnlyList<Torrent> In, string ActionName, Func<RTSharpDataProvider, IList<Torrent>, Task<TorrentStatuses>> Fx)
+    private static async Task ActionForMulti(IReadOnlyList<Torrent> In, string ActionName, Func<RTSharpDataProvider, IList<Torrent>, Task<TorrentStatuses>> Fx)
     {
         try {
             var actions = In.GroupBy(x => x.DataOwner).Select(x => (
@@ -253,14 +253,14 @@ public partial class TorrentListingViewModel
         var serverIds = In.Select(x => x.DataOwner.DataProviderInstanceConfig!.ServerId).Distinct();
 
         var references = new InfoHashDictionary<Torrent[]>();
-        var allTorrents = TorrentPolling.Torrents.Where(x => {
+        var allTorrents = TorrentPolling.Torrents.GetSnapshot().Where(x => {
             var selectedOnly = In.Where(i => i.Hash.SequenceEqual(x.Hash)).Select(x => x.DataOwner.DataProviderInstanceConfig!.ServerId);
             
             return selectedOnly.Contains(x.DataOwner.DataProviderInstanceConfig!.ServerId);
         }).ToImmutableArray();
         bool multiReference = false;
 
-        foreach (var torrentGroup in allTorrents.GroupBy(x => x.Hash, new HashEqualityComparer())) {
+        foreach (var torrentGroup in allTorrents.GroupBy(x => x.Hash, HashEqualityComparer.Instance)) {
             var found = torrentGroup.GroupBy(x => x.DataOwner.DataProviderInstanceConfig!.ServerId + "_" + x.RemotePath).Where(x => x.Count() > 1);
             foreach (var torrentsInServer in found) {
 

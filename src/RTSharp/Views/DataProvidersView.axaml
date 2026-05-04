@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="600"
-             xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             xmlns:i="https://github.com/projektanker/icons.avalonia"
              xmlns:plugin="clr-namespace:RTSharp.Plugin"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:vm="clr-namespace:RTSharp.ViewModels"
@@ -30,10 +30,10 @@
                         <TextBlock Text=")" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <i:Icon Margin="0 0 4 0" Value="fa-solid fa-download" />
+                        <i:Icon Margin="0 0 4 0" Value="fa7-solid fa7-download" />
                         <TextBlock Padding="0 0 8 0" Text="{Binding TotalDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
 
-                        <i:Icon Margin="0 0 4 0" Value="fa-solid fa-upload" />
+                        <i:Icon Margin="0 0 4 0" Value="fa7-solid fa7-upload" />
                         <TextBlock Text="{Binding TotalUPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">

@@ -1,9 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 
-using DynamicData;
-using DynamicData.Aggregation;
-using DynamicData.Binding;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -12,11 +8,9 @@ using RTSharp.Core.TorrentPolling;
 using RTSharp.Plugin;
 using RTSharp.ViewModels.Converters;
 
-using System.Collections.Generic;
-using System.Collections.Specialized;
+using System;
 using System.Globalization;
 using System.Linq;
-using System.Reactive.Linq;
 
 namespace RTSharp.ViewModels
 {
@@ -41,18 +35,25 @@ namespace RTSharp.ViewModels
             });
             this.TrayIconVisible = uiStateMonitor.CurrentValue.TrayIconVisible;
 
-            TorrentPolling.TorrentBatchChange += TorrentPolling_TorrentBatchChange;
+            TorrentPolling.Torrents.Changed += TorrentPolling_TorrentBatchChange;
         }
 
-        private void TorrentPolling_TorrentBatchChange(List<NotifyCollectionChangedEventArgs> In)
+        private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)
         {
             if (Plugins.DataProviders.Count == 0) {
                 TrayIconText = "RT#";
                 return;
             }
 
-            var upSpeed = (string)SIDataSpeedConverterInstance.Convert(TorrentPolling.Torrents.Sum(x => (long)x.UPSpeed), typeof(string), null, CultureInfo.InvariantCulture);
-            var dlSpeed = (string)SIDataSpeedConverterInstance.Convert(TorrentPolling.Torrents.Sum(x => (long)x.DLSpeed), typeof(string), null, CultureInfo.InvariantCulture);
+            long totalUPSpeed = 0;
+            long totalDLSpeed = 0;
+            foreach (var torrent in TorrentPolling.Torrents.GetSnapshot()) {
+                totalUPSpeed += (long)torrent.UPSpeed;
+                totalDLSpeed += (long)torrent.DLSpeed;
+            }
+
+            var upSpeed = (string)SIDataSpeedConverterInstance.Convert(totalUPSpeed, typeof(string), null, CultureInfo.InvariantCulture);
+            var dlSpeed = (string)SIDataSpeedConverterInstance.Convert(totalDLSpeed, typeof(string), null, CultureInfo.InvariantCulture);
             TrayIconText = $"RT# - 🠉 {upSpeed} 🠋 {dlSpeed}";
         }
     }

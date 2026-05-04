@@ -6,7 +6,7 @@ using Avalonia.Styling;
 
 namespace RTSharp.Shared.Controls.Views
 {
-    public partial class GroupBox : UserControl, IStyleable
+    public partial class GroupBox : UserControl
     {
 #region Label
         private string _label;
@@ -124,8 +124,6 @@ namespace RTSharp.Shared.Controls.Views
             get { return GetValue(BorderBackgroundProperty); }
             set { SetValue(BorderBackgroundProperty, value); }
         }
-
-        Type IStyleable.StyleKey => typeof(GroupBox);
 
         public void EvTextBlockTapped(object e, TappedEventArgs args)
         {

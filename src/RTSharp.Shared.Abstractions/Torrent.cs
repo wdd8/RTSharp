@@ -1,6 +1,7 @@
-﻿using RTSharp.Shared.Abstractions.Daemon;
-using RTSharp.Shared.Abstractions.DataProvider;
+﻿using RTSharp.Shared.Abstractions.DataProvider;
 
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace RTSharp.Shared.Abstractions;
@@ -210,27 +211,30 @@ public enum TORRENT_STATE
 
 public static class EnumExt
 {
+    private static readonly ConcurrentDictionary<TORRENT_STATE, string> StateCache = new();
+
     public static string ToString(this TORRENT_STATE In)
     {
-        string stateStr = "N/A";
-        if ((In & TORRENT_STATE.SEEDING) == TORRENT_STATE.SEEDING)
-            stateStr = "Seeding";
-        if ((In & TORRENT_STATE.STOPPED) == TORRENT_STATE.STOPPED)
-            stateStr = "Stopped";
-        if ((In & TORRENT_STATE.COMPLETE) == TORRENT_STATE.COMPLETE)
-            stateStr = "Complete";
-        if ((In & TORRENT_STATE.DOWNLOADING) == TORRENT_STATE.DOWNLOADING)
-            stateStr = "Downloading";
-        if ((In & TORRENT_STATE.PAUSED) == TORRENT_STATE.PAUSED)
-            stateStr = "Paused";
-        if ((In & TORRENT_STATE.HASHING) == TORRENT_STATE.HASHING)
-            stateStr = "Hashing";
-        if ((In & TORRENT_STATE.ERRORED) == TORRENT_STATE.ERRORED)
-            stateStr = "☠ " + stateStr;
-        if ((In & TORRENT_STATE.ACTIVE) == TORRENT_STATE.ACTIVE)
-            stateStr = "⚡ " + stateStr;
-
-        return stateStr;
+        return StateCache.GetOrAdd(In, static state => {
+            string stateStr = "N/A";
+            if ((state & TORRENT_STATE.SEEDING) == TORRENT_STATE.SEEDING)
+                stateStr = "Seeding";
+            if ((state & TORRENT_STATE.STOPPED) == TORRENT_STATE.STOPPED)
+                stateStr = "Stopped";
+            if ((state & TORRENT_STATE.COMPLETE) == TORRENT_STATE.COMPLETE)
+                stateStr = "Complete";
+            if ((state & TORRENT_STATE.DOWNLOADING) == TORRENT_STATE.DOWNLOADING)
+                stateStr = "Downloading";
+            if ((state & TORRENT_STATE.PAUSED) == TORRENT_STATE.PAUSED)
+                stateStr = "Paused";
+            if ((state & TORRENT_STATE.HASHING) == TORRENT_STATE.HASHING)
+                stateStr = "Hashing";
+            if ((state & TORRENT_STATE.ERRORED) == TORRENT_STATE.ERRORED)
+                stateStr = "☠ " + stateStr;
+            if ((state & TORRENT_STATE.ACTIVE) == TORRENT_STATE.ACTIVE)
+                stateStr = "⚡ " + stateStr;
+            return stateStr;
+        });
     }
 
     public static TORRENT_STATE ToTorrentState(string Option)
@@ -282,14 +286,16 @@ public static class EnumExt
     }
 }
 
-public unsafe class HashEqualityComparer : IEqualityComparer<byte[]>
+public class HashEqualityComparer : IEqualityComparer<byte[]>
 {
+    public static readonly HashEqualityComparer Instance = new();
+
     public bool Equals(byte[] x, byte[] y)
     {
         return x.SequenceEqual(y);
     }
 
-    public unsafe int GetHashCode(byte[] obj)
+    public int GetHashCode(byte[] obj)
     {
         if (obj.Length < 4) {
             switch (obj.Length) {
@@ -302,9 +308,7 @@ public unsafe class HashEqualityComparer : IEqualityComparer<byte[]>
             }
         }
 
-        fixed (byte* ptr = &MemoryMarshal.GetReference(obj.AsSpan())) {
-            return *(int*)ptr;
-        }
+        return Unsafe.ReadUnaligned<int>(ref MemoryMarshal.GetReference(obj.AsSpan()));
     }
 }
 

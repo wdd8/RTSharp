@@ -4,7 +4,6 @@ option csharp_namespace = "RTSharp.Daemon.Protocols.DataProvider";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
-import "google/protobuf/empty.proto";
 
 message TorrentTracker {
     string ID = 1;

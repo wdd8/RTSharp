@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -41,33 +42,35 @@ public class Plugin : BasePlugin
         this.Host = Host;
         Progress(("Initializing...", 0f));
 
-        Host.RegisterTorrentContextMenuItem(list => {
-            var newMenuItem = new MenuItem {
-                Header = "Align file integrity & recheck",
-                Command = new AsyncRelayCommand<IReadOnlyList<Torrent>>(selected => {
-                    return Do(selected!);
-                })
-            };
+        Dispatcher.UIThread.Invoke(() => {
+            Host.RegisterTorrentContextMenuItem(list => {
+                var newMenuItem = new MenuItem {
+                    Header = "Align file integrity & recheck",
+                    Command = new AsyncRelayCommand<IReadOnlyList<Torrent>>(selected => {
+                        return Do(selected!);
+                    })
+                };
 
-            for (var x = 0;x < list.Count; x++) {
-                var t = list[x];
-                if (t is MenuItem menuItem && menuItem.Header!.ToString() == "Force _recheck") {
-                    list.Insert(x + 1, newMenuItem);
-                    return newMenuItem;
-                }
-            }
-
-            list.Add(newMenuItem);
-            return newMenuItem;
-        }, list => {
-            for (var x = 0;x < list.Count;x++) {
-                var t = list[x];
-                if (t is MenuItem menuItem) {
-                    if (menuItem.Header!.ToString() == "Align file integrity & recheck") {
-                        list.RemoveAt(x);
+                for (var x = 0;x < list.Count; x++) {
+                    var t = list[x];
+                    if (t is MenuItem menuItem && menuItem.Header!.ToString() == "Force _recheck") {
+                        list.Insert(x + 1, newMenuItem);
+                        return newMenuItem;
                     }
                 }
-            }
+
+                list.Add(newMenuItem);
+                return newMenuItem;
+            }, list => {
+                for (var x = 0;x < list.Count;x++) {
+                    var t = list[x];
+                    if (t is MenuItem menuItem) {
+                        if (menuItem.Header!.ToString() == "Align file integrity & recheck") {
+                            list.RemoveAt(x);
+                        }
+                    }
+                }
+            });
         });
 
         Progress(("Done", 100f));

@@ -22,6 +22,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 
 namespace RTSharp.Plugin;
 
@@ -116,6 +117,8 @@ public class RTSharpPlugin : IPluginHost
 
     public IDisposable RegisterRootMenuItem(MenuItem In)
     {
+        Dispatcher.UIThread.VerifyAccess();
+
         App.MainWindowViewModel.MenuItems.Add(In);
         return Disposable.Create(() => {
             App.MainWindowViewModel.MenuItems.Remove(In);
@@ -124,6 +127,8 @@ public class RTSharpPlugin : IPluginHost
 
     public IDisposable RegisterToolsMenuItem(MenuItem In)
     {
+        Dispatcher.UIThread.VerifyAccess();
+
         var tools = App.MainWindowViewModel.MenuItems.First(x => x.Name == "ToolsMenu");
         tools.Items.Add(In);
         return Disposable.Create(() => {
@@ -133,6 +138,8 @@ public class RTSharpPlugin : IPluginHost
 
     public IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In)
     {
+        Dispatcher.UIThread.VerifyAccess();
+
         var fx = (System.Collections.IList items) => {
             var control = In();
             Debug.Assert(control.GetVisualParent() == null);
@@ -147,6 +154,8 @@ public class RTSharpPlugin : IPluginHost
 
     public IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove)
     {
+        Dispatcher.UIThread.VerifyAccess();
+
         RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Add(Add);
         return Disposable.Create(() => {
             RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Remove(Add);
@@ -171,7 +180,7 @@ public class RTSharpPlugin : IPluginHost
             .ForContext("PluginColor", PluginInstanceConfig.Color)
             .ForContext("PluginDisplayName", PluginInstanceConfig.Name);
 
-    public IReadOnlyCollection<Torrent> Torrents => [.. Core.TorrentPolling.TorrentPolling.Torrents.Select(x => x.ToPluginModel())];
+    public IReadOnlyCollection<Torrent> Torrents => [.. Core.TorrentPolling.TorrentPolling.Torrents.GetSnapshot().Select(x => x.ToPluginModel())];
 
     public HttpClient HttpClient => Core.Http.Client;
 

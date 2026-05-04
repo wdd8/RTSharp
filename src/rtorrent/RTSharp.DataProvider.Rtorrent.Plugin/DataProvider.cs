@@ -103,14 +103,13 @@ public class DataProvider : IDataProvider
         return ret;
     }
 
-    public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, T, byte[]>>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<Daemon.Protocols.DataProvider.IncompleteDeltaTorrentResponse, T> Update, Action<Daemon.Protocols.DataProvider.CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
-        where T : class
+    public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, Torrent, byte[]>>> GetTorrentChanges(CancellationToken CancellationToken)
     {
         var client = PluginHost.AttachedDaemonService.GetTorrentsService(this);
 
         var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
 
-        return client.GetTorrentChanges(Existing, Update, Update2, combined.Token);
+        return client.GetTorrentChanges(combined.Token);
     }
 
     public async Task<TorrentStatuses> StartTorrents(IList<byte[]> In)

@@ -7,6 +7,10 @@ namespace RTSharp.Shared.Utils
         public InfoHashDictionary() : base(ByteArrayComparer.Default)
         {
         }
+
+        public InfoHashDictionary(int capacity) : base(capacity, ByteArrayComparer.Default)
+        {
+        }
     }
 
     public class ConcurrentInfoHashDictionary<T> : ConcurrentDictionary<byte[], T>
@@ -27,7 +31,9 @@ namespace RTSharp.Shared.Utils
     {
         public static InfoHashDictionary<T> ToInfoHashDictionary<T>(this IEnumerable<T> source, Func<T, byte[]> infoHashSelector)
         {
-            var ret = new InfoHashDictionary<T>();
+            var ret = source.TryGetNonEnumeratedCount(out var count)
+                ? new InfoHashDictionary<T>(count)
+                : new InfoHashDictionary<T>();
 
             foreach (var el in source) {
                 ret.Add(infoHashSelector(el), el);
@@ -38,7 +44,9 @@ namespace RTSharp.Shared.Utils
 
         public static InfoHashDictionary<TTarget> ToInfoHashDictionary<T, TTarget>(this IEnumerable<T> source, Func<T, byte[]> infoHashSelector, Func<T, TTarget> elSelector)
         {
-            var ret = new InfoHashDictionary<TTarget>();
+            var ret = source.TryGetNonEnumeratedCount(out var count)
+                ? new InfoHashDictionary<TTarget>(count)
+                : new InfoHashDictionary<TTarget>();
 
             foreach (var el in source) {
                 ret.Add(infoHashSelector(el), elSelector(el));

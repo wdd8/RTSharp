@@ -3,7 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RTSharp.ViewModels;assembly=RTSharp"
-        xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        xmlns:i="https://github.com/projektanker/icons.avalonia"
         xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters"
         d:DataContext="{x:Static vm:ExampleDirectorySelectorWindowViewModel.ViewModel}"
         x:DataType="vm:DirectorySelectorWindowViewModel"
@@ -23,7 +23,7 @@
     <Grid ColumnDefinitions="*" RowDefinitions="Auto,*,Auto" Margin="8">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" RowDefinitions="*">
             <TextBox Name="PathTextBox" Text="{Binding Selected.Path, Mode=OneWay}" Grid.Column="0" Margin="0 0 8 0" />
-            <Button Grid.Column="2" Command="{Binding SetCurrentFolderCommand}" CommandParameter="{Binding #PathTextBox.Text}" IsDefault="True" i:Attached.Icon="fa-solid fa-right-long" />
+            <Button Grid.Column="2" Command="{Binding SetCurrentFolderCommand}" CommandParameter="{Binding #PathTextBox.Text}" IsDefault="True" i:Attached.Icon="fa7-solid fa7-right-long" />
         </Grid>
 
         <DataGrid
@@ -79,7 +79,7 @@
                 <Button
                     Command="{Binding CreateDirectoryCommand}">
                     <StackPanel Orientation="Horizontal">
-                        <i:Icon Value="fa-solid fa-folder-plus" Margin="0 0 4 0" />
+                        <i:Icon Value="fa7-solid fa7-folder-plus" Margin="0 0 4 0" />
                         <TextBlock>Create directory</TextBlock>
                     </StackPanel>
                 </Button>

@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace RTSharp.Views
 {
-    public partial class ActionQueueView : UserControl
+    public partial class ActionQueuesView : UserControl
     {
-        public ActionQueueView()
+        public ActionQueuesView()
         {
             InitializeComponent();
         }

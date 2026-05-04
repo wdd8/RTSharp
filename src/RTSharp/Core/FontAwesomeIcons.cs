@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Media;
 
-using Projektanker.Icons.Avalonia;
+using Optris.Icons.Avalonia;
 
 namespace RTSharp.Core
 {

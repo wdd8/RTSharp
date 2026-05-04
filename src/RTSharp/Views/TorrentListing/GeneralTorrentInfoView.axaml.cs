@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels.TorrentListing;
@@ -22,5 +24,10 @@ public partial class GeneralTorrentInfoView : VmUserControl<GeneralTorrentInfoVi
     {
         var topLevel = TopLevel.GetTopLevel(this);
         await topLevel!.Clipboard!.SetTextAsync(In);
+    }
+
+    private async void CopyHash_Click(object sender, RoutedEventArgs e)
+    {
+        await ViewModel!.CopyInfoHash();
     }
 }

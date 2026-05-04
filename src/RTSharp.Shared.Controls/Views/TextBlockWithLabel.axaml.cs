@@ -5,7 +5,7 @@ using Avalonia.Styling;
 
 namespace RTSharp.Shared.Controls.Views
 {
-    public partial class TextBlockWithLabel : UserControl, IStyleable
+    public partial class TextBlockWithLabel : UserControl
     {
         public TextBlockWithLabel()
         {

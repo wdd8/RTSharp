@@ -2,37 +2,35 @@ using System;
 using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using StaticViewLocator;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using Dock.Model.Core;
 
-namespace RTSharp
+namespace RTSharp;
+
+[StaticViewLocator]
+public partial class ViewLocator : IDataTemplate
 {
-    public class ViewLocator : IDataTemplate
+    public Control? Build(object? data)
     {
-        private static Dictionary<string, Control> Cache = new();
+        if (data is null)
+            return null;
 
-        public Control Build(object data)
-        {
-            return null!;
-            /*var name = data.GetType().FullName!.Replace("ViewModel", "View");
-            var type = data.GetType().Assembly.GetType(name);
+        var type = data.GetType();
+        if (s_views.TryGetValue(type, out var func))
+            return func.Invoke();
 
-            if (type != null)
-            {
-                if (Cache.TryGetValue(name, out var control)) {
-                    return control;
-                }
-                return Cache[name] = (Control)Activator.CreateInstance(type)!;
-            }
-            else
-            {
-                return new TextBlock { Text = "Not Found: " + name };
-            }*/
+        throw new Exception($"Unable to create view for type: {type}");
+    }
+
+    public bool Match(object? data)
+    {
+        if (data is null) {
+            return false;
         }
 
-        public bool Match(object data)
-        {
-            return data is ObservableObject;
-        }
+        var type = data.GetType();
+        return data is IDockable || s_views.ContainsKey(type);
     }
 }

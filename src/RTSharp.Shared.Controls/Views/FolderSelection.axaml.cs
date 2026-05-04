@@ -7,7 +7,7 @@ using Avalonia.Interactivity;
 
 namespace RTSharp.Shared.Controls.Views
 {
-    public partial class FolderSelection : UserControl, IStyleable
+    public partial class FolderSelection : UserControl
     {
         public FolderSelection()
         {
@@ -28,8 +28,6 @@ namespace RTSharp.Shared.Controls.Views
             set { SetValue(ValueProperty, value); }
         }
         #endregion Value
-
-        Type IStyleable.StyleKey => typeof(FolderSelection);
 
         public async void EvBrowse(object sender, RoutedEventArgs e)
         {

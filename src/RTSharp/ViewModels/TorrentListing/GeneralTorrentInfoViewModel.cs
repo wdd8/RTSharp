@@ -19,14 +19,17 @@ namespace RTSharp.ViewModels.TorrentListing
 
         [ObservableProperty]
         public partial IList<Shared.Abstractions.PieceState> Pieces { get; set; }
-        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-circle-info");
+        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-circle-info");
 
         public Func<string, Task> Copy;
 
         [RelayCommand]
         public async Task CopyInfoHash()
         {
-            await Copy(Convert.ToHexString(Torrent!.Hash));
+            if (Torrent is null)
+                return;
+
+            await Copy(Convert.ToHexString(Torrent.Hash));
         }
     }
 }

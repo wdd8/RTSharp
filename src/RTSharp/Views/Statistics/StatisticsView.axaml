@@ -1,22 +1,21 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:statistics="using:RTSharp.ViewModels.Statistics"
-        mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="110"
-		SizeToContent="WidthAndHeight"
+        mc:Ignorable="d" d:DesignWidth="310" d:DesignHeight="260"
+		MinWidth="310" MinHeight="260"
         xmlns:views="using:RTSharp.Shared.Controls.Views"
         xmlns:converters="using:RTSharp.ViewModels.Converters"
-        x:Class="RTSharp.Views.Statistics.StatisticsWindow"
-		x:DataType="statistics:StatisticsWindowViewModel"
-        Title="Statistics">
+        x:Class="RTSharp.Views.Statistics.StatisticsView"
+		x:DataType="statistics:StatisticsViewModel">
 
-    <Window.Resources>
+    <UserControl.Resources>
         <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
-    </Window.Resources>
-    <Window.Styles>
+    </UserControl.Resources>
+    <UserControl.Styles>
         <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
-    </Window.Styles>
+    </UserControl.Styles>
 
 	<StackPanel Orientation="Vertical">
 		<views:GroupBox Label="Listing" Margin="4,4,4,4">
@@ -47,4 +46,4 @@
 			</Grid>
 		</views:GroupBox>
 	</StackPanel>
-</Window>
+</UserControl>

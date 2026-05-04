@@ -13,15 +13,20 @@ using Microsoft.Extensions.Hosting;
 
 using MsBox.Avalonia;
 
-using NP.Ava.UniDock;
-
-using ProDiagnostics.Transport;
-
-using Projektanker.Icons.Avalonia;
-using Projektanker.Icons.Avalonia.FontAwesome;
+using Optris.Icons.Avalonia;
+using Optris.Icons.Avalonia.FontAwesome7;
+//using ProDiagnostics.Transport;
 
 using RTSharp.Core;
+using RTSharp.Core.Services.Cache.ASCache;
+using RTSharp.Core.Services.Cache.Images;
+using RTSharp.Core.Services.Cache.TorrentFileCache;
+using RTSharp.Core.Services.Cache.TorrentPropertiesCache;
+using RTSharp.Core.Services.Cache.TrackerDb;
 using RTSharp.Core.Services.Daemon;
+using RTSharp.Core.TorrentPolling;
+using RTSharp.Shared.Controls;
+using RTSharp.Shared.Controls.Views;
 using RTSharp.ViewModels;
 using RTSharp.Views;
 
@@ -111,7 +116,7 @@ public class App : Application
             .CreateLogger();
         Log.Logger = log;
 
-        IconProvider.Current.Register<FontAwesomeIconProvider>();
+        IconProvider.Current.Register<FontAwesome7IconProvider>();
 
         try {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
@@ -138,15 +143,15 @@ public class App : Application
         AvaloniaXamlLoader.Load(this);
 
 #if DEBUG
-        this.AttachDevTools();
+        //this.AttachDevTools();
 #endif
 
-        var diagnosticsExporter = new DiagnosticsUdpExporter(new DiagnosticsUdpOptions {
+        /*var diagnosticsExporter = new DiagnosticsUdpExporter(new DiagnosticsUdpOptions {
             ActivitySourceNames = new[] { "ProDataGrid.Diagnostic.Source", "Avalonia.Diagnostic.Source" },
             MeterNames = new[] { "ProDataGrid.Diagnostic.Meter", "Avalonia.Diagnostic.Meter" }
         });
 
-        diagnosticsExporter.Start();
+        diagnosticsExporter.Start();*/
     }
 
     private static ConcurrentDictionary<string, Func<ValueTask>> FxOnExit = new();
@@ -160,8 +165,6 @@ public class App : Application
 
     public static MainWindowViewModel MainWindowViewModel { get; private set; }
 
-    public static DockManager DockManager { get; internal set; }
-
     public override void OnFrameworkInitializationCompleted()
     {
         var tcs = new TaskCompletionSource();
@@ -172,11 +175,29 @@ public class App : Application
         thread.Start();
 
         tcs.Task.ContinueWith((task) => {
-            Dispatcher.UIThread.Invoke(() => {
+            Dispatcher.UIThread.Invoke(async () => {
                 try {
                     this.DataContext = new AppViewModel();
                     MainWindowViewModel = new MainWindowViewModel();
                     MainWindow = new MainWindow(MainWindowViewModel);
+
+                    using var scope = Core.ServiceProvider.CreateScope();
+                    var tasks = Task.WhenAll(
+                        Task.Run(scope.ServiceProvider.GetRequiredService<TorrentFileCache>().Initialize),
+                        Task.Run(scope.ServiceProvider.GetRequiredService<TorrentPropertiesCache>().Initialize),
+                        Task.Run(scope.ServiceProvider.GetRequiredService<ASCache>().Initialize),
+                        Task.Run(scope.ServiceProvider.GetRequiredService<ImageCache>().Initialize),
+                        Task.Run(scope.ServiceProvider.GetRequiredService<TrackerDb>().Initialize),
+                        Task.Run(() => Plugin.Plugins.LoadPlugins((progress, text) => { })),
+                        Task.Run(scope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>().Initialize)
+                    );
+
+                    TorrentPolling.Start();
+                    await tasks;
+
+                    Log.Logger.Information("Ready");
+
+                    MainWindowViewModel!.PostStartup();
                 } catch (Exception ex) {
                     var msgbox = MessageBoxManager.GetMessageBoxStandard("RTSharp has crashed", $"RTSharp has crashed.\n{ex}", MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error, WindowStartupLocation.CenterOwner);
                     var task = msgbox.ShowAsync();
@@ -197,20 +218,20 @@ public class App : Application
                     desktopLifetime.ShutdownRequested += (sender, e) => {
                         if (firstExit) {
                             e.Cancel = true;
-                        }
 
-                        var tcs = new TaskCompletionSource();
-                        var thread = new Thread(() => {
-                            foreach (var (_, fx) in FxOnExit) {
-                                fx().GetAwaiter().GetResult();
-                            }
+                            var tcs = new TaskCompletionSource();
+                            var thread = new Thread(() => {
+                                foreach (var (_, fx) in FxOnExit) {
+                                    fx().GetAwaiter().GetResult();
+                                }
 
-                            firstExit = false;
-                            Dispatcher.UIThread.Post(() => {
-                                desktopLifetime.Shutdown();
+                                firstExit = false;
+                                Dispatcher.UIThread.Post(() => {
+                                    desktopLifetime.Shutdown();
+                                });
                             });
-                        });
-                        thread.Start();
+                            thread.Start();
+                        }
                     };
                 }
 

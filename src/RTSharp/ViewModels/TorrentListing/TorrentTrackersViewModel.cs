@@ -189,7 +189,7 @@ namespace RTSharp.ViewModels.TorrentListing
             await Parent.UpdateTrackersInTorrents();
         }
 
-        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa-solid fa-address-book");
+        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-address-book");
 
         public bool CanExecuteReplaceTracker() => CanExecuteAction("Replace");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteReplaceTracker))]

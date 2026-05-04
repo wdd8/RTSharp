@@ -1,9 +1,5 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Data;
-using Avalonia.Markup.Xaml.MarkupExtensions;
-using Avalonia.Markup.Xaml.MarkupExtensions.CompiledBindings;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -17,10 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
-using System.Reactive;
-
 using RTSharp.Shared.Abstractions.Client;
-using RTSharp.Shared.Utils;
 using RTSharp.ViewModels;
 using RTSharp.ViewModels.TorrentListing;
 using RTSharp.Views.Util;
@@ -33,13 +26,15 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Torrent = RTSharp.Models.Torrent;
+using System.Collections.Generic;
 
 namespace RTSharp.Views.TorrentListing;
 
 public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 {
     private int RowHeight { get; set; }
-    private Thickness GridBorderThickness { get; } = Thickness.Parse("0 0 0 1");
+
+    private static readonly Dictionary<string, (SolidColorBrush? Background, IBrush? Foreground)> RowBrushCache = new();
 
     public static ObservableCollection<Func<System.Collections.IList, MenuItem>> MenuItemInserts = new();
     public static ObservableCollection<Action<System.Collections.IList>> MenuItemRemoves = new();
@@ -58,14 +53,10 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             vm!.CloseAddLabelDialog = CloseAddLabelDialog;
             vm!.CaptureGridState = CaptureGridState;
             vm!.ScrollToItem = grid_ScrollToItem;
+
+            grid.SortingAdapterFactory = vm!.SortingAdapterFactory;
+            grid.FilteringAdapterFactory = vm!.FilteringAdapterFactory;
         }, null);
-
-        grid.Initialized += (sender, e) => {
-            using var scope = Core.ServiceProvider.CreateScope();
-            var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
-
-            RestoreGridState(config.UIState.Value.TorrentGridState);
-        };
 
         MenuItemInserts.CollectionChanged += MenuItemInserts_CollectionChanged;
         HandleInserts(MenuItemInserts);
@@ -112,7 +103,9 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
                         TokenProvider = new TorrentListingViewModel.DataGridStatePersistenceTokenProvider()
                     }
                 );
-            } catch { }
+            } catch {
+                // probe point
+            }
             @lock.Set();
         });
 
@@ -120,7 +113,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         return serialized;
     }
 
-    private void RestoreGridState(string In)
+    public void RestoreGridState(string In)
     {
         try {
             DataGridStatePersistence.RestoreStateFromString(
@@ -135,7 +128,9 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             );
 
             ViewModel!.PostGridStateRestore();
-        } catch { }
+        } catch {
+            // probe point
+        }
     }
 
     public void StateFilterFlyoutOpening(object? sender, EventArgs e) => ViewModel!.StateFilterFlyoutOpening();
@@ -168,7 +163,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
                 var oldCommand = menuItem.Command;
                 menuItem.Command = new RelayCommand(() => {
-                    oldCommand.Execute(SelectedItemsToPluginModelConverter.Instance.Convert(grid.SelectedItems, null!, null, null!));
+                    oldCommand?.Execute(SelectedItemsToPluginModelConverter.Instance.Convert(grid.SelectedItems, null!, null, null!));
                 });
             }
         }
@@ -201,18 +196,24 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     public void EvLoadingRow(object sender, DataGridRowEventArgs e)
     {
         var torrent = (Torrent)e.Row.DataContext!;
-        if (Color.TryParse(torrent!.DataOwner.PluginInstance.PluginInstanceConfig.Color, out var color)) {
-            e.Row.Background = new SolidColorBrush(color);
-            if (color.R * 0.299 + color.G * 0.587 + color.B * 0.114 > 186) {
-                e.Row.Foreground = Brushes.Black;
-            } else {
-                e.Row.Foreground = Brushes.White;
+        var colorStr = torrent!.DataOwner.PluginInstance.PluginInstanceConfig.Color;
+        if (colorStr != null) {
+            if (!RowBrushCache.TryGetValue(colorStr, out var brushes)) {
+                if (Color.TryParse(colorStr, out var color)) {
+                    var luminance = color.R * 0.299 + color.G * 0.587 + color.B * 0.114;
+                    brushes = (new SolidColorBrush(color), luminance > 186 ? Brushes.Black : Brushes.White);
+                }
+                RowBrushCache[colorStr] = brushes;
+            }
+            if (brushes.Background != null && !ReferenceEquals(e.Row.Background, brushes.Background)) {
+                e.Row.Background = brushes.Background;
+                e.Row.Foreground = brushes.Foreground;
             }
         }
 
         var loadingCellHooks = Plugin.Plugins.GetHook<object, string, DataGridCell>(Plugin.Plugins.HookType.TorrentListing_EvLoadingCell);
 
-        if (loadingCellHooks.Any()) {
+        if (loadingCellHooks.Length > 0) {
             for (var x = 0;x < e.Row.Cells.Count;x++) {
                 var cell = e.Row.Cells[x];
                 var columnKey = (string)cell.OwningColumn.ColumnKey;
@@ -224,8 +225,10 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         }
 
         var loadingRowHooks = Plugin.Plugins.GetHook<object, DataGridRowEventArgs>(Plugin.Plugins.HookType.TorrentListing_EvLoadingRow);
-        foreach (var hook in loadingRowHooks) {
-            hook(sender, e);
+        if (loadingRowHooks.Length > 0) {
+            foreach (var hook in loadingRowHooks) {
+                hook(sender, e);
+            }
         }
     }
 
@@ -234,7 +237,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         var window = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams() {
             ButtonDefinitions = ButtonEnum.YesNo,
             ContentTitle = "RT#",
-            ContentMessage = $"Are you sure you want to recheck {Input.Count} torrent{(Input.Count == 1 ? "" : "s")} ({Converters.GetSIDataSize(Input.Size)})?",
+            ContentMessage = $"Are you sure you want to recheck {Input.Count} torrent{(Input.Count == 1 ? "" : "s")} ({Shared.Utils.Converters.GetSIDataSize(Input.Size)})?",
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Icon = Icon.Question
@@ -273,7 +276,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         var window = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams() {
             ButtonDefinitions = ButtonEnum.YesNo,
             ContentTitle = "RT#",
-            ContentMessage = $"Are you sure you want to delete {Input.Count} torrent{(Input.Count == 1 ? "" : "s")}{(Input.AndData ? $" and their data ({Converters.GetSIDataSize(Input.Size)})" : "")}?",
+            ContentMessage = $"Are you sure you want to delete {Input.Count} torrent{(Input.Count == 1 ? "" : "s")}{(Input.AndData ? $" and their data ({Shared.Utils.Converters.GetSIDataSize(Input.Size)})" : "")}?",
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Icon = Icon.Question
@@ -295,5 +298,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         return result;
     }
 
-    public void grid_KeyUp(object? sender, Avalonia.Input.KeyEventArgs e) => ViewModel!.EvGridKeyUp(e);
+    public void EvLabelsMenuOpening(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel!.RefreshLabelCheckedState();
+
+    public void EvGridKeyUp(object? sender, Avalonia.Input.KeyEventArgs e) => ViewModel!.EvGridKeyUp(e);
 }

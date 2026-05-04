@@ -62,7 +62,7 @@ namespace RTSharp.Plugin
                 var list = (Func<T, ValueTask>[])Hooks[(int)type];
                 var newList = list.ToList();
                 newList.Add(fx);
-                Hooks[(int)type] = [.. newList];
+                Hooks[(int)type] = newList.ToArray();
             }
 
             return Disposable.Create(() => {
@@ -70,7 +70,7 @@ namespace RTSharp.Plugin
                     var list = (Func<T, ValueTask>[])Hooks[(int)type];
                     var newList = list.ToList();
                     newList.Remove(fx);
-                    Hooks[(int)type] = [.. newList];
+                    Hooks[(int)type] = newList.ToArray();
                 }
             });
         }
@@ -81,7 +81,7 @@ namespace RTSharp.Plugin
                 var list = (Action<T, T2>[])Hooks[(int)type];
                 var newList = list.ToList();
                 newList.Add(fx);
-                Hooks[(int)type] = [.. newList];
+                Hooks[(int)type] = newList.ToArray();
             }
 
             return Disposable.Create(() => {
@@ -89,7 +89,7 @@ namespace RTSharp.Plugin
                     var list = (Action<T, T2>[])Hooks[(int)type];
                     var newList = list.ToList();
                     newList.Remove(fx);
-                    Hooks[(int)type] = [.. newList];
+                    Hooks[(int)type] = newList.ToArray();
                 }
             });
         }
@@ -100,7 +100,7 @@ namespace RTSharp.Plugin
                 var list = (Action<T, T2, T3>[])Hooks[(int)type];
                 var newList = list.ToList();
                 newList.Add(fx);
-                Hooks[(int)type] = [.. newList];
+                Hooks[(int)type] = newList.ToArray();
             }
 
             return Disposable.Create(() => {
@@ -108,7 +108,7 @@ namespace RTSharp.Plugin
                     var list = (Action<T, T2, T3>[])Hooks[(int)type];
                     var newList = list.ToList();
                     newList.Remove(fx);
-                    Hooks[(int)type] = [.. newList];
+                    Hooks[(int)type] = newList.ToArray();
                 }
             });
         }
@@ -119,7 +119,7 @@ namespace RTSharp.Plugin
                 var list = (Action<T>[])Hooks[(int)type];
                 var newList = list.ToList();
                 newList.Add(fx);
-                Hooks[(int)type] = [.. newList];
+                Hooks[(int)type] = newList.ToArray();
             }
 
             return Disposable.Create(() => {
@@ -127,30 +127,22 @@ namespace RTSharp.Plugin
                     var list = (Action<T>[])Hooks[(int)type];
                     var newList = list.ToList();
                     newList.Remove(fx);
-                    Hooks[(int)type] = [.. newList];
+                    Hooks[(int)type] = newList.ToArray();
                 }
             });
         }
 
-        internal static IEnumerable<Action<T>> GetHook<T>(HookType type)
-        {
-            return Hooks[(int)type].Cast<Action<T>>();
-        }
+        internal static Action<T>[] GetHook<T>(HookType type) =>
+            (Action<T>[])Hooks[(int)type];
 
-        internal static IEnumerable<Action<T, T2>> GetHook<T, T2>(HookType type)
-        {
-            return Hooks[(int)type].Cast<Action<T, T2>>();
-        }
+        internal static Action<T, T2>[] GetHook<T, T2>(HookType type) =>
+            (Action<T, T2>[])Hooks[(int)type];
 
-        internal static IEnumerable<Action<T, T2, T3>> GetHook<T, T2, T3>(HookType type)
-        {
-            return Hooks[(int)type].Cast<Action<T, T2, T3>>();
-        }
+        internal static Action<T, T2, T3>[] GetHook<T, T2, T3>(HookType type) =>
+            (Action<T, T2, T3>[])Hooks[(int)type];
 
-        internal static IEnumerable<Func<T, ValueTask>> GetHookAsync<T>(HookType type)
-        {
-            return Hooks[(int)type].Cast<Func<T, ValueTask>>();
-        }
+        internal static Func<T, ValueTask>[] GetHookAsync<T>(HookType type) =>
+            (Func<T, ValueTask>[])Hooks[(int)type];
 
         public static string GetFirstPluginConfigOrDefault(string FullModuleContentsPath)
         {
@@ -341,11 +333,11 @@ namespace RTSharp.Plugin
             Progress(($"Loaded plugin {pluginName}", 100f));
         }
 
-        public static async Task LoadPlugins(WaitingBox Progress)
+        public static async Task LoadPlugins(Action<float, string> Progress)
         {
             if (!Directory.Exists(Shared.Abstractions.Consts.PLUGINS_PATH)) {
                 Log.Logger.Information("No plugins loaded");
-                Progress.Report((100, $"No plugins loaded"));
+                Progress(100, $"No plugins loaded");
                 return;
             }
 
@@ -356,11 +348,11 @@ namespace RTSharp.Plugin
                 int nextProgress = (int)((float)(x + 1) / files.Length * 100);
 
                 await LoadPlugin(files[x], ((string Status, float Progress) e) => {
-                    Progress.Report(((int)(e.Progress / files.Length), e.Status));
+                    Progress((int)(e.Progress / files.Length), e.Status);
                 });
             }
 
-            Progress.Report((100, $"Plugins loaded"));
+            Progress(100, $"Plugins loaded");
         }
 
         public static List<string> ListUnloadedPluginDirs()

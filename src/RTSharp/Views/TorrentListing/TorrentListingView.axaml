@@ -3,7 +3,7 @@
 			 xmlns:dataGridEx="using:RTSharp.Views.DataGridEx"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:i="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+			 xmlns:i="https://github.com/projektanker/icons.avalonia"
 			 xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
 			 xmlns:sharedConverters="using:RTSharp.Shared.Controls.Converters"
 			 xmlns:torrentListingVm="clr-namespace:RTSharp.ViewModels.TorrentListing;assembly=RTSharp"
@@ -18,7 +18,6 @@
 			 xmlns:shared="using:RTSharp.Shared.Controls.Views"
 			 d:DataContext="{x:Static torrentListingVm:ExampleTorrentListingViewModel.ViewModel}"
 			 x:DataType="torrentListingVm:TorrentListingViewModel"
-			 x:CompileBindings="False"
 			 d:DesignWidth="600" d:DesignHeight="450">
 
 	<Control.Resources>
@@ -60,7 +59,8 @@
 			<Separator />
 			<MenuItem
 				Header="Set _label..."
-				ItemsSource="{Binding LabelsWithAdd}" />
+				ItemsSource="{Binding LabelsWithAdd}"
+				SubmenuOpened="EvLabelsMenuOpening" />
 			<MenuItem IsEnabled="False" Header="_Set priority...">
 				<MenuItem Header="yoo" />
 				<MenuItem Header="yoo" />
@@ -198,19 +198,19 @@
 		<Grid RowDefinitions="Auto,*,4,*">
 			<StackPanel Orientation="Horizontal">
 				<Button
-					i:Attached.Icon="fa-solid fa-play"
+					i:Attached.Icon="fa7-solid fa7-play"
 					Command="{Binding StartTorrentsCommand}"
 					CommandParameter="{Binding #grid.SelectedItems}"
 					Background="Transparent"
 					ToolTip.Tip="Start" />
 				<Button
-					i:Attached.Icon="fa-solid fa-pause"
+					i:Attached.Icon="fa7-solid fa7-pause"
 					Command="{Binding PauseTorrentsCommand}"
 					CommandParameter="{Binding #grid.SelectedItems}"
 					Background="Transparent"
 					ToolTip.Tip="Pause" />
 				<Button
-					i:Attached.Icon="fa-solid fa-stop"
+					i:Attached.Icon="fa7-solid fa7-stop"
 					Command="{Binding StopTorrentsCommand}"
 					CommandParameter="{Binding #grid.SelectedItems}"
 					Background="Transparent"
@@ -223,7 +223,7 @@
 					</Separator>
 				</Panel>
 				<Button
-					i:Attached.Icon="fa-solid fa-gear"
+					i:Attached.Icon="fa7-solid fa7-gear"
 					Background="Transparent"
 					Command="{Binding ShowOptionsCommand}" />
 			</StackPanel>
@@ -236,7 +236,7 @@
 					  ColumnDefinitionsSource="{Binding ColumnDefinitions}"
 					  SortingModel="{Binding SortingModel}"
 					  FilteringModel="{Binding FilteringModel}"
-					  KeyUp="grid_KeyUp"
+					  KeyUp="EvGridKeyUp"
 					  IsReadOnly="True"
 					  IsMultiSortEnabled="True"
 					  SortCycleMode="AscendingDescendingNone"
@@ -244,7 +244,7 @@
 					  LoadingRow="EvLoadingRow"
 					  UseLogicalScrollable="True"
 					  KeepRecycledContainersInVisualTree="True"
-				      RecycledContainerHidingMode="SetIsVisibleOnly"
+					  TrimRecycledContainers="True"
 					  CanUserResizeColumns="true"
 					  ClipboardCopyMode="ExcludeHeader"
 					  CanUserAddRows="False"
@@ -262,6 +262,9 @@
 						StrictMode="True"
 						ThrowOnMissingAccessor="True" />
 				</DataGrid.FastPathOptions>
+				<DataGrid.FormulaModel>
+					<dataGridEx:NoopDataGridFormulaModel />
+				</DataGrid.FormulaModel>
 				<DataGrid.RowHeightEstimator>
 					<DefaultRowHeightEstimator />
 				</DataGrid.RowHeightEstimator>
@@ -287,7 +290,10 @@
 			  </DataGrid.ColumnHeaderContextMenu>
 			  <DataGrid.Resources>
 				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentDoneTemplate">
-				  <ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Name="TorrentProgressBar" />
+				  <dataGridEx:TorrentProgressCell Value="{Binding Done, Mode=OneWay}" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+				    FontSize="{DynamicResource ControlContentThemeFontSize}"
+				    FillBrush="{DynamicResource SystemControlHighlightAccentBrush}"
+				    TrackBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
 				</DataTemplate>
 				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentTrackerTemplate">
 				  <StackPanel Orientation="Horizontal">

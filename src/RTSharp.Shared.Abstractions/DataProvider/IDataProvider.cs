@@ -19,8 +19,7 @@ public interface IDataProvider : IDataProviderBase<DataProviderCapabilities>
 
     public Task<Torrent> GetTorrent(byte[] Hash);
 
-    Task<ChannelReader<ListingChanges<Torrent, T, byte[]>>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<IncompleteDeltaTorrentResponse, T> Update, Action<CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
-        where T : class;
+    Task<ChannelReader<ListingChanges<Torrent, Torrent, byte[]>>> GetTorrentChanges(CancellationToken CancellationToken);
 
     public Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken = default);
 

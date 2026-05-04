@@ -28,9 +28,9 @@ namespace RTSharp.Models
             this.Item = Item;
 
             if (IsDirectory)
-                Icon = Core.FontAwesomeIcons.Get("fa-regular fa-folder");
+                Icon = Core.FontAwesomeIcons.Get("fa7-regular fa7-folder");
             else
-                Icon = Core.FontAwesomeIcons.Get("fa-regular fa-file");
+                Icon = Core.FontAwesomeIcons.Get("fa7-regular fa7-file");
         }
     }
 

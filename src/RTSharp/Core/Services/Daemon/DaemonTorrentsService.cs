@@ -31,6 +31,8 @@ namespace RTSharp.Core.Services.Daemon
         private readonly string ServerId;
         private readonly RTSharpDataProvider DataProvider;
 
+        private readonly InfoHashDictionary<Shared.Abstractions.Torrent> Existing = new();
+
         public DaemonTorrentsService(RTSharpDataProvider DataProvider)
         {
             this.ServerId = DataProvider.DataProviderInstanceConfig.ServerId;
@@ -45,8 +47,7 @@ namespace RTSharp.Core.Services.Daemon
             Logger = scope.ServiceProvider.GetRequiredService<ILogger<DaemonService>>();
         }
 
-        public Channel<ListingChanges<Shared.Abstractions.Torrent, T, byte[]>> GetTorrentChanges<T>(ConcurrentInfoHashOwnerDictionary<T> Existing, Action<IncompleteDeltaTorrentResponse, T> Update, Action<CompleteDeltaTorrentResponse, T> Update2, CancellationToken CancellationToken)
-            where T : class
+        public Channel<ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>> GetTorrentChanges(CancellationToken CancellationToken)
         {
             using var scope = Core.ServiceProvider.CreateScope();
             var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
@@ -55,7 +56,7 @@ namespace RTSharp.Core.Services.Daemon
                 Interval = Duration.FromTimeSpan(DataProvider.DataProviderInstanceConfig.ListUpdateInterval)
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
-            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, T, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
+            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
@@ -67,16 +68,29 @@ namespace RTSharp.Core.Services.Daemon
                     await foreach (var update in updates.ResponseStream.ReadAllAsync(CancellationToken)) {
                         DataProvider.State.Change(DataProviderState.ACTIVE);
                         var fullUpdate = new List<Shared.Abstractions.Torrent>();
-                        var changes = new List<T>();
+                        var changes = new List<Shared.Abstractions.Torrent>();
+                        var removed = update.Removed.Select(x => x.ToByteArray()).ToList();
+
+                        foreach (var hash in removed) {
+                            Existing.Remove(hash);
+                        }
+
+                        foreach (var torrent in update.FullUpdate) {
+                            var hash = torrent.Hash.ToByteArray();
+                            var mapped = Mapper.MapFromProto(torrent, DataProvider.Instance);
+                            fullUpdate.Add(mapped);
+                            Existing[hash] = mapped;
+                        }
 
                         var incomplete = update.Incomplete.Select(x => {
                             var hash = x.Hash.ToByteArray();
-                            if (!Existing.TryGetValue((hash, ownerId), out var cachedTorrent)) {
+
+                            if (!Existing.TryGetValue(hash, out var cachedTorrent)) {
                                 return null; // TODO: what to do?
                             }
 
                             try {
-                                Update(x, cachedTorrent);
+                                Mapper.ApplyFromProto(cachedTorrent, x, DataProvider.Instance);
                                 return cachedTorrent;
                             } catch {
                                 // probe point
@@ -87,12 +101,12 @@ namespace RTSharp.Core.Services.Daemon
 
                         var complete = update.Complete.Select(x => {
                             var hash = x.Hash.ToByteArray();
-                            if (!Existing.TryGetValue((hash, ownerId), out var cachedTorrent)) {
+                            if (!Existing.TryGetValue(hash, out var cachedTorrent)) {
                                 return null; // TODO: what to do?
                             }
 
                             try {
-                                Update2(x, cachedTorrent);
+                                Mapper.ApplyFromProto(cachedTorrent, x, DataProvider.Instance);
                                 return cachedTorrent;
                             } catch {
                                 // Probe point
@@ -101,10 +115,8 @@ namespace RTSharp.Core.Services.Daemon
                         });
                         changes.AddRange(complete.Where(x => x != null)!);
 
-                        fullUpdate.AddRange([ ..update.FullUpdate.Select(x => Mapper.MapFromProto(x, DataProvider.Instance)) ]);
-
                         if (changes.Count != 0 || fullUpdate.Count != 0 || update.Removed.Count != 0)
-                            await channel.Writer.WriteAsync(new ListingChanges<Shared.Abstractions.Torrent, T, byte[]>(fullUpdate, changes, [.. update.Removed.Select(x => x.ToByteArray())]), CancellationToken);
+                            await channel.Writer.WriteAsync(new ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>(fullUpdate, changes, removed), CancellationToken);
                     }
 
                     channel.Writer.Complete();

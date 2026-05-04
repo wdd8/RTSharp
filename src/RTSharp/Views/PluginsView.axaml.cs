@@ -3,9 +3,9 @@ using RTSharp.ViewModels;
 
 namespace RTSharp.Views
 {
-    public partial class Plugins : VmWindow<PluginsViewModel>
+    public partial class PluginsView : VmWindow<PluginsViewModel>
     {
-        public Plugins()
+        public PluginsView()
         {
             InitializeComponent();
         }

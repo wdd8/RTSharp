@@ -1,28 +1,13 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 
 namespace RTSharp.Models
 {
-    public record struct ConnectedTotalPair : INotifyPropertyChanged
+    public record struct ConnectedTotalPair : IComparable<ConnectedTotalPair>
     {
-        public uint Connected {
-            get => field;
-            set {
-                var old = field;
-                field = value;
-                if (old != value)
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Connected)));
-            }
-        }
+        public uint Connected { get; set; }
 
-        public uint Total {
-            get => field;
-            set {
-                var old = field;
-                field = value;
-                if (old != value)
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
-            }
-        }
+        public uint Total { get; set; }
 
         public ConnectedTotalPair(uint Connected, uint Total)
         {
@@ -30,11 +15,11 @@ namespace RTSharp.Models
             this.Total = Total;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
         public override string ToString()
         {
             return $"{Connected} ({Total})";
         }
+
+        public int CompareTo(ConnectedTotalPair other) => this.Connected.CompareTo(other.Connected);
     }
 }
