@@ -9,6 +9,7 @@ using Serilog.Events;
 using System.Threading.Tasks;
 using RTSharp.Shared.Abstractions.Client;
 using Avalonia.Input.Platform;
+using Avalonia.VisualTree;
 
 namespace RTSharp.Views;
 
@@ -58,6 +59,9 @@ public partial class LogEntriesView : VmUserControl<LogEntriesViewModel>
 
     private void EvScrollToBottom()
     {
+        if (!this.IsAttachedToVisualTree())
+            return;
+
         if (!MainGrid.IsFocused && ViewModel!.LogEntries.Count > 2) {
             try {
                 MainGrid.ScrollIntoView(ViewModel!.LogEntries[^2], null);

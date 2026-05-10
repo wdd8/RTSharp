@@ -271,7 +271,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
             Logger.LogDebug("Returning");
 
             return new BytesValue {
-                Value = session.Id.ToByteArray().ToByteString()
+                Value = session.Id.ToByteString()
             };
         }
 
@@ -725,7 +725,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                     return new TorrentsReply.Types.TorrentReply
                     {
-                        InfoHash = hash.ToByteArray().ToByteString(),
+                        InfoHash = hash,
                         Status = {
                             exception == null ? (IList<Protocols.DataProvider.Status>)Array.Empty<Protocols.DataProvider.Status>() : [
                                 new Protocols.DataProvider.Status {
@@ -773,7 +773,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                     }
 
                     return new TorrentsReply.Types.TorrentReply {
-                        InfoHash = hash.ToByteArray().ToByteString(),
+                        InfoHash = hash,
                         Status = {
                             exception == null ? (IList<Protocols.DataProvider.Status>)Array.Empty<Protocols.DataProvider.Status>() : [
                                 new Protocols.DataProvider.Status {

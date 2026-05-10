@@ -320,7 +320,7 @@ namespace RTSharp.Daemon.Services.transmission
             return new TorrentsReply {
                 Torrents = {
                     In.Hashes.Select(x => new TorrentsReply.Types.TorrentReply {
-                        InfoHash = x.ToByteArray().ToByteString(),
+                        InfoHash = x,
                         Status = {
                             exception == null ? (IList<Protocols.DataProvider.Status>)Array.Empty<Protocols.DataProvider.Status>() : [
                                 new Protocols.DataProvider.Status {
@@ -351,7 +351,7 @@ namespace RTSharp.Daemon.Services.transmission
             return new TorrentsReply {
                 Torrents = {
                     In.Hashes.Select(x => new TorrentsReply.Types.TorrentReply {
-                        InfoHash = x.ToByteArray().ToByteString(),
+                        InfoHash = x,
                         Status = {
                             exception == null ? (IList<Protocols.DataProvider.Status>)Array.Empty<Protocols.DataProvider.Status>() : [
                                 new Protocols.DataProvider.Status {
@@ -519,7 +519,7 @@ namespace RTSharp.Daemon.Services.transmission
             Logger.LogDebug("Returning");
 
             return new BytesValue {
-                Value = session.Id.ToByteArray().ToByteString()
+                Value = session.Id.ToByteString()
             };
         }
 

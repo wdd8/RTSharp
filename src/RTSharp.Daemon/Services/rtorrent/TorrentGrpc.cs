@@ -133,7 +133,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             
             return new BytesValue
             {
-                Value = session.Id.ToByteArray().ToByteString()
+                Value = session.Id.ToByteString()
             };
         }
 

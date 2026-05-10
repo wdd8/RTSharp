@@ -55,7 +55,7 @@ namespace RTSharp.Daemon.GRPCServices
                 }, TaskContinuationOptions.OnlyOnCanceled);
 
                 return Task.FromResult(new ScriptSessionReply {
-                    Id = session.Id.ToByteArray().ToByteString()
+                    Id = session.Id.ToByteString()
                 });
             } catch (CompilationFailureException ex) {
                 throw new RpcException(new Status(StatusCode.InvalidArgument, string.Join('\n', ex.Message.Split([ "\r\n", "\n" ], StringSplitOptions.None).Where(x => !x.StartsWith("warning")))));
@@ -90,17 +90,9 @@ namespace RTSharp.Daemon.GRPCServices
 
         public override async Task ScriptsStatus(Empty Req, IServerStreamWriter<Protocols.ScriptProgressState> Res, ServerCallContext Ctx)
         {
-            while (!Ctx.CancellationToken.IsCancellationRequested) {
-                var sessions = Sessions.GetScriptSessions();
-
-                await Task.WhenAll(sessions.Select(async x => {
-                    var linked = CancellationTokenSource.CreateLinkedTokenSource(Ctx.CancellationToken, x.Cts.Token);
-
-                    while (!linked.IsCancellationRequested) {
-                        await Res.WriteAsync(MapProgressState(x.Id.ToByteArray().ToByteString(), x.Progress), linked.Token);
-                        await x.EvProgressChanged.WaitAsync(linked.Token);
-                    }
-                }));
+            var ct = Ctx.CancellationToken;
+            await foreach (var (id, progress) in Sessions.MonitorSessions(ct).ReadAllAsync(ct)) {
+                await Res.WriteAsync(MapProgressState(id.ToByteString(), progress), ct);
             }
         }
 
