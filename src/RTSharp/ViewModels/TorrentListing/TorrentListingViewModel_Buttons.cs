@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -43,7 +43,7 @@ public partial class TorrentListingViewModel
         try {
             var actions = In.GroupBy(x => x.DataOwner).Select(x => (
                 Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance),
-                ActionQueueAction.New(ActionName, async () => {
+                ActionQueueAction.New(ActionName, async (action) => {
                     var result = await Fx(x.Key, x.ToList());
                     if (result.Any(x => x.Exceptions.Any())) {
                         throw new Exception("Operation failed:\n" + String.Join('\n', result.Select(x => Convert.ToHexString(x.Hash) + ": " + String.Join(", ", x.Exceptions.Select(x => x.Message)))));
@@ -190,7 +190,6 @@ public partial class TorrentListingViewModel
 
             var sourceTargetMapCheck = data.SelectMany(x => x.Files.Select(f => (targetPath(x.BasePath, x, f), targetPath(targetDir, x, f)))).ToArray();
 
-            var progress = new Progress<(float, string)>();
             /*var moveProgress = new Progress<(byte[] InfoHash, string File, ulong Moved, string? AdditionalProgress)>(args => {
                 var (infoHash, file, moved, additionalProgress) = args;
 
@@ -217,18 +216,18 @@ public partial class TorrentListingViewModel
                 ));
             });*/
 
-            tasks.Add(Core.ActionQueue.GetActionQueueEntry(dataProvider.PluginInstance)!.Queue.RunAction(ActionQueueAction.New("Move torrent", async () => {
+            tasks.Add(Core.ActionQueue.GetActionQueueEntry(dataProvider.PluginInstance)!.Queue.RunAction(ActionQueueAction.New("Move torrent", async (action) => {
                 var result = await dataProvider.Instance.MoveDownloadDirectory(
                     data.ToInfoHashDictionary(x => x.Hash, _ => targetDir),
                     sourceTargetMapCheck
                 );
-                
+
                 if (result != null) {
                     await dataProvider.PluginInstance.AttachedDaemonService!.GetScriptProgress(result.Value, state => {
-                        ((IProgress<(float, string)>)progress).Report((state.Progress ?? 0f, state.Text));
+                        action.ChangeProgress(state.Progress ?? 0f, state.Text);
                     });
                 }
-            }, progress)));
+            })));
         }
 
         if (tasks.Any())
@@ -306,7 +305,7 @@ public partial class TorrentListingViewModel
         var result = await DeleteTorrentsConfirmationDialog((App.MainWindow, (ulong)In.DistinctBy(x => x.DataOwner.DataProviderInstanceConfig.ServerId + "_" + Convert.ToHexString(x.Hash)).Sum(x => (decimal)x.WantedSize), In.Count, true));
 
         if (result)
-            await ActionForMulti(In, "Remove torrents and data", (dp, torrents) => dp.Instance.RemoveTorrentsAndData(torrents.Select(x => x.ToPluginModel()).ToList()));
+            await ActionForMulti(In, "Remove torrents and data", (dp, torrents) => dp.Instance.RemoveTorrentsAndData([.. torrents.Select(x => x.ToPluginModel())]));
     }
 
     public bool CanExecuteGetDotTorrents() => CanExecuteAction("Get .torrent");
@@ -318,17 +317,16 @@ public partial class TorrentListingViewModel
         if (String.IsNullOrEmpty(result))
             return;
 
-        var tasks = In.GroupBy(x => x.DataOwner).Select(x => (Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance), x.Key.Instance.GetDotTorrents(x.Select(i => i.ToPluginModel()).ToList())));
+        var tasks = In.GroupBy(x => x.DataOwner).Select(x => (Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance), x.Key.Instance.GetDotTorrents([.. x.Select(i => i.ToPluginModel())])));
 
         await Task.WhenAll(tasks.Select((data) => {
-            var action = ActionQueueAction.New("Download .torrent files", async () => {
+            return data.Item1.Queue.RunAction(ActionQueueAction.New("Download .torrent files", async (action) => {
                 var files = await data.Item2;
 
                 foreach (var (hash, file) in files) {
                     await System.IO.File.WriteAllBytesAsync(System.IO.Path.Combine(result, Convert.ToHexString(hash) + ".torrent"), file);
                 }
-            });
-            return data.Item1.Queue.RunAction(action);
+            }));
         }));
     }
 
@@ -408,19 +406,19 @@ public partial class TorrentListingViewModel
         var exec = tasks.Select((data) => {
             var targetDataProvider = data.DataProvider;
 
-            var getDotTorrentFiles = ActionQueueAction.New("Download .torrent files", () => {
+            var getDotTorrentFiles = ActionQueueAction.New<InfoHashDictionary<byte[]>[]>("Download .torrent files", (action) => {
                 var groups = In.GroupBy(x => x.DataOwner);
                 var tasks = groups.Select(x => x.Key.Instance.GetDotTorrents(x.Select(i => i.ToPluginModel()).ToArray()));
                 return Task.WhenAll(tasks);
             });
 
-            var getTorrentFileList = getDotTorrentFiles.CreateChild("Get torrent file list", RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, (parent) => {
+            var getTorrentFileList = getDotTorrentFiles.CreateChild<InfoHashDictionary<(bool MultiFile, IList<File> Files)>[]>("Get torrent file list", RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, (parent, action) => {
                 var groups = In.GroupBy(x => x.DataOwner);
                 var tasks = groups.Select(x => x.Key.Instance.GetFiles(x.Select(x => x.ToPluginModel()).ToArray()));
                 return Task.WhenAll(tasks);
             });
 
-            var addTorrents = getDotTorrentFiles.CreateChild("Add torrents", RUN_MODE.DEPENDS_ON_PARENT, (parent) => {
+            var addTorrents = getDotTorrentFiles.CreateChild<TorrentStatuses>("Add torrents", RUN_MODE.DEPENDS_ON_PARENT, (parent, action) => {
                 var dotTorrents = parent.GetResult()!.SelectMany(x => x).ToInfoHashDictionary(x => x.Key, x => x.Value);
 
                 return targetDataProvider.Instance.AddTorrents(dotTorrents.Select(x => (
@@ -431,7 +429,7 @@ public partial class TorrentListingViewModel
             });
 
             ActionQueueAction<InfoHashDictionary<bool>> transferFiles = null;
-            transferFiles = addTorrents.CreateChild("Transfer files", RUN_MODE.DEPENDS_ON_PARENT, async (parent) => {
+            transferFiles = addTorrents.CreateChild<InfoHashDictionary<bool>>("Transfer files", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
                 var res = parent.GetResult()!;
 
                 await Task.Delay(5000); // TODO: AddTorrents should ensure torrent exists
@@ -450,7 +448,7 @@ public partial class TorrentListingViewModel
                     }
                     var sourceTorrent = In.First(x => x.Hash.SequenceEqual(hash));
 
-                    if (sourceTorrent.DataOwner.DataProviderInstanceConfig.ServerId != targetDataProvider.DataProviderInstanceConfig.ServerId) {
+                    if (sourceTorrent.DataOwner.DataProviderInstanceConfig!.ServerId != targetDataProvider.DataProviderInstanceConfig!.ServerId) {
                         await getTorrentFileList.RunningTask;
                         var fileList = getTorrentFileList.GetResult()!.SelectMany(x => x).ToInfoHashDictionary(x => x.Key, x => x.Value);
                         var files = fileList[sourceTorrent.Hash];
@@ -458,10 +456,6 @@ public partial class TorrentListingViewModel
 
                         var sourceServer = Core.Servers.Value[sourceTorrent.DataOwner.DataProviderInstanceConfig.ServerId];
                         var targetServer = Core.Servers.Value[targetDataProvider.DataProviderInstanceConfig.ServerId];
-
-                        var progressRaw = new Progress<(float, string)>();
-                        IProgress<(float, string)> progress = progressRaw;
-                        transferFiles!.BindProgress(progressRaw);
 
                         try {
                             await targetServer.RequestReceiveFiles(
@@ -472,7 +466,7 @@ public partial class TorrentListingViewModel
                                 )),
                                 sourceTorrent.DataOwner.DataProviderInstanceConfig.ServerId,
                                 ((string File, float Progress) info) => {
-                                    progress.Report((info.Progress, $"{info.File}"));
+                                    action.ChangeProgress(info.Progress, $"{info.File}");
                                 }
                             );
                         } catch (Exception ex) {
@@ -487,7 +481,7 @@ public partial class TorrentListingViewModel
                 return ret;
             });
 
-            transferFiles.CreateChild("Force recheck", RUN_MODE.DEPENDS_ON_PARENT, async (parent) => {
+            transferFiles.CreateChild<Guid>("Force recheck", RUN_MODE.DEPENDS_ON_PARENT, (parent, action) => {
                 var res = parent.GetResult()!;
 
                 return targetDataProvider.Instance.ForceRecheck(res.Where(x => x.Value).Select(x => x.Key).ToArray());

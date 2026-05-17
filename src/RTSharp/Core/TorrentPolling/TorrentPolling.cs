@@ -1,4 +1,4 @@
-﻿using Avalonia.Threading;
+using Avalonia.Threading;
 
 using DynamicData;
 
@@ -18,9 +18,11 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.Arm;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+
 using GlobalTorrentKey = RTSharp.Models.GlobalTorrentKey;
 
 namespace RTSharp.Core.TorrentPolling
@@ -160,19 +162,22 @@ namespace RTSharp.Core.TorrentPolling
             }
         }
 
-        private static async Task ReadTorrentChanges(RTSharpDataProvider DataProvider, ChannelReader<ListingChanges<Torrent, Torrent, byte[]>> In)
+        private static async Task ReadTorrentChanges(RTSharpDataProvider DataProvider)
         {
-            try
-            {
-                await foreach (var listingChanges in In.ReadAllAsync())
+            try {
+                var channel = await DataProvider.Instance.GetTorrentChanges(DataProvider.CurrentTorrentChangesTaskCts.Token);
+
+                await foreach (var listingChanges in channel.ReadAllAsync())
                 {
                     if (listingChanges.Changes.Any() || listingChanges.FullUpdate.Any() || listingChanges.Removed.Any())
                         await ListingChanges.Writer.WriteAsync((DataProvider, listingChanges));
                 }
-            }
-            catch
-            {
-                // Log? Don't really care, it will gonna restart itself anyway
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, $"{DataProvider.PluginInstance.PluginInstanceConfig.Name} GetTorrentChanges threw an error");
+
+                await Task.Delay(TimeSpan.FromSeconds(5));
+
+                throw;
             }
         }
 
@@ -195,50 +200,22 @@ namespace RTSharp.Core.TorrentPolling
                         continue;
                     }
 
-                    // Prevent rapid retrying in case changes task is crashing
-                    if (dataProviders.Where(x => x.TorrentChangesTaskStartedAt != DateTime.MinValue).Any(x => DateTime.UtcNow - x.TorrentChangesTaskStartedAt <= TimeSpan.FromSeconds(5))) {
-                        await Task.Delay(TimeSpan.FromSeconds(5) - dataProviders.Where(x => x.TorrentChangesTaskStartedAt != DateTime.MinValue).Min(x => DateTime.UtcNow - x.TorrentChangesTaskStartedAt));
-                    }
-
                     foreach (var dp in dataProviders.Where(x => x.CurrentTorrentChangesTask == null))
                     {
-                        ChannelReader<ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>> channel;
-
-                        dp.CurrentTorrentChangesTaskCts?.Cancel();
-                        dp.CurrentTorrentChangesTaskCts = new();
-
-                        try
-                        {
-                            channel = await dp.Instance.GetTorrentChanges(dp.CurrentTorrentChangesTaskCts.Token);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Logger.Error(ex, $"{dp.PluginInstance.PluginInstanceConfig.Name} GetTorrentChanges threw an error");
-                            
-                            dp.TorrentChangesTaskStartedAt = DateTime.MinValue;
-                            continue;
-                        }
-
-                        dp.CurrentTorrentChangesTask = ReadTorrentChanges(dp, channel);
-                        dp.TorrentChangesTaskStartedAt = DateTime.UtcNow;
+                        dp.CurrentTorrentChangesTask = ReadTorrentChanges(dp);
                     }
 
-                    var tasks = dataProviders.Select(x => x.CurrentTorrentChangesTask ?? Task.Delay(1000)); // Wait for changes task or 1 second before retrying
-
-                    // Wait for any changes in tasks or data providers
+                    var tasks = dataProviders.Select(x => x.CurrentTorrentChangesTask!)!;
                     var dataProvidersChangedTask = dataProvidersChanged.WaitAsync();
 
-                    var task = await Task.WhenAny(tasks.Concat([dataProvidersChangedTask]).ToArray()!);
+                    var task = await Task.WhenAny([..tasks, dataProvidersChangedTask]);
 
                     if (task != dataProvidersChangedTask)
                     {
-                        var dps = dataProviders.Where(x => x.CurrentTorrentChangesTask != dataProvidersChangedTask);
+                        var dps = dataProviders.Where(x => x.CurrentTorrentChangesTask?.IsCompleted == true);
 
-                        // Reset on retry
-                        foreach (var dp in dps) {
+                        foreach (var dp in dps)
                             dp.CurrentTorrentChangesTask = null;
-                            dp.CurrentTorrentChangesTaskCts.Cancel();
-                        }
                     }
                 }
             }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -54,8 +54,6 @@ public class Config
             public string TorrentGridState { get; set; }
 
             public string DockState { get; set; }
-
-            public string DockVMState { get; set; }
 
             public int? LastPosX { get; set; }
 
@@ -155,7 +153,11 @@ public class Config
     "InMemoryImages": 100
   },
   "UIState": {
-    "TorrentGridState": null
+    "TorrentGridState": null,
+    "DockState": null,
+    "LastPosX": null,
+    "LastPosY": null,
+    "Maximized": false
   },
   "Look": {
     "TorrentListing": {

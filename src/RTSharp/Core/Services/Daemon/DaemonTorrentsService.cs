@@ -1,4 +1,4 @@
-﻿using Google.Protobuf.WellKnownTypes;
+using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
 using Grpc.Net.ClientFactory;
@@ -19,6 +19,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Utils;
+using Serilog;
 
 namespace RTSharp.Core.Services.Daemon
 {
@@ -26,7 +27,6 @@ namespace RTSharp.Core.Services.Daemon
     {
         GRPCTorrentService.GRPCTorrentServiceClient TorrentClient;
         GRPCTorrentsService.GRPCTorrentsServiceClient TorrentsClient;
-        ILogger<DaemonService> Logger;
 
         private readonly string ServerId;
         private readonly RTSharpDataProvider DataProvider;
@@ -43,8 +43,6 @@ namespace RTSharp.Core.Services.Daemon
 
             TorrentClient = clientFactory.CreateClient<GRPCTorrentService.GRPCTorrentServiceClient>(nameof(GRPCTorrentService.GRPCTorrentServiceClient) + "_" + ServerId);
             TorrentsClient = clientFactory.CreateClient<GRPCTorrentsService.GRPCTorrentsServiceClient>(nameof(GRPCTorrentsService.GRPCTorrentsServiceClient) + "_" + ServerId);
-
-            Logger = scope.ServiceProvider.GetRequiredService<ILogger<DaemonService>>();
         }
 
         public Channel<ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>> GetTorrentChanges(CancellationToken CancellationToken)

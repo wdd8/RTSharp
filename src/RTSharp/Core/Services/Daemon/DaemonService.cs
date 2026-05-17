@@ -1,4 +1,4 @@
-﻿using Google.Protobuf;
+using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
@@ -36,7 +36,7 @@ namespace RTSharp.Core.Services.Daemon;
 record RequestReceivePaths(string StorePath, string RemoteSourcePath, ulong TotalSize);
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(RequestReceivePaths))]
+[JsonSerializable(typeof(List<RequestReceivePaths>))]
 internal partial class RequestReceivePathsContext : JsonSerializerContext { }
 
 public class DaemonService : IDaemonService
@@ -134,7 +134,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
 
         transfer.State = TASK_STATE.RUNNING;
 
-        await FileTransfer.ReceiveFilesFromRemote(channel, paths.Select(x => (x.StorePath, x.RemoteSourcePath)), FileTransferService.FileTransferSessionProgress progress => {
+        await FileTransfer.ReceiveFilesFromRemote(channel, paths.Select(x => (x.StorePath, x.RemoteSourcePath)), (FileTransferService.FileTransferSessionProgress progress) => {
             transfer.Text = progress.Path;
 
             if (progress.Path == "") {
@@ -155,10 +155,10 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
     }
 }
 """,
-            Name = "RequstReceiveFiles",
+            Name = "RequestReceiveFiles",
             Variables = {
                 { "Uri", senderServer.ToString() },
-                { "Paths", JsonSerializer.Serialize(Paths.Select(x => new RequestReceivePaths(x.StoreTo, x.RemoteSource, x.TotalSize)), RequestReceivePathsContext.Default.RequestReceivePaths) }
+                { "Paths", JsonSerializer.Serialize(Paths.Select(x => new RequestReceivePaths(x.StoreTo, x.RemoteSource, x.TotalSize)).ToList(), RequestReceivePathsContext.Default.ListRequestReceivePaths) }
             }
         });
 
@@ -279,11 +279,16 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         await ServerClient.StopScriptAsync(new BytesValue { Value = ByteString.CopyFrom(Id.ToByteArray()) });
     }
 
+    public async Task RemoveScriptSession(Guid Id)
+    {
+        await ServerClient.RemoveScriptAsync(new BytesValue { Value = ByteString.CopyFrom(Id.ToByteArray()) });
+    }
+
     ScriptProgressState MapProgressState(RTSharp.Daemon.Protocols.ScriptProgressState In)
     {
         return new ScriptProgressState {
             Id = new Guid(In.Id.ToByteArray()),
-            Progress = In.Progress,
+            Progress = In.Progress < 0 ? null : In.Progress,
             State = In.State switch {
                 TaskState.Done => TASK_STATE.DONE,
                 TaskState.Running => TASK_STATE.RUNNING,
@@ -294,6 +299,34 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             Text = In.Text,
             StateData = In.StateData,
             Chain = In.Chain?.Select(MapProgressState).ToArray() ?? []
+        };
+    }
+
+    Shared.Abstractions.ScriptSessionState MapScriptSessionState(RTSharp.Daemon.Protocols.ScriptSessionState In)
+    {
+        return new Shared.Abstractions.ScriptSessionState {
+            Id = new Guid(In.Id.ToByteArray()),
+            Name = In.Name,
+            Progress = MapProgressState(In.Progress)
+        };
+    }
+
+    ScriptSessionStateUpdate MapScriptSessionUpdate(RTSharp.Daemon.Protocols.ScriptSessionsUpdate In)
+    {
+        return In.UpdateCase switch {
+            ScriptSessionsUpdate.UpdateOneofCase.FullUpdate => new ScriptSessionStateUpdate {
+                FullUpdate = true,
+                Sessions = [.. In.FullUpdate.Sessions.Select(MapScriptSessionState)]
+            },
+            ScriptSessionsUpdate.UpdateOneofCase.DeltaUpdate => new ScriptSessionStateUpdate {
+                FullUpdate = false,
+                SessionId = new Guid(In.DeltaUpdate.SessionId.ToByteArray()),
+                ParentStateId = In.DeltaUpdate.ParentStateId != null ? new Guid(In.DeltaUpdate.ParentStateId.ToByteArray()) : null,
+                State = MapProgressState(In.DeltaUpdate.State)
+            },
+            _ => new ScriptSessionStateUpdate {
+                FullUpdate = false
+            }
         };
     }
 
@@ -312,18 +345,22 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         } catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled) { }
     }
 
-    public ChannelReader<ScriptProgressState> StreamScriptsStatus(CancellationToken cancellationToken)
+    public ChannelReader<ScriptSessionStateUpdate> StreamScriptsStatus(CancellationToken cancellationToken)
     {
-        var channel = Channel.CreateUnbounded<ScriptProgressState>(new UnboundedChannelOptions {
+        var channel = Channel.CreateUnbounded<ScriptSessionStateUpdate>(new UnboundedChannelOptions {
             SingleReader = false,
             SingleWriter = true
         });
         _ = Task.Run(async () => {
-            var stream = ServerClient.ScriptsStatus(new(), cancellationToken: cancellationToken);
-            await foreach (var state in stream.ResponseStream.ReadAllAsync(cancellationToken: cancellationToken)) {
-                await channel.Writer.WriteAsync(MapProgressState(state), cancellationToken);
+            try {
+                var stream = ServerClient.ScriptsStatus(new Empty(), cancellationToken: cancellationToken);
+                await foreach (var state in stream.ResponseStream.ReadAllAsync(cancellationToken: cancellationToken)) {
+                    Log.Logger.Information($"Received script session update: {state.UpdateCase}: full? {state.FullUpdate?.Sessions.Count} delta? {state.DeltaUpdate?.SessionId?.ToBase64()} {state.DeltaUpdate?.State?.Id?.ToBase64()} {state.DeltaUpdate?.State?.State}");
+                    await channel.Writer.WriteAsync(MapScriptSessionUpdate(state), cancellationToken);
+                }
+            } finally {
+                channel.Writer.TryComplete();
             }
-            channel.Writer.TryComplete();
         }, cancellationToken);
         return channel;
     }

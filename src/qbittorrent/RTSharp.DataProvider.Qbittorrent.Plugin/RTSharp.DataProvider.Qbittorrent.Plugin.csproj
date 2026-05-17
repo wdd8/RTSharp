@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -24,13 +24,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="12.0.2" />
-        <PackageReference Include="Avalonia.Desktop" Version="12.0.2" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.2" />
+        <PackageReference Include="Avalonia" Version="12.0.3" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.0.3" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
         <PackageReference Include="BencodeNET" Version="5.0.0" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageReference Include="QBittorrent.Client" Version="1.9.24285.1" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.7" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.8" />
         <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
     </ItemGroup>
     <ItemGroup>
@@ -46,9 +46,6 @@
         <ProjectReference Include="..\..\RTSharp.Shared.Controls\RTSharp.Shared.Controls.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <Compile Update="Views\ActionQueue.axaml.cs">
-            <DependentUpon>%(Filename)</DependentUpon>
-        </Compile>
         <Compile Update="Views\MainWindow.axaml.cs">
             <DependentUpon>%(Filename)</DependentUpon>
         </Compile>

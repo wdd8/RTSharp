@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Dialogs;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -64,51 +64,56 @@ namespace RTSharp.ViewModels
             DockFactory = new RTSharpDockFactory();
 
             TorrentListingViewModel = new TorrentListingViewModel();
-            var torrentListingView = new TorrentListingView {
-                DataContext = TorrentListingViewModel
-            };
+            var actionQueuesViewModel = new ActionQueuesViewModel();
+            var logEntriesViewModel = new LogEntriesViewModel();
+            var dataProvidersViewModel = new DataProvidersViewModel();
 
-            using var scope = Core.ServiceProvider.CreateScope();
-            var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
-            torrentListingView.RestoreGridState(config.UIState.Value.TorrentGridState);
+            TorrentListingView CreateTorrentListingView()
+            {
+                using var viewScope = Core.ServiceProvider.CreateScope();
+                var viewConfig = viewScope.ServiceProvider.GetRequiredService<Core.Config>();
+
+                var view = new TorrentListingView {
+                    DataContext = TorrentListingViewModel
+                };
+                view.RestoreGridState(viewConfig.UIState.Value.TorrentGridState);
+                return view;
+            }
 
             var torrentListing = new DocumentWithIcon {
                 Id = "TorrentListing",
                 Title = "Torrent listing",
                 Icon = FontAwesomeIcons.Get("fa7-solid fa7-list"),
-                Content = new Func<IServiceProvider, object>(_ => torrentListingView),
+                Content = new Func<IServiceProvider, object>(_ => CreateTorrentListingView()),
                 DockCapabilityOverrides = new()
             };
 
-            var actionQueuesView = new ActionQueuesView {
-                DataContext = new ActionQueuesViewModel()
-            };
             var actionQueue = new DocumentWithIcon {
                 Id = "ActionQueue",
                 Title = "Action queue",
                 Icon = FontAwesomeIcons.Get("fa7-solid fa7-bolt"),
-                Content = new Func<IServiceProvider, object>(_ => actionQueuesView),
+                Content = new Func<IServiceProvider, object>(_ => new ActionQueuesView {
+                    DataContext = actionQueuesViewModel
+                }),
                 DockCapabilityOverrides = new()
             };
 
-            var logEntriesView = new LogEntriesView {
-                DataContext = new LogEntriesViewModel()
-            };
             var log = new DocumentWithIcon {
                 Id = "Log",
                 Title = "Log",
                 Icon = FontAwesomeIcons.Get("fa7-solid fa7-calendar-days"),
-                Content = new Func<IServiceProvider, object>(_ => logEntriesView),
+                Content = new Func<IServiceProvider, object>(_ => new LogEntriesView {
+                    DataContext = logEntriesViewModel
+                }),
                 DockCapabilityOverrides = new()
             };
 
-            var dataProvidersView = new DataProvidersView() {
-                DataContext = new DataProvidersViewModel()
-            };
             var rightTool = new Tool {
                 Id = "DataProviders",
                 Title = "Data providers",
-                Content = new Func<IServiceProvider, object>(_ => dataProvidersView),
+                Content = new Func<IServiceProvider, object>(_ => new DataProvidersView {
+                    DataContext = dataProvidersViewModel
+                }),
                 DockCapabilityOverrides = new()
             };
 

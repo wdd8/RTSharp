@@ -1,10 +1,13 @@
-﻿using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions;
 using RTSharp.DataProvider.Transmission.Plugin.Views;
 using RTSharp.DataProvider.Transmission.Plugin.ViewModels;
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Transmission.Plugin.Mappers;
 using RTSharp.Shared.Abstractions.Client;
+using Avalonia.Threading;
 
 namespace RTSharp.DataProvider.Transmission.Plugin;
 
@@ -35,17 +38,21 @@ public class Plugin : BasePlugin
 
     public IDataProviderHost DataProvider { get; set; }
 
-    internal ActionQueue ActionQueue { get; set; }
+    internal DefaultActionQueueRenderer ActionQueue { get; set; }
 
     private CancellationTokenSource DataProviderActive { get; set; }
 
-    public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
+    public override async Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
 
         Progress(("Registering queue...", 0f));
 
-        ActionQueue = new ActionQueue(Host.PluginInstanceConfig.Name, Host.InstanceId);
+        await Dispatcher.UIThread.InvokeAsync(() => {
+            ActionQueue = new DefaultActionQueueRenderer(
+                Host.PluginInstanceConfig.Name,
+                new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Transmission.Plugin/Assets/transmission.png"))));
+        });
         Host.RegisterActionQueue(ActionQueue);
 
         Progress(("Registering data provider...", 50f));
@@ -57,7 +64,7 @@ public class Plugin : BasePlugin
         });
 
         Progress(("Loaded", 100f));
-        return Task.FromResult((IPlugin)this);
+        return this;
     }
 
     public override async Task ShowPluginSettings(object ParentWindow)

@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -31,10 +31,10 @@ public partial class MainWindowViewModel : ObservableObject
         var daemon = PluginHost.AttachedDaemonService;
         var client = daemon.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
 
-        Func<Task<Empty>> setSettingsTask = async () => await client.SetSessionSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        Func<ActionQueueAction, Task<Empty>> setSettingsTask = async (task) => await client.SetSessionSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
-        var action = ActionQueueAction.New("Set settings", setSettingsTask);
-        _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async parent => {
+        var action = ActionQueueAction.New<Empty>("Set settings", setSettingsTask);
+        _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
             SavingSettings = false;
         });
         await ((IActionQueueRenderer)ThisPlugin.ActionQueue).RunAction(action);

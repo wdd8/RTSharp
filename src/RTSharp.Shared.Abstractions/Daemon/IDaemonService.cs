@@ -1,4 +1,4 @@
-﻿using Grpc.Core;
+using Grpc.Core;
 
 using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Utils;
@@ -62,6 +62,8 @@ public interface IDaemonService
     Task<Guid> RunCustomScript(string Script, string Name, Dictionary<string, string> Variables);
 
     Task QueueScriptCancellation(Guid Id);
+
+    Task RemoveScriptSession(Guid Id);
     
     Task GetScriptProgress(Guid Req, Action<ScriptProgressState>? Progress);
 
@@ -70,7 +72,7 @@ public interface IDaemonService
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    ChannelReader<ScriptProgressState> StreamScriptsStatus(CancellationToken cancellationToken);
+    ChannelReader<ScriptSessionStateUpdate> StreamScriptsStatus(CancellationToken cancellationToken);
 
     /// <summary>
     /// Checks files permissions to see if it's possible to delete provided files

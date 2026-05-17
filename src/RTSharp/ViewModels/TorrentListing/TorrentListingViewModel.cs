@@ -1,4 +1,4 @@
-﻿using Avalonia.Collections;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.DataGridConditionalFormatting;
 using Avalonia.Controls.DataGridFiltering;
@@ -134,6 +134,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
     }
 
     private List<IDisposable> VMDisposables = new();
+    private bool contextPopulated;
 
     private readonly Dictionary<string, (MenuItem Container, CheckBox Icon)> LabelControlCache = new();
     private readonly Separator LabelSeparator = new();
@@ -150,8 +151,8 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
 
         VisibleTorrents = TorrentPolling.Torrents.VisibleItems;
 
-        SortingAdapterFactory = new TorrentSortingAdapterFactory((comparer, hasSort) => TorrentPolling.Torrents.ApplySort(comparer, hasSort));
-        FilteringAdapterFactory = new TorrentFilteringAdapterFactory(predicate => TorrentPolling.Torrents.ApplyFilter(predicate));
+        SortingAdapterFactory = new TorrentSortingAdapterFactory(TorrentPolling.Torrents.ApplySort);
+        FilteringAdapterFactory = new TorrentFilteringAdapterFactory(TorrentPolling.Torrents.ApplyFilter);
 
         var builder = DataGridColumnDefinitionBuilder.For<Torrent>();
         DataGridColumnDefinition connectionColumn, hashColumn, stateColumn, priorityColumn;
@@ -593,6 +594,10 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
 
     public void OnContextPopulated()
     {
+        if (contextPopulated)
+            return;
+
+        contextPopulated = true;
         VMDisposables.Add(TorrentPolling.AllLabelReferencesObservable.Subscribe(x => UpdateLabelsWithAdd(x)));
     }
 

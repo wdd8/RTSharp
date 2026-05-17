@@ -8,6 +8,8 @@ public interface IActionQueueRenderer
 {
     public StyledElement Display { get; }
 
+    public StyledElement CreateDisplay() => Display;
+
     public IReadOnlyCollection<ActionQueueAction> Actions { get; }
 
     public void AddAction(ActionQueueAction Action);

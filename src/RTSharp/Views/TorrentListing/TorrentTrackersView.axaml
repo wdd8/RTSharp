@@ -8,7 +8,7 @@
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              xmlns:s="clr-namespace:System;assembly=System.Runtime"
              d:DesignWidth="1100" d:DesignHeight="450"
-			 x:DataType="torrentListing:TorrentTrackersViewModel">
+             x:DataType="torrentListing:TorrentTrackersViewModel">
 
     <Control.Resources>
         <converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter"/>
@@ -19,7 +19,7 @@
     </Design.DataContext>
 
     <dialogHost:DialogHost Name="DialogHost" Identifier="SetNameHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
-		<dialogHost:DialogHost.DialogContent>
+        <dialogHost:DialogHost.DialogContent>
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
                     <TextBlock FontWeight="Bold">Set a new name for tracker</TextBlock>
@@ -71,13 +71,14 @@
                     Width="0"
                     IsDefault="True"
                     Command="{Binding AddNewTrackerCommand}"
-					CommandParameter="{Binding #AddNewTrackerText.Text}"
+                    CommandParameter="{Binding #AddNewTrackerText.Text}"
                 />
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
 
         <DataGrid Name="grid"
                       ItemsSource="{Binding Trackers}"
+                      SelectedItem="{Binding SelectedItem}"
                       CanUserReorderColumns="True"
                       CanUserResizeColumns="True"
                       CanUserSortColumns="True"
@@ -102,8 +103,9 @@
                               Command="{Binding RemoveCommand}"
                               CommandParameter="{Binding #grid.SelectedItems}"
                     />
-					<MenuItem Header="Replace"
+                    <MenuItem Header="Replace"
                               Command="{Binding #DialogHostReplace.OpenDialogCommand}"
+                              IsEnabled="{Binding HasSelectedItem}"
                     />
                     <Separator />
                     <MenuItem Header="Reannounce"
@@ -113,6 +115,7 @@
                     <Separator />
                     <MenuItem Header="Set name..."
                               Command="{Binding #DialogHost.OpenDialogCommand}"
+                              IsEnabled="{Binding HasSelectedItem}"
                     />
                     <MenuItem Header="Set icon..."
                               Command="{Binding SetIconCommand}"
@@ -147,6 +150,6 @@
             </DataGrid.Columns>
         </DataGrid>
     </dialogHost:DialogHost>
-	</dialogHost:DialogHost>
-	</dialogHost:DialogHost>
+    </dialogHost:DialogHost>
+    </dialogHost:DialogHost>
 </UserControl>

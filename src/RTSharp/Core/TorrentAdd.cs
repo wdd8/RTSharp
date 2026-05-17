@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -46,7 +46,7 @@ namespace RTSharp.Core
 
             var files = (await Task.WhenAll(tasks)).Select((data, x) => (data.Content, data.Filename, Input.Sources[x].Options)).ToList();
 
-            var action = ActionQueueAction.New("Add torrents", () => {
+            var action = ActionQueueAction.New<TorrentStatuses>("Add torrents", (action) => {
                 return Primary.Instance.AddTorrents(files);
             });
             if (Primary.Instance.Capabilities.ForceStartTorrentOnAdd == null) {
@@ -54,7 +54,7 @@ namespace RTSharp.Core
                     case START_MODE.DO_NOTHING:
                         break;
                     case START_MODE.START:
-                        action.CreateChild("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, parent => {
+                        action.CreateChild<TorrentStatuses>("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, (parent, action) => {
                             var res = parent.GetResult()!;
                             foreach (var (hash, exceptions) in res) {
                                 if (exceptions.All(x => x == null))
@@ -64,7 +64,7 @@ namespace RTSharp.Core
                             }
 
                             return Primary.Instance.StartTorrents(res.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash).ToArray());
-                        }).CreateChild("Start torrent completion", RUN_MODE.DEPENDS_ON_PARENT, startTorrentAction => {
+                        }).CreateChild("Start torrent completion", RUN_MODE.DEPENDS_ON_PARENT, (startTorrentAction, action) => {
                             foreach (var (hash, exceptions) in startTorrentAction.GetResult()!) {
                                 if (exceptions.All(x => x == null))
                                     Primary.PluginInstance.Logger.Information($"Torrent {Convert.ToHexString(hash)} started");
@@ -76,7 +76,7 @@ namespace RTSharp.Core
                         });
                         break;
                     case START_MODE.RECHECK_AND_START:
-                        action.CreateChild("Recheck", RUN_MODE.DEPENDS_ON_PARENT, async parent => {
+                        action.CreateChild<TorrentStatuses>("Recheck", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
                             var torrentHashes = parent.GetResult()!.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash).ToArray();
 
                             var guid = await Primary.Instance.ForceRecheck(torrentHashes);
@@ -85,7 +85,7 @@ namespace RTSharp.Core
                             
                             // TODO: report proper status
                             return new TorrentStatuses(torrentHashes.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())));
-                        }).CreateChild("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, recheckAction => {
+                        }).CreateChild<TorrentStatuses>("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, (recheckAction, action) => {
                             var recheckResults = recheckAction.GetResult()!.Where(x => x.Exceptions.All(i => i != null));
 
                             return Primary.Instance.StartTorrents(recheckResults.Select(x => x.Hash).ToArray());

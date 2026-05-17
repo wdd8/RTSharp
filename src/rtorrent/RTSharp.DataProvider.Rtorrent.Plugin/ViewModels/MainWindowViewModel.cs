@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using RTSharp.Shared.Abstractions;
@@ -28,10 +28,10 @@ public partial class MainWindowViewModel : ObservableObject
         var daemon = PluginHost.AttachedDaemonService;
         var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
-        Func<Task<CommandReply>> setSettingsTask = async () => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        Func<ActionQueueAction, Task<CommandReply>> setSettingsTask = async (task) => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
         var action = ActionQueueAction.New("Set settings", setSettingsTask);
-        _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async parent => {
+        _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
             SavingSettings = false;
         });
         await ((IActionQueueRenderer)ThisPlugin.ActionQueue).RunAction(action);

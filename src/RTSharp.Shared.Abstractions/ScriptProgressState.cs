@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 namespace RTSharp.Shared.Abstractions;
 
@@ -17,11 +17,28 @@ public class ScriptProgressState
     public ScriptProgressState(IScriptSession Base)
     {
         this.Base = Base;
+        Id = Guid.NewGuid();
+    }
+
+    public ScriptProgressState(Guid Id, IScriptSession Base)
+    {
+        this.Base = Base;
+        this.Id = Id;
     }
     
-    public ScriptProgressState() { }
+    public ScriptProgressState()
+    {
+        Id = Guid.NewGuid();
+    }
 
-    public ScriptProgressState[]? Chain { get; set; }
+    private ScriptProgressState[]? _chain;
+    public ScriptProgressState[]? Chain {
+        get => _chain;
+        set {
+            _chain = value;
+            Base?.ProgressChanged(this, chainChanged: true);
+        }
+    }
 
     public Guid Id { get; init; }
 
@@ -30,7 +47,7 @@ public class ScriptProgressState
         get => _text;
         set {
             _text = value;
-            this.Base?.ProgressChanged();
+            this.Base?.ProgressChanged(this);
         }
     }
 
@@ -40,7 +57,7 @@ public class ScriptProgressState
         get => _progress;
         set {
             _progress = value;
-            this.Base?.ProgressChanged();
+            this.Base?.ProgressChanged(this);
         }
     }
 
@@ -49,7 +66,7 @@ public class ScriptProgressState
         get => _state;
         set {
             _state = value;
-            this.Base?.ProgressChanged();
+            this.Base?.ProgressChanged(this);
         }
     }
     
@@ -59,7 +76,7 @@ public class ScriptProgressState
         get => _stateData;
         set {
             _stateData = value;
-            this.Base?.ProgressChanged();
+            this.Base?.ProgressChanged(this);
         }
     }
 }

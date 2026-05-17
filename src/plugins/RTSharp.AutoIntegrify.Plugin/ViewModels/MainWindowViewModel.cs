@@ -1,4 +1,4 @@
-﻿using Avalonia.Media.Imaging;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -338,7 +338,7 @@ done:;
         Session.Progress.State = TASK_STATE.DONE;
     }
 }
-""", $"AutoIntegrify_{Guid.NewGuid()}", new Dictionary<string, string> {
+""", "AutoIntegrify", new Dictionary<string, string> {
             ["AdditionalPaths"] = String.Join('\x00', AdditionalPaths),
             ["FilePath"] = File.File.FullPath,
             ["Size"] = File.File.FileSize.ToString(),

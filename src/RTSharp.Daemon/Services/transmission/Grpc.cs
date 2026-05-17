@@ -1,4 +1,4 @@
-﻿using Google.Protobuf;
+using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
@@ -392,8 +392,7 @@ namespace RTSharp.Daemon.Services.transmission
 
             var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
 
-            var session = Sessions.CreateSession(cts, async (session) => {
-                session.Progress.Text = "Observing state...";
+            var session = Sessions.CreateSession("Force recheck torrents", cts, async (session) => {
                 session.Progress.Progress = 0f;
                 session.Progress.State = TASK_STATE.RUNNING;
 
@@ -861,7 +860,7 @@ namespace RTSharp.Daemon.Services.transmission
                 session.Progress.Text = "Done";
             }
 
-            var session = Sessions.CreateSession(cts, fx);
+            var session = Sessions.CreateSession("Move download directory", cts, fx);
 
             return session.Id.ToByteArray().ToBytesValue();
         }

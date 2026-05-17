@@ -1,4 +1,4 @@
-﻿using Google.Protobuf;
+using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
@@ -139,8 +139,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
             var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
 
-            var session = Sessions.CreateSession(cts, async (session) => {
-                session.Progress.Text = "Observing state...";
+            var session = Sessions.CreateSession("Force recheck torrents", cts, async (session) => {
                 session.Progress.Progress = 0f;
                 session.Progress.State = TASK_STATE.RUNNING;
 
@@ -265,7 +264,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                     await Task.Delay(1000); // TODO: Customizable?
                 }
 
-                Logger.LogDebug("Session complete");
+                session.Progress.State = TASK_STATE.DONE;
             });
 
             Logger.LogDebug("Returning");
@@ -653,12 +652,6 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 session.Progress.State = TASK_STATE.RUNNING;
                 session.Progress.Progress = 0f;
 
-                var enumFiles = new ScriptProgressState(session) {
-                    Text = "Enumerating files...",
-                    Progress = 0f,
-                    State = TASK_STATE.WAITING
-                };
-
                 var tasks = new List<Task<(ByteString Hash, IList<Exception> Exceptions)>>();
                 foreach (var req in Req.Torrents) {
                     tasks.Add(Task.Run(async () => {
@@ -703,7 +696,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 session.Progress.Text = "Done";
             }
 
-            var session = Sessions.CreateSession(cts, fx);
+            var session = Sessions.CreateSession("Moving download directory", cts, fx);
 
             return session.Id.ToByteArray().ToBytesValue();
         }

@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using Grpc.Core;
 
@@ -24,11 +24,9 @@ namespace RTSharp.Plugin
 
         public IPlugin Plugin => PluginInstance.Instance;
 
-        public DateTime TorrentChangesTaskStartedAt { get; set; } = DateTime.MinValue;
-
         public Task? CurrentTorrentChangesTask { get; set; }
 
-        public CancellationTokenSource CurrentTorrentChangesTaskCts { get; set; }
+        public CancellationTokenSource CurrentTorrentChangesTaskCts { get; set; } = new();
 
         public DataProviderInstanceConfig? DataProviderInstanceConfig => PluginInstance.PluginConfig.GetSection("DataProvider").Get<DataProviderInstanceConfig?>();
 

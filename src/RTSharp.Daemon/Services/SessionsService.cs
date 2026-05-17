@@ -1,4 +1,4 @@
-﻿using Nito.AsyncEx;
+using Nito.AsyncEx;
 
 using RTSharp.Daemon.RuntimeCompilation;
 using RTSharp.Daemon.RuntimeCompilation.Exceptions;
@@ -24,23 +24,46 @@ public class ScriptSession : IScriptSession
 
     public ScriptProgressState Progress { get; internal set; }
 
+    public required string Name { get; set; }
+
     internal AsyncAutoResetEvent EvProgressChanged = new(false);
 
-    public void ProgressChanged()
+    internal event Action<ScriptSession, ScriptProgressState, bool>? ProgressUpdated;
+
+    public void ProgressChanged(ScriptProgressState? progress = null, bool chainChanged = false)
     {
         var logger = Scope?.ServiceProvider.GetRequiredService<ILogger<SessionsService>>();
         logger?.LogInformation($"EV: Script session {Id} progress changed");
+
         EvProgressChanged.Set();
+        ProgressUpdated?.Invoke(this, progress ?? Progress, chainChanged);
     }
+}
+
+public class ScriptSessionStatusUpdate
+{
+    public required bool FullUpdate { get; init; }
+
+    public IReadOnlyList<ScriptSession> Sessions { get; init; } = [];
+
+    public Guid SessionId { get; init; }
+
+    public Guid? ParentStateId { get; init; }
+
+    public ScriptProgressState? Progress { get; init; }
+
+    public bool IncludeChain { get; init; }
 }
 
 public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<SessionsService> Logger)
 {
     private readonly List<ScriptSession> Sessions = new();
 
-    private readonly AsyncAutoResetEvent EvSessionAdded = new(false);
+    private readonly object SessionsLock = new();
 
-    public ScriptSession RunScript(DynamicScript<IScript> DynamicScript, Dictionary<string, string> Variables)
+    private readonly List<ChannelWriter<ScriptSessionStatusUpdate>> Subscribers = new();
+
+    public ScriptSession RunScript(string Name, DynamicScript<IScript> DynamicScript, Dictionary<string, string> Variables)
     {
         var scope = ScopeFactory.CreateScope();
         var cts = new CancellationTokenSource();
@@ -58,46 +81,56 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
             throw new InstantiationException($"{DynamicScript.ClassType.Name} has not been resolved");
         }
 
-        Sessions.Add(session = new ScriptSession {
+        session = new ScriptSession {
             Id = id,
+            Name = Name,
             Scope = scope,
             Script = DynamicScript,
             ScriptInstance = instance,
             Cts = cts,
             Progress = null!
-        });
+        };
 
-        var progress = new ScriptProgressState(session);
+        var progress = new ScriptProgressState(id, session);
         session.Progress = progress;
+        RegisterSession(session);
 
         session.Execution = instance.Execute(Variables, session, cts.Token);
         BindContinuations(session);
 
-        EvSessionAdded.Set();
-
         return session;
     }
 
-    internal ScriptSession CreateSession(CancellationTokenSource Cts, Func<ScriptSession, Task> Fx)
+    internal ScriptSession CreateSession(string Name, CancellationTokenSource Cts, Func<ScriptSession, Task> Fx)
     {
         ScriptSession session;
 
-        Sessions.Add(session = new ScriptSession {
+        session = new ScriptSession {
             Id = Guid.NewGuid(),
+            Name = Name,
             Scope = null,
             Script = null,
             ScriptInstance = null,
             Cts = Cts,
             Progress = null!
-        });
-        EvSessionAdded.Set();
+        };
 
-        var progress = new ScriptProgressState(session);
+        var progress = new ScriptProgressState(session.Id, session);
         session.Progress = progress;
+        RegisterSession(session);
         session.Execution = Fx(session);
         BindContinuations(session);
         
         return session;
+    }
+
+    private void RegisterSession(ScriptSession session)
+    {
+        session.ProgressUpdated += PublishProgressChanged;
+        lock (SessionsLock) {
+            Sessions.Add(session);
+            Publish(session.Id, null, session.Progress, true);
+        }
     }
 
     private void BindContinuations(ScriptSession Session)
@@ -108,26 +141,24 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         }, TaskContinuationOptions.OnlyOnFaulted);
     }
 
-    public ChannelReader<(Guid Id, ScriptProgressState Progress)> MonitorSessions(CancellationToken CancellationToken)
+    public ChannelReader<ScriptSessionStatusUpdate> MonitorSessionUpdates(CancellationToken CancellationToken)
     {
-        var channel = Channel.CreateUnbounded<(Guid, ScriptProgressState)>(new UnboundedChannelOptions {
+        var channel = Channel.CreateUnbounded<ScriptSessionStatusUpdate>(new UnboundedChannelOptions {
             SingleReader = true,
             SingleWriter = false
         });
 
-        _ = Task.Run(async () => {
-            var monitoredIds = new HashSet<Guid>();
-            try {
-                while (!CancellationToken.IsCancellationRequested) {
-                    foreach (var session in Sessions) {
-                        if (monitoredIds.Add(session.Id)) {
-                            _ = MonitorSession(session, channel.Writer, CancellationToken);
-                        }
-                    }
-                    await EvSessionAdded.WaitAsync(CancellationToken);
-                }
-            } catch (OperationCanceledException) {
-            } finally {
+        lock (SessionsLock) {
+            channel.Writer.TryWrite(new ScriptSessionStatusUpdate {
+                FullUpdate = true,
+                Sessions = [.. Sessions]
+            });
+            Subscribers.Add(channel.Writer);
+        }
+
+        CancellationToken.Register(() => {
+            lock (SessionsLock) {
+                Subscribers.Remove(channel.Writer);
                 channel.Writer.TryComplete();
             }
         });
@@ -135,37 +166,97 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         return channel.Reader;
     }
 
-    private static async Task MonitorSession(ScriptSession Session, ChannelWriter<(Guid, ScriptProgressState)> Channel, CancellationToken CancellationToken)
+    private void PublishProgressChanged(ScriptSession session, ScriptProgressState progress, bool chainChanged)
     {
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken, Session.Cts.Token);
-        var token = linked.Token;
-        try {
-            while (!token.IsCancellationRequested) {
-                Channel.TryWrite((Session.Id, Session.Progress));
-                await Session.EvProgressChanged.WaitAsync(token);
+        lock (SessionsLock) {
+            Guid? parentStateId = null;
+            if (progress.Id != session.Progress.Id) {
+                parentStateId = FindParentStateId(session.Progress, progress.Id); // TODO: optimization either have dict or store parent id in state
+                if (parentStateId == null) {
+                    return;
+                }
             }
-        } catch (OperationCanceledException) {
+
+            Publish(session.Id, parentStateId, progress, chainChanged);
         }
     }
 
-    public IReadOnlyList<ScriptSession> GetScriptSessions()
+    private void Publish(Guid SessionId, Guid? ParentStateId, ScriptProgressState Progress, bool IncludeChain)
     {
-        return Sessions.AsReadOnly();
+        for (var x = Subscribers.Count - 1; x >= 0; x--) {
+            var ret = Subscribers[x].TryWrite(new ScriptSessionStatusUpdate {
+                FullUpdate = false,
+                SessionId = SessionId,
+                ParentStateId = ParentStateId,
+                Progress = Progress,
+                IncludeChain = IncludeChain
+            });
+
+            if (!ret) {
+                Subscribers.RemoveAt(x);
+            }
+        }
+    }
+
+    private static Guid? FindParentStateId(ScriptProgressState root, Guid stateId)
+    {
+        if (root.Chain == null) {
+            return null;
+        }
+
+        foreach (var child in root.Chain) {
+            if (child.Id == stateId) {
+                return root.Id;
+            }
+
+            var found = FindParentStateId(child, stateId);
+            if (found != null) {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     public ScriptSession? GetScriptSession(Guid Id)
     {
-        return Sessions.FirstOrDefault(x => x.Id == Id);
+        lock (SessionsLock) {
+            return Sessions.FirstOrDefault(x => x.Id == Id);
+        }
     }
 
     public bool QueueScriptCancellation(Guid Id)
     {
-        var session = Sessions.FirstOrDefault(x => x.Id == Id);
+        ScriptSession? session;
+        lock (SessionsLock) {
+            session = Sessions.FirstOrDefault(x => x.Id == Id);
+        }
 
         if (session == null)
             return false;
 
         session.Cts.Cancel();
+
+        return true;
+    }
+
+    public bool RemoveCompletedScriptSession(Guid Id)
+    {
+        ScriptSession? session;
+        lock (SessionsLock) {
+            session = Sessions.FirstOrDefault(x => x.Id == Id);
+            if (session == null || session.Progress.State != TASK_STATE.DONE) {
+                return false;
+            }
+
+            session.ProgressUpdated -= PublishProgressChanged;
+            Sessions.Remove(session);
+        }
+
+        Publish(session.Id, null, session.Progress, true);
+
+        session.Cts.Dispose();
+        session.Scope?.Dispose();
 
         return true;
     }

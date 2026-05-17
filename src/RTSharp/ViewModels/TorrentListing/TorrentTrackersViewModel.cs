@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Media;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -38,6 +38,12 @@ namespace RTSharp.ViewModels.TorrentListing
         [ObservableProperty]
         public partial Models.Torrent Torrent { get; set; }
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasSelectedItem))]
+        public partial Models.Tracker? SelectedItem { get; set; }
+
+        public bool HasSelectedItem => SelectedItem != null;
+
         public TorrentTrackersViewModel()
         {
         }
@@ -60,7 +66,7 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             Debug.Assert(StrToCap.ContainsKey(Action));
 
-            return StrToCap[Action](Torrent.DataOwner.Instance.Tracker.Capabilities);
+            return HasSelectedItem && StrToCap[Action](Torrent.DataOwner.Instance.Tracker.Capabilities);
         }
 
         public bool CanExecuteAddNewTracker() => CanExecuteAction("Add new tracker");
@@ -142,7 +148,8 @@ namespace RTSharp.ViewModels.TorrentListing
             }
         }
 
-        [RelayCommand]
+        public bool CanExecuteSetIcon() => HasSelectedItem;
+        [RelayCommand(CanExecute = nameof(CanExecuteSetIcon))]
         public async Task SetIcon(IList In)
         {
             using var scope = Core.ServiceProvider.CreateScope();

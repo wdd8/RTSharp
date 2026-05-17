@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -24,6 +24,7 @@ public partial class LogEntriesViewModel : ObservableObject, IContextPopulatedNo
 
     public Func<string, Task>? SetClipboardAsync;
 
+    private bool ContextPopulated;
 
     [RelayCommand]
     public async Task CopyException(IList In)
@@ -44,6 +45,10 @@ public partial class LogEntriesViewModel : ObservableObject, IContextPopulatedNo
 
     public void OnContextPopulated()
     {
+        if (ContextPopulated)
+            return;
+
+        ContextPopulated = true;
         LogEntries.CollectionChanged += EvLogEntriesChanged;
     }
 }

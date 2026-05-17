@@ -1,17 +1,18 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.Linq;
+using DynamicData;
 
 using RTSharp.Core.Services.Daemon;
 using RTSharp.Models;
 using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions.Client;
 
+using System;
+using System.Linq;
+
 namespace RTSharp.Core;
 
 public static class ActionQueue
 {
-    public static ObservableCollection<ActionQueueEntry> ActionQueues { get; } = new ObservableCollection<ActionQueueEntry>();
+    public static SourceList<ActionQueueEntry> ActionQueues { get; } = new();
 
     private static object ActionQueueLock = new object();
     public static void RegisterActionQueue(RTSharpPlugin Plugin, IActionQueueRenderer In)
@@ -65,7 +66,7 @@ public static class ActionQueue
     public static ActionQueueEntry? GetActionQueueEntry(object Related)
     {
         lock (ActionQueueLock) {
-            return ActionQueues.FirstOrDefault(x => x.Related == Related);
+            return ActionQueues.Items.FirstOrDefault(x => x.Related == Related);
         }
     }
 }

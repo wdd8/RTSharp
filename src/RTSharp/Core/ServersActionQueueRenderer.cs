@@ -1,117 +1,145 @@
-﻿using Avalonia;
-using Avalonia.Threading;
-
 using RTSharp.Shared.Abstractions;
-using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Abstractions.Daemon;
+using RTSharp.Shared.Controls;
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace RTSharp.Core;
 
-public class ServersActionQueueRenderer : DefaultActionQueueRenderer
+public class ServersActionQueueRenderer(string ServerName, IDaemonService DaemonService) : DefaultActionQueueRenderer(ServerName, BuiltInIcon.Get(BuiltInIcons.SERVER))
 {
-    public override StyledElement Display { get; }
+    private ConcurrentDictionary<Guid, TaskCompletionSource> ActionsTasks = new();
 
-    public List<ActionQueueAction> _actions = new();
-
-    private Views.ServerActionQueue ActionQueueView;
-    private ViewModels.ServerActionQueueViewModel ActionQueueVm;
-
-    public ServersActionQueueRenderer(string ServerName)
+    public async Task TrackServerActions()
     {
-        Dispatcher.UIThread.Invoke(() => {
-            ActionQueueView = new Views.ServerActionQueue() {
-                DataContext = ActionQueueVm = new ViewModels.ServerActionQueueViewModel() {
-                    DisplayName = $"{ServerName}"
-                }
-            };
-        });
-        Display = ActionQueueView;
-    }
-
-    public async Task TrackServerActions(IDaemonService DaemonService)
-    {
-        static void updateAction(ActionQueueAction action, ScriptProgressState state)
-        {
-            action.ProgressString = state.StateData ?? "";
-            action.ProgressDone = state.Progress ?? 0;
-            action.State = state.State switch {
-                TASK_STATE.WAITING => ACTION_STATE.WAITING,
-                TASK_STATE.RUNNING => ACTION_STATE.RUNNING,
-                TASK_STATE.DONE => ACTION_STATE.DONE,
-                TASK_STATE.FAILED => ACTION_STATE.FAILED,
-                _ => ACTION_STATE.CANCELLED
-            };
-        }
-
         while (true) {
-            var channel = DaemonService.StreamScriptsStatus(default);
-            await foreach (var state in channel.ReadAllAsync()) {
-                var action = FindAction(state.Id);
-                if (action != null) {
-
-                } else {
-                    static ActionQueueAction create(ActionQueueAction parent, ScriptProgressState[] states)
-                    {
-                        foreach (var childState in states) {
-                            var child = parent.CreateCosmeticChild(childState.Id, childState.Text);
-                            updateAction(child, childState);
-                            if (childState.Chain != null) {
-                                create(child, childState.Chain);
-                            }
-                        }
-
-                        return parent;
+            try {
+                var channel = DaemonService.StreamScriptsStatus(default);
+                await foreach (var update in channel.ReadAllAsync()) {
+                    if (update.FullUpdate) {
+                        ApplyFullUpdate(update);
+                    } else {
+                        ApplyPartialUpdate(update);
                     }
-                    var rootAction = ActionQueueAction.NewCosmetic(state.Id, state.Text);
-                    updateAction(rootAction, state);
-                    AddAction(create(rootAction, [state]));
                 }
+            } finally {
+                await Task.Delay(TimeSpan.FromSeconds(5));
             }
         }
     }
 
-    private string RenderActionQueue(IEnumerable<ActionQueueAction> Actions, StringBuilder Builder, int Identation = 0)
+    private void ApplyFullUpdate(ScriptSessionStateUpdate update)
     {
-        foreach (var action in Actions) {
-            var running = action.State switch {
-                ACTION_STATE.WAITING => "[waiting]",
-                ACTION_STATE.RUNNING => "[running]",
-                ACTION_STATE.CANCELLED => "[cancelled]",
-                ACTION_STATE.FAILED => "[failed]",
-                ACTION_STATE.DONE => "[done]",
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            Builder.AppendLine(new string(Enumerable.Repeat('\t', Identation).ToArray()) + " " + running + " " + action.Name);
-            if (action.ProgressDone > 0) {
-                Builder.AppendLine(new string(Enumerable.Repeat('\t', Identation).ToArray()) + $" {Math.Round(action.ProgressDone, 2)}% {action.ProgressString}");
-            }
+        var sessionIds = update.Sessions.Select(x => x.Id).ToHashSet();
 
-            if (action.ChildActions.Any()) {
-                RenderActionQueue(action.ChildActions, Builder, Identation + 1);
+        foreach (var session in update.Sessions) {
+            var rootAction = FindAction(session.Id);
+            if (rootAction == null) {
+                var tcs = ActionsTasks[session.Progress.Id] = new TaskCompletionSource();
+                rootAction = ActionQueueAction.New(session.Id, session.Name, _ => tcs.Task);
+                AddAction(rootAction);
+                rootAction.RunAction();
+                ChangeProgress(rootAction, session.Progress);
+                rootAction.Name = session.Name;
+                PopulateChain(rootAction, session.Progress.Chain ?? []);
+            } else {
+                UpdateAction(rootAction, session.Progress);
             }
         }
-
-        return Builder.ToString();
     }
 
-    public override void RenderActionQueue(IEnumerable<ActionQueueAction> Actions)
+    private void ApplyPartialUpdate(ScriptSessionStateUpdate update)
     {
-        ActionQueueVm.ActionQueueString = RenderActionQueue(Actions, new StringBuilder());
+        if (update.State == null) {
+            return;
+        }
+
+        var action = FindAction(update.State.Id);
+        if (action != null) {
+            UpdateAction(action, update.State);
+        } else {
+            if (update.ParentStateId == null) {
+                return;
+            }
+
+            var parent = FindAction(update.ParentStateId.Value);
+            if (parent == null) {
+                return;
+            }
+
+            var tcs = ActionsTasks[update.State.Id] = new TaskCompletionSource();
+            var child = parent.CreateChild(update.State.Id, update.State.Text, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, (_, _) => tcs.Task);
+            child.RunAction();
+            UpdateAction(child, update.State);
+        }
     }
 
-    public override void ActionCreated(ActionQueueAction Action) => ActionQueueVm.ActionsInQueue++;
-    public override void ActionRun(ActionQueueAction Action) { }
-    public override void ActionCompleted(ActionQueueAction Action) => ActionQueueVm.ActionsInQueue--;
-    public override void ActionErrored(ActionQueueAction Action)
+    public override void ActionExpired(ActionQueueAction Action)
     {
-        ActionQueueVm.ErroredActions++;
-        ActionQueueVm.ActionsInQueue--;
+        _ = DaemonService.RemoveScriptSession(Action.Id);
     }
-    public override void ActionExpired(ActionQueueAction Action) { }
+
+    private void ChangeProgress(ActionQueueAction action, ScriptProgressState state)
+    {
+        TaskCompletionSource? getTcs()
+        {
+            if (!ActionsTasks.TryGetValue(state.Id, out var tcs))
+                return null;
+            if (tcs.Task.IsCompleted)
+                return null;
+
+            return tcs;
+        }
+
+        if (state.State == TASK_STATE.DONE) {
+            getTcs()?.SetResult();
+        } else if (state.State == TASK_STATE.FAILED) {
+            getTcs()?.SetException(new Exception(state.Text));
+        }
+
+        action.ChangeProgress(state.State switch {
+            TASK_STATE.WAITING => ACTION_STATE.WAITING,
+            TASK_STATE.RUNNING => ACTION_STATE.RUNNING,
+            TASK_STATE.DONE => ACTION_STATE.DONE,
+            TASK_STATE.FAILED => ACTION_STATE.FAILED,
+            _ => ACTION_STATE.CANCELLED
+        }, state.Progress ?? 0, state.Text);
+    }
+
+    private void PopulateChain(ActionQueueAction parent, ScriptProgressState[] states)
+    {
+        foreach (var childState in states) {
+            var tcs = ActionsTasks[childState.Id] = new TaskCompletionSource();
+            var child = parent.CreateChild(childState.Id, childState.Text, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, (_, _) => tcs.Task);
+            ChangeProgress(child, childState);
+
+            if (childState.Chain != null) {
+                PopulateChain(child, childState.Chain);
+            }
+        }
+    }
+
+    private void UpdateAction(ActionQueueAction action, ScriptProgressState state)
+    {
+        ChangeProgress(action, state);
+
+        if (state.Chain == null) {
+            return;
+        }
+
+        foreach (var childState in state.Chain) {
+            var child = FindAction(childState.Id);
+            if (child == null) {
+                var tcs = ActionsTasks[childState.Id] = new TaskCompletionSource();
+                child = action.CreateChild(childState.Id, childState.Text, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, (_, _) => tcs.Task);
+                child.RunAction();
+            }
+
+            UpdateAction(child, childState);
+        }
+    }
 }

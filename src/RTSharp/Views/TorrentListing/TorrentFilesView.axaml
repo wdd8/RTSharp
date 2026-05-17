@@ -8,7 +8,7 @@
              xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
              d:DesignWidth="1500" d:DesignHeight="450"
-			 x:DataType="torrentListing:TorrentFilesViewModel">
+             x:DataType="torrentListing:TorrentFilesViewModel">
 
     <Control.Resources>
         <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
@@ -18,28 +18,29 @@
     </Design.DataContext>
 
     <DataGrid
-		AutoGenerateColumns="False"
-		HierarchicalModel="{Binding Model}"
-		HierarchicalRowsEnabled="True"
+        Name="MainGrid"
+        AutoGenerateColumns="False"
+        HierarchicalModel="{Binding Model}"
+        HierarchicalRowsEnabled="True"
         ColumnDefinitionsSource="{Binding ColumnDefinitions}"
-		SelectionMode="Extended"
-		UseLogicalScrollable="True"
-		HeadersVisibility="All"
-		IsReadOnly="True"
+        SelectionMode="Extended"
+        UseLogicalScrollable="True"
+        HeadersVisibility="All"
+        IsReadOnly="True"
         CanUserAddRows="False"
-		CanUserDeleteRows="False"
-		CanUserHideColumns="True"
-		CanUserPaste="False"
-		CanUserReorderColumns="True"
-		CanUserReorderRows="False"
-		CanUserResizeColumns="True"
-		CanUserSortColumns="True"
+        CanUserDeleteRows="False"
+        CanUserHideColumns="True"
+        CanUserPaste="False"
+        CanUserReorderColumns="True"
+        CanUserReorderRows="False"
+        CanUserResizeColumns="True"
+        CanUserSortColumns="True"
     >
         <DataGrid.Resources>
-			<DataTemplate x:Key="FileNameTemplate" x:DataType="models:File">
+            <DataTemplate x:Key="FileNameTemplate" x:DataType="models:File">
               <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-		      </StackPanel>
+              </StackPanel>
             </DataTemplate>
             <DataTemplate x:Key="FileSizeTemplate" x:DataType="dgh:HierarchicalNode">
                 <TextBlock Text="{Binding ((models:File)Item).Size, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
@@ -55,7 +56,7 @@
             <ContextMenu>
                 <MenuItem Header="_Mediainfo"
                           Command="{Binding MediaInfoCommand}"
-                          CommandParameter="{Binding}"
+                          CommandParameter="{Binding #MainGrid.SelectedItems}"
                         />
             </ContextMenu>
         </DataGrid.ContextMenu>

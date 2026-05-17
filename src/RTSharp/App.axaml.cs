@@ -95,9 +95,11 @@ public static class Services
         foreach (var server in servers) {
             var instance = ActivatorUtilities.CreateInstance<DaemonService>(Core.ServiceProvider._provider, server.Key);
             Core.Servers.Value.Add(server.Key, instance);
-            var renderer = new ServersActionQueueRenderer(server.Key);
-            ActionQueue.RegisterActionQueue(instance, renderer);
-            _ = renderer.TrackServerActions(instance);
+            Dispatcher.UIThread.Invoke(() => {
+                var renderer = new ServersActionQueueRenderer(server.Key, instance);
+                ActionQueue.RegisterActionQueue(instance, renderer);
+                _ = renderer.TrackServerActions();
+            });
         }
     }
 }

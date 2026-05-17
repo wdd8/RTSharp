@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace RTSharp.Shared.Abstractions;
 
-namespace RTSharp.Shared.Abstractions
+public interface IScriptSession
 {
-    public interface IScriptSession
-    {
-        public void ProgressChanged();
+    public void ProgressChanged(ScriptProgressState? progress = null, bool chainChanged = false);
 
-        public ScriptProgressState Progress { get; }
-    }
+    public ScriptProgressState Progress { get; }
 }

@@ -1,4 +1,4 @@
-﻿using Google.Protobuf;
+using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
@@ -40,7 +40,7 @@ namespace RTSharp.Daemon.GRPCServices
                     Logger.LogDebug($"Cached script: {Convert.ToBase64String(hash)}");
                 }
 
-                var session = Sessions.RunScript(compilation, Req.Variables.ToDictionary());
+                var session = Sessions.RunScript(Req.Name, compilation, Req.Variables.ToDictionary());
 
                 Logger.LogInformation("Script ID {id} is running...", session.Id);
 
@@ -70,10 +70,10 @@ namespace RTSharp.Daemon.GRPCServices
             }
         }
 
-        Protocols.ScriptProgressState MapProgressState(ByteString Id, Shared.Abstractions.ScriptProgressState In)
+        Protocols.ScriptProgressState MapProgressState(Shared.Abstractions.ScriptProgressState In, bool includeChain)
         {
             return new Protocols.ScriptProgressState {
-                Id = Id,
+                Id = In.Id.ToByteString(),
                 Text = In.Text,
                 Progress = In.Progress ?? -1,
                 State = In.State switch {
@@ -83,16 +83,47 @@ namespace RTSharp.Daemon.GRPCServices
                     TASK_STATE.DONE => TaskState.Done,
                     _ => throw new IndexOutOfRangeException()
                 },
-                Chain = { In.Chain?.Select(x => MapProgressState(Id, x)) ?? [] },
+                Chain = { includeChain ? In.Chain?.Select(x => MapProgressState(x, includeChain: true)) ?? [] : [] },
                 StateData = In.StateData
             };
         }
 
-        public override async Task ScriptsStatus(Empty Req, IServerStreamWriter<Protocols.ScriptProgressState> Res, ServerCallContext Ctx)
+        Protocols.ScriptSessionState MapScriptSession(ScriptSession In)
+        {
+            return new Protocols.ScriptSessionState {
+                Id = In.Id.ToByteString(),
+                Name = In.Name,
+                Progress = MapProgressState(In.Progress, includeChain: true)
+            };
+        }
+
+        Protocols.ScriptSessionsUpdate MapScriptSessionUpdate(ScriptSessionStatusUpdate In)
+        {
+            var ret = new Protocols.ScriptSessionsUpdate();
+
+            if (In.FullUpdate) {
+                ret.FullUpdate = new Protocols.ScriptSessionsFullUpdate {
+                    Sessions = { In.Sessions.Select(MapScriptSession) }
+                };
+            } else {
+                ret.DeltaUpdate = new Protocols.ScriptSessionDeltaUpdate {
+                    SessionId = In.SessionId.ToByteString(),
+                    State = In.Progress != null ? MapProgressState(In.Progress, In.IncludeChain) : null
+                };
+
+                if (In.ParentStateId != null) {
+                    ret.DeltaUpdate.ParentStateId = In.ParentStateId.Value.ToByteString();
+                }
+            }
+
+            return ret;
+        }
+
+        public override async Task ScriptsStatus(Empty Req, IServerStreamWriter<Protocols.ScriptSessionsUpdate> Res, ServerCallContext Ctx)
         {
             var ct = Ctx.CancellationToken;
-            await foreach (var (id, progress) in Sessions.MonitorSessions(ct).ReadAllAsync(ct)) {
-                await Res.WriteAsync(MapProgressState(id.ToByteString(), progress), ct);
+            await foreach (var update in Sessions.MonitorSessionUpdates(ct).ReadAllAsync(ct)) {
+                await Res.WriteAsync(MapScriptSessionUpdate(update), ct);
             }
         }
 
@@ -114,7 +145,7 @@ namespace RTSharp.Daemon.GRPCServices
                 var task = await Task.WhenAny(session.Execution!, session.EvProgressChanged.WaitAsync(Ctx.CancellationToken));
 
                 Logger.LogInformation($"ScriptStatus: Session {id} progress changed, sending");
-                await Res.WriteAsync(MapProgressState(Req.Value, session.Progress), Ctx.CancellationToken);
+                await Res.WriteAsync(MapProgressState(session.Progress, includeChain: true), Ctx.CancellationToken);
 
                 if (task == session.Execution) {
                     return;
@@ -131,6 +162,17 @@ namespace RTSharp.Daemon.GRPCServices
 
             if (!Sessions.QueueScriptCancellation(id)) {
                  throw new RpcException(new Status(StatusCode.NotFound, "Script session not found"));
+            }
+
+            return Task.FromResult(new Empty());
+        }
+
+        public override Task<Empty> RemoveScript(BytesValue Req, ServerCallContext Ctx)
+        {
+            var id = new Guid(Req.Value.Span);
+
+            if (!Sessions.RemoveCompletedScriptSession(id)) {
+                throw new RpcException(new Status(StatusCode.NotFound, "Completed script session not found"));
             }
 
             return Task.FromResult(new Empty());

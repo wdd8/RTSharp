@@ -1,7 +1,10 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Threading;
 
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
@@ -41,16 +44,20 @@ public class Plugin : BasePlugin
 
     public IDataProviderHost DataProvider { get; set; }
 
-    internal ActionQueueRenderer ActionQueue { get; set; }
+    internal DefaultActionQueueRenderer ActionQueue { get; set; }
 
     private CancellationTokenSource DataProviderActive { get; set; }
 
-    public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
+    public override async Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
         Progress(("Registering queue...", 0f));
 
-        ActionQueue = new ActionQueueRenderer(Host.PluginInstanceConfig.Name, Host.InstanceId);
+        await Dispatcher.UIThread.InvokeAsync(() => {
+            ActionQueue = new DefaultActionQueueRenderer(
+                Host.PluginInstanceConfig.Name,
+                new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Rtorrent.Plugin/Assets/rtorrent.png"))));
+        });
         Host.RegisterActionQueue(ActionQueue);
 
         Progress(("Registering data provider...", 50f));
@@ -64,7 +71,7 @@ public class Plugin : BasePlugin
         DataProvider = Host.RegisterDataProvider(dp);
 
         Progress(("Loaded", 100f));
-        return Task.FromResult((IPlugin)this);
+        return this;
     }
 
     public override async Task ShowPluginSettings(object ParentWindow)

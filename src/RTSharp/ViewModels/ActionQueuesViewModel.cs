@@ -1,19 +1,28 @@
-﻿using System.Collections.ObjectModel;
-using System.Linq;
-using Avalonia;
-using Avalonia.Media;
+using System;
+using System.Collections.ObjectModel;
+using System.Reactive.Linq;
+
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using DynamicData;
 
-using RTSharp.Core;
 using RTSharp.Models;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.ViewModels;
 
-public class ActionQueuesViewModel : ObservableObject
+public partial class ActionQueuesViewModel : ObservableObject
 {
-    public ObservableCollection<ActionQueueEntry> ActionQueue => Core.ActionQueue.ActionQueues;
+    public SourceList<ActionQueueEntry> ActionQueue => Core.ActionQueue.ActionQueues;
 
-    public ObservableCollection<StyledElement> QueueDisplay => new ObservableCollection<StyledElement>(ActionQueue.Select(x => x.Queue.Display));
+    [ObservableProperty]
+    public partial ReadOnlyObservableCollection<IActionQueueRenderer> QueueRenderers { get; set; }
+
+    public ActionQueuesViewModel()
+    {
+        ActionQueue.Connect().ObserveOn(AvaloniaSynchronizationContext.Current).Transform(x => x.Queue).Bind(out var observable).Subscribe();
+        QueueRenderers = observable;
+    }
 }

@@ -75,7 +75,7 @@ public partial class LogEntriesView : VmUserControl<LogEntriesViewModel>
 
     }
 
-    private void EvLostFocus(object sender, RoutedEventArgs e)
+    private void EvLostFocus(object sender, FocusChangedEventArgs e)
     {
 
     }

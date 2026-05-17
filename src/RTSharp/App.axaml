@@ -3,11 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:np="https://np.com/visuals"
              xmlns:local="clr-namespace:RTSharp"
-			 xmlns:converters="using:RTSharp.Views.Converters"
-			 xmlns:vm="clr-namespace:RTSharp.ViewModels"
+             xmlns:converters="using:RTSharp.Views.Converters"
+             xmlns:vm="clr-namespace:RTSharp.ViewModels"
              xmlns:dock="clr-namespace:Dock.Model.Core;assembly=Dock.Model"
-			 xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
-			 x:DataType="vm:AppViewModel">
+             xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+             x:DataType="vm:AppViewModel">
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>
@@ -19,9 +19,9 @@
 
     <Application.Styles>
         <FluentTheme />
-		<DockFluentTheme />
+        <DockFluentTheme />
         <dialogHostAvalonia:DialogHostStyles />
-		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.v2.xaml" />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.v2.xaml" />
 
         <Style Selector="TextBlock">
             <Setter Property="FontSize" Value="12" />
@@ -31,7 +31,7 @@
             <Setter Property="FontSize" Value="12" />
         </Style>
 
-		<Style Selector="DataGridSearchTextBlock">
+        <Style Selector="DataGridSearchTextBlock">
             <Setter Property="FontSize" Value="12" />
         </Style>
 
@@ -48,16 +48,16 @@
         </Style>
 
         <Style Selector="DocumentControl">
-		  <Setter Property="IconTemplate">
-			<DataTemplate DataType="dock:IDockable">
-				<PathIcon
-					Data="{Binding ., Converter={StaticResource IconConverter}}"
-					Width="16"
-					Height="16"
-					Margin="0" />
-			</DataTemplate>
-		  </Setter>
-		</Style>
+          <Setter Property="IconTemplate">
+            <DataTemplate DataType="dock:IDockable">
+                <PathIcon
+                    Data="{Binding ., Converter={StaticResource IconConverter}}"
+                    Width="16"
+                    Height="16"
+                    Margin="0" />
+            </DataTemplate>
+          </Setter>
+        </Style>
     </Application.Styles>
 
     <TrayIcon.Icons>

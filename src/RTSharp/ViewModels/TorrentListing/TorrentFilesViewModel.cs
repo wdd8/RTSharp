@@ -1,5 +1,6 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Controls.DataGridHierarchical;
+using Avalonia.Controls.DataGridSelection;
 using Avalonia.Data.Core;
 using Avalonia.Markup.Xaml.MarkupExtensions.CompiledBindings;
 using Avalonia.Media;
@@ -175,7 +176,7 @@ public partial class TorrentFilesViewModel : ObservableObject
 
     public bool CanExecuteMediaInfo() => true;
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteMediaInfo))]
-    public async Task MediaInfo(IReadOnlyList<object?> In)
+    public async Task MediaInfo(SelectedItemsView In)
     {
         var files = In.Cast<Models.File>().Where(x => x.Path != "./");
 

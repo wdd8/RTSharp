@@ -1,41 +1,90 @@
-﻿using Avalonia;
+using Avalonia;
+using Avalonia.Media;
+using Avalonia.Threading;
 
-using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Client.ViewModels;
+using RTSharp.Shared.Abstractions.Client.Views;
 
 namespace RTSharp.Shared.Abstractions.Client;
 
-public abstract class DefaultActionQueueRenderer : IActionQueueRenderer
+public class DefaultActionQueueRenderer : IActionQueueRenderer
 {
-    public abstract StyledElement Display { get; }
+    private List<ActionQueueAction> _actions = [];
+    private Lock ActionsLock = new();
 
-    private List<ActionQueueAction> _actions = new();
-    public IReadOnlyCollection<ActionQueueAction> Actions => _actions;
+    public IReadOnlyCollection<ActionQueueAction> Actions {
+        get {
+            lock (ActionsLock) {
+                return [.. _actions];
+            }
+        }
+    }
 
-    public abstract void RenderActionQueue(IEnumerable<ActionQueueAction> Actions);
+    public virtual StyledElement Display => CreateDisplay();
 
-    public abstract void ActionCreated(ActionQueueAction Action);
+    protected DefaultActionQueueViewModel? ActionQueueVm { get; private set; }
 
-    public abstract void ActionRun(ActionQueueAction Action);
+    protected DefaultActionQueueRenderer() { }
 
-    public abstract void ActionCompleted(ActionQueueAction Action);
+    public DefaultActionQueueRenderer(string DisplayName, IImage? Icon = null)
+    {
+        ActionQueueVm = new DefaultActionQueueViewModel {
+            DisplayName = DisplayName,
+            Icon = Icon
+        };
+    }
 
-    public abstract void ActionErrored(ActionQueueAction Action);
+    public virtual StyledElement CreateDisplay()
+    {
+        return new DefaultActionQueueView {
+            DataContext = ActionQueueVm
+        };
+    }
 
-    public abstract void ActionExpired(ActionQueueAction Action);
+    private static void FlattenActions(IEnumerable<ActionQueueAction> actions, List<DefaultActionQueueActionViewModel> result, int depth)
+    {
+        foreach (var action in actions) {
+            result.Add(new DefaultActionQueueActionViewModel {
+                Name = action.Name,
+                State = action.State,
+                ProgressDone = action.ProgressDone,
+                ProgressString = action.ProgressString ?? "",
+                Depth = depth
+            });
+            if (action.ChildActions.Any())
+                FlattenActions(action.ChildActions, result, depth + 1);
+        }
+    }
 
-    private void TrackAction(ActionQueueAction Action, bool Child)
+    public virtual void RenderActionQueue(params IEnumerable<ActionQueueAction> Actions)
+    {
+        var list = new List<DefaultActionQueueActionViewModel>();
+        FlattenActions(Actions, list, 0);
+        Dispatcher.UIThread.Post(() => {
+            ActionQueueVm.Actions.Clear();
+            foreach (var item in list)
+                ActionQueueVm.Actions.Add(item);
+        });
+    }
+
+    public virtual void ActionCreated(ActionQueueAction Action) { }
+    public virtual void ActionRun(ActionQueueAction Action) { }
+    public virtual void ActionCompleted(ActionQueueAction Action) { }
+    public virtual void ActionErrored(ActionQueueAction Action) { }
+    public virtual void ActionExpired(ActionQueueAction Action) { }
+
+    private void TrackAction(ActionQueueAction Action)
     {
         ActionCreated(Action);
-        if (!Child) {
-            _actions.Add(Action);
-        }
+        ActionQueueVm!.ActionsInQueue++;
+
         RenderActionQueue(Actions);
         Action.ProgressChanged += (sender, e) => {
             RenderActionQueue(Actions);
         };
 
         foreach (var child in Action.ChildActions) {
-            TrackAction(child, true);
+            TrackAction(child);
         }
 
         Action.OnRun(task => {
@@ -45,54 +94,57 @@ public abstract class DefaultActionQueueRenderer : IActionQueueRenderer
 
         void queueActionExpiration(ActionQueueAction Action)
         {
-            bool allCompleted(ActionQueueAction action)
-            {
-                foreach (var child in action.ChildActions) {
-                    if (!allCompleted(child)) {
-                        return false;
-                    }
-                }
+            Action = Action.GetRootAction();
 
-                return action.IsCompleted;
-            }
-
-            while (Action.Parent != null)
-                Action = Action.Parent;
-
-            if (!allCompleted(Action))
+            if (!Action.IsCompleted)
                 return;
 
-            _ = Task.Delay(5000).ContinueWith(_ => {
-                _actions.Remove(Action);
+            var delay = Math.Min(120, 8 + Action.GetChildActionCount() * 4);
+
+            _ = Task.Delay(TimeSpan.FromSeconds(delay)).ContinueWith(_ => {
+                lock (ActionsLock) {
+                    _actions.Remove(Action);
+                }
                 ActionExpired(Action);
-                RenderActionQueue(Actions);
+                RenderActionQueue(_actions);
             });
         }
 
         Action.OnFail((ex, task) => {
             RenderActionQueue(Actions);
+            ActionQueueVm.ErroredActions++;
+            ActionQueueVm.ActionsInQueue--;
+            queueActionExpiration(Action);
             ActionErrored(Action);
-            queueActionExpiration(Action);
         });
-        Action.AfterRun((result, task) => {
+        Action.OnDone((result, task) => {
             RenderActionQueue(Actions);
-            ActionCompleted(Action);
+            ActionQueueVm!.ActionsInQueue--;
             queueActionExpiration(Action);
+            ActionCompleted(Action);
         });
     }
 
-    public void AddAction(ActionQueueAction Action) => TrackAction(Action, false);
+    public void AddAction(ActionQueueAction Action)
+    {
+        lock (ActionsLock) {
+            _actions.Add(Action);
+        }
+        TrackAction(Action);
+    }
 
-    private ActionQueueAction? FindAction(IEnumerable<ActionQueueAction> Actions, Guid Id)
+    private static ActionQueueAction? FindAction(IEnumerable<ActionQueueAction> Actions, Guid Id)
     {
         foreach (var action in Actions) {
             if (action.Id == Id)
                 return action;
-            return FindAction(action.ChildActions, Id);
+            var found = FindAction(action.ChildActions, Id);
+            if (found != null)
+                return found;
         }
 
         return null;
     }
 
-    public ActionQueueAction? FindAction(Guid Id) => FindAction(Actions, Id);
+    public ActionQueueAction? FindAction(Guid Id) => FindAction(_actions, Id);
 }

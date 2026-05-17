@@ -1,4 +1,4 @@
-﻿using BencodeNET.Objects;
+using BencodeNET.Objects;
 using BencodeNET.Parsing;
 using BencodeNET.Torrents;
 
@@ -73,8 +73,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
             
-            var session = Sessions.CreateSession(cts, async (session) => {
-                session.Progress.Text = "Observing state...";
+            var session = Sessions.CreateSession("Force recheck torrents", cts, async (session) => {
                 session.Progress.Progress = 0f;
                 session.Progress.State = TASK_STATE.RUNNING;
                 
@@ -888,7 +887,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 session.Progress.State = TASK_STATE.DONE;
                 session.Progress.Text = "Done";
             }
-            var session = Sessions.CreateSession(cts, fx);
+            var session = Sessions.CreateSession("Move download directory", cts, fx);
 
             return session.Id.ToByteArray().ToBytesValue();
         }
@@ -1130,11 +1129,16 @@ namespace RTSharp.Daemon.Services.rtorrent
             await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ label ]) ], [ "d.custom1.set" ]);
 
             // Override addtime later
-            Sessions.CreateSession(new(), async session => {
+            Sessions.CreateSession("Edit tracker", new(), async session => {
+                session.Progress.State = TASK_STATE.RUNNING;
+                session.Progress.Text = "Delay override created on date on torrent...";
+
                 Logger.LogInformation("Sleeping for 20sec before setting addtime...");
                 await Task.Delay(TimeSpan.FromSeconds(20), session.Cts.Token);
                 Logger.LogInformation("Setting addtime");
                 await Scgi.XmlActionTorrentsMulti([(InfoHash.ToByteArray(), [ "addtime", addtime ])], ["d.custom.set"]);
+                session.Progress.State = TASK_STATE.DONE;
+                session.Progress.Progress = 100f;
             });
 
             return new();
