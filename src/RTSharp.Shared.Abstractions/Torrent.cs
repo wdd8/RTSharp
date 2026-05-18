@@ -14,7 +14,7 @@ public class Torrent
     public required IDataProvider DataOwner { get; init; }
 
     /// <summary>
-    /// Torrent info hash, 20 bytes
+    /// Torrent info hash
     /// </summary>
     public byte[] Hash { get; }
 

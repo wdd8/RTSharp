@@ -13,6 +13,13 @@ namespace RTSharp.Shared.Utils
     {
         public record DataInfo(long TotalSize, FileInfo? SingleFile, List<FileInfo>? Files);
 
+        [Flags]
+        public enum VERSION
+        {
+            V1 = 1,
+            V2 = 2
+        }
+
         private static long GetDirectorySize(ConcurrentBag<FileInfo> Files, DirectoryInfo DirectoryInfo, bool Recursive = true)
         {
             var startDirectorySize = default(long);
@@ -80,6 +87,7 @@ namespace RTSharp.Shared.Utils
             bool Private,
             bool Entropy,
             bool EmitCreationDate,
+            VERSION Version = VERSION.V1 | VERSION.V2,
             int? PieceLength = null,
             bool Parallel = true,
             Action<(float HashProgress, string CurrentFile, float FileProgress, float FileBuffer, string HashExcerpt)>? Progress = null,

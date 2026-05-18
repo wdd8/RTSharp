@@ -121,7 +121,7 @@ namespace RTSharp.Models
     public partial class Torrent : ObservableObject
     {
         /// <summary>
-        /// Torrent info hash, 20 bytes
+        /// Torrent info hash
         /// </summary>
         public byte[] Hash { get; set; }
 
