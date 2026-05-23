@@ -244,7 +244,7 @@
 					  LoadingRow="EvLoadingRow"
 					  UseLogicalScrollable="True"
 					  KeepRecycledContainersInVisualTree="True"
-					  TrimRecycledContainers="True"
+					  TrimRecycledContainers="False"
 					  CanUserResizeColumns="true"
 					  ClipboardCopyMode="ExcludeHeader"
 					  CanUserAddRows="False"
