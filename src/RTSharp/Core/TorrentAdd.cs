@@ -63,7 +63,7 @@ namespace RTSharp.Core
                                     Primary.PluginInstance.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
                             }
 
-                            return Primary.Instance.StartTorrents(res.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash).ToArray());
+                            return Primary.Instance.StartTorrents([.. res.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash)]);
                         }).CreateChild("Start torrent completion", RUN_MODE.DEPENDS_ON_PARENT, (startTorrentAction, action) => {
                             foreach (var (hash, exceptions) in startTorrentAction.GetResult()!) {
                                 if (exceptions.All(x => x == null))

@@ -21,7 +21,8 @@ public partial class TorrentCreatorWindow : VmWindow<TorrentCreatorWindowViewMod
         DragDropPanel.AddHandler(DragDrop.DropEvent, EvDragDrop);
 
         BindViewModelActions(vm => {
-            vm!.StrPieceLength = (ComboBoxItem)CmbPieceLength.Items[0];
+            vm!.StrPieceLength = (ComboBoxItem)CmbPieceLength.Items[0]!;
+            vm!.StrVersion = (ComboBoxItem)CmbVersion.Items[0]!;
             vm!.SelectFileDialog = SelectFileDialogAsync;
             vm!.SelectFolderDialog = SelectFolderDialogAsync;
             vm!.SelectFileDestDialog = SelectFileDestDialogAsync;

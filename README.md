@@ -80,7 +80,7 @@ _* - not directly supported by torrent daemon_
 
 |Feature|Support|
 |-|-|
-|SHA256 infohashes|🔴Not implemented|
+|V2/Hybrid torrent creation|🟢Supported|
 |File previews|🔴Not implemented|
 |File icons (as determined by OS)|🔴Not implemented|
 |Native AOT|🔴https://github.com/DapperLib/DapperAOT/issues/160|

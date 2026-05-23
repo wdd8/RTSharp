@@ -101,6 +101,14 @@
                     <CheckBox IsChecked="{Binding PrivateTorrent}">Private torrent (Won't distribute on DHT network)</CheckBox>
                     <CheckBox IsChecked="{Binding Entropy}">Add entropy (Makes torrent unique)</CheckBox>
                     <CheckBox IsChecked="{Binding EmitCreationDate}">Emit creation date</CheckBox>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock VerticalAlignment="Center" Margin="0 0 4 0">Version:</TextBlock>
+                        <ComboBox Name="CmbVersion" VerticalAlignment="Center" Width="125" SelectedIndex="0" SelectedItem="{Binding StrVersion}">
+                            <ComboBoxItem>V1</ComboBoxItem>
+                            <ComboBoxItem>V2</ComboBoxItem>
+                            <ComboBoxItem>Hybrid</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
                     <!--<views:GroupBox CheckBoxEnabled="True" IsCheckBoxChecked="{Binding OptimiseAlignment}" Label="Optimise alignment" IsEnabled="False">
                         <StackPanel Orientation="Horizontal" Margin="4" IsEnabled="{Binding OptimiseAlignment}">
                             <TextBlock VerticalAlignment="Center">Align to piece boundary for files larger than:</TextBlock>

@@ -10,10 +10,8 @@ using RTSharp.Shared.Utils;
 using Serilog;
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -107,6 +105,16 @@ namespace RTSharp.ViewModels.Tools
 
         [ObservableProperty]
         public partial bool EmitCreationDate { get; set; } = true;
+
+        [ObservableProperty]
+        public partial ComboBoxItem StrVersion { get; set; }
+
+        public TorrentCreator.VERSION Version => StrVersion.Content switch {
+            "V1" => TorrentCreator.VERSION.V1,
+            "V2" => TorrentCreator.VERSION.V2,
+            "Hybrid" => TorrentCreator.VERSION.V1 | TorrentCreator.VERSION.V2,
+            _ => throw new ArgumentOutOfRangeException()
+        };
 
         public partial class ProgressInfo : ObservableObject
         {
@@ -214,19 +222,20 @@ namespace RTSharp.ViewModels.Tools
                 return;
             }
 
-            var progress = ((float HashProgress, string CurrentFile, float FileProgress, float FileBuffer, string HashExcerpt) progress) => {
+            void progress((float HashProgress, string CurrentFile, float FileProgress, float FileBuffer, string HashExcerpt) progress)
+            {
                 ProgressInfoInstance.HashProgress = progress.HashProgress;
                 ProgressInfoInstance.CurrentFile = progress.CurrentFile;
                 ProgressInfoInstance.FileProgress = progress.FileProgress;
                 ProgressInfoInstance.FileBuffer = progress.FileBuffer;
                 ProgressInfoInstance.HashExcerpt = progress.HashExcerpt;
-            };
+            }
 
             ProgressInfoInstance.Cts = new();
 
             ProgressInfoInstance.Shown = true;
             try {
-                var file = await Creator.Create(
+                var file = await TorrentCreator.Create(
                     Path: SourcePath,
                     Trackers: trackerUrls,
                     WebSeeds: webSeedUrls,
@@ -236,6 +245,7 @@ namespace RTSharp.ViewModels.Tools
                     Entropy: Entropy,
                     EmitCreationDate: EmitCreationDate,
                     PieceLength: PieceLength,
+                    Version: Version,
                     Parallel: true,
                     Progress: progress,
                     cancellationToken: ProgressInfoInstance.Cts.Token);
@@ -258,15 +268,15 @@ namespace RTSharp.ViewModels.Tools
             if (SourcePath == null)
                 return;
 
-            var dataInfo = await Creator.GetDataInfo(SourcePath);
+            var dataInfo = await TorrentCreator.GetDataInfo(SourcePath);
 
             int pieceLength;
             if (PieceLength == null)
-                pieceLength = Creator.CalculatePieceLength(dataInfo.TotalSize);
+                pieceLength = TorrentCreator.CalculatePieceLength(dataInfo.TotalSize);
             else
                 pieceLength = PieceLength.Value;
 
-            NumberOfPieces = Creator.CalculateNumberOfPieces(dataInfo.TotalSize, pieceLength);
+            NumberOfPieces = TorrentCreator.CalculateNumberOfPieces(dataInfo.TotalSize, pieceLength);
         }
 
         [RelayCommand]

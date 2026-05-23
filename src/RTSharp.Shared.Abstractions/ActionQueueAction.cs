@@ -36,7 +36,7 @@ namespace RTSharp.Shared.Abstractions
 
         public ActionQueueAction<TChild> CreateChild<TChild>(string Name, RUN_MODE RunMode, Func<ActionQueueAction<T>, ActionQueueAction<TChild>, Task<TChild>> Task)
         {
-            async Task<TChild> task(ActionQueueAction child, ActionQueueAction parent)
+            async Task<TChild> task(ActionQueueAction parent, ActionQueueAction child)
             {
                 var ret = await Task((ActionQueueAction<T>)parent, (ActionQueueAction<TChild>)child);
                 return ret;
