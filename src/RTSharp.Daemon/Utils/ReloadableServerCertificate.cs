@@ -30,10 +30,7 @@ public sealed class ReloadableServerCertificate
                 return;
             }
 
-            var previousCertificateThumbprint = Current.GetCertHashString(HashAlgorithmName.SHA256);
             Current = newCertificate;
-
-            Console.WriteLine($"Reloaded server certificate {previousCertificateThumbprint} -> {Current.GetCertHashString(HashAlgorithmName.SHA256)}");
         }
     }
 

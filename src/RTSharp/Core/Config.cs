@@ -71,8 +71,6 @@ public class Config
             public ushort DaemonPort { get; set; }
 
             public string? TrustedThumbprint { get; set; }
-
-            public bool? VerifyNative { get; set; }
         }
 
         public class Look
@@ -168,8 +166,7 @@ public class Config
     "example": {
       "Host": "example.com",
       "DaemonPort": 12345,
-      "TrustedThumbprint": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-      "VerifyNative": false
+      "TrustedThumbprint": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     }
   }
 }

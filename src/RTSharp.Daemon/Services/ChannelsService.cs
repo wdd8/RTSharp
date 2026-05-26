@@ -1,5 +1,4 @@
 ﻿using Grpc.Net.Client;
-using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
 using RTSharp.Daemon.Protocols;
 
@@ -14,25 +13,21 @@ public class ChannelsService(IConfiguration Config, ILogger<ChannelsService> Log
         if (ChannelsCache.TryGetValue(Url, out var ret))
             return ret;
 
-        var publicPem = await System.IO.File.ReadAllTextAsync(Config.GetSection("Certificate").GetValue<string>("PublicPem"));
-        var privatePem = await System.IO.File.ReadAllTextAsync(Config.GetSection("Certificate").GetValue<string>("PrivatePem"));
-        var x509 = X509Certificate2.CreateFromPem(publicPem, privatePem);
-        var cert = new X509Certificate2(x509.Export(X509ContentType.Pkcs12));
-        var allowedClients = Config.GetSection("AllowedClients").Get<string[]>();
+        var allowedClients = Config.GetSection("AllowedClients").Get<string[]>() ?? [];
 
-        Logger.LogInformation($"Creating channel with certificate {cert.GetCertHashString(HashAlgorithmName.SHA256)}");
+        Logger.LogDebug($"Creating channel with certificate {Program.ServerCertificate.Current.GetCertHashString(HashAlgorithmName.SHA256)}");
 
         return ChannelsCache[Url] = GrpcChannel.ForAddress(Url, new GrpcChannelOptions() {
             HttpHandler = new SocketsHttpHandler() {
                 SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
-                    ClientCertificates = [cert],
+                    ClientCertificates = [Program.ServerCertificate.Current],
                     RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => {
                         if (certificate == null)
                             return false;
 
                         var clientThumbprint = certificate.GetCertHashString(HashAlgorithmName.SHA256);
 
-                        if (allowedClients != null && !allowedClients.Any(x => x.Equals(clientThumbprint, StringComparison.OrdinalIgnoreCase))) {
+                        if (!allowedClients.Any(x => x.Equals(clientThumbprint, StringComparison.OrdinalIgnoreCase))) {
                             Logger.LogWarning($"Tried to connect to remote server, but server thumbprint {clientThumbprint} is not allowed");
                             return false;
                         }

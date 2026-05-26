@@ -95,25 +95,6 @@ namespace RTSharp.Core.Services.Daemon
                                 if (cert == null)
                                     return false;
 
-                                if (server.VerifyNative ?? true) {
-                                    if (policyErrors != System.Net.Security.SslPolicyErrors.None) {
-                                        Dispatcher.UIThread.InvokeAsync(async () => {
-                                            var wnd = MessageBoxManager.GetMessageBoxStandard(
-                                            title: "RT#",
-                                            text: "Certificate " + cert.GetCertHashString() + " is untrusted (" + policyErrors + ")",
-                                            @enum: ButtonEnum.Ok,
-                                            icon: Icon.Error,
-                                            windowStartupLocation: WindowStartupLocation.CenterScreen);
-
-                                            await wnd.ShowWindowAsync();
-                                        }).GetAwaiter().GetResult();
-
-                                        return false;
-                                    }
-
-                                    return true;
-                                }
-
                                 var thumbprint = server.TrustedThumbprint;
 
                                 if (thumbprint?.Equals(cert.GetCertHashString(HashAlgorithmName.SHA256), StringComparison.OrdinalIgnoreCase) != true) {
@@ -132,7 +113,7 @@ It is also possible that a host key has just been changed.
 ```
 
 " : "") +
-    @$"Do you trust the following server certificate? {(policyErrors == System.Net.Security.SslPolicyErrors.None ? "(trusted by system)" : "")}
+    @$"Do you trust the following server certificate?
 
 ```
 {cert.ToString(true)}

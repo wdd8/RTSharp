@@ -355,7 +355,6 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             try {
                 var stream = ServerClient.ScriptsStatus(new Empty(), cancellationToken: cancellationToken);
                 await foreach (var state in stream.ResponseStream.ReadAllAsync(cancellationToken: cancellationToken)) {
-                    Log.Logger.Information($"Received script session update: {state.UpdateCase}: full? {state.FullUpdate?.Sessions.Count} delta? {state.DeltaUpdate?.SessionId?.ToBase64()} {state.DeltaUpdate?.State?.Id?.ToBase64()} {state.DeltaUpdate?.State?.State}");
                     await channel.Writer.WriteAsync(MapScriptSessionUpdate(state), cancellationToken);
                 }
             } finally {

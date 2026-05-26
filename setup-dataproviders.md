@@ -14,7 +14,6 @@ Next, you will need to add configuration of `RTSharp.Daemon` instances. `config.
 * `Host` is a domain or an IP address
 * `DaemonPort` is a port of `RTSharp.Daemon` service which will be set-up later
 * `TrustedThumbprint` is a thumbprint of `RTSharp.Daemon` service certificate which will be set-up later
-* `VerifyNative` can be used if you have a possibility to get a certificate which is trusted by the system natively, such as letsencrypt certificate
 
 Example:
 
@@ -24,14 +23,12 @@ Example:
     "server1": {
       "Host": "myserver1.local",
       "DaemonPort": 1234,
-      "TrustedThumbprint": "BAFF479F32FEC5E5E9750EEE7D8567C1C0715CD31FDBF7DDBF6D0789D0AB0D4E",
-      "VerifyNative": false
+      "TrustedThumbprint": "BAFF479F32FEC5E5E9750EEE7D8567C1C0715CD31FDBF7DDBF6D0789D0AB0D4E"
     },
     "server2": {
       "Host": "myserver2.local",
       "DaemonPort": 4321,
-      "TrustedThumbprint": "BAB5A581A07261D605C6276A972B3D354397A5ECD403778493A9A0FC7023117B",
-      "VerifyNative": false
+      "TrustedThumbprint": "BAB5A581A07261D605C6276A972B3D354397A5ECD403778493A9A0FC7023117B"
     }
   }
 <...>
