@@ -39,12 +39,12 @@ namespace RTSharp.ViewModels
             try {
                 await Core.Servers.Value[Server.ServerId].Ping(default);
 
-                var msgBox = MessageBoxManager.GetMessageBoxStandard("RT#", "Connection successful", ButtonEnum.Ok, Icon.Success);
+                var msgBox = MessageBoxManager.GetMessageBoxStandard(title: "RT#", text: "Connection successful", @enum: ButtonEnum.Ok, icon: Icon.Success);
                 await msgBox.ShowAsync();
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Ping to daemon has failed");
 
-                var msgBox = MessageBoxManager.GetMessageBoxStandard("RT#", "Connection failed", ButtonEnum.Ok, Icon.Error);
+                var msgBox = MessageBoxManager.GetMessageBoxStandard(title: "RT#", text: "Connection failed", @enum: ButtonEnum.Ok, icon: Icon.Error);
                 await msgBox.ShowAsync();
             }
         }

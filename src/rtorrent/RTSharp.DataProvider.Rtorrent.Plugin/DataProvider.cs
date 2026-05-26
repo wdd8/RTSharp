@@ -203,7 +203,12 @@ public class DataProvider : IDataProvider
 
         if (existsCount == reply.Count) {
             // All exist
-            var msgbox = await MessageBoxManager.GetMessageBoxStandard("RT# - rtorrent", "All of the file names exist in destination directory, do you want to proceed without moving the files?", ButtonEnum.YesNo, Icon.Info, WindowStartupLocation.CenterOwner).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+            var msgbox = await MessageBoxManager.GetMessageBoxStandard(
+                title: "RT# - rtorrent",
+                text: "All of the file names exist in destination directory, do you want to proceed without moving the files?",
+                @enum: ButtonEnum.YesNo,
+                icon: Icon.Info,
+                windowStartupLocation: WindowStartupLocation.CenterOwner).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
 
             if (msgbox == ButtonResult.Yes)
                 move = false;

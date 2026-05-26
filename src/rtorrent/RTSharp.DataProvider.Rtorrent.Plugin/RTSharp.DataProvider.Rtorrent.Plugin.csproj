@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <EnableDynamicLoading>true</EnableDynamicLoading>
@@ -32,6 +32,7 @@
         <PackageReference Include="Optris.Icons.Avalonia.FontAwesome7" Version="12.0.6" />
     </ItemGroup>
     <ItemGroup>
+        <ProjectReference Include="..\..\MessageBox.Avalonia\MsBox.Avalonia\MsBox.Avalonia.csproj" />
         <ProjectReference Include="..\..\ProDataGrid\src\Avalonia.Controls.DataGrid\Avalonia.Controls.DataGrid.csproj" />
         <ProjectReference Include="..\..\RTSharp.Daemon.Protocols\RTSharp.Daemon.Protocols.csproj" />
         <ProjectReference Include="..\..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj">
