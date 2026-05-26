@@ -24,13 +24,13 @@ Example:
     "server1": {
       "Host": "myserver1.local",
       "DaemonPort": 1234,
-      "TrustedThumbprint": "8645416854AC681681F6854l8534185E68541A54",
+      "TrustedThumbprint": "BAFF479F32FEC5E5E9750EEE7D8567C1C0715CD31FDBF7DDBF6D0789D0AB0D4E",
       "VerifyNative": false
     },
     "server2": {
       "Host": "myserver2.local",
       "DaemonPort": 4321,
-      "TrustedThumbprint": "486548641AC683541685l4685F68541685E6854C",
+      "TrustedThumbprint": "BAB5A581A07261D605C6276A972B3D354397A5ECD403778493A9A0FC7023117B",
       "VerifyNative": false
     }
   }
