@@ -38,8 +38,12 @@
     >
         <DataGrid.Resources>
             <DataTemplate x:Key="FileNameTemplate" x:DataType="models:File">
-              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+              <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <Image Source="{Binding IconTask^}"
+                       IsVisible="{Binding !!IconTask^}"
+                       Width="16" Height="16"
+                       VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
               </StackPanel>
             </DataTemplate>
             <DataTemplate x:Key="FileSizeTemplate" x:DataType="dgh:HierarchicalNode">
@@ -56,6 +60,10 @@
             <ContextMenu>
                 <MenuItem Header="_Mediainfo"
                           Command="{Binding MediaInfoCommand}"
+                          CommandParameter="{Binding #MainGrid.SelectedItems}"
+                        />
+                <MenuItem Header="_Preview with mpv"
+                          Command="{Binding PreviewCommand}"
                           CommandParameter="{Binding #MainGrid.SelectedItems}"
                         />
             </ContextMenu>

@@ -2,19 +2,19 @@ using Avalonia.Controls;
 using Avalonia.Controls.DataGridHierarchical;
 using Avalonia.Controls.DataGridSelection;
 using Avalonia.Data.Core;
-using Avalonia.Markup.Xaml.MarkupExtensions.CompiledBindings;
 using Avalonia.Media;
-using Avalonia.Styling;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using DynamicData;
 
+using Microsoft.Extensions.DependencyInjection;
+
 using RTSharp.Core;
+using RTSharp.Core.Services;
 using RTSharp.Models;
 using RTSharp.Shared.Abstractions;
-using RTSharp.Shared.Controls.DataGridFilters;
 
 using Serilog;
 
@@ -93,7 +93,7 @@ public partial class TorrentFilesViewModel : ObservableObject
 
     [ObservableProperty]
     public partial Models.Torrent? Torrent { get; set; }
-    public Action<string> ShowTextPreviewWindow { get; set; }
+    public Action<string> ShowTextPreviewWindow { get; set; } = null!; // view set
 
     private static DataGridBindingDefinition CreateNodeBinding<TValue>(string name, Func<Models.File, TValue> getter)
     {
@@ -173,6 +173,20 @@ public partial class TorrentFilesViewModel : ObservableObject
     }
 
     public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-file");
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    public async Task Preview(SelectedItemsView In)
+    {
+        var file = In.Cast<Models.File>().FirstOrDefault(x => !x.IsDirectory && x.Path != "./");
+
+        if (file != null && Torrent != null) {
+            var remotePath = file.GetRemotePath(Torrent.RemotePath, Torrent.Name, MultiFile);
+
+            using var scope = Core.ServiceProvider.CreateScope();
+            var preview = scope.ServiceProvider.GetRequiredService<MediaPreviewService>();
+            await preview.OpenPreview(Torrent, remotePath, file.Size);
+        }
+    }
 
     public bool CanExecuteMediaInfo() => true;
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteMediaInfo))]

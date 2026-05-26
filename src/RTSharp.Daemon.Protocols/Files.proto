@@ -1,4 +1,4 @@
-﻿syntax = "proto3";
+syntax = "proto3";
 
 option csharp_namespace = "RTSharp.Daemon.Protocols";
 
@@ -84,6 +84,8 @@ message SaveFilesFromRemoteInput {
 
 message SendFilesInput {
     repeated string Paths = 1;
+    uint64 StartByte = 2;
+    optional uint64 EndByte = 3;
 }
 
 message FileBuffer {

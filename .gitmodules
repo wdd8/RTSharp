@@ -5,3 +5,6 @@
 	path = src/ProDataGrid
 	url = git@github.com:TETYYS/ProDataGrid.git
 	branch = workingBranch
+[submodule "src/MessageBox.Avalonia"]
+	path = src/MessageBox.Avalonia
+	url = git@github.com:TETYYS/MessageBox.Avalonia.git

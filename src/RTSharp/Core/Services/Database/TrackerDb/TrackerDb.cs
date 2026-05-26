@@ -1,18 +1,13 @@
-﻿using System;
 using Dapper;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using FluentMigrator.Runner;
 using FluentMigrator.Runner.Initialization;
 using Microsoft.Data.Sqlite;
-using NetTools;
 using RTSharp.Core.Services.Cache.TrackerDb.Migrations;
-using RTSharp.Shared.Utils;
-using SQLitePCL;
 using System.Collections.Generic;
 
-namespace RTSharp.Core.Services.Cache.TrackerDb
+namespace RTSharp.Core.Services.Database.TrackerDb
 {
     public class TrackerDb
     {

@@ -8,19 +8,16 @@ using Serilog;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using RTSharp.Core.Services.Cache.Images;
-using RTSharp.Core.Services.Cache.TrackerDb;
 using System.Threading.Channels;
 using RTSharp.Shared.Utils;
 using RTSharp.Core;
-using Nager.PublicSuffix;
-using Nager.PublicSuffix.RuleProviders;
-using Nager.PublicSuffix.RuleProviders.CacheProviders;
+using RTSharp.Core.Services.Database.TrackerDb;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
-        private Channel<(Models.Torrent, IList<Tracker>)> TrackersChanges;
+        private Channel<(Models.Torrent, IList<Tracker>)>? TrackersChanges;
 
         private async Task TrackersTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
@@ -65,6 +62,10 @@ namespace RTSharp.ViewModels.TorrentListing
         private async Task TrackersModelUpdates()
         {
             Models.Torrent? lastFetchedFor = null;
+
+            if (TrackersChanges == null)
+                throw new NullReferenceException(nameof(TrackersChanges));
+
             try {
                 TrackersViewModel.Trackers.Clear();
 
@@ -133,7 +134,7 @@ namespace RTSharp.ViewModels.TorrentListing
                                     System.IO.Stream? favicon = null;
                                     if (!string.IsNullOrEmpty(UriUtils.GetDomainForTracker(tracker.Uri))) {
                                         var domainInfo = domainParser.Parse(UriUtils.GetDomainForTracker(tracker.Uri));
-                                        if (domainInfo != null) {
+                                        if (domainInfo?.RegistrableDomain != null) {
                                             favicon = await favicons.GetFavicon(domainInfo.RegistrableDomain);
                                         }
                                     }
@@ -182,7 +183,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         return;
                     }
 
-                    TrackersChanges.Writer.TryWrite((current, trackers));
+                    TrackersChanges!.Writer.TryWrite((current, trackers));
 
                     try {
                         await delayTask;
@@ -192,7 +193,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 Log.Logger.Fatal(ex, "GetTrackersChanges task has died.");
                 throw;
             } finally {
-                TrackersChanges.Writer.Complete();
+                TrackersChanges!.Writer.Complete();
             }
         }
     }

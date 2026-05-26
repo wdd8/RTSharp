@@ -1,4 +1,5 @@
-﻿using Avalonia.Threading;
+using Avalonia.Controls;
+using Avalonia.Threading;
 
 using Ben.Collections.Specialized;
 
@@ -56,15 +57,17 @@ public static class Mapper
 
     public static Shared.Abstractions.Tracker MapFromProto(RTSharp.Daemon.Protocols.DataProvider.TorrentTracker In)
     {
-        var ret = new Shared.Abstractions.Tracker();
+        var ret = new Shared.Abstractions.Tracker {
+            ID = In.Uri,
+            Uri = In.Uri,
+            StatusMsg = ""
+        };
         UpdateTracker(ret, In);
         return ret;
     }
 
     public static void UpdateTracker(Shared.Abstractions.Tracker Bottom, RTSharp.Daemon.Protocols.DataProvider.TorrentTracker Top)
     {
-        Bottom.ID = Top.Uri;
-        Bottom.Uri = Top.Uri;
         Bottom.Status = MapFromProto(Top.Status);
         Bottom.Seeders = Top.Seeders;
         Bottom.Peers = Top.Peers;
@@ -92,7 +95,7 @@ public static class Mapper
                 DLSpeed = In.DLSpeed,
                 UPSpeed = In.UPSpeed,
                 ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
-                Labels = In.Labels.Select(StringCache.Intern).ToHashSet(),
+                Labels = [.. In.Labels.Select(x => StringCache.Intern(x)!)],
                 Peers = (In.PeersConnected, In.PeersTotal),
                 Seeders = (In.SeedersConnected, In.SeedersTotal),
                 Priority = MapFromProto(In.Priority),
@@ -125,7 +128,7 @@ public static class Mapper
             Existing.DLSpeed = In.DLSpeed;
             Existing.UPSpeed = In.UPSpeed;
             Existing.ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan();
-            Existing.Labels = In.Labels.Select(StringCache.Intern).ToHashSet();
+            Existing.Labels = [.. In.Labels.Select(x => StringCache.Intern(x)!)];
             Existing.Peers = (In.PeersConnected, In.PeersTotal);
             Existing.Seeders = (In.SeedersConnected, In.SeedersTotal);
             Existing.Priority = MapFromProto(In.Priority);
@@ -148,7 +151,7 @@ public static class Mapper
             Existing.WantedSize = In.WantedSize;
             Existing.Uploaded = In.Uploaded;
             Existing.UPSpeed = In.UPSpeed;
-            Existing.Labels = In.Labels.Select(StringCache.Intern).ToHashSet();
+            Existing.Labels = [.. In.Labels.Select(x => StringCache.Intern(x)!)];
             Existing.Peers = (In.PeersConnected, In.PeersTotal);
             Existing.Seeders = (Existing.Seeders.Connected, In.SeedersTotal);
             Existing.Priority = MapFromProto(In.Priority);
@@ -180,7 +183,7 @@ public static class Mapper
             DLSpeed = In.DLSpeed,
             UPSpeed = In.UPSpeed,
             ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
-            Labels = In.Labels.Select(StringCache.Intern).ToHashSet(),
+            Labels = In.Labels.Select(x => StringCache.Intern(x)!).ToHashSet(),
             Peers = (In.PeersConnected, In.PeersTotal),
             Seeders = (In.SeedersConnected, In.SeedersTotal),
             Priority = MapFromProto(In.Priority),
@@ -191,7 +194,7 @@ public static class Mapper
             AddedOnDate = Torrent.AddedOnDate,
             TrackerSingle = In.PrimaryTracker != null ? In.PrimaryTracker.Uri : null,
             StatusMessage = StringCache.Intern(In.StatusMessage),
-            Comment = StringCache.Intern(Torrent.Comment),
+            Comment = StringCache.Intern(Torrent.Comment ?? "")!,
             RemotePath = StringCache.Intern(In.RemotePath),
             MagnetDummy = In.MagnetDummy
         };
@@ -250,7 +253,7 @@ public static class Mapper
             DLSpeed = Torrent.DLSpeed,
             UPSpeed = In.UPSpeed,
             ETA = Torrent.ETA,
-            Labels = In.Labels.Select(StringCache.Intern).ToHashSet(),
+            Labels = [.. In.Labels.Select(x => StringCache.Intern(x))],
             Peers = (In.PeersConnected, In.PeersTotal),
             Seeders = (Torrent.Seeders.Connected, In.SeedersTotal),
             Priority = MapFromProto(In.Priority),
@@ -261,7 +264,7 @@ public static class Mapper
             AddedOnDate = Torrent.AddedOnDate,
             TrackerSingle = In.PrimaryTracker != null ? StringCache.Intern(In.PrimaryTracker.Uri) : null,
             StatusMessage = StringCache.Intern(In.StatusMessage),
-            Comment = StringCache.Intern(Torrent.Comment),
+            Comment = StringCache.Intern(Torrent.Comment ?? ""),
             RemotePath = StringCache.Intern(In.RemotePath),
             MagnetDummy = Torrent.MagnetDummy
         };

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
@@ -96,15 +96,15 @@ namespace RTSharp.ViewModels
 
         public bool ForceStartTorrentOnAdd => SelectedProvider?.Instance.Capabilities.ForceStartTorrentOnAdd != null;
 
-        public Action CancelWindow { get; set; }
+        public Action CancelWindow { get; set; } = null!; // view set
 
-        public Func<string?, Task<IEnumerable<IStorageFile>>> OpenLocalFileDialog { get; set; }
+        public Func<string?, Task<IEnumerable<IStorageFile>>> OpenLocalFileDialog { get; set; } = null!; // view set
 
-        public Func<string?, Task<string?>> SelectRemoteDirectoryDialog { get; set; }
+        public Func<string?, Task<string?>> SelectRemoteDirectoryDialog { get; set; } = null!; // view set
 
-        public Func<Task> PreviewClipboard { get; set; }
+        public Func<Task> PreviewClipboard { get; set; } = null!; // view set
 
-        public Func<Task<string?>> GetClipboard { get; set; }
+        public Func<Task<string?>> GetClipboard { get; set; } = null!; // view set
 
         [RelayCommand]
         public async Task BrowseRemoteDirectoryClick()
@@ -143,7 +143,6 @@ namespace RTSharp.ViewModels
         public async Task AddClick()
         {
             var input = new Core.TorrentAdd.TorrentAddInput();
-            IClipboard? clipboardObj;
             IList<string> sources;
 
             if (SelectedProvider == null)

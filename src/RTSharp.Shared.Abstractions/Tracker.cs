@@ -1,4 +1,4 @@
-﻿namespace RTSharp.Shared.Abstractions
+namespace RTSharp.Shared.Abstractions
 {
     public class Tracker
     {
@@ -15,12 +15,12 @@
         /// <summary>
         /// Tracker ID internal to DataProvider
         /// </summary>
-        public object ID { get; set; } 
+        public required object ID { get; set; } 
 
         /// <summary>
         /// Tracker Uri
         /// </summary>
-        public string Uri { get; set; }
+        public required string Uri { get; set; }
 
         /// <summary>
         /// Tracker status
@@ -61,6 +61,6 @@
         /// <summary>
         /// Tracker status message
         /// </summary>
-        public string StatusMsg { get; set; }
+        public required string StatusMsg { get; set; }
     }
 }

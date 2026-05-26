@@ -1,4 +1,4 @@
-﻿using RTSharp.Shared.Abstractions.DataProvider;
+using RTSharp.Shared.Abstractions.DataProvider;
 
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
@@ -290,9 +290,9 @@ public class HashEqualityComparer : IEqualityComparer<byte[]>
 {
     public static readonly HashEqualityComparer Instance = new();
 
-    public bool Equals(byte[] x, byte[] y)
+    public bool Equals(byte[]? x, byte[]? y)
     {
-        return x.SequenceEqual(y);
+        return x?.SequenceEqual(y) == true;
     }
 
     public int GetHashCode(byte[] obj)
@@ -314,12 +314,12 @@ public class HashEqualityComparer : IEqualityComparer<byte[]>
 
 public unsafe class TorrentEqualityComparer : IEqualityComparer<Torrent>
 {
-    public bool Equals(Torrent x, Torrent y)
+    public bool Equals(Torrent? x, Torrent? y)
     {
-        return x.Hash.SequenceEqual(y.Hash);
+        return x != null && y != null && x.Hash.SequenceEqual(y.Hash);
     }
 
-    public unsafe int GetHashCode(Torrent obj)
+    public int GetHashCode(Torrent obj)
     {
         if (obj.Hash.Length < 4) {
             switch (obj.Hash.Length) {

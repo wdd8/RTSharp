@@ -1,10 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
+
+using Avalonia.Media.Imaging;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using RTSharp.Core.Services;
 using RTSharp.Core.Services.Cache.TorrentFileCache;
 using RTSharp.Shared.Utils;
 using static RTSharp.Shared.Abstractions.File;
@@ -16,12 +20,12 @@ namespace RTSharp.Models
         /// <summary>
         /// File path
         /// </summary>
-        public string Path { get; set; }
+        public required string Path { get; set; }
 
         /// <summary>
         /// File name
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
 
         /// <summary>
         /// Size in bytes
@@ -63,6 +67,8 @@ namespace RTSharp.Models
         [ObservableProperty]
         public partial bool IsExpanded { get; set; }
         public bool IsDirectory { get; set; }
+
+        public Task<Bitmap?> IconTask => FileIconService.GetIconAsync(Name, IsDirectory);
 
         public ObservableCollection<File> Children { get; set; } = new();
 
@@ -158,32 +164,33 @@ namespace RTSharp.Models
         {
             File map(Shared.Abstractions.File In)
             {
-                var ret = new File();
-                ret.Path = In.Path;
-                ret.Size = In.Size;
-                ret.DownloadedPieces = In.DownloadedPieces;
-                ret.Done = In.Done;
-                ret.Downloaded = In.Downloaded;
+                var ret = new File {
+                    Path = In.Path,
+                    Size = In.Size,
+                    DownloadedPieces = In.DownloadedPieces,
+                    Done = In.Done,
+                    Downloaded = In.Downloaded,
 
-                ret.Priority = In.Priority switch {
-                    PRIORITY.DONT_DOWNLOAD => "Don't download",
-                    PRIORITY.NORMAL => "Normal",
-                    PRIORITY.HIGH => "High",
-                    PRIORITY.NA => "N/A",
-                    _ => throw new ArgumentOutOfRangeException()
+                    Priority = In.Priority switch {
+                        PRIORITY.DONT_DOWNLOAD => "Don't download",
+                        PRIORITY.NORMAL => "Normal",
+                        PRIORITY.HIGH => "High",
+                        PRIORITY.NA => "N/A",
+                        _ => throw new ArgumentOutOfRangeException()
+                    },
+
+                    PriorityInternal = In.Priority,
+
+                    DownloadStrategy = In.DownloadStrategy switch {
+                        DOWNLOAD_STRATEGY.NORMAL => "Normal",
+                        DOWNLOAD_STRATEGY.PRIORITIZE_FIRST => "Prioritize first",
+                        DOWNLOAD_STRATEGY.PRIORITIZE_LAST => "Prioritize last",
+                        DOWNLOAD_STRATEGY.NA => "N/A",
+                        _ => throw new ArgumentOutOfRangeException()
+                    },
+
+                    DownloadStrategyInternal = In.DownloadStrategy
                 };
-
-                ret.PriorityInternal = In.Priority;
-
-                ret.DownloadStrategy = In.DownloadStrategy switch {
-                    DOWNLOAD_STRATEGY.NORMAL => "Normal",
-                    DOWNLOAD_STRATEGY.PRIORITIZE_FIRST => "Prioritize first",
-                    DOWNLOAD_STRATEGY.PRIORITIZE_LAST => "Prioritize last",
-                    DOWNLOAD_STRATEGY.NA => "N/A",
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-
-                ret.DownloadStrategyInternal = In.DownloadStrategy;
 
                 return ret;
             }
@@ -195,17 +202,18 @@ namespace RTSharp.Models
         {
             File map(CachedTorrentPath In)
             {
-                var ret = new File();
-                ret.Path = In.Path;
-                ret.Size = In.Size;
-                ret.DownloadedPieces = FullyDownloaded && torrent.PieceSize.HasValue ? (ulong)Math.Ceiling((double)In.Size / torrent.PieceSize.Value) : 0;
-                ret.Done = FullyDownloaded ? 100 : 0;
-                ret.Downloaded = FullyDownloaded ? In.Size : 0;
-                ret.Priority = "N/A";
-                ret.PriorityInternal = PRIORITY.NA;
+                var ret = new File {
+                    Path = In.Path,
+                    Size = In.Size,
+                    DownloadedPieces = FullyDownloaded && torrent.PieceSize.HasValue ? (ulong)Math.Ceiling((double)In.Size / torrent.PieceSize.Value) : 0,
+                    Done = FullyDownloaded ? 100 : 0,
+                    Downloaded = FullyDownloaded ? In.Size : 0,
+                    Priority = "N/A",
+                    PriorityInternal = PRIORITY.NA,
 
-                ret.DownloadStrategy = "N/A";
-                ret.DownloadStrategyInternal = DOWNLOAD_STRATEGY.NA;
+                    DownloadStrategy = "N/A",
+                    DownloadStrategyInternal = DOWNLOAD_STRATEGY.NA
+                };
 
                 return ret;
             }

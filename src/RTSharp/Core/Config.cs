@@ -37,7 +37,7 @@ public class Config
 
             public TimeSpan SearchAsYouGoDelay { get; set; }
 
-            public Dictionary<string, string> PeerOriginReplacements { get; set; }
+            public Dictionary<string, string> PeerOriginReplacements { get; set; } = new();
         }
 
         public class Caching
@@ -51,9 +51,9 @@ public class Config
 
         public class UIState
         {
-            public string TorrentGridState { get; set; }
+            public string? TorrentGridState { get; set; }
 
-            public string DockState { get; set; }
+            public string? DockState { get; set; }
 
             public int? LastPosX { get; set; }
 
@@ -66,7 +66,7 @@ public class Config
 
         public class Server
         {
-            public string Host { get; set; }
+            public required string Host { get; set; }
 
             public ushort DaemonPort { get; set; }
 
@@ -82,7 +82,7 @@ public class Config
                 public int RowHeight { get; set; }
             }
 
-            public TorrentListingConfig TorrentListing { get; set; }
+            public required TorrentListingConfig TorrentListing { get; set; }
         }
     }
 

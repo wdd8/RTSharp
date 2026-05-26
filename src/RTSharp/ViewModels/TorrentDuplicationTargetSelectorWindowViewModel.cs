@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using RTSharp.Models;
@@ -23,16 +23,16 @@ namespace RTSharp.ViewModels
         public partial Plugin.RTSharpDataProvider? SelectedProvider { get; set; }
 
         [ObservableProperty]
-        public partial string RemoteTargetPath { get; set; }
+        public partial string? RemoteTargetPath { get; set; }
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
         public partial bool RemoteTargetPathEnabled { get; set; }
         public Torrent SourceTorrent { get; }
 
-        public Func<string?, Task<string?>> SelectRemoteDirectoryDialog { get; set; }
+        public Func<string?, Task<string?>> SelectRemoteDirectoryDialog { get; set; } = null!; // view set
 
-        public Action<bool> CloseDialog { get; set; }
+        public Action<bool> CloseDialog { get; set; } = null!; // view set
 
         public TorrentDuplicationTargetSelectorWindowViewModel(Torrent SourceTorrent)
         {

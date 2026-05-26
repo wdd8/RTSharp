@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,13 +24,13 @@ namespace RTSharp.ViewModels.Tools
         [NotifyPropertyChangedFor(nameof(IsMultiFileEnabled))]
         [NotifyCanExecuteChangedFor(nameof(CreateTorrentClickCommand))]
         public partial string? SourcePath { get; set; }
-        public Func<Task<string?>> SelectFolderDialog { get;  set; }
+        public Func<Task<string?>> SelectFolderDialog { get;  set; } = null!; // view set
 
-        public Func<Task<string?>> SelectFileDialog { get; set; }
+        public Func<Task<string?>> SelectFileDialog { get; set; } = null!; // view set
 
-        public Action CloseWindow { get; set; }
+        public Action CloseWindow { get; set; } = null!; // view set
 
-        public Func<string, Task<string?>> SelectFileDestDialog { get; set; }
+        public Func<string, Task<string?>> SelectFileDestDialog { get; set; } = null!; // view set
 
         private bool isMultiFileCheckedUserChoice;
         public bool IsMultiFileChecked {
@@ -66,7 +66,7 @@ namespace RTSharp.ViewModels.Tools
         }
 
         [ObservableProperty]
-        public partial ComboBoxItem StrPieceLength { get; set; }
+        public partial ComboBoxItem StrPieceLength { get; set; } = null!; // view set
 
         public int? PieceLength => StrPieceLength.Content switch {
             "Auto" => null,
@@ -89,16 +89,16 @@ namespace RTSharp.ViewModels.Tools
         public partial bool PrivateTorrent { get; set; }
 
         [ObservableProperty]
-        public partial string TrackerUrls { get; set; }
+        public partial string TrackerUrls { get; set; } = "";
 
         [ObservableProperty]
-        public partial string WebSeedUrls { get; set; }
+        public partial string WebSeedUrls { get; set; } = "";
 
         [ObservableProperty]
-        public partial string Comments { get; set; }
+        public partial string Comments { get; set; } = "";
 
         [ObservableProperty]
-        public partial string Source { get; set; }
+        public partial string Source { get; set; } = "";
 
         [ObservableProperty]
         public partial bool Entropy { get; set; }
@@ -107,7 +107,7 @@ namespace RTSharp.ViewModels.Tools
         public partial bool EmitCreationDate { get; set; } = true;
 
         [ObservableProperty]
-        public partial ComboBoxItem StrVersion { get; set; }
+        public partial ComboBoxItem StrVersion { get; set; } = null!; // view set
 
         public TorrentCreator.VERSION Version => StrVersion.Content switch {
             "V1" => TorrentCreator.VERSION.V1,
@@ -136,16 +136,13 @@ namespace RTSharp.ViewModels.Tools
             [ObservableProperty]
             public partial string HashExcerpt { get; set; }
 
-            public CancellationTokenSource Cts;
+            public CancellationTokenSource? Cts;
         }
 
         public ProgressInfo ProgressInfoInstance { get; } = new ProgressInfo();
 
-        TorrentCreator Creator;
-
         public TorrentCreatorWindowViewModel()
         {
-            Creator = new TorrentCreator();
         }
 
         [RelayCommand]
@@ -282,7 +279,7 @@ namespace RTSharp.ViewModels.Tools
         [RelayCommand]
         public void CancelHashingClick()
         {
-            ProgressInfoInstance.Cts.Cancel();
+            ProgressInfoInstance.Cts?.Cancel();
         }
     }
 }

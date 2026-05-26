@@ -24,19 +24,19 @@ namespace RTSharp.ViewModels.TorrentListing;
 
 public partial class TorrentListingViewModel
 {
-    public Func<(Window Owner, ulong Size, int Count), Task<bool>> RecheckTorrentsConfirmationDialog { get; set; }
+    public Func<(Window Owner, ulong Size, int Count), Task<bool>> RecheckTorrentsConfirmationDialog { get; set; } = null!; // view set
 
-    public Func<(Window Owner, string[] CurrentFiles, string[] FutureFiles, string MoveWarning), Task<bool>> MoveDownloadDirectoryConfirmationDialog { get; set; }
+    public Func<(Window Owner, string[] CurrentFiles, string[] FutureFiles, string MoveWarning), Task<bool>> MoveDownloadDirectoryConfirmationDialog { get; set; } = null!; // view set
 
-    public Func<(Window Owner, string Title), Task<string?>> SelectDirectoryDialog { get; set; }
+    public Func<(Window Owner, string Title), Task<string?>> SelectDirectoryDialog { get; set; } = null!; // view set
 
-    public Func<(Window Owner, string Title, Plugin.RTSharpDataProvider DataProvider, string? StartingDir), Task<string?>> SelectRemoteDirectoryDialog { get; set; }
+    public Func<(Window Owner, string Title, Plugin.RTSharpDataProvider DataProvider, string? StartingDir), Task<string?>> SelectRemoteDirectoryDialog { get; set; } = null!; // view set
 
-    public Func<(Window Owner, ulong Size, int Count, bool AndData), Task<bool>> DeleteTorrentsConfirmationDialog { get; set; }
+    public Func<(Window Owner, ulong Size, int Count, bool AndData), Task<bool>> DeleteTorrentsConfirmationDialog { get; set; } = null!; // view set
 
-    public Action ShowAddLabelDialog { get; set; }
+    public Action ShowAddLabelDialog { get; set; } = null!; // view set
 
-    public Action CloseAddLabelDialog { get; set; }
+    public Action CloseAddLabelDialog { get; set; } = null!; // view set
 
     private static async Task ActionForMulti(IReadOnlyList<Torrent> In, string ActionName, Func<RTSharpDataProvider, IList<Torrent>, Task<TorrentStatuses>> Fx)
     {
@@ -317,7 +317,7 @@ public partial class TorrentListingViewModel
         if (String.IsNullOrEmpty(result))
             return;
 
-        var tasks = In.GroupBy(x => x.DataOwner).Select(x => (Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance), x.Key.Instance.GetDotTorrents([.. x.Select(i => i.ToPluginModel())])));
+        var tasks = In.GroupBy(x => x.DataOwner).Select(x => (Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance)!, x.Key.Instance.GetDotTorrents([.. x.Select(i => i.ToPluginModel())])));
 
         await Task.WhenAll(tasks.Select((data) => {
             return data.Item1.Queue.RunAction(ActionQueueAction.New("Download .torrent files", async (action) => {
@@ -378,11 +378,6 @@ public partial class TorrentListingViewModel
     [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanExecuteDuplicateTorrentTo))]
     private async Task DuplicateTorrentTo(IReadOnlyList<Torrent> In)
     {
-        Log.Logger.Information("Torrents: ");
-        foreach (var t in In) {
-            Log.Logger.Information("t: " + Convert.ToHexString(t.Hash));
-        }
-
         var dests = new InfoHashDictionary<(RTSharpDataProvider Provider, string Directory)>();
 
         foreach (var torrent in In) {
@@ -393,6 +388,10 @@ public partial class TorrentListingViewModel
             var result = await wnd.ShowDialog<bool>(App.MainWindow);
             if (!result)
                 return;
+
+            if (wnd.ViewModel.SelectedProvider == null || wnd.ViewModel.RemoteTargetPath == null) {
+                return;
+            }
 
             dests[torrent.Hash] = (wnd.ViewModel.SelectedProvider, wnd.ViewModel.RemoteTargetPath);
         }
@@ -428,8 +427,7 @@ public partial class TorrentListingViewModel
                 )).ToArray());
             });
 
-            ActionQueueAction<InfoHashDictionary<bool>> transferFiles = null;
-            transferFiles = addTorrents.CreateChild<InfoHashDictionary<bool>>("Transfer files", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
+            var transferFiles = addTorrents.CreateChild<InfoHashDictionary<bool>>("Transfer files", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
                 var res = parent.GetResult()!;
 
                 await Task.Delay(5000); // TODO: AddTorrents should ensure torrent exists
@@ -449,7 +447,7 @@ public partial class TorrentListingViewModel
                     var sourceTorrent = In.First(x => x.Hash.SequenceEqual(hash));
 
                     if (sourceTorrent.DataOwner.DataProviderInstanceConfig!.ServerId != targetDataProvider.DataProviderInstanceConfig!.ServerId) {
-                        await getTorrentFileList.RunningTask;
+                        await getTorrentFileList.RunningTask!;
                         var fileList = getTorrentFileList.GetResult()!.SelectMany(x => x).ToInfoHashDictionary(x => x.Key, x => x.Value);
                         var files = fileList[sourceTorrent.Hash];
                         var dest = dests[sourceTorrent.Hash].Directory;

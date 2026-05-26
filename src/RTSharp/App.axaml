@@ -7,6 +7,8 @@
              xmlns:vm="clr-namespace:RTSharp.ViewModels"
              xmlns:dock="clr-namespace:Dock.Model.Core;assembly=Dock.Model"
              xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+             xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
+             xmlns:av="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
              x:DataType="vm:AppViewModel">
     <Application.DataTemplates>
         <local:ViewLocator />
@@ -22,6 +24,7 @@
         <DockFluentTheme />
         <dialogHostAvalonia:DialogHostStyles />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.v2.xaml" />
+        <StyleInclude Source="avares://MsBox.Avalonia.Markdown/Controls/MarkdownView.axaml" />
 
         <Style Selector="TextBlock">
             <Setter Property="FontSize" Value="12" />

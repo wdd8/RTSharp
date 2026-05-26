@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 
 using Avalonia.Media;
@@ -24,12 +24,12 @@ namespace RTSharp.Models
         /// <summary>
         /// Peer IP:Port
         /// </summary>
-        public IPEndPoint IPPort { get; init; }
+        public required IPEndPoint IPPort { get; init; }
 
         /// <summary>
         /// Peer client
         /// </summary>
-        public string Client { get; init; }
+        public required string Client { get; init; }
 
         /// <summary>
         /// Peer flags

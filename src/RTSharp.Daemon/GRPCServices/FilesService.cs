@@ -194,13 +194,19 @@ namespace RTSharp.Daemon.GRPCServices
                 }
             });
 
+            ulong? bytesToRead = Req.HasEndByte ? Req.EndByte - Req.StartByte : null;
+
             try {
                 foreach (var (path, file) in streams) {
                     Logger.LogInformation($"Sending file {path}...");
+
+                    if (Req.StartByte > 0)
+                        file.Seek((long)Req.StartByte, SeekOrigin.Begin);
+
                     await Res.WriteAsync(new FileBuffer {
                         Path = path
                     });
-                    await FileTransferService.SendFile(path, file, Res);
+                    await FileTransferService.SendFile(path, file, Res, bytesToRead);
                 }
                 Logger.LogInformation($"File send done");
                 await Res.WriteAsync(new FileBuffer {

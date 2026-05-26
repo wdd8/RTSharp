@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace RTSharp.Shared.Abstractions
 {
@@ -48,7 +48,7 @@ namespace RTSharp.Shared.Abstractions
         /// <summary>
         /// File path
         /// </summary>
-        public string Path { get; set; }
+        public required string Path { get; set; }
 
         /// <summary>
         /// Size in bytes

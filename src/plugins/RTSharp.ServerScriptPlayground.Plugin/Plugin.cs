@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -39,13 +40,15 @@ public class Plugin : BasePlugin
     {
         Progress(("Initializing...", 0f));
 
-        RootMenuItem = Host.RegisterRootMenuItem(new MenuItem() {
-            Header = "Server scripting",
-            Command = new RelayCommand(() => {
-                var wnd = new PlaygroundWindow();
-                wnd.ViewModel = new ViewModels.PlaygroundWindowViewModel(Host, wnd);
-                wnd.Show();
-            })
+        Dispatcher.UIThread.Invoke(() => {
+            RootMenuItem = Host.RegisterRootMenuItem(new MenuItem() {
+                Header = "Server scripting",
+                Command = new RelayCommand(() => {
+                    var wnd = new PlaygroundWindow();
+                    wnd.ViewModel = new ViewModels.PlaygroundWindowViewModel(Host, wnd);
+                    wnd.Show();
+                })
+            });
         });
 
         Progress(("Done", 100f));

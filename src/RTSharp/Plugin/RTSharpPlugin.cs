@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.VisualTree;
 
 using Microsoft.Extensions.Configuration;
@@ -29,7 +29,7 @@ namespace RTSharp.Plugin;
 public class RTSharpPlugin : IPluginHost
 {
     internal PluginAssemblyLoadContext AssemblyLoadContext { get; private set; }
-    internal Assembly Assembly { get; private set; }
+    internal Assembly? Assembly { get; private set; }
     internal IPlugin Instance { get; set; }
     public PluginInstanceConfig PluginInstanceConfig { get; }
 
@@ -42,7 +42,7 @@ public class RTSharpPlugin : IPluginHost
     public IConfigurationRoot PluginConfig { get; }
     public string PluginConfigPath { get; }
 
-    private string AttachedServerId { get; set; }
+    private string? AttachedServerId { get; set; }
 
     /// <inheritdoc />
     public Shared.Abstractions.Version Version => Global.Consts.Version;
@@ -56,7 +56,9 @@ public class RTSharpPlugin : IPluginHost
         throw new NotImplementedException();
     }
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
     public RTSharpPlugin(PluginAssemblyLoadContext Context, Assembly Assembly, IConfigurationRoot PluginConfig, string PluginConfigPath, Guid InstanceId, string ModulePath)
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
     {
         this.Assembly = Assembly;
         this.AssemblyLoadContext = Context;
@@ -67,8 +69,6 @@ public class RTSharpPlugin : IPluginHost
         this.InstanceId = InstanceId;
         this.ModulePath = ModulePath;
     }
-
-    public IConfigurationRoot Config { get; private set; }
 
     private static object DataProviderLock = new();
 
@@ -176,7 +176,7 @@ public class RTSharpPlugin : IPluginHost
     public ILogger Logger =>
         Log.Logger
             .ForContext("PluginInstanceId", InstanceId)
-            .ForContext("PluginGuid", Instance.GUID)
+            .ForContext("PluginGuid", Instance?.GUID.ToString() ?? "?")
             .ForContext("PluginColor", PluginInstanceConfig.Color)
             .ForContext("PluginDisplayName", PluginInstanceConfig.Name);
 
@@ -186,11 +186,12 @@ public class RTSharpPlugin : IPluginHost
 
     internal async Task Unload()
     {
-        await Instance.Unload();
-        AssemblyLoadContext.Unload();
+        if (Instance != null)
+            await Instance.Unload();
+        AssemblyLoadContext!.Unload();
         Assembly = null;
-        Instance = null;
-        AssemblyLoadContext = null;
+        Instance = null!;
+        AssemblyLoadContext = null!;
         Plugins.LoadedPlugins.Remove(this);
     }
 

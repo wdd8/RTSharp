@@ -78,7 +78,7 @@ public partial class TorrentCreatorWindow : VmWindow<TorrentCreatorWindowViewMod
         return path == default ? null : HttpUtility.UrlDecode(path);
     }
 
-    public async void EvDragDrop(object? sender, DragEventArgs e)
+    public async Task EvDragDrop(object? sender, DragEventArgs e)
     {
         var files = e.DataTransfer.TryGetFiles();
         if (files?.Any() == false)

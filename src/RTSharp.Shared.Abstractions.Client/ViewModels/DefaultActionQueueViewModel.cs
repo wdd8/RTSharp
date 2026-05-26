@@ -8,7 +8,7 @@ namespace RTSharp.Shared.Abstractions.Client.ViewModels;
 
 public partial class DefaultActionQueueViewModel : ObservableObject
 {
-    public string DisplayName { get; set; }
+    public required string DisplayName { get; set; }
 
     public IImage? Icon { get; set; }
 

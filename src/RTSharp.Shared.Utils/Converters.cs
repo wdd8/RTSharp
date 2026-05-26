@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 
 namespace RTSharp.Shared.Utils
@@ -78,7 +78,8 @@ namespace RTSharp.Shared.Utils
                 "PB" => num * mult * mult * mult * mult * mult,
                 "PiB" => num * 1024 * 1024 * 1024 * 1024 * 1024,
                 "EB" => num * mult * mult * mult * mult * mult * mult,
-                "EiB" => num * 1024 * 1024 * 1024 * 1024 * 1024 * 1024
+                "EiB" => num * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
+                _ => throw new ArgumentOutOfRangeException(nameof(In))
             });
 
             if (Ret == 0 && num != 0)

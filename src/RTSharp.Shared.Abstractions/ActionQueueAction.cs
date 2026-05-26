@@ -61,7 +61,7 @@ namespace RTSharp.Shared.Abstractions
         public new async Task<T?> RunAction() => (T?)await base.RunAction();
     }
 
-    public record ProgressChangedEvArgs(ACTION_STATE State, float Percentage, string Message);
+    public record ProgressChangedEvArgs(ACTION_STATE State, float Percentage, string? Message);
 
     public class ActionQueueAction
     {
@@ -83,15 +83,11 @@ namespace RTSharp.Shared.Abstractions
 
         public float ProgressDone { get; private set; }
 
-        public string ProgressString { get; private set; }
+        public string? ProgressString { get; private set; }
 
         public event EventHandler<ProgressChangedEvArgs>? ProgressChanged;
 
         public ConcurrentBag<ActionQueueAction> ChildActions { get; } = [];
-
-        private ActionQueueAction()
-        {
-        }
 
         protected ActionQueueAction(Guid Id, string Name, RUN_MODE? RunMode, Func<ActionQueueAction, Task<object?>>? FxCreateTask, ActionQueueAction? Parent)
         {
@@ -104,7 +100,7 @@ namespace RTSharp.Shared.Abstractions
 
         public bool IsCompleted => State == ACTION_STATE.CANCELLED || State == ACTION_STATE.FAILED || State == ACTION_STATE.DONE;
 
-        public void ChangeProgress(ACTION_STATE State, float Percentage, string Message)
+        public void ChangeProgress(ACTION_STATE State, float Percentage, string? Message)
         {
             if (IsCompleted)
                 return;

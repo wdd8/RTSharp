@@ -1,8 +1,13 @@
-﻿namespace RTSharp.Core.Services.Cache.ASCache
+using System;
+
+namespace RTSharp.Core.Services.Cache.ASCache
 {
     public class CachedAS
     {
+        [Obsolete("For serialization only", true)]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         public CachedAS()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         {
         }
 

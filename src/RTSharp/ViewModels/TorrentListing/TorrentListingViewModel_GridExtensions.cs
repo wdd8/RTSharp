@@ -28,20 +28,20 @@ public partial class TorrentListingViewModel
 {
     public class DataGridStatePersistenceTokenProvider : IDataGridStatePersistenceTokenProvider
     {
-        public bool TryGetConditionalFormattingPredicateToken(ConditionalFormattingDescriptor descriptor, out string token)
+        public bool TryGetConditionalFormattingPredicateToken(ConditionalFormattingDescriptor descriptor, out string? token)
         {
             Debugger.Break();
             token = null;
             return false;
         }
-        public bool TryGetConditionalFormattingThemeToken(ConditionalFormattingDescriptor descriptor, out string token)
+        public bool TryGetConditionalFormattingThemeToken(ConditionalFormattingDescriptor descriptor, out string? token)
         {
             Debugger.Break();
             token = null;
             return false;
         }
 
-        public bool TryGetFilteringPredicateToken(FilteringDescriptor descriptor, out string token)
+        public bool TryGetFilteringPredicateToken(FilteringDescriptor descriptor, out string? token)
         {
             var columnKey = (string)descriptor.ColumnId;
             if (columnKey == nameof(Torrent.TrackerDisplayName)) {
@@ -60,7 +60,7 @@ public partial class TorrentListingViewModel
             return false;
         }
 
-        public bool TryGetFilteringValueToken(FilteringDescriptor descriptor, object value, out string token)
+        public bool TryGetFilteringValueToken(FilteringDescriptor descriptor, object value, out string? token)
         {
             var columnKey = (string)descriptor.ColumnId;
             if (value is TrackerFilterContext ctx) {
@@ -88,14 +88,14 @@ public partial class TorrentListingViewModel
             return false;
         }
 
-        public bool TryGetGroupingValueConverterToken(IValueConverter converter, out string token)
+        public bool TryGetGroupingValueConverterToken(IValueConverter converter, out string? token)
         {
             Debugger.Break();
             token = null;
             return false;
         }
 
-        public bool TryGetSortingComparerToken(SortingDescriptor descriptor, out string token)
+        public bool TryGetSortingComparerToken(SortingDescriptor descriptor, out string? token)
         {
             var columnKey = (string)descriptor.ColumnId;
 
@@ -106,20 +106,20 @@ public partial class TorrentListingViewModel
 
     public class DataGridStatePersistenceTokenResolver : IDataGridStatePersistenceTokenResolver
     {
-        public bool TryResolveConditionalFormattingPredicate(string token, out Func<ConditionalFormattingContext, bool> predicate)
+        public bool TryResolveConditionalFormattingPredicate(string token, out Func<ConditionalFormattingContext, bool>? predicate)
         {
             Debugger.Break();
             predicate = null;
             return false;
         }
-        public bool TryResolveConditionalFormattingTheme(string token, out Avalonia.Styling.ControlTheme theme)
+        public bool TryResolveConditionalFormattingTheme(string token, out Avalonia.Styling.ControlTheme? theme)
         {
             Debugger.Break();
             theme = null;
             return false;
         }
 
-        public bool TryResolveFilteringPredicate(string token, object value, List<object> values, out Func<object, bool> predicate)
+        public bool TryResolveFilteringPredicate(string token, object value, List<object> values, out Func<object, bool>? predicate)
         {
             if (token == "Filtering:TrackerDisplayName") {
                 predicate = x => values.Any(i => ((TrackerFilterContext)i!).Name == ((Torrent)x!).TrackerDisplayName);
@@ -141,7 +141,7 @@ public partial class TorrentListingViewModel
             return false;
         }
 
-        public bool TryResolveFilteringValue(string token, out object value)
+        public bool TryResolveFilteringValue(string token, out object? value)
         {
             const string TRACKER_FILTER_CONTEXT = "TrackerFilterContext:";
             const string CONNECTION_FILTER_CONTEXT = "ConnectionFilterContext:";
@@ -178,14 +178,14 @@ public partial class TorrentListingViewModel
             return false;
         }
 
-        public bool TryResolveGroupingValueConverter(string token, out IValueConverter converter)
+        public bool TryResolveGroupingValueConverter(string token, out IValueConverter? converter)
         {
             Debugger.Break();
             converter = null;
             return false;
         }
 
-        public bool TryResolveSortingComparer(string token, out IComparer comparer)
+        public bool TryResolveSortingComparer(string token, out IComparer? comparer)
         {
             comparer = null;
             return false;
@@ -307,7 +307,7 @@ public partial class TorrentListingViewModel
 
             if (existingOptions.TryGetValue(key, out var info) && !info.AccountedFor) {
                 existingOptions[key] = info with { AccountedFor = true };
-                FilterContext.Options.RemoveWhere(x => x.Display.Equals(key));
+                FilterContext.Options.RemoveWhere(x => x.Display!.Equals(key));
                 FilterContext.Options.Add(new() { Display = key, IsSelected = info.Option.IsSelected });
             } else
                 FilterContext.Options.Add(new() { Display = key, IsSelected = false });

@@ -1,4 +1,4 @@
-﻿using Avalonia.Media;
+using Avalonia.Media;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -21,7 +21,7 @@ namespace RTSharp.ViewModels.TorrentListing
         public partial IList<Shared.Abstractions.PieceState> Pieces { get; set; }
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-circle-info");
 
-        public Func<string, Task> Copy;
+        public Func<string, Task> Copy = null!; // view set
 
         [RelayCommand]
         public async Task CopyInfoHash()

@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using System;
 using System.Linq;
 using System.Threading;
@@ -40,25 +40,26 @@ namespace RTSharp.Core.Services
                 doc.LoadHtml(html);
                 var links = doc.DocumentNode.Descendants("link")
                     .Where(x => {
-                        var rel = x.GetAttributeValue("rel", null);
+                        var rel = x.GetAttributeValue<string?>("rel", null);
                         return rel == "shortcut icon" || rel == "icon" || rel == "alternate icon";
-                    }).Select(x => x.GetAttributeValue("href", null))
+                    }).Select(x => x.GetAttributeValue<string?>("href", null))
                     .Where(x => x != null)
                     .ToArray();
 
-                if (links.Any()) {
-                    var link = links.First();
+                var link = links.FirstOrDefault();
 
-                    if (!link.StartsWith("http")) {
-                        if (!link.StartsWith('/'))
-                            link = "/" + link;
-                        link = $"https://{Domain}" + link;
-                    }
+                if (link == default)
+                    return null;
 
-                    response = await HttpClient.GetAsync(link, cts.Token);
-                    if (response.IsSuccessStatusCode)
-                        return await response.Content.ReadAsStreamAsync();
+                if (!link.StartsWith("http")) {
+                    if (!link.StartsWith('/'))
+                        link = "/" + link;
+                    link = $"https://{Domain}" + link;
                 }
+
+                response = await HttpClient.GetAsync(link, cts.Token);
+                if (response.IsSuccessStatusCode)
+                    return await response.Content.ReadAsStreamAsync();
 
                 return null;
             } catch (TaskCanceledException) {

@@ -1,4 +1,4 @@
-﻿using Google.Protobuf;
+using Google.Protobuf;
 
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -78,29 +78,29 @@ namespace RTSharp.Daemon.Services
             }
         }
 
-        public async Task SendFile(string Path, FileStream file, IServerStreamWriter<FileBuffer> Stream)
+        public async Task SendFile(string Path, FileStream File, IServerStreamWriter<FileBuffer> Stream, ulong? BytesToRead = null)
         {
             Memory<byte> buffer = new byte[16384];
+            ulong bytesTotal = 0;
 
-            long bytesRead, bytesTotal = 0;
-            //var sw = Stopwatch.StartNew();
+            while (true) {
+                int toRead = buffer.Length;
+                if (BytesToRead.HasValue) {
+                    var remaining = BytesToRead.Value - bytesTotal;
+                    if (remaining == 0)
+                        break;
+                    toRead = (int)Math.Min((ulong)toRead, remaining);
+                }
 
-            //var outpBuffer = new FileBuffer();
+                var bytesRead = await File.ReadAsync(buffer[..toRead]);
+                if (bytesRead == 0)
+                    break;
 
-            Logger.LogDebug($"SendFile: {Path}, len {file.Length}");
-
-            while ((bytesRead = await file.ReadAsync(buffer)) > 0) {
-                /*var bytes = UnsafeByteOperations.UnsafeWrap(buffer[..(int)bytesRead]);
-                outpBuffer.Buffer = bytes;*/
-                //await Stream.WriteAsync(outpBuffer);
                 await Stream.WriteAsync(new FileBuffer {
-                    Buffer = ByteString.CopyFrom(buffer[..(int)bytesRead].Span)
+                    Buffer = ByteString.CopyFrom(buffer[..bytesRead].Span)
                 });
 
-                bytesTotal += bytesRead;
-                /*if (sw.Elapsed > TimeSpan.FromMilliseconds(500)) {
-                    sw.Restart();
-                }*/
+                bytesTotal += (ulong)bytesRead;
             }
         }
     }

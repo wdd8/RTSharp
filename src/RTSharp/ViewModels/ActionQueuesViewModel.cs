@@ -22,7 +22,7 @@ public partial class ActionQueuesViewModel : ObservableObject
 
     public ActionQueuesViewModel()
     {
-        ActionQueue.Connect().ObserveOn(AvaloniaSynchronizationContext.Current).Transform(x => x.Queue).Bind(out var observable).Subscribe();
+        ActionQueue.Connect().ObserveOn(AvaloniaSynchronizationContext.Current!).Transform(x => x.Queue).Bind(out var observable).Subscribe();
         QueueRenderers = observable;
     }
 }

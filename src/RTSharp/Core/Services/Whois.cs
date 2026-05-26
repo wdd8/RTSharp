@@ -1,4 +1,4 @@
-﻿using Arin.NET.Client;
+using Arin.NET.Client;
 using Arin.NET.Entities;
 
 using NetTools;
@@ -15,13 +15,7 @@ using System.Threading.Tasks;
 
 namespace RTSharp.Core.Services
 {
-    public class WhoisInfo
-    {
-        public IPAddressRange Range { get; set; }
-        public string? Country { get; set; }
-        public string? Organization { get; set; }
-        public string? Domain { get; set; }
-    }
+    public record WhoisInfo(IPAddressRange Range, string? Country, string? Organization, string? Domain);
 
     public class Whois
     {
@@ -74,12 +68,12 @@ namespace RTSharp.Core.Services
         public static async Task<WhoisInfo?> GetWhoisInfo(IPAddress In, Dictionary<string, string> DomainReplacements)
         {
             if (IsPrivate(In)) {
-                return new WhoisInfo {
-                    Country = null,
-                    Domain = null,
-                    Organization = "LAN",
-                    Range = new IPAddressRange(In)
-                };
+                return new WhoisInfo(
+                    Country: null,
+                    Domain: null,
+                    Organization: "LAN",
+                    Range: new IPAddressRange(In)
+                );
             }
 
             var cts = new CancellationTokenSource();
@@ -119,7 +113,7 @@ namespace RTSharp.Core.Services
             var domain = vcards.Select(x => x?.FirstOrDefault(i => i.Key == "email").Value).FirstOrDefault(x => x != null)?.Value?.FirstOrDefault();
             IPAddressRange range;
             string organization = "Unknown";
-            string country = vcards.Select(x => x?.FirstOrDefault(i => i.Key == "adr").Value).FirstOrDefault(x => x != null)?.Value?.Where(x => !String.IsNullOrWhiteSpace(x))?.LastOrDefault();
+            var country = vcards.Select(x => x?.FirstOrDefault(i => i.Key == "adr").Value).FirstOrDefault(x => x != null)?.Value?.Where(x => !String.IsNullOrWhiteSpace(x))?.LastOrDefault();
 
             if (!String.IsNullOrWhiteSpace(domain)) {
                 domain = domain.Split('@')[^1];
@@ -162,16 +156,15 @@ namespace RTSharp.Core.Services
                     organization = fnOrg;
                 }
             } else {
-                organization = fnOrg;
+                organization = fnOrg ?? "Unknown";
             }
 
-            return new WhoisInfo
-            {
-                Domain = String.IsNullOrWhiteSpace(domain) ? null : domain,
-                Range = range,
-                Organization = organization,
-                Country = String.IsNullOrWhiteSpace(country) ? null : country
-            };
+            return new WhoisInfo(
+                Domain: String.IsNullOrWhiteSpace(domain) ? null : domain,
+                Range: range,
+                Organization: organization,
+                Country: String.IsNullOrWhiteSpace(country) ? null : country
+            );
         }
     }
 }

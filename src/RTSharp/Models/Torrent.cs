@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -12,7 +13,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Core.Services.Cache.Images;
-using RTSharp.Core.Services.Cache.TrackerDb;
+using RTSharp.Core.Services.Database.TrackerDb;
 using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
@@ -54,7 +55,9 @@ namespace RTSharp.Models
 
             foreach (var (hash, plugin) in Plugin) {
                 if (!Domain.TryGetValue((hash, dpId), out var torrent)) {
-                    torrent = new Torrent(hash, DataProvider);
+                    torrent = new Torrent(hash, DataProvider) {
+                        Comment = ""
+                    };
                 }
 
                 if (plugin.TrackerSingle != torrent.TrackerSingle && plugin.TrackerSingle != null) {
@@ -126,8 +129,6 @@ namespace RTSharp.Models
         public byte[] Hash { get; set; }
 
         public Plugin.RTSharpDataProvider DataOwner { get; set; }
-
-        public Plugin.RTSharpPlugin Plugin { get; set; }
 
         /// <summary>
         /// Torrent name
@@ -584,7 +585,7 @@ namespace RTSharp.Models
         /// <summary>
         /// Torrent comment
         /// </summary>
-        public string? Comment { get; set; }
+        public required string Comment { get; set; }
 
         /// <summary>
         /// Remote path of torrent data

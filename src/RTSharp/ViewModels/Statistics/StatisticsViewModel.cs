@@ -1,4 +1,4 @@
-﻿using Avalonia.Threading;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -41,7 +41,7 @@ public partial class StatisticsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool SomeDontSupport { get; set; }
-    public PeriodicTimer Timer { get; set; }
+    public PeriodicTimer? Timer { get; set; }
 
     public void RunTimer()
     {

@@ -10,7 +10,7 @@ namespace RTSharp.Shared.Controls.Views;
 
 public partial class PieceProgressBar : UserControl
 {
-    private IList<PieceState> _pieces;
+    private IList<PieceState> _pieces = [];
 
     /// <summary>
     /// Defines the <see cref="Pieces"/> property.

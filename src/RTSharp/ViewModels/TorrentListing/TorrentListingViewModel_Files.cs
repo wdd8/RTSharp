@@ -17,9 +17,9 @@ namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
-        private Channel<(Models.Torrent, Models.File)> FilesChanges;
+        private Channel<(Models.Torrent, Models.File)>? FilesChanges;
 
-        private Channel<(Models.Torrent, IList<PieceState>)> PiecesChanges;
+        private Channel<(Models.Torrent, IList<PieceState>)>? PiecesChanges;
 
         private async Task FilesTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
@@ -45,6 +45,9 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             Models.Torrent? lastFetchedFor = null;
 
+            if (PiecesChanges == null)
+                throw new NullReferenceException(nameof(PiecesChanges));
+
             await foreach (var (fetchedFor, pieces) in PiecesChanges.Reader.ReadAllAsync()) {
                 GeneralInfoViewModel.Pieces = pieces;
 
@@ -54,6 +57,9 @@ namespace RTSharp.ViewModels.TorrentListing
 
         private async Task FilesModelUpdates()
         {
+            if (FilesChanges == null)
+                throw new NullReferenceException(nameof(FilesChanges));
+
             Models.Torrent? lastFetchedFor = null;
             FilesViewModel.ClearRoot();
 
@@ -87,6 +93,9 @@ namespace RTSharp.ViewModels.TorrentListing
 
         private async Task GetFilesChanges(Models.Torrent current, CancellationToken selectionChange)
         {
+            if (FilesChanges == null)
+                throw new NullReferenceException(nameof(FilesChanges));
+
             try {
                 while (!selectionChange.IsCancellationRequested) {
                     using var scope = Core.ServiceProvider.CreateScope();
@@ -142,6 +151,9 @@ namespace RTSharp.ViewModels.TorrentListing
 
         private async Task GetPiecesChanges(Models.Torrent current, CancellationToken selectionChange)
         {
+            if (PiecesChanges == null)
+                throw new NullReferenceException(nameof(PiecesChanges));
+
             try {
                 while (!selectionChange.IsCancellationRequested) {
                     if (!current.DataOwner.Instance.Capabilities.GetPieces) {

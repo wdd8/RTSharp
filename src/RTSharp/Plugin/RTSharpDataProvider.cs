@@ -28,7 +28,7 @@ namespace RTSharp.Plugin
 
         public CancellationTokenSource CurrentTorrentChangesTaskCts { get; set; } = new();
 
-        public DataProviderInstanceConfig? DataProviderInstanceConfig => PluginInstance.PluginConfig.GetSection("DataProvider").Get<DataProviderInstanceConfig?>();
+        public DataProviderInstanceConfig DataProviderInstanceConfig => PluginInstance.PluginConfig.GetSection("DataProvider").Get<DataProviderInstanceConfig?>() ?? throw new NullReferenceException($"{nameof(DataProviderInstanceConfig)} must not be null");
 
         public Notifyable<DataProviderState> State { get; } = new();
 

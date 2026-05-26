@@ -22,8 +22,8 @@ using RTSharp.Core.Services.Cache.ASCache;
 using RTSharp.Core.Services.Cache.Images;
 using RTSharp.Core.Services.Cache.TorrentFileCache;
 using RTSharp.Core.Services.Cache.TorrentPropertiesCache;
-using RTSharp.Core.Services.Cache.TrackerDb;
 using RTSharp.Core.Services.Daemon;
+using RTSharp.Core.Services.Database.TrackerDb;
 using RTSharp.Core.TorrentPolling;
 using RTSharp.Shared.Controls;
 using RTSharp.Shared.Controls.Views;
@@ -67,7 +67,7 @@ public static class Services
 
         await ConfigureServices.GenerateCertificatesIfNeeded();
 
-        var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>();
+        var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>() ?? [];
 
         var host = Host.CreateDefaultBuilder()
             .ConfigureServices((_, services) => {
@@ -82,9 +82,10 @@ public static class Services
                 services.AddTransient<Core.Services.Cache.TorrentPropertiesCache.TorrentPropertiesCache>();
                 services.AddTransient<Core.Services.Cache.ASCache.ASCache>();
                 services.AddTransient<Core.Services.Cache.Images.ImageCache>();
-                services.AddTransient<Core.Services.Cache.TrackerDb.TrackerDb>();
+                services.AddTransient<TrackerDb>();
                 services.AddSingleton<Shared.Abstractions.ISpeedMovingAverageService, Core.Services.SpeedMovingAverageService>();
                 services.AddSingleton<Core.Services.DomainParser>();
+                services.AddSingleton<Core.Services.MediaPreviewService>();
                 services.AddHttpClient<Core.Services.Favicon>();
             })
             .Build();
@@ -123,7 +124,12 @@ public class App : Application
         try {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
         } catch (Exception ex) {
-            var msgbox = MessageBoxManager.GetMessageBoxStandard("RTSharp has crashed", $"RTSharp has crashed.\n{ex}", MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error, WindowStartupLocation.CenterOwner);
+            var msgbox = MessageBoxManager.GetMessageBoxStandard(
+                title: "RTSharp has crashed", 
+                text: $"RTSharp has crashed.\n{ex}", 
+                @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok, 
+                icon: MsBox.Avalonia.Enums.Icon.Error, 
+                windowStartupLocation: WindowStartupLocation.CenterOwner);
             var task = msgbox.ShowAsync();
             var cts = new CancellationTokenSource();
             task.ContinueWith((task) => cts.Cancel());
@@ -163,9 +169,9 @@ public class App : Application
         FxOnExit[Key] = Fx;
     }
 
-    public static MainWindow MainWindow { get; private set; }
+    public static MainWindow MainWindow { get; private set; } = null!;
 
-    public static MainWindowViewModel MainWindowViewModel { get; private set; }
+    public static MainWindowViewModel MainWindowViewModel { get; private set; } = null!;
 
     public override void OnFrameworkInitializationCompleted()
     {
@@ -201,10 +207,15 @@ public class App : Application
 
                     MainWindowViewModel!.PostStartup();
                 } catch (Exception ex) {
-                    var msgbox = MessageBoxManager.GetMessageBoxStandard("RTSharp has crashed", $"RTSharp has crashed.\n{ex}", MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error, WindowStartupLocation.CenterOwner);
+                    var msgbox = MessageBoxManager.GetMessageBoxStandard(
+                        title: "RTSharp has crashed", 
+                        text: $"RTSharp has crashed.\n{ex}", 
+                        @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok, 
+                        icon: MsBox.Avalonia.Enums.Icon.Error, 
+                        windowStartupLocation: WindowStartupLocation.CenterOwner);
                     var task = msgbox.ShowAsync();
                     var cts = new CancellationTokenSource();
-                    task.ContinueWith((task) => cts.Cancel());
+                    _ = task.ContinueWith((task) => cts.Cancel());
                     Dispatcher.UIThread.MainLoop(cts.Token);
 #if !DEBUG
                     Environment.Exit(1);

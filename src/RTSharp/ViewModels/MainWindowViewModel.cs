@@ -37,14 +37,12 @@ namespace RTSharp.ViewModels
 
         public ObservableCollection<Plugin.RTSharpPlugin> Plugins => Plugin.Plugins.LoadedPlugins;
 
-        public ICommand CmdOptionsClick { get; }
+        public Func<Task> ShowPluginsDialog { get; set; } = null!; // view set
 
-        public Func<PluginsViewModel, Task> ShowPluginsDialog { get; set; }
-
-        public Func<ServersWindowViewModel, Task> ShowServersDialog { get; set; }
+        public Func<ServersWindowViewModel, Task> ShowServersDialog { get; set; } = null!; // view set
 
         [ObservableProperty]
-        public partial string StringFilter { get; set; }
+        public partial string StringFilter { get; set; } = "";
 
         [ObservableProperty]
         public partial string Title { get; set; } = "RT#";
@@ -57,8 +55,8 @@ namespace RTSharp.ViewModels
 
         public MainWindowViewModel()
         {
-            ((AppViewModel)Avalonia.Application.Current.DataContext).PropertyChanged += (sender, e) => {
-                Title = ((AppViewModel)sender).TrayIconText;
+            ((AppViewModel)Avalonia.Application.Current!.DataContext!).PropertyChanged += (sender, e) => {
+                Title = ((AppViewModel)sender!).TrayIconText;
             };
 
             DockFactory = new RTSharpDockFactory();
@@ -72,11 +70,8 @@ namespace RTSharp.ViewModels
             {
                 using var viewScope = Core.ServiceProvider.CreateScope();
                 var viewConfig = viewScope.ServiceProvider.GetRequiredService<Core.Config>();
-
-                var view = new TorrentListingView {
-                    DataContext = TorrentListingViewModel
-                };
-                view.RestoreGridState(viewConfig.UIState.Value.TorrentGridState);
+                var view = new TorrentListingView { DataContext = TorrentListingViewModel };
+                view.RestoreGridState(viewConfig.UIState.Value.TorrentGridState ?? "{}");
                 return view;
             }
 
@@ -199,8 +194,7 @@ namespace RTSharp.ViewModels
         [RelayCommand]
         public void PluginsClick()
         {
-            var vm = new PluginsViewModel();
-            ShowPluginsDialog(vm);
+            ShowPluginsDialog();
         }
 
         [RelayCommand]

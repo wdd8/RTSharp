@@ -1,4 +1,4 @@
-﻿using Avalonia.Media;
+using Avalonia.Media;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -73,17 +73,6 @@ namespace RTSharp.ViewModels
                 item.TotalUPSpeed = totalUPSpeed;
                 item.ActiveTorrentCount = activeTorrentCount;
             }
-        }
-
-        private CancellationTokenSource RefreshingToken { get; set; }
-
-        public void StartRefreshing()
-        {
-        }
-
-        public void StopRefreshing()
-        {
-            RefreshingToken.Cancel();
         }
     }
 }

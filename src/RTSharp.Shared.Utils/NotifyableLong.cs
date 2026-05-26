@@ -1,18 +1,18 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Reactive.Disposables;
 
 namespace RTSharp.Shared.Utils
 {
     public interface INotifyable
     {
-        public string ValueStr { get; }
+        public string? ValueStr { get; }
     }
 
     public class Notifyable<T> : INotifyPropertyChanged, INotifyable, IObservable<T>
     {
-        public T Value { get; private set; }
+        public T? Value { get; private set; }
 
-        public string ValueStr => Value.ToString();
+        public string? ValueStr => Value?.ToString();
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -27,15 +27,16 @@ namespace RTSharp.Shared.Utils
 
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            PropertyChangedEventHandler fx = (object sender, PropertyChangedEventArgs e) => {
-                observer.OnNext(Value);
-            };
+            void fx(object? sender, PropertyChangedEventArgs e)
+            {
+                observer.OnNext(Value!);
+            }
 
             PropertyChanged += fx;
 
             return Disposable.Create(() => PropertyChanged -= fx);
         }
 
-        public override string ToString() => Value.ToString();
+        public override string? ToString() => Value?.ToString();
     }
 }

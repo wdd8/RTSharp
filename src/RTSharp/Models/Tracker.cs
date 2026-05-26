@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using Avalonia.Media;
 
@@ -20,7 +20,7 @@ namespace RTSharp.Models
         /// <summary>
         /// Tracker URI
         /// </summary>
-        public string Uri { get; set; }
+        public required string Uri { get; set; }
 
         public string Domain => UriUtils.GetDomainForTracker(Uri);
 

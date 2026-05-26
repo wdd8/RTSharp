@@ -81,9 +81,8 @@ _* - not directly supported by torrent daemon_
 |Feature|Support|
 |-|-|
 |V2/Hybrid torrent creation|🟢Supported|
-|File previews|🔴Not implemented|
-|File icons (as determined by OS)|🔴Not implemented|
-|Native AOT|🔴https://github.com/DapperLib/DapperAOT/issues/160|
+|File previews|🟡mpv only|
+|File icons (as determined by OS)|🟡Not on macOS|
 
 ### Configuration
 

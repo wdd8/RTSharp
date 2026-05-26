@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Core;
 using RTSharp.Core.Services.Cache.Images;
-using RTSharp.Core.Services.Cache.TrackerDb;
+using RTSharp.Core.Services.Database.TrackerDb;
 using RTSharp.Shared.Abstractions;
 
 using Serilog;
@@ -31,22 +31,18 @@ namespace RTSharp.ViewModels.TorrentListing
     {
         public ObservableCollection<Models.Tracker> Trackers { get; } = new();
 
-        public Func<Window, Task<string?>> BrowseForIconDialog { get; set; }
+        public Func<Window, Task<string?>> BrowseForIconDialog { get; set; } = null!; // view set
 
         public TorrentListingViewModel Parent { get; init; }
 
         [ObservableProperty]
-        public partial Models.Torrent Torrent { get; set; }
+        public partial Models.Torrent? Torrent { get; set; }
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(HasSelectedItem))]
         public partial Models.Tracker? SelectedItem { get; set; }
 
         public bool HasSelectedItem => SelectedItem != null;
-
-        public TorrentTrackersViewModel()
-        {
-        }
 
         public TorrentTrackersViewModel(TorrentListingViewModel Parent)
         {
@@ -66,6 +62,9 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             Debug.Assert(StrToCap.ContainsKey(Action));
 
+            if (Torrent == null)
+                return false;
+
             return HasSelectedItem && StrToCap[Action](Torrent.DataOwner.Instance.Tracker.Capabilities);
         }
 
@@ -73,6 +72,9 @@ namespace RTSharp.ViewModels.TorrentListing
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddNewTracker))]
         public async Task AddNewTracker(string Text)
         {
+            if (Torrent == null)
+                return;
+
             try {
                 await Torrent.DataOwner.Instance.Tracker.AddNewTracker(Torrent.ToPluginModel(), Text);
             } catch (Exception ex) {
@@ -103,6 +105,9 @@ namespace RTSharp.ViewModels.TorrentListing
             var trackers = In.Cast<Models.Tracker>().ToArray();
 
             if (trackers.Length != 1)
+                return;
+
+            if (Torrent == null)
                 return;
 
             var oldTracker = trackers[0].Uri;
@@ -137,7 +142,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
             try {
                 var trackerInfo = await trackerDb.GetTrackerInfo(trackers[0].Domain);
-                trackerInfo ??= new TrackerInfo();
+                trackerInfo ??= new TrackerInfo("", null, null);
                 trackerInfo.Name = In.Text;
                 await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, trackerInfo);
                 await Parent.UpdateTrackersInTorrents();
@@ -174,9 +179,7 @@ namespace RTSharp.ViewModels.TorrentListing
             }
 
             var trackerInfo = await trackerDb.GetTrackerInfo(trackers[0].Domain);
-            trackerInfo ??= new TrackerInfo() {
-                Name = trackers[0].Domain
-            };
+            trackerInfo ??= new TrackerInfo(trackers[0].Domain, null, null);
 
             var img = await imageCache.AddImage(icon);
             if (img == null) {
@@ -202,6 +205,9 @@ namespace RTSharp.ViewModels.TorrentListing
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteReplaceTracker))]
         public async Task ReplaceTracker((object SelectedItems, string Text) In)
         {
+            if (Torrent == null)
+                return;
+
             var trackers = ((IList)In.SelectedItems).Cast<Models.Tracker>().ToArray();
 
             if (trackers.Length != 1)

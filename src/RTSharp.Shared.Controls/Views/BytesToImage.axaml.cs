@@ -14,8 +14,8 @@ namespace RTSharp.Shared.Controls.Views;
 
 public partial class BytesToImage : UserControl
 {
-    private byte[] _bytes;
-    private int[] _ints;
+    private byte[] _bytes = [];
+    private int[] _ints = [];
 
     /// <summary>
     /// Defines the <see cref="Bytes"/> property.

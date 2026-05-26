@@ -179,6 +179,17 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         }
     }
 
+    protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        var state = CaptureGridState();
+        if (state != null) {
+            using var scope = Core.ServiceProvider.CreateScope();
+            var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
+            config.UIState.Value.TorrentGridState = state;
+        }
+    }
+
     public override void EndInit() => base.EndInit();
 
     public TorrentListingViewModel? TypedContext => (TorrentListingViewModel?)DataContext;

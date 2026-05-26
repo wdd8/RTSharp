@@ -1,22 +1,21 @@
-﻿using Avalonia.Data.Converters;
+using Avalonia.Data.Converters;
 using System;
 using System.Globalization;
 
-namespace RTSharp.ViewModels.Converters
+namespace RTSharp.ViewModels.Converters;
+
+public class SIDataSizeConverter : IValueConverter
 {
-    public class SIDataSizeConverter : IValueConverter
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value == null)
-                return "";
+        if (value == null)
+            return "";
 
-            return Shared.Utils.Converters.GetSIDataSize((ulong)value);
-        }
+        return Shared.Utils.Converters.GetSIDataSize((ulong)value);
+    }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            return null!;
-        }
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return null!;
     }
 }

@@ -1,4 +1,4 @@
-﻿
+
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace RTSharp.Shared.Controls.ViewModels
@@ -6,13 +6,13 @@ namespace RTSharp.Shared.Controls.ViewModels
     public partial class TextPreviewWindowViewModel : ObservableObject
     {
         [ObservableProperty]
-        public string text;
+        public partial string Text { get; set; } = "";
 
         [ObservableProperty]
-        public bool monospace;
+        public partial bool Monospace { get; set; }
 
         [ObservableProperty]
-        public string fontFamily = "Consolas";
+        public partial string FontFamily { get; set; } = "Consolas";
 
         public TextPreviewWindowViewModel()
         {

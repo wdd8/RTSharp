@@ -31,7 +31,6 @@
 			<converters:EqualsConverter />
 			<converters:NotConverter />
 		</converters:ValueConverterGroup>
-		<converters:StringJoiner x:Key="StringJoiner"/>
 
 		<acol:AvaloniaList x:Key="GridContextMenuItems" x:TypeArguments="Control">
 			<MenuItem

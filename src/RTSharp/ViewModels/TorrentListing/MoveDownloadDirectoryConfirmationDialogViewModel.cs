@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -17,7 +17,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public string MoveWarning { get; set; }
 
-        public Action<bool> CloseWithResult { get; set; }
+        public Action<bool> CloseWithResult { get; set; } = null!; // view set
 
         public MoveDownloadDirectoryConfirmationDialogViewModel(string LeftSide, string RightSide, string MoveWarning)
         {
@@ -41,6 +41,6 @@ namespace RTSharp.ViewModels.TorrentListing
 
     public static class ExampleMoveDownloadDirectoryConfirmationDialogViewModel
     {
-        public static MoveDownloadDirectoryConfirmationDialogViewModel ViewModel { get; } = new MoveDownloadDirectoryConfirmationDialogViewModel("Left", "Right", "Warning!");
+        public static MoveDownloadDirectoryConfirmationDialogViewModel ViewModel { get; } = new MoveDownloadDirectoryConfirmationDialogViewModel("Left", "Right", "Warning!") { CloseWithResult = null! };
     }
 }

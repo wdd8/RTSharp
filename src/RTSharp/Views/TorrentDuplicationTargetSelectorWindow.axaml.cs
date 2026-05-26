@@ -28,6 +28,9 @@ public partial class TorrentDuplicationTargetSelectorWindow : VmWindow<TorrentDu
 
     private async Task<string?> SelectRemoteDirectoryDialogAsync(string? Input)
     {
+        if (ViewModel!.SelectedProvider == null)
+            return null;
+
         var dialog = new DirectorySelectorWindow() {
             ViewModel = new DirectorySelectorWindowViewModel(ViewModel!.SelectedProvider!) {
                 WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider.PluginInstance.PluginInstanceConfig.Name})"
@@ -41,6 +44,11 @@ public partial class TorrentDuplicationTargetSelectorWindow : VmWindow<TorrentDu
 
     public async void EvDropDownClosed(object sender, EventArgs e)
     {
-        await this.ViewModel!.ProviderChanged((RTSharpDataProvider)((ComboBox)sender).SelectedItem);
+        var selectedItem = (RTSharpDataProvider?)((ComboBox)sender).SelectedItem;
+
+        if (selectedItem == null)
+            return;
+
+        await this.ViewModel!.ProviderChanged(selectedItem);
     }
 }

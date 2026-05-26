@@ -55,7 +55,7 @@ public readonly struct TrackerFilterContext : IComparable
         return String.Compare(Name, b.Name, StringComparison.Ordinal);
     }
 
-    public override bool Equals(object obj) => obj is TrackerFilterContext b && Name == b.Name;
+    public override bool Equals(object? obj) => obj is TrackerFilterContext b && Name == b.Name;
     public override int GetHashCode() => String.GetHashCode(Name);
 }
 
@@ -64,7 +64,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
     public ReadOnlyObservableCollection<Torrent> VisibleTorrents;
 
     [ObservableProperty]
-    public partial DataGridCollectionView View { get; set; }
+    public partial DataGridCollectionView View { get; set; } = null!; // set in AttachGridData
 
     public SearchModel SearchModel { get; } = new SearchModel {
         HighlightMode = SearchHighlightMode.None,
@@ -101,7 +101,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
 
     public DateTime LastSearchKey { get; set; }
     public TimeSpan SearchAsYouGoDelay { get; private set; }
-    public string CurrentSearchText { get; set; }
+    public string CurrentSearchText { get; set; } = "";
 
     public ObservableCollection<TemplatedControl> LabelsWithAdd { get; } = new();
     public GeneralTorrentInfoViewModel GeneralInfoViewModel { get; } = new();
@@ -120,8 +120,8 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
 
     public Geometry? Icon => null;
 
-    public Func<string?> CaptureGridState;
-    public Action<object> ScrollToItem;
+    public Func<string?> CaptureGridState = null!; // view set
+    public Action<object> ScrollToItem = null!; // view set
 
     static TorrentListingViewModel()
     {
@@ -603,7 +603,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
 
     private void CurrentlySelectedTorrentsChanged(object? sender, SelectionModelSelectionChangedEventArgs<Torrent> e)
     {
-        var selection = e.SelectedItems;
+        var selection = (IReadOnlyList<Torrent>)e.SelectedItems;
         UpdateTorrentInChildViewModels(selection);
         _ = PollTorrentInfo(selection);
 
@@ -626,5 +626,5 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
 
 public static class ExampleTorrentListingViewModel
 {
-    public static TorrentListingViewModel ViewModel { get; }
+    public static TorrentListingViewModel ViewModel { get; } = new();
 }

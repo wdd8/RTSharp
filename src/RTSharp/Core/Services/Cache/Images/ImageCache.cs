@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Dapper;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,10 +23,7 @@ namespace RTSharp.Core.Services.Cache.Images
         public ImageCache(Config Config)
         {
             this.Config = Config;
-            if (Images == null)
-            {
-                Images = new(Config.Caching.Value.InMemoryImages, new ByteArrayComparer());
-            }
+            Images ??= new(Config.Caching.Value.InMemoryImages, new ByteArrayComparer());
         }
 
         private static async Task<SqliteConnection> New()
@@ -59,7 +56,9 @@ namespace RTSharp.Core.Services.Cache.Images
             runner.MigrateUp();
         }
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         private static Dictionary<byte[], WeakReference<Bitmap>> Images;
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 
         private Bitmap CacheInMemory(byte[] ImageHash, Bitmap Image)
         {

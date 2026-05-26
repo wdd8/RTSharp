@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -21,12 +21,13 @@ namespace RTSharp.ViewModels;
 
 public partial class DirectorySelectorWindowViewModel : ObservableObject
 {
-    public string WindowTitle { get; set; }
+    public required string WindowTitle { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SelectCommand))]
     public partial FileSystemItem? Selected { get; set; }
-    public FileSystemItem Current { get; set; }
+
+    public FileSystemItem? Current { get; set; }
 
     public Plugin.RTSharpDataProvider DataProvider { get; init; }
 
@@ -35,11 +36,11 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
     private ReadOnlyObservableCollection<FileSystemItem> _items;
     public ReadOnlyObservableCollection<FileSystemItem> Items => _items;
 
-    public Action ClearSelection { get; set; }
+    public Action? ClearSelection { get; set; }
 
-    public Action<string?> CloseDialog { get; set; }
+    public Action<string?> CloseDialog { get; set; } = null!; // view set
 
-    public Func<FileSystemItem, Task<bool>> DoCreateDirectory { get; set; }
+    public Func<FileSystemItem, Task<bool>> DoCreateDirectory { get; set; } = null!; // view set
 
     [ObservableProperty]
     public partial bool RemoveDirectoryAllowed { get; set; }
@@ -71,6 +72,9 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task CreateDirectory()
     {
+        if (Current == null)
+            return;
+
         var emptyItem = new FileSystemItem(Current.Path + "/New directory", true, null, null, "d?????????");
         _itemsSource.Add(emptyItem);
         await Task.Delay(100); // huge fucking hack to wait til the list in grid populates
@@ -105,6 +109,9 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
         } catch (Exception ex) {
             Log.Logger.Error(ex, $"Failed to remove empty directory \"{items.First().Path}\"");
         }
+
+        if (Current == null)
+            return;
 
         await SetCurrentFolder(Current.Path);
     }

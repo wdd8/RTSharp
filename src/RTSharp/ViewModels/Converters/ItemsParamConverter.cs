@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Data.Converters;
 
 using System;
@@ -18,7 +18,7 @@ namespace RTSharp.ViewModels.Converters
             if (values[0] is UnsetValueType)
                 return null;
 
-            return (values[0], (string)values[1]);
+            return (values[0], (string?)values[1]);
         }
     }
 }

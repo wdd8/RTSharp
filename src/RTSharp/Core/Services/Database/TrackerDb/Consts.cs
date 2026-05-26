@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using RTSharp.Core.Services.Cache;
 
-namespace RTSharp.Core.Services.Cache.TrackerDb
+namespace RTSharp.Core.Services.Database.TrackerDb;
+
+public static class Consts
 {
-    public static class Consts
-    {
-        public static readonly string ConnectionString = Utils.MakeConnectionString("TrackerInfo");
-    }
+    public static readonly string ConnectionString = Utils.MakeConnectionString("TrackerInfo");
 }

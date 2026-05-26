@@ -44,7 +44,7 @@ namespace RTSharp.Shared.Controls.Views
             });
 
 #pragma warning disable CA1826
-            Value = dir?.FirstOrDefault()?.Path?.LocalPath;
+            Value = dir?.FirstOrDefault()?.Path?.LocalPath ?? "";
 #pragma warning restore CA1826
         }
     }

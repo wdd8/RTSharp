@@ -118,7 +118,7 @@ public static class DockStateSerializer
                 };
             case nameof(ProportionalDock):
                 dock = new ProportionalDock {
-                    Id = dto.Id,
+                    Id = dto.Id!,
                     Proportion = dto.Proportion ?? double.NaN,
                     Orientation = dto.Orientation ?? Orientation.Horizontal,
                     DockCapabilityPolicy = new(),
@@ -139,7 +139,7 @@ public static class DockStateSerializer
                 if (children.Count == 0)
                     return null; // Skip empty tool docks — adjacent splitter cleaned by caller
                 dock = new ToolDock {
-                    Id = dto.Id,
+                    Id = dto.Id!,
                     Proportion = dto.Proportion ?? double.NaN,
                     Alignment = dto.Alignment ?? Alignment.Unset,
                     DockCapabilityPolicy = new(),
@@ -157,7 +157,7 @@ public static class DockStateSerializer
                 if (children.Count == 0)
                     return null;
                 dock = new DocumentDock {
-                    Id = dto.Id,
+                    Id = dto.Id!,
                     Proportion = dto.Proportion ?? double.NaN,
                     DockCapabilityPolicy = new(),
                     DockCapabilityOverrides = new()

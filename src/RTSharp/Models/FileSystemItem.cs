@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
@@ -63,9 +63,9 @@ namespace RTSharp.Models
 
     public class FileSystemItemEqualityComparer : IEqualityComparer<FileSystemItem>
     {
-        public bool Equals(FileSystemItem x, FileSystemItem y)
+        public bool Equals(FileSystemItem? x, FileSystemItem? y)
         {
-            return x.Path == y.Path && x.IsDirectory == y.IsDirectory && x.Size == y.Size && x.LastModified == y.LastModified && x.Permissions == y.Permissions;
+            return x != null && y != null && x.Path == y.Path && x.IsDirectory == y.IsDirectory && x.Size == y.Size && x.LastModified == y.LastModified && x.Permissions == y.Permissions;
         }
 
         public int GetHashCode([DisallowNull] FileSystemItem obj)

@@ -1,18 +1,18 @@
-﻿using Avalonia;
+using Avalonia;
 
 namespace RTSharp.Models;
 
 public class PluginInfo : AvaloniaObject
 {
-    public string InstanceGuid { get; init; }
+    public required string InstanceGuid { get; init; }
 
-    public string DisplayName { get; init; }
+    public required string DisplayName { get; init; }
 
-    public string Description { get; init; }
+    public required string Description { get; init; }
 
-    public string Author { get; init; }
+    public required string Author { get; init; }
 
-    public string Version { get; init; }
+    public required string Version { get; init; }
 
-    public string PluginGuid { get; init; }
+    public required string PluginGuid { get; init; }
 }

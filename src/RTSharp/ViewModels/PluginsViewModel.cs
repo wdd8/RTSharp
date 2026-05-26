@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -18,8 +18,8 @@ namespace RTSharp.ViewModels
     {
         public ObservableCollection<RTSharpPlugin> Plugins => Plugin.Plugins.LoadedPlugins;
         
-        private RTSharpPlugin _currentlySelectedPlugin;
-        public RTSharpPlugin CurrentlySelectedPlugin {
+        private RTSharpPlugin? _currentlySelectedPlugin;
+        public RTSharpPlugin? CurrentlySelectedPlugin {
             get {
                 return _currentlySelectedPlugin;
             }
@@ -43,8 +43,8 @@ namespace RTSharp.ViewModels
         }
 
         [ObservableProperty]
-        public partial Models.PluginInfo PluginInfo { get; set; }
-        public Window ThisWindow { get; set; }
+        public partial Models.PluginInfo? PluginInfo { get; set; }
+        public required Window ThisWindow { get; set; }
 
         public PluginsViewModel()
         {
@@ -61,14 +61,19 @@ namespace RTSharp.ViewModels
                 CurrentlySelectedPlugin = Plugins[0];
         }
 
-        public bool CanExecutePluginsSettingsClick() => ((IPlugin)CurrentlySelectedPlugin.Instance).Capabilities.HasSettingsWindow;
+        public bool CanExecutePluginsSettingsClick() => CurrentlySelectedPlugin != null && CurrentlySelectedPlugin.Instance.Capabilities.HasSettingsWindow;
         [RelayCommand(CanExecute = nameof(CanExecutePluginsSettingsClick))]
         public async Task PluginsSettingsClick()
         {
             try {
-                await ((IPlugin)CurrentlySelectedPlugin.Instance).ShowPluginSettings(ThisWindow);
+                await CurrentlySelectedPlugin!.Instance.ShowPluginSettings(ThisWindow);
             } catch (Exception ex) {
-                var msgBox = MessageBoxManager.GetMessageBoxStandard("Plugin manager", $"Failed to show plugin settings:\n{ex}", ButtonEnum.Ok, Icon.Error, WindowStartupLocation.CenterScreen);
+                var msgBox = MessageBoxManager.GetMessageBoxStandard(
+                    title: "Plugin manager", 
+                    text: $"Failed to show plugin settings:\n{ex}", 
+                    @enum: ButtonEnum.Ok, 
+                    icon: Icon.Error, 
+                    windowStartupLocation: WindowStartupLocation.CenterScreen);
                 await msgBox.ShowWindowDialogAsync(ThisWindow);
             }
         }

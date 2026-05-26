@@ -1,4 +1,4 @@
-﻿using Avalonia.Data.Converters;
+using Avalonia.Data.Converters;
 
 using System.Globalization;
 
@@ -13,27 +13,23 @@ namespace RTSharp.Shared.Controls.Converters
 
         #region IValueConverter Members
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
+            if (parameter is not string mathEquation || value == null)
+                return null;
+
             // Parse value into equation and remove spaces
-            var mathEquation = parameter as string;
             mathEquation = mathEquation.Replace(" ", "");
             mathEquation = mathEquation.Replace("@VALUE", value.ToString());
 
             // Validate values and get list of numbers in equation
             var numbers = new List<double>();
-            double tmp;
 
-            foreach (string s in mathEquation.Split(_allOperators))
-            {
-                if (s != string.Empty)
-                {
-                    if (Double.TryParse(s, CultureInfo.InvariantCulture, out tmp))
-                    {
+            foreach (string s in mathEquation.Split(_allOperators)) {
+                if (s != string.Empty) {
+                    if (Double.TryParse(s, CultureInfo.InvariantCulture, out var tmp)) {
                         numbers.Add(tmp);
-                    }
-                    else
-                    {
+                    } else {
                         // Handle Error - Some non-numeric, operator, or grouping character found in string
                         throw new InvalidCastException();
                     }
@@ -47,7 +43,7 @@ namespace RTSharp.Shared.Controls.Converters
             return numbers[0];
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

@@ -9,7 +9,7 @@ namespace RTSharp.Shared.Controls.Views
     public partial class GroupBox : UserControl
     {
 #region Label
-        private string _label;
+        private string _label = "";
 
         /// <summary>
         /// Defines the <see cref="Label"/> property.
@@ -34,8 +34,8 @@ namespace RTSharp.Shared.Controls.Views
         /// <summary>
         /// Defines the <see cref="RadioButton"/> property.
         /// </summary>
-        public static readonly DirectProperty<GroupBox, string> RadioButtonGroupProperty =
-            AvaloniaProperty.RegisterDirect<GroupBox, string>(
+        public static readonly DirectProperty<GroupBox, string?> RadioButtonGroupProperty =
+            AvaloniaProperty.RegisterDirect<GroupBox, string?>(
                 nameof(RadioButtonGroup),
                 o => o.RadioButtonGroup,
                 (o, v) => o.RadioButtonGroup = v);
@@ -43,7 +43,7 @@ namespace RTSharp.Shared.Controls.Views
         /// <summary>
         /// Gets or sets visibility of a radio button
         /// </summary>
-        public string RadioButtonGroup {
+        public string? RadioButtonGroup {
             get { return _radioButtonGroup; }
             set {
                 SetAndRaise(RadioButtonGroupProperty, ref _radioButtonGroup, value);

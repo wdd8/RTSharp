@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 
 namespace RTSharp.Shared.Abstractions.Client;
 
@@ -6,7 +6,7 @@ public interface IVmContentControl<T>
 {
     T? ViewModel { get; set; }
 
-    protected Action<T> FxBind { get; set; }
+    protected Action<T>? FxBind { get; set; }
     protected Action<T>? FxUnbind { get; set; }
     protected T? PreviousViewModel { get; set; }
 
@@ -25,7 +25,7 @@ public interface IVmContentControl<T>
     {
         if (PreviousViewModel != null && FxUnbind != null)
             FxUnbind(PreviousViewModel);
-        if (ViewModel != null)
+        if (FxBind != null && ViewModel != null)
             FxBind(ViewModel);
 
         PreviousViewModel = ViewModel;

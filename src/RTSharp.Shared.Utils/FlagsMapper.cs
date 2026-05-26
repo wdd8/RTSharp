@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,7 +23,7 @@ namespace RTSharp.Shared.Utils
             return CastTo<TDst>.From(ret);
         }
 
-        public static string MapConcat<TSrc>(TSrc In, Func<TSrc, string> FxMap, string JoiningString = null)
+        public static string MapConcat<TSrc>(TSrc In, Func<TSrc, string> FxMap, string? JoiningString = null)
             where TSrc : struct, Enum
         {
             if (!Enum.TryParse<TSrc>("Max", out var srcMax)) {

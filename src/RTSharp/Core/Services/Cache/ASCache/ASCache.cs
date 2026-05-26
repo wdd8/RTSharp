@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Dapper;
 using System.Net;
 using System.Threading.Tasks;
@@ -80,7 +80,7 @@ namespace RTSharp.Core.Services.Cache.ASCache
                 IpHighPart = high
             });
 
-            return d;
+            return d!;
         }
 
         public async Task AddCachedAS(IPAddressRange Range, CachedAS In)

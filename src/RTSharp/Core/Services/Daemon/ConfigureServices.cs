@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -52,11 +52,11 @@ namespace RTSharp.Core.Services.Daemon
             if (!Path.Exists(CertPath) || !Path.Exists(KeyPath)) {
                 var res = await Dispatcher.UIThread.InvokeAsync(async () => {
                     var wnd = MessageBoxManager.GetMessageBoxStandard(
-                    "RT#",
-                    "No client certificate exists for server daemon, do you wish to generate a new one?",
-                    ButtonEnum.YesNo,
-                    Icon.Question,
-                    WindowStartupLocation.CenterScreen);
+                    title: "RT#",
+                    text: "No client certificate exists for server daemon, do you wish to generate a new one?",
+                    @enum: ButtonEnum.YesNo,
+                    icon: Icon.Question,
+                    windowStartupLocation: WindowStartupLocation.CenterScreen);
 
                     return await wnd.ShowWindowAsync();
                 });
@@ -92,17 +92,20 @@ namespace RTSharp.Core.Services.Daemon
                             ClientCertificates = [ pkcs12 ],
 
                             RemoteCertificateValidationCallback = (httpRequestMessage, cert, certChain, policyErrors) => {
+                                if (cert == null)
+                                    return false;
+
                                 if (server.VerifyNative ?? true) {
                                     if (policyErrors != System.Net.Security.SslPolicyErrors.None) {
                                         Dispatcher.UIThread.InvokeAsync(async () => {
                                             var wnd = MessageBoxManager.GetMessageBoxStandard(
-                                            "RT#",
-                                            "Certificate " + cert.GetCertHashString() + " is untrusted (" + policyErrors + ")",
-                                            ButtonEnum.Ok,
-                                            Icon.Error,
-                                            WindowStartupLocation.CenterScreen);
+                                            title: "RT#",
+                                            text: "Certificate " + cert.GetCertHashString() + " is untrusted (" + policyErrors + ")",
+                                            @enum: ButtonEnum.Ok,
+                                            icon: Icon.Error,
+                                            windowStartupLocation: WindowStartupLocation.CenterScreen);
 
-                                            await wnd.ShowWindowDialogAsync(App.MainWindow);
+                                            await wnd.ShowWindowAsync();
                                         }).GetAwaiter().GetResult();
 
                                         return false;
@@ -113,7 +116,7 @@ namespace RTSharp.Core.Services.Daemon
 
                                 var thumbprint = server.TrustedThumbprint;
 
-                                if (thumbprint.Equals(cert.GetCertHashString(HashAlgorithmName.SHA256), StringComparison.OrdinalIgnoreCase)) {
+                                if (thumbprint?.Equals(cert.GetCertHashString(HashAlgorithmName.SHA256), StringComparison.OrdinalIgnoreCase) != true) {
                                     var result = Dispatcher.UIThread.InvokeAsync(async () => {
                                         var wnd = MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
                                             Icon = Icon.Warning,
@@ -145,7 +148,9 @@ It is also possible that a host key has just been changed.
                                                 Name = "No"
                                             },
                                         },
-                                            WindowStartupLocation = WindowStartupLocation.CenterOwner
+                                            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                                            MaxWidth = 700,
+                                            Width = 700
                                         });
 
                                         var res = await wnd.ShowWindowAsync();
@@ -157,7 +162,6 @@ It is also possible that a host key has just been changed.
 
                                         var config = provider.GetRequiredService<Config>();
                                         config.Rewrite().GetAwaiter().GetResult();
-                                    } else {
                                     }
 
                                     return result;

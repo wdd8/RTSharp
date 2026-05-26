@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 
 namespace RTSharp.Shared.Abstractions
 {
@@ -19,17 +19,17 @@ namespace RTSharp.Shared.Abstractions
         /// <summary>
         /// Data provider specific peer ID
         /// </summary>
-        public object PeerId { get; set; }
+        public required object PeerId { get; set; }
 
         /// <summary>
         /// Peer IP address and port
         /// </summary>
-        public IPEndPoint IPPort { get; set; }
+        public required IPEndPoint IPPort { get; set; }
 
         /// <summary>
         /// Peer client
         /// </summary>
-        public string Client { get; set; }
+        public required string Client { get; set; }
 
         /// <summary>
         /// Peer flags

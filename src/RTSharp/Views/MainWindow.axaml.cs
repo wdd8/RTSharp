@@ -1,23 +1,13 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
-
-using Dock.Avalonia.Controls;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using Nito.AsyncEx;
 
 using RTSharp.Core;
-using RTSharp.Core.Services.Cache.ASCache;
-using RTSharp.Core.Services.Cache.Images;
-using RTSharp.Core.Services.Cache.TorrentFileCache;
-using RTSharp.Core.Services.Cache.TorrentPropertiesCache;
-using RTSharp.Core.Services.Cache.TrackerDb;
-using RTSharp.Core.TorrentPolling;
 using RTSharp.Shared.Abstractions.Client;
-using RTSharp.Shared.Controls;
-using RTSharp.Shared.Controls.Views;
 using RTSharp.ViewModels;
 
 using Serilog;
@@ -31,8 +21,6 @@ namespace RTSharp.Views;
 
 public partial class MainWindow : VmWindow<MainWindowViewModel>
 {
-    private static readonly TimeSpan StartupContentResizeQuietPeriod = TimeSpan.FromMilliseconds(350);
-
     public MainWindow()
     {
         InitializeComponent();
@@ -45,7 +33,6 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         ShowInTaskbar = true;
         ViewModel!.ShowPluginsDialog = ShowPluginsDialogAsync;
         ViewModel!.ShowServersDialog = ShowServersDialogAsync;
-        Opened += EvOpened;
 
         using var scope = Core.ServiceProvider.CreateScope();
         var config = scope.ServiceProvider.GetRequiredService<Config>();
@@ -109,16 +96,13 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         await config.Rewrite();
     }
 
-    private async void EvOpened(object? sender, System.EventArgs e)
-    {
-        
-    }
-
-    private async Task ShowPluginsDialogAsync(PluginsViewModel Input)
+    private async Task ShowPluginsDialogAsync()
     {
         var dialog = new PluginsView();
-        Input.ThisWindow = dialog;
-        dialog.ViewModel = Input;
+        var vm = new PluginsViewModel {
+            ThisWindow = dialog
+        };
+        dialog.ViewModel = vm;
 
         await dialog.ShowDialog(this);
     }
@@ -131,7 +115,7 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         await dialog.ShowDialog(this);
     }
 
-    private async void EvDragDrop(object sender, DragEventArgs e)
+    private async Task EvDragDrop(object? sender, DragEventArgs e)
     {
         var files = e.DataTransfer.TryGetFiles();
         var uri = e.DataTransfer.TryGetText();

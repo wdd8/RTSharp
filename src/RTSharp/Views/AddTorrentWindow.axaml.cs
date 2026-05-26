@@ -33,7 +33,7 @@ namespace RTSharp.Views
             {
                 ViewModel = new DirectorySelectorWindowViewModel(ViewModel!.SelectedProvider!)
                 {
-                    WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider.PluginInstance.PluginInstanceConfig.Name})"
+                    WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider!.PluginInstance.PluginInstanceConfig.Name})"
                 }
             };
 
@@ -69,7 +69,12 @@ namespace RTSharp.Views
 
         public async void EvDropDownClosed(object sender, EventArgs e)
         {
-            await this.ViewModel!.ProviderChanged((RTSharpDataProvider)((ComboBox)sender).SelectedItem);
+            var selectedItem = (RTSharpDataProvider?)((ComboBox)sender).SelectedItem;
+
+            if (selectedItem == null)
+                return;
+
+            await this.ViewModel!.ProviderChanged(selectedItem);
         }
 
         private async Task PreviewClipboardAsync()

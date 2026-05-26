@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 using RTSharp.Shared.Abstractions;
 
@@ -22,7 +22,7 @@ public partial class DataProvider : ObservableObject
 
     [ObservableProperty]
     public partial uint ActiveTorrentCount { get; set; }
-    public string DisplayName { get; set; }
+    public required string DisplayName { get; set; }
 
     public Guid InstanceId;
 }

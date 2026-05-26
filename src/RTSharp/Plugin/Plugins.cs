@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 
 using DynamicData;
 
@@ -144,7 +144,7 @@ namespace RTSharp.Plugin
         internal static Func<T, ValueTask>[] GetHookAsync<T>(HookType type) =>
             (Func<T, ValueTask>[])Hooks[(int)type];
 
-        public static string GetFirstPluginConfigOrDefault(string FullModuleContentsPath)
+        public static string? GetFirstPluginConfigOrDefault(string FullModuleContentsPath)
         {
             foreach (var json in Directory.GetFiles(Consts.PLUGINS_PATH, "*.json")) {
                 try {
@@ -153,6 +153,9 @@ namespace RTSharp.Plugin
                     var configRaw = builder.Build();
                     var config = configRaw.GetSection("Plugin").Get<PluginInstanceConfig>();
                     var moduleContentsPath = configRaw.GetSection("Plugin").GetValue<string>("Path");
+
+                    if (moduleContentsPath == null)
+                        continue;
 
                     moduleContentsPath = System.IO.Path.IsPathRooted(moduleContentsPath) ? moduleContentsPath : System.IO.Path.GetFullPath(System.IO.Path.Combine(Shared.Abstractions.Consts.PLUGINS_PATH, moduleContentsPath));
 
@@ -172,9 +175,9 @@ namespace RTSharp.Plugin
             var modName = System.IO.Path.GetFileName(ModuleContentsPath);
 
             json["Plugin"] = new JsonObject();
-            json["Plugin"]["Path"] = ModuleContentsPath;
-            json["Plugin"]["InstanceId"] = Guid.NewGuid();
-            json["Plugin"]["Name"] = modName;
+            json["Plugin"]!["Path"] = ModuleContentsPath;
+            json["Plugin"]!["InstanceId"] = Guid.NewGuid();
+            json["Plugin"]!["Name"] = modName;
 
             var existing = Directory.GetFiles(Shared.Abstractions.Consts.PLUGINS_PATH, $"{modName}-*.json").OrderBy(file => Regex.Replace(file, @"\d+", match => match.Value.PadLeft(4, '0')));
             int next = 1;
@@ -203,9 +206,16 @@ namespace RTSharp.Plugin
 
             try {
                 configRaw = builder.Build();
-                config = configRaw.GetSection("Plugin").Get<PluginInstanceConfig>();
-                moduleContentsPath = configRaw.GetSection("Plugin").GetValue<string>("Path");
-                rawInstanceId = configRaw.GetSection("Plugin").GetValue<string>("InstanceId");
+                config = configRaw.GetSection("Plugin").Get<PluginInstanceConfig>()!;
+                moduleContentsPath = configRaw.GetSection("Plugin").GetValue<string>("Path")!;
+                rawInstanceId = configRaw.GetSection("Plugin").GetValue<string>("InstanceId")!;
+
+                if (config == null)
+                    throw new NullReferenceException(nameof(config));
+                if (moduleContentsPath == null)
+                    throw new NullReferenceException(nameof(moduleContentsPath));
+                if (rawInstanceId == null)
+                    throw new NullReferenceException(nameof(rawInstanceId));
             } catch (Exception ex) {
                 Exception inner = ex;
                 while (inner.InnerException != null)
@@ -226,6 +236,9 @@ namespace RTSharp.Plugin
             var manifestConfig = manifestBuilder.Build();
             var modulePath = manifestConfig.GetValue<string>("Module");
 
+            if (modulePath == null)
+                throw new InvalidPluginConfigurationException($"Plugin {pluginName}: Invalid manifest file.\nNo \"Module\" property");
+
             modulePath = System.IO.Path.IsPathRooted(modulePath) ? modulePath : System.IO.Path.Combine(moduleContentsPath, modulePath);
 
             // Generate InstanceId and Name if needed
@@ -239,9 +252,9 @@ namespace RTSharp.Plugin
 
             if (needRewrite) {
                 var jsonRaw = await System.IO.File.ReadAllTextAsync(Path);
-                var json = JsonNode.Parse(jsonRaw);
-                json["Plugin"]["InstanceId"] = instanceId;
-                json["Plugin"]["Name"] = config.Name;
+                var json = JsonNode.Parse(jsonRaw)!;
+                json["Plugin"]!["InstanceId"] = instanceId;
+                json["Plugin"]!["Name"] = config.Name;
                 await System.IO.File.WriteAllTextAsync(Path, json.ToJsonString(new JsonSerializerOptions() {
                     WriteIndented = true
                 }));
@@ -291,10 +304,10 @@ namespace RTSharp.Plugin
             }
             if (Global.Consts.Version.Major != init.CompatibleMajorVersion) {
                 var msgbox = MessageBoxManager.GetMessageBoxStandard(
-                    "Plugin loader",
-                    $"Plugin {modulePath}: Incompatible to RT# core version (RT# - {Global.Consts.Version.Major}, plugin - {init.CompatibleMajorVersion}), load anyways?",
-                    ButtonEnum.YesNo,
-                    Icon.Error);
+                    title: "Plugin loader",
+                    text: $"Plugin {modulePath}: Incompatible to RT# core version (RT# - {Global.Consts.Version.Major}, plugin - {init.CompatibleMajorVersion}), load anyways?",
+                    @enum: ButtonEnum.YesNo,
+                    icon: Icon.Error);
                 if (await msgbox.ShowWindowAsync() != ButtonResult.Yes) {
                     throw new PluginLoadException($"Incompatible RT# core version for plugin {modulePath}", null);
                 }
@@ -323,7 +336,12 @@ namespace RTSharp.Plugin
                 ctx.Unload();
 
                 Log.Logger.Error($"Failed to initialize plugin {modulePath}: {ex}");
-                await MessageBoxManager.GetMessageBoxStandard("RT# - Failed to load plugin", $"Failed to load plugin {modulePath}\n{ex}", ButtonEnum.Ok, Icon.Error, WindowStartupLocation.CenterOwner).ShowAsync();
+                await MessageBoxManager.GetMessageBoxStandard(
+                    title: "RT# - Failed to load plugin", 
+                    text: $"Failed to load plugin {modulePath}\n{ex}", 
+                    @enum: ButtonEnum.Ok, 
+                    icon: Icon.Error, 
+                    windowStartupLocation: WindowStartupLocation.CenterOwner).ShowAsync();
 
                 return;
             }

@@ -1,9 +1,7 @@
-﻿using Avalonia.Data.Converters;
+using Avalonia.Data.Converters;
 using Avalonia.Platform;
-using Avalonia;
 
 using System.Globalization;
-using System.Reflection;
 using Avalonia.Media.Imaging;
 
 namespace RTSharp.Shared.Controls.Converters
@@ -21,7 +19,7 @@ namespace RTSharp.Shared.Controls.Converters
     {
         public static BitmapAssetValueConverter Instance = new BitmapAssetValueConverter();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value == null)
                 return null;
@@ -42,7 +40,7 @@ namespace RTSharp.Shared.Controls.Converters
             throw new NotSupportedException();
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotSupportedException();
         }

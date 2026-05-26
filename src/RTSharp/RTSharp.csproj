@@ -8,6 +8,7 @@
     <LangVersion>preview</LangVersion>
     <VerifyReferenceAotCompatibility>true</VerifyReferenceAotCompatibility>
     <InterceptorsPreviewNamespaces>$(InterceptorsPreviewNamespaces);Dapper.AOT</InterceptorsPreviewNamespaces>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
   <PropertyGroup Label="Avalonia">
     <AvaloniaUseCompiledBindingsByDefault>True</AvaloniaUseCompiledBindingsByDefault>
@@ -287,6 +288,10 @@
     <TrimmableAssembly Include="FluentMigrator.Runner" />
   </ItemGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Arin.NET" Version="1.1.3" />
     <PackageReference Include="Avalonia" Version="12.0.3" />
     <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
@@ -310,7 +315,6 @@
     <PackageReference Include="Grpc.Net.ClientFactory" Version="2.80.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
     <PackageReference Include="IPAddressRange" Version="6.3.0" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.4" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.8" />
@@ -322,19 +326,24 @@
     <PackageReference Include="Nito.Disposables" Version="2.5.0" />
     <PackageReference Include="Optris.Icons.Avalonia.FontAwesome7" Version="12.0.6" />
     <PackageReference Include="Polly" Version="8.6.6" />
+    <PackageReference Include="Svg.Skia" Version="5.0.0" />
     <!--<PackageReference Include="ProDiagnostics" Version="12.0.0" />
     <PackageReference Include="ProDiagnostics.Transport" Version="12.0.0" />-->
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
-    <PackageReference Include="Splat.Microsoft.Extensions.DependencyInjection" Version="19.3.1" />
+    <PackageReference Include="Splat.Microsoft.Extensions.DependencyInjection" Version="19.4.0" />
     <PackageReference Include="StaticViewLocator" Version="0.4.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="ini-parser-netstandard" Version="2.5.3" />
     <PackageReference Include="System.Linq.Async" Version="7.0.1" />
+    <PackageReference Include="Xdg.Directories" Version="0.1.2" />
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\MessageBox.Avalonia\MsBox.Avalonia.Markdown\MsBox.Avalonia.Markdown.csproj" />
+    <ProjectReference Include="..\MessageBox.Avalonia\MsBox.Avalonia\MsBox.Avalonia.csproj" />
     <ProjectReference Include="..\ProDataGrid\src\Avalonia.Controls.DataGrid\Avalonia.Controls.DataGrid.csproj" />
     <ProjectReference Include="..\RTSharp.Daemon.Protocols\RTSharp.Daemon.Protocols.csproj" />
     <ProjectReference Include="..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj" />

@@ -9,8 +9,8 @@ namespace RTSharp.Shared.Abstractions.Client;
 
 public class DefaultActionQueueRenderer : IActionQueueRenderer
 {
-    private List<ActionQueueAction> _actions = [];
-    private Lock ActionsLock = new();
+    private readonly List<ActionQueueAction> _actions = [];
+    private readonly Lock ActionsLock = new();
 
     public IReadOnlyCollection<ActionQueueAction> Actions {
         get {
@@ -22,9 +22,7 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
 
     public virtual StyledElement Display => CreateDisplay();
 
-    protected DefaultActionQueueViewModel? ActionQueueVm { get; private set; }
-
-    protected DefaultActionQueueRenderer() { }
+    protected DefaultActionQueueViewModel ActionQueueVm { get; private set; }
 
     public DefaultActionQueueRenderer(string DisplayName, IImage? Icon = null)
     {

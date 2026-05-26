@@ -24,8 +24,8 @@ namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
-        private Channel<(Models.Torrent, ListingChanges<Peer, Models.Peer, IPEndPoint>)> PeersChanges;
-        private Channel<Models.Peer> PeerInfoFetches;
+        private Channel<(Models.Torrent, ListingChanges<Peer, Models.Peer, IPEndPoint>)>? PeersChanges;
+        private Channel<Models.Peer>? PeerInfoFetches;
         static AsyncBulkheadPolicy? PeerInfoFetchQueue;
 
         private async Task PeersTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
@@ -48,6 +48,9 @@ namespace RTSharp.ViewModels.TorrentListing
 
         private async Task PeerInfoFetch()
         {
+            if (PeerInfoFetches == null)
+                throw new NullReferenceException(nameof(PeerInfoFetches));
+
             using (var scope = Core.ServiceProvider.CreateScope()) {
                 var config = scope.ServiceProvider.GetRequiredService<Config>();
                 PeerInfoFetchQueue ??= Policy.BulkheadAsync(config.Caching.Value.ConcurrentPeerCachingRequests);
@@ -88,7 +91,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                         if (whois.Country != null) {
                             realImage = flagImage = await imageCache.AddImage(AssetLoader.Open(new Uri($"avares://RTSharp/Assets/Icons/Flags/{whois.Country.ToLowerInvariant()}.png")));
-                            peerIcon = realImage.Value.Image;
+                            peerIcon = realImage!.Value.Image;
                         } else
                             peerIcon = DefaultImage;
 
@@ -120,12 +123,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
 
                         if (realImage != null) {
-                            await asCache.AddCachedAS(whois.Range, new CachedAS {
-                                Domain = whois.Domain,
-                                Organization = whois.Organization,
-                                Country = whois.Country,
-                                ImageHash = realImage.Value.Hash
-                            });
+                            await asCache.AddCachedAS(whois.Range, new CachedAS(whois.Domain, whois.Organization, whois.Country, realImage.Value.Hash));
                         }
                     } finally {
                         fetchingPeers.TryRemove(peer.IPPort.Address);
@@ -137,6 +135,10 @@ namespace RTSharp.ViewModels.TorrentListing
         private async Task PeersModelUpdates()
         {
             Models.Torrent? lastFetchedFor = null;
+
+            if (PeersChanges == null)
+                throw new NullReferenceException(nameof(PeersChanges));
+
             try {
                 PeersViewModel.Peers.Clear();
 
@@ -192,7 +194,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     }
                     foreach (var peer in PeersViewModel.Peers.Where(x => x.Origin == "Inactive peer")) {
                         if (DateTime.UtcNow - peer.ObservedOn > TimeSpan.FromSeconds(3)) {
-                            PeerInfoFetches.Writer.TryWrite(peer);
+                            PeerInfoFetches!.Writer.TryWrite(peer);
                         }
                     }
 
@@ -201,7 +203,7 @@ namespace RTSharp.ViewModels.TorrentListing
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "PeersModelUpdates task has exited");
             } finally {
-                PeerInfoFetches.Writer.Complete();
+                PeerInfoFetches!.Writer.Complete();
             }
         }
 
@@ -216,7 +218,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     var delayTask = Task.Delay(config.Behavior.Value.PeersPollingInterval, SelectionChange);
                     
-                    IList<Peer> peers = null;
+                    IList<Peer> peers = null!;
                     try {
                         peers = (await current!.DataOwner.Instance.GetPeers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).First().Value;
                     } catch (Exception ex) {
@@ -239,7 +241,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             if (foundInPrevious) {
                                 previousPeers.Remove(newPeer.IPPort);
 
-                                if (prevPeer.Flags != newPeer.Flags ||
+                                if (prevPeer!.Flags != newPeer.Flags ||
                                     prevPeer.Downloaded != newPeer.Downloaded ||
                                     prevPeer.Uploaded != newPeer.Uploaded ||
                                     prevPeer.DLSpeed != newPeer.DLSpeed ||
@@ -263,7 +265,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         previousPeers = peers.ToDictionary(x => x.IPPort, x => x);
                     }
 
-                    PeersChanges.Writer.TryWrite((current, changes));
+                    PeersChanges!.Writer.TryWrite((current, changes));
 
                     try {
                         await delayTask;
@@ -272,7 +274,7 @@ namespace RTSharp.ViewModels.TorrentListing
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "GetPeersChanges task has died.");
             } finally {
-                PeersChanges.Writer.Complete();
+                PeersChanges!.Writer.Complete();
             }
         }
     }

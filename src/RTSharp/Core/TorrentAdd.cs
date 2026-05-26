@@ -95,11 +95,13 @@ namespace RTSharp.Core
             }
 
             var queue = Core.ActionQueue.GetActionQueueEntry(Primary.PluginInstance);
-            var response = await queue.Queue.RunAction(action);
+            if (queue != null) {
+                var response = await queue.Queue.RunAction(action);
 
-            foreach (var torrent in response) {
-                if (torrent.Exceptions.Any(x => x != null))
-                    Primary.PluginInstance.Logger.Error($"{Convert.ToHexString(torrent.Hash)}: {String.Join("; ", torrent.Exceptions.Select(x => x.Message))}");
+                foreach (var torrent in response!) {
+                    if (torrent.Exceptions.Any(x => x != null))
+                        Primary.PluginInstance.Logger.Error($"{Convert.ToHexString(torrent.Hash)}: {String.Join("; ", torrent.Exceptions.Select(x => x.Message))}");
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 
 namespace RTSharp.Shared.Abstractions.Client;
 
@@ -17,7 +17,7 @@ public class VmWindow<T> : Window, IVmContentControl<T>
 
     public void BindViewModelActions(Action<T> FxBind) => ((IVmContentControl<T>)this).BindViewModelActions(this, FxBind);
 
-    Action<T> IVmContentControl<T>.FxBind { get; set; }
+    Action<T>? IVmContentControl<T>.FxBind { get; set; }
     Action<T>? IVmContentControl<T>.FxUnbind { get; set; }
     T? IVmContentControl<T>.PreviousViewModel { get; set; } = default;
 }

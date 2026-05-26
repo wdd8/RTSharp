@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -52,8 +52,8 @@ namespace RTSharp.ViewModels
                 totalDLSpeed += (long)torrent.DLSpeed;
             }
 
-            var upSpeed = (string)SIDataSpeedConverterInstance.Convert(totalUPSpeed, typeof(string), null, CultureInfo.InvariantCulture);
-            var dlSpeed = (string)SIDataSpeedConverterInstance.Convert(totalDLSpeed, typeof(string), null, CultureInfo.InvariantCulture);
+            var upSpeed = (string)SIDataSpeedConverterInstance.Convert(totalUPSpeed, typeof(string), null, CultureInfo.InvariantCulture)!;
+            var dlSpeed = (string)SIDataSpeedConverterInstance.Convert(totalDLSpeed, typeof(string), null, CultureInfo.InvariantCulture)!;
             TrayIconText = $"RT# - 🠉 {upSpeed} 🠋 {dlSpeed}";
         }
     }
