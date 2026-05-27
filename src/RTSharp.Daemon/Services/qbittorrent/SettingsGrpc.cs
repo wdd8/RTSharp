@@ -21,8 +21,8 @@ public class SettingsGrpc
 
     public async Task<StringValue> GetDefaultSavePath()
     {
-        await Client.Init();
+        var client = await Client.Init();
 
-        return new StringValue { Value = await Client.Client.GetDefaultSavePathAsync() };
+        return new StringValue { Value = await client.GetDefaultSavePathAsync() };
     }
 }

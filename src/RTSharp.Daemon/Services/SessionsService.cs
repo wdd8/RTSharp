@@ -12,17 +12,17 @@ public class ScriptSession : IScriptSession
 {
     public required Guid Id { get; init; }
 
-    public required IServiceScope Scope { get; init; }
+    public required IServiceScope? Scope { get; init; }
 
-    public required DynamicScript<IScript> Script { get; init; }
+    public required DynamicScript<IScript>? Script { get; init; }
 
-    public required IScript ScriptInstance { get; init; }
+    public required IScript? ScriptInstance { get; init; }
 
     public Task? Execution { get; set; }
 
     public required CancellationTokenSource Cts { get; init; }
 
-    public ScriptProgressState Progress { get; internal set; }
+    public ScriptProgressState Progress { get; internal set; } = null!; // set later
 
     public required string Name { get; set; }
 

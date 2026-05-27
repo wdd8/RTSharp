@@ -13,9 +13,9 @@ public class TransmissionClient
         Config = Opts.Create(InstanceKey);
     }
 
-    public ITransmissionClient Client;
+    private Transmission.Net.TransmissionClient? Client;
 
-    public async ValueTask Init()
+    public async ValueTask<ITransmissionClient> Init()
     {
         if (Client == null) {
             try {
@@ -24,11 +24,15 @@ public class TransmissionClient
                 var session = await Client.GetSessionInformationAsync();
 
                 Config.ConfigDir ??= session!.ConfigDirectory!;
+
+                return Client;
             } catch {
                 Client = null;
                 throw;
             }
         }
+
+        return Client;
     }
 
     public string ConfigDir => Config?.ConfigDir!;

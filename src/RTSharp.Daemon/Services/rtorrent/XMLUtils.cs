@@ -71,11 +71,11 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public static readonly byte[] ENDING_TAG = "</"u8.ToArray();
         
-        public class FaultStatus
+        public record FaultStatus
         {
-            public string Command { get; set; }
-            public string FaultCode { get; set; }
-            public string FaultString { get; set; }
+            public required string Command { get; set; }
+            public required string FaultCode { get; set; }
+            public required string FaultString { get; set; }
             
             public string ToFailureString()
             {
@@ -281,15 +281,18 @@ namespace RTSharp.Daemon.Services.rtorrent
         public static FaultStatus GetFaultStruct(ref ReadOnlyMemory<byte> In, string Command)
         {
             // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-506</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Method 'base_path' not defined</string></value></member>\r\n</struct></value>\r\n
-            var ret = new FaultStatus {
-                Command = Command
-            };
+            string faultCode = "", faultString = "";
             foreach (var kv in GetStruct(ref In)) {
                 if (kv.Key == "faultCode")
-                    ret.FaultCode = kv.Value;
+                    faultCode = kv.Value;
                 if (kv.Key == "faultString")
-                    ret.FaultString = kv.Value;
+                    faultString = kv.Value;
             }
+            var ret = new FaultStatus {
+                Command = Command,
+                FaultCode = faultCode,
+                FaultString = faultString
+            };
 
             return ret;
         }
@@ -297,9 +300,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         public static FaultStatus? TryGetFaultStruct(ref ReadOnlyMemory<byte> In, string Command)
         {
             // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-506</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Method 'base_path' not defined</string></value></member>\r\n</struct></value>\r\n
-            var ret = new FaultStatus() {
-                Command = Command
-            };
+            
 
             var check = In;
             if (!MaybeSeekFixed(ref check, VALUE_TOKEN))
@@ -316,12 +317,19 @@ namespace RTSharp.Daemon.Services.rtorrent
             if (!check[..9].Span.SequenceEqual("faultCode"u8))
                 return null;
 
+            string faultCode = "", faultString = "";
             foreach (var kv in GetStruct(ref In)) {
                 if (kv.Key == "faultCode")
-                    ret.FaultCode = kv.Value;
+                    faultCode = kv.Value;
                 if (kv.Key == "faultString")
-                    ret.FaultString = kv.Value;
+                    faultString = kv.Value;
             }
+
+            var ret = new FaultStatus {
+                Command = Command,
+                FaultCode = faultCode,
+                FaultString = faultString
+            };
 
             return ret;
         }

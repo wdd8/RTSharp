@@ -25,10 +25,15 @@ namespace RTSharp.Daemon.RuntimeCompilation
 				var searchDirs = new List<string>() { "." };
 			
 				var runtimeVer = FileVersionInfo.GetVersionInfo(typeof(System.Runtime.GCSettings).Assembly.Location).ProductVersion;
+
+                if (runtimeVer == null) {
+                    throw new DllNotFoundException(Name);
+                }
+
 				runtimeVer = runtimeVer[..runtimeVer.IndexOf('+')];
 				
 				var runtime = typeof(System.Runtime.GCSettings).Assembly!.Location;
-				searchDirs.Add(Path.GetDirectoryName(runtime));
+				searchDirs.Add(Path.GetDirectoryName(runtime)!);
 				
 				var pathComponents = runtime.Split(Path.DirectorySeparatorChar, StringSplitOptions.None);
 				var analyzersPath = new List<string>();
@@ -57,7 +62,7 @@ namespace RTSharp.Daemon.RuntimeCompilation
 				}
 
 				var thisLoc = Assembly.GetEntryAssembly()!.Location;
-				searchDirs.Add(Path.GetDirectoryName(thisLoc));
+				searchDirs.Add(Path.GetDirectoryName(thisLoc)!);
 
 				foreach (var dir in searchDirs) {
 					Debug.WriteLine($"Searching directory '{dir}'...");
@@ -229,8 +234,8 @@ namespace RTSharp.Daemon.RuntimeCompilation
 				Debug.WriteLine($"Loading {name}...");
 				var loaded = Assembly.LoadFile(name);
 				
-				generators.AddRange(loaded.GetTypes().Where(x => x.IsAssignableTo(typeof(ISourceGenerator))).Select(x => (ISourceGenerator)Activator.CreateInstance(x)));
-				generators.AddRange(loaded.GetTypes().Where(x => x.IsAssignableTo(typeof(IIncrementalGenerator))).Select(x => GeneratorExtensions.AsSourceGenerator((IIncrementalGenerator)Activator.CreateInstance(x))));
+				generators.AddRange(loaded.GetTypes().Where(x => x.IsAssignableTo(typeof(ISourceGenerator))).Select(x => (ISourceGenerator)Activator.CreateInstance(x)!)!);
+				generators.AddRange(loaded.GetTypes().Where(x => x.IsAssignableTo(typeof(IIncrementalGenerator))).Select(x => GeneratorExtensions.AsSourceGenerator((IIncrementalGenerator)Activator.CreateInstance(x)!)));
 			}
 			
 			Debug.WriteLine($"Generators: {string.Join(',', generators.Select(x => x.GetType().Name))}...");

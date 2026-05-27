@@ -227,7 +227,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                     var changes = await sub.GetChanges(false, default)!;
 
                     foreach (var (hash, _) in accountedFor) {
-                        var torrentHash = changes.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
+                        var torrentHash = changes!.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
                         torrentHash ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
                         torrentHash ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(hash))?.Hash;
 
@@ -274,8 +274,9 @@ namespace RTSharp.Daemon.Services.rtorrent
             var ret = await TorrentOpService.GetTorrentsFiles(Req.Hashes.Select(x => x.ToByteArray()));
             
             var pieceSizes = Req.Hashes.ToInfoHashDictionary(x => x.ToByteArray(), x => {
-                var entry = PollingSubscription.GetLatestHistoryEntry(x.ToByteArray());
-                return entry.Value.Torrent.ChunkSize;
+                var entry = PollingSubscription.GetLatestHistoryEntry(x.ToByteArray()) ?? throw new InvalidOperationException("No polling history entries");
+
+                return entry.Torrent.ChunkSize;
             });
 
             foreach (var el in ret.Reply) {
@@ -856,7 +857,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                             var oldPath = Path.Combine(basePath.Current, basePath.ContainerFolder ?? "", file.Path);
 
                             try { System.IO.File.Delete(oldPath); } catch { deleteOld.Text = "{torrent.InfoHash}: {oldPath} failed to delete"; }
-                            directories.Add(Path.GetDirectoryName(oldPath));
+                            directories.Add(Path.GetDirectoryName(oldPath)!);
 
                             if (sw.ElapsedMilliseconds > 100) {
                                 deleteOld.Text = "{torrent.InfoHash}: {oldPath}";

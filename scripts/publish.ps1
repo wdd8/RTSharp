@@ -3,6 +3,7 @@ Set-StrictMode -Version Latest
 $pwd = Get-Location
 
 dotnet publish ./src/RTSharp -c Release -r $args[0] --no-self-contained -o $args[0]
+dotnet build ./src/plugins/RTSharp.AutoIntegrify.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/AutoIntegrify')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
 dotnet build ./src/plugins/RTSharp.MassTrackerRewrite.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/MassTrackerRewrite')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
 dotnet build ./src/plugins/RTSharp.ColoredRatio.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/ColoredRatio')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
 dotnet build ./src/rtorrent/RTSharp.DataProvider.Rtorrent.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/DataProvider.Rtorrent')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"

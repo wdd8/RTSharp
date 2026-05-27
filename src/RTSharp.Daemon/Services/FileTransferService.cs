@@ -43,8 +43,8 @@ namespace RTSharp.Daemon.Services
                 Paths = { Paths.Select(x => x.RemoteSourcePath) }
             });
 
-            FileStream file = null;
-            string currentPath = null;
+            FileStream? file = null;
+            string? currentPath = null;
             var sw = Stopwatch.StartNew();
             long bytesTotal = 0;
             await foreach (var buffer in req.ResponseStream.ReadAllAsync()) {

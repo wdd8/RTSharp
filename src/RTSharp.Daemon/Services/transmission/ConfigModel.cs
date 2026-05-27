@@ -1,12 +1,12 @@
 namespace RTSharp.Daemon.Services.transmission;
 
-public class ConfigModel
+public record ConfigModel
 {
-    public string Uri { get; init; }
+    public required string Uri { get; init; }
 
-    public string Username { get; init; }
+    public required string Username { get; init; }
 
-    public string Password { get; init; }
+    public required string Password { get; init; }
 
-    public string? ConfigDir { get; set; }
+    public required string? ConfigDir { get; set; }
 }

@@ -12,10 +12,10 @@ public class QbitClient
         Config = Opts.Create(InstanceKey);
     }
 
-    public IQBittorrentClient2 Client;
+    private QBittorrentClient? Client;
     private DateTime Created = DateTime.MinValue;
 
-    public async Task Init()
+    public async Task<IQBittorrentClient2> Init()
     {
         if (Client == null || DateTime.UtcNow - Created > TimeSpan.FromMinutes(30)) {
             try {
@@ -25,11 +25,14 @@ public class QbitClient
                 await Client.LoginAsync(Config.Username, Config.Password);
 
                 Created = DateTime.UtcNow;
+                return Client;
             } catch {
                 Client = null;
                 Created = DateTime.MinValue;
                 throw;
             }
         }
+
+        return Client;
     }
 }

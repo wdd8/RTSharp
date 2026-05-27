@@ -17,7 +17,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         }
 
 #if DEBUG
-        private static string WslAddress;
+        private static string? WslAddress;
 #endif
 
         public async Task<ReadOnlyMemory<byte>> Get(string Xml, CancellationToken CancellationToken = default)
@@ -37,7 +37,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                     };
 
                     var proc = Process.Start(si);
-                    await proc.WaitForExitAsync();
+                    await proc!.WaitForExitAsync();
                     var output = await proc.StandardOutput.ReadToEndAsync();
 
                     WslAddress = output[(output.IndexOf("inet ") + 4)..output.IndexOf('/')].Trim();

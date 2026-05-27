@@ -6,7 +6,7 @@ using RTSharp.Daemon.Protocols.DataProvider;
 
 namespace RTSharp.Daemon.GRPCServices.DataProvider
 {
-    public class TorrentsService(ILogger<TorrentsService> Logger, RegisteredDataProviders RegisteredDataProviders, IHostApplicationLifetime Lifetime) : GRPCTorrentsService.GRPCTorrentsServiceBase
+    public class TorrentsService(RegisteredDataProviders RegisteredDataProviders) : GRPCTorrentsService.GRPCTorrentsServiceBase
     {
         public override async Task<TorrentsListResponse> GetTorrentList(Empty Req, ServerCallContext Ctx)
         {

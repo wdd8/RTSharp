@@ -128,7 +128,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             // <value><array><data>\r\n<value><string>/home/user/torrentdata/smartos-20221201T010802Z</string></value>\r\n</data></array></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
 
-            var basePaths = new InfoHashDictionary<(string BasePath, string ContainerFolder)>();
+            var basePaths = new InfoHashDictionary<(string BasePath, string? ContainerFolder)>();
 
             foreach (var hash in Hashes) {
                 if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {

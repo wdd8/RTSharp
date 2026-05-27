@@ -23,9 +23,9 @@ public class SettingsGrpc
 
     public async Task<TransmissionSessionInformation> GetSessionInformation()
     {
-        await Client.Init();
+        var client = await Client.Init();
 
-        var info = (await Client.Client.GetSessionInformationAsync())!;
+        var info = (await client.GetSessionInformationAsync())!;
 
         return new TransmissionSessionInformation
         {
@@ -85,9 +85,9 @@ public class SettingsGrpc
 
     public async Task SetSessionSettings(TransmissionSessionInformation Input)
     {
-        await Client.Init();
+        var client = await Client.Init();
 
-        await Client.Client.SetSessionSettingsAsync(new Transmission.Net.Arguments.SessionSettings {
+        await client.SetSessionSettingsAsync(new Transmission.Net.Arguments.SessionSettings {
             AlternativeSpeedDown = Input.AlternativeSpeedDown,
             AlternativeSpeedEnabled = Input.AlternativeSpeedEnabled,
             AlternativeSpeedTimeBegin = Input.AlternativeSpeedTimeBegin,

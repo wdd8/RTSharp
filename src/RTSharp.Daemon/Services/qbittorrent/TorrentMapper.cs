@@ -30,6 +30,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 QBittorrent.Client.TorrentState.QueuedForChecking => Protocols.DataProvider.TorrentState.Hashing,
                 QBittorrent.Client.TorrentState.CheckingResumeData => Protocols.DataProvider.TorrentState.Hashing | Protocols.DataProvider.TorrentState.Active,
                 QBittorrent.Client.TorrentState.Moving => Protocols.DataProvider.TorrentState.Allocating | Protocols.DataProvider.TorrentState.Hashing, // ???
+                _ => throw new ArgumentOutOfRangeException(),
             };
         }
 
@@ -224,6 +225,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 QBittorrent.Client.TorrentTrackerStatus.Working => Shared.Abstractions.Tracker.TRACKER_STATUS.ENABLED | Shared.Abstractions.Tracker.TRACKER_STATUS.ACTIVE,
                 QBittorrent.Client.TorrentTrackerStatus.Updating => Shared.Abstractions.Tracker.TRACKER_STATUS.ENABLED,
                 QBittorrent.Client.TorrentTrackerStatus.NotWorking => Shared.Abstractions.Tracker.TRACKER_STATUS.ENABLED | Shared.Abstractions.Tracker.TRACKER_STATUS.NOT_ACTIVE,
+                _ => throw new ArgumentOutOfRangeException()
             };
         }
 
@@ -232,7 +234,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
             return new Shared.Abstractions.Tracker {
                 ID = In.Url.OriginalString,
                 Uri = In.Url.ToString(),
-                Status = MapFromExternal(In.TrackerStatus.Value),
+                Status = MapFromExternal(In.TrackerStatus!.Value),
                 Seeders = (uint)(In.Seeds ?? 0),
                 Peers = (uint)(In.Peers ?? 0),
                 // Where do leeches come in?

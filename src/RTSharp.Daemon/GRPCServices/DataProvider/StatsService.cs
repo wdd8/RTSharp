@@ -7,7 +7,7 @@ using RTSharp.Daemon.Protocols.DataProvider;
 
 namespace RTSharp.Daemon.GRPCServices.DataProvider
 {
-    public class StatsService(ILogger<StatsService> Logger, IServiceProvider ServiceProvider, RegisteredDataProviders RegisteredDataProviders) : GRPCStatsService.GRPCStatsServiceBase
+    public class StatsService(RegisteredDataProviders RegisteredDataProviders) : GRPCStatsService.GRPCStatsServiceBase
     {
         public override async Task<AllTimeDataStats> GetAllTimeDataStats(Empty _, ServerCallContext Ctx)
         {

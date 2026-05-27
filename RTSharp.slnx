@@ -21,6 +21,8 @@
     <Project Path="src/transmission/RTSharp.DataProvider.Transmission.Plugin/RTSharp.DataProvider.Transmission.Plugin.csproj" />
     <Project Path="src/RTSharp.Daemon/Services/transmission/Transmission.Net/Transmission.Net/Transmission.Net.csproj" />
   </Folder>
+  <Project Path="src/MessageBox.Avalonia/MsBox.Avalonia.Markdown/MsBox.Avalonia.Markdown.csproj" />
+  <Project Path="src/MessageBox.Avalonia/MsBox.Avalonia/MsBox.Avalonia.csproj" />
   <Project Path="src/ProDataGrid/src/Avalonia.Controls.DataGrid/Avalonia.Controls.DataGrid.csproj" />
   <Project Path="src/ProDataGrid/src/ProDataGrid.FormulaEngine.Excel/ProDataGrid.FormulaEngine.Excel.csproj" />
   <Project Path="src/ProDataGrid/src/ProDataGrid.FormulaEngine/ProDataGrid.FormulaEngine.csproj" />

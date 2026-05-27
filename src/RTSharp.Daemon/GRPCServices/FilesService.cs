@@ -131,7 +131,7 @@ namespace RTSharp.Daemon.GRPCServices
                 });
 
                 ret.Children.AddRange(entries.Where(x => x != null).Select(x => new FileSystemItem() {
-                    Path = x.FullName,
+                    Path = x!.FullName,
                     Directory = x.IsDirectory,
                     Children = { },
                     LastModified = Timestamp.FromDateTime(x.LastWriteTimeUtc),

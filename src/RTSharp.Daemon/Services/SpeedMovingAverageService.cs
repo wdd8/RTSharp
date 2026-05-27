@@ -68,11 +68,11 @@ namespace RTSharp.Daemon.Services
 
             var deltas = new List<double>(Items.Count - 1);
             var item = Items.First;
-            while (item.Next != null) {
-                var next = item.Next.Value;
-                var time = next.TimeUtc - item.Value.TimeUtc;
+            while (item?.Next != null) {
+                var (timeUtc, totalBytes) = item.Next.Value;
+                var time = timeUtc - item.Value.TimeUtc;
 
-                deltas.Add((next.TotalBytes - item.Value.TotalBytes) / time.TotalSeconds);
+                deltas.Add((totalBytes - item.Value.TotalBytes) / time.TotalSeconds);
                 item = item.Next;
             }
 
@@ -101,7 +101,7 @@ namespace RTSharp.Daemon.Services
                 return new SpeedMovingAverage(itemsMax, Alpha);
             });
 
-            return cacheEntry;
+            return cacheEntry!;
         }
     }
 }

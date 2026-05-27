@@ -1,6 +1,6 @@
 namespace RTSharp.Daemon.Services.rtorrent;
 
-public class ConfigModel
+public record ConfigModel
 {
-    public string SCGIListen { get; init; }
+    public required string SCGIListen { get; init; }
 }

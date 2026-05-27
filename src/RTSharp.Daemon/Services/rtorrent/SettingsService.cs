@@ -77,7 +77,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             new SettingSpec("network.bind_address", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.NetworkBindAddress))
         };
 
-        public static readonly SettingSpec SessionPath = new SettingSpec("session.path", SCGI_DATA_TYPE.STRING, null);
+        public static readonly SettingSpec SessionPath = new SettingSpec("session.path", SCGI_DATA_TYPE.STRING, "");
 
         public async Task<Dictionary<string, object>> GetSettings(params SettingSpec[] Settings)
         {
@@ -158,9 +158,10 @@ namespace RTSharp.Daemon.Services.rtorrent
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var setting in AllSettings) {
                 var currentValue = currentSettings[setting.RtorrentSetting];
-                var newValue = Req.GetType().GetProperty(setting.Property).GetValue(Req);
+                var prop = Req.GetType().GetProperty(setting.Property) ?? throw new InvalidOperationException();
+                var newValue = prop.GetValue(Req);
 
-                if (currentValue.ToString() == newValue.ToString())
+                if (currentValue.ToString() == newValue?.ToString())
                     continue;
 
                 sentSettings.Add(setting);
@@ -172,7 +173,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 if (setting.RtorrentSetting == "pieces.preload.type")
                     valueToSend = piecesPreloadType.ToString();
                 else
-                    valueToSend = newValue.ToString();
+                    valueToSend = newValue?.ToString() ?? "";
 
                 switch (setting.DataType) {
                     case SCGI_DATA_TYPE.I8:

@@ -3,8 +3,6 @@ using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
 
-using QBittorrent.Client;
-
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
@@ -17,6 +15,7 @@ using System.Threading.Tasks;
 
 using Transmission.Net.Api;
 using Transmission.Net.Api.Entity;
+using Transmission.Net.Core;
 using Transmission.Net.Core.Enums;
 
 namespace RTSharp.Daemon.Services.transmission
@@ -64,33 +63,9 @@ namespace RTSharp.Daemon.Services.transmission
 
             return null;
         }
-
-        int[] Translate(IList<Protocols.DataProvider.Torrent> In)
-        {
-            var ret = new int[In.Count];
-            for (var x = 0;x < ret.Length;x++) {
-                var translated = Translate(In[x].Hash.ToByteArray()) ?? throw new NullReferenceException($"Cannot translate '{Convert.ToHexString(In[x].Hash.Span)}'");
-                ret[x] = translated;
-            }
-
-            return ret;
-        }
-
         object[] TranslateObj(IList<byte[]> In)
         {
             var ret = new object[In.Count];
-
-            for (var x = 0;x < In.Count;x++) {
-                var translated = Translate(In[x]) ?? throw new NullReferenceException($"Cannot translate '{Convert.ToHexString(In[x])}'");
-                ret[x] = translated;
-            }
-
-            return ret;
-        }
-
-        int[] Translate(IList<byte[]> In)
-        {
-            var ret = new int[In.Count];
 
             for (var x = 0;x < In.Count;x++) {
                 var translated = Translate(In[x]) ?? throw new NullReferenceException($"Cannot translate '{Convert.ToHexString(In[x])}'");
@@ -136,13 +111,13 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task GetTorrentListUpdates(GetTorrentListUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsListResponse> Res, CancellationToken CancellationToken)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             var pollInternal = Req.Interval.ToTimeSpan();
 
             var delta = new DeltaTorrentsListResponse();
 
-            var all = await Client.Client.TorrentGetAsync(null, ALL_FIELDS_EXCEPT_LISTS);
+            var all = await client.TorrentGetAsync(null, ALL_FIELDS_EXCEPT_LISTS);
 
             foreach (var externalTorrent in all!.Torrents) {
                 var hash = Convert.FromHexString(externalTorrent.HashString!);
@@ -186,9 +161,9 @@ namespace RTSharp.Daemon.Services.transmission
 
                 Task<TorrentsResult?>? fullUpdateResultTask = null;
                 if (fullUpdateQueue != null) {
-                    fullUpdateResultTask = Client.Client.TorrentGetAsync([.. fullUpdateQueue], ALL_FIELDS_EXCEPT_LISTS);
+                    fullUpdateResultTask = client.TorrentGetAsync([.. fullUpdateQueue], ALL_FIELDS_EXCEPT_LISTS);
                 }
-                var list = await Client.Client.TorrentGetRecentyActiveAsync(ALL_FIELDS_EXCEPT_LISTS);
+                var list = await client.TorrentGetRecentyActiveAsync(ALL_FIELDS_EXCEPT_LISTS);
                 
                 if (fullUpdateResultTask != null) {
                     var fullUpdateResult = await fullUpdateResultTask;
@@ -286,13 +261,13 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<TorrentsListResponse> GetTorrentList()
         {
-            await Client.Init();
+            var client = await Client.Init();
 
-            var all = await Client.Client.TorrentGetAsync(null, TorrentFields.ALL_FIELDS);
+            var all = await client.TorrentGetAsync(null, TorrentFields.ALL_FIELDS);
 
             var ret = new TorrentsListResponse {
                 List = {
-                    all.Torrents.Select(x => {
+                    all!.Torrents.Select(x => {
                         var internalTorrent = new Protocols.DataProvider.Torrent {
                             Hash = Convert.FromHexString(x.HashString!).ToByteString()
                         };
@@ -304,15 +279,15 @@ namespace RTSharp.Daemon.Services.transmission
             return ret;
         }
 
-        public async Task<TorrentsReply> PerformVoidActionObj(Torrents In, Func<object[], Task> Fx)
+        public async Task<TorrentsReply> PerformVoidActionObj(Torrents In, Func<ITransmissionClient, object[], Task> Fx)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             var tasks = new List<Task<TorrentsReply.Types.TorrentReply>>();
-            Exception exception = null;
+            Exception? exception = null;
 
             try {
-                await Fx(TranslateObj(In));
+                await Fx(client, TranslateObj(In));
             } catch (Exception ex) {
                 exception = ex;
             }
@@ -335,15 +310,15 @@ namespace RTSharp.Daemon.Services.transmission
             };
         }
 
-        public async Task<TorrentsReply> PerformVoidActionInt(Torrents In, Func<int[], Task> Fx)
+        public async Task<TorrentsReply> PerformVoidActionInt(Torrents In, Func<ITransmissionClient, int[], Task> Fx)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             var tasks = new List<Task<TorrentsReply.Types.TorrentReply>>();
-            Exception exception = null;
+            Exception? exception = null;
 
             try {
-                await Fx(Translate(In));
+                await Fx(client, Translate(In));
             } catch (Exception ex) {
                 exception = ex;
             }
@@ -366,20 +341,20 @@ namespace RTSharp.Daemon.Services.transmission
             };
         }
 
-        public Task<TorrentsReply> StartTorrents(Torrents In) => PerformVoidActionObj(In, Client.Client.TorrentStartAsync);
+        public Task<TorrentsReply> StartTorrents(Torrents In) => PerformVoidActionObj(In, (client, obj) => client.TorrentStartAsync(obj));
 
         public Task<TorrentsReply> PauseTorrents(Torrents In) => throw new NotSupportedException();
 
-        public Task<TorrentsReply> StopTorrents(Torrents In) => PerformVoidActionObj(In, Client.Client.TorrentStopAsync);
+        public Task<TorrentsReply> StopTorrents(Torrents In) => PerformVoidActionObj(In, (client, obj) => client.TorrentStopAsync(obj));
 
         public async Task<BytesValue> ForceRecheckTorrents(Torrents In, CancellationToken CancellationToken)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             Exception? exception = null;
 
             try {
-                await Client.Client.TorrentVerifyAsync(TranslateObj(In));
+                await client.TorrentVerifyAsync(TranslateObj(In));
             } catch (Exception ex) {
                 exception = ex;
             }
@@ -411,7 +386,7 @@ namespace RTSharp.Daemon.Services.transmission
 
                     Logger.LogDebug("Getting partial data inside session");
 
-                    var partialData = await Client.Client.TorrentGetRecentyActiveAsync(TorrentFields.HASH_STRING, TorrentFields.STATUS);
+                    var partialData = await client.TorrentGetRecentyActiveAsync(TorrentFields.HASH_STRING, TorrentFields.STATUS);
 
                     Logger.LogDebug("Got partial data inside session");
 
@@ -522,13 +497,13 @@ namespace RTSharp.Daemon.Services.transmission
             };
         }
 
-        public Task<TorrentsReply> ReannounceToAllTrackers(Torrents In) => PerformVoidActionObj(In, Client.Client.TorrentReannounceAsync);
+        public Task<TorrentsReply> ReannounceToAllTrackers(Torrents In) => PerformVoidActionObj(In, (client, obj) => client.TorrentReannounceAsync(obj));
 
         record Torrent(string Path, string Filename, MemoryStream Data);
 
         public async Task<TorrentsReply> AddTorrents(IAsyncStreamReader<NewTorrentsData> Req)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             var torrents = new Dictionary<string, Torrent>();
             await foreach (var chunk in Req.ReadAllAsync()) {
@@ -567,13 +542,13 @@ namespace RTSharp.Daemon.Services.transmission
                 try {
                     var b64 = Convert.ToBase64String(torrent.Data.ToArray());
 
-                    var newInfo = await Client.Client.TorrentAddAsync(new NewTorrent {
+                    var newInfo = await client.TorrentAddAsync(new NewTorrent {
                         DownloadDirectory = torrent.Path,
                         Metainfo = b64,
                         Paused = true
                     });
                     HashToId[btorrent.OriginalInfoHashBytes] = newInfo!.Id;
-                } catch (Exception ex) {
+                } catch (Exception) {
                     ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                         InfoHash = Array.Empty<byte>().ToByteString(),
                         Status = { new Protocols.DataProvider.Status() {
@@ -602,10 +577,10 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<TorrentsFilesReply> GetTorrentsFiles(Torrents Req)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             // Could also fetch from torrent polling task if its live
-            var torrents = (await Client.Client.TorrentGetAsync(Translate(Req), ["files", "hashString", "name", "fileStats", "pieceSize"]))!.Torrents;
+            var torrents = (await client.TorrentGetAsync(Translate(Req), ["files", "hashString", "name", "fileStats", "pieceSize"]))!.Torrents;
 
             return new TorrentsFilesReply {
                 Reply = {
@@ -637,13 +612,13 @@ namespace RTSharp.Daemon.Services.transmission
             };
         }
 
-        public Task<TorrentsReply> RemoveTorrents(Torrents In) => PerformVoidActionInt(In, x => Client.Client.TorrentRemoveAsync(x, false));
+        public Task<TorrentsReply> RemoveTorrents(Torrents In) => PerformVoidActionInt(In, (client, x) => client.TorrentRemoveAsync(x, false));
 
-        public Task<TorrentsReply> RemoveTorrentsAndData(Torrents In) => PerformVoidActionInt(In, x => Client.Client.TorrentRemoveAsync(x, true));
+        public Task<TorrentsReply> RemoveTorrentsAndData(Torrents In) => PerformVoidActionInt(In, (client, x) => client.TorrentRemoveAsync(x, true));
 
         public async Task GetDotTorrents(Torrents Req, IServerStreamWriter<DotTorrentsData> Res, CancellationToken CancellationToken)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             for (var x = 0;x < Req.Hashes.Count;x++) {
                 var hash = Req.Hashes[x];
@@ -686,9 +661,9 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<TorrentsPeersReply> GetTorrentsPeers(Torrents Req)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
-            var torrents = await Client.Client.TorrentGetAsync(Translate(Req), [TorrentFields.HASH_STRING, TorrentFields.PEERS, TorrentFields.TOTAL_SIZE]);
+            var torrents = await client.TorrentGetAsync(Translate(Req), [TorrentFields.HASH_STRING, TorrentFields.PEERS, TorrentFields.TOTAL_SIZE]);
 
             return new TorrentsPeersReply {
                 Reply = {
@@ -760,19 +735,19 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<TorrentsTrackersReply> GetTorrentsTrackers(Torrents Req, CancellationToken CancellationToken)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
-            var torrents = await Client.Client.TorrentGetAsync(Translate(Req), [TorrentFields.HASH_STRING, TorrentFields.TRACKER_STATS]);
+            var torrents = await client.TorrentGetAsync(Translate(Req), [TorrentFields.HASH_STRING, TorrentFields.TRACKER_STATS]);
 
             return new TorrentsTrackersReply {
                 Reply = {
-                    await Task.WhenAll(torrents.Torrents.Select(async x => {
+                    await Task.WhenAll(torrents!.Torrents.Select(async x => {
                         var trackers = x.TrackerStats;
 
                         return new TorrentsTrackersReply.Types.TorrentsTrackers {
                             InfoHash = Convert.FromHexString(x.HashString!).ToByteString(),
                             Trackers = {
-                                trackers.Select(x => new Protocols.DataProvider.TorrentTracker {
+                                trackers!.Select(x => new Protocols.DataProvider.TorrentTracker {
                                     ID = x.Id.ToString(),
                                     Uri = x.Announce,
                                     Status = (x.AnnounceState == null ? x.ScrapeState : x.AnnounceState) switch {
@@ -798,7 +773,7 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<BytesValue> MoveDownloadDirectory(MoveDownloadDirectoryArgs Req, CancellationToken CancellationToken)
         {
-            await Client.Init();
+            var client = await Client.Init();
             var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
 
             if (!Req.DeleteSourceFiles) {
@@ -833,7 +808,7 @@ namespace RTSharp.Daemon.Services.transmission
                         ];
 
                         try {
-                            await Client.Client.TorrentSetLocationAsync([Translate(req.InfoHash.Span)!.Value], req.TargetDirectory, Req.Move);
+                            await client.TorrentSetLocationAsync([Translate(req.InfoHash.Span)!.Value], req.TargetDirectory, Req.Move);
                         } catch (Exception ex) {
                             progress.State = TASK_STATE.FAILED;
                             progress.Text = $"Failed to set location. {ex.Message}";
@@ -867,7 +842,7 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<TorrentsReply> SetLabels(SetLabelsArgs Req)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             Logger.LogInformation("In SetLabels");
 
@@ -881,7 +856,7 @@ namespace RTSharp.Daemon.Services.transmission
                     Exception? exception = null;
 
                     try {
-                        await Client.Client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
+                        await client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
                             IDs = TranslateObj(Hashes.ToArray()),
                             Labels = Labels.ToArray()
                         });
@@ -919,9 +894,9 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<TorrentsPiecesReply> GetTorrentsPieces(Torrents Req)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
-            var torrents = await Client.Client.TorrentGetAsync(Translate(Req), [ TorrentFields.HASH_STRING, TorrentFields.PIECES ]);
+            var torrents = await client.TorrentGetAsync(Translate(Req), [ TorrentFields.HASH_STRING, TorrentFields.PIECES ]);
 
             return new TorrentsPiecesReply {
                 Reply = {
@@ -939,11 +914,11 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<Protocols.DataProvider.Torrent> GetTorrent(BytesValue Hash)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             var id = Translate(Hash.Value.Span) ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent translation not found"));
 
-            var torrent = await Client.Client.TorrentGetAsync([ id ]);
+            var torrent = await client.TorrentGetAsync([ id ]);
 
             if (!torrent!.Torrents.Any())
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
@@ -966,11 +941,11 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<Empty> EditTracker(ByteString InfoHash, string Existing, string New, CancellationToken CancellationToken)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             var id = Translate(InfoHash.Span) ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent translation not found"));
 
-            var torrents = await Client.Client.TorrentGetAsync([ id ], [ TorrentFields.TRACKER_LIST ]);
+            var torrents = await client.TorrentGetAsync([ id ], [ TorrentFields.TRACKER_LIST ]);
             var torrent = torrents?.Torrents.SingleOrDefault();
 
             if (torrent == default) {
@@ -987,7 +962,7 @@ namespace RTSharp.Daemon.Services.transmission
                 }
             }
 
-            await Client.Client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
+            await client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
                 IDs = TranslateObj([ InfoHash.ToByteArray() ]),
                 TrackerList = string.Join("\r\n", newTrackerList)
             });
@@ -997,11 +972,11 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<Empty> AddTracker(ByteString InfoHash, string Tracker, CancellationToken CancellationToken)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             var id = Translate(InfoHash.Span) ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent translation not found"));
 
-            var torrents = await Client.Client.TorrentGetAsync([ id ], [ TorrentFields.TRACKER_LIST ]);
+            var torrents = await client.TorrentGetAsync([ id ], [ TorrentFields.TRACKER_LIST ]);
             var torrent = torrents?.Torrents.SingleOrDefault();
 
             if (torrent == default) {
@@ -1012,7 +987,7 @@ namespace RTSharp.Daemon.Services.transmission
                 Tracker
             };
 
-            await Client.Client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
+            await client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
                 IDs = TranslateObj([ InfoHash.ToByteArray() ]),
                 TrackerList = string.Join("\r\n", newTrackerList)
             });
@@ -1022,11 +997,11 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<Empty> RemoveTracker(ByteString InfoHash, string Tracker, CancellationToken CancellationToken)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
             var id = Translate(InfoHash.Span) ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent translation not found"));
 
-            var torrents = await Client.Client.TorrentGetAsync([id], [TorrentFields.TRACKER_LIST]);
+            var torrents = await client.TorrentGetAsync([id], [TorrentFields.TRACKER_LIST]);
             var torrent = torrents?.Torrents.SingleOrDefault();
 
             if (torrent == default) {
@@ -1039,7 +1014,7 @@ namespace RTSharp.Daemon.Services.transmission
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Tracker not found"));
             }
 
-            await Client.Client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
+            await client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
                 IDs = TranslateObj([InfoHash.ToByteArray()]),
                 TrackerList = string.Join("\r\n", newTrackerList)
             });
@@ -1049,12 +1024,12 @@ namespace RTSharp.Daemon.Services.transmission
 
         public async Task<Protocols.DataProvider.AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken)
         {
-            await Client.Init();
+            var client = await Client.Init();
 
-            var stats = await Client.Client.GetSessionStatisticAsync();
+            var stats = await client.GetSessionStatisticAsync();
 
             return new Protocols.DataProvider.AllTimeDataStats {
-                Download = (ulong)stats.CumulativeStats!.DownloadedBytes!,
+                Download = (ulong)stats!.CumulativeStats!.DownloadedBytes!,
                 Upload = (ulong)stats.CumulativeStats.UploadedBytes!,
                 ShareRatio = (float)stats.CumulativeStats.DownloadedBytes.Value / (float)stats.CumulativeStats.UploadedBytes.Value
             };

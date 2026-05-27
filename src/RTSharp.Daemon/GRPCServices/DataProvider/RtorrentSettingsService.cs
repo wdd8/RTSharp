@@ -21,6 +21,10 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             var ret = new RtorrentSettings();
             foreach (var (k, v) in settings) {
                 var prop = ret.GetType().GetProperty(Services.rtorrent.SettingsService.AllSettings.First(x => x.RtorrentSetting == k).Property);
+
+                if (prop == null)
+                    continue;
+
                 if (prop.PropertyType == typeof(int))
                     prop.SetValue(ret, (int)(long)v);
                 else
