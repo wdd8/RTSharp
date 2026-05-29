@@ -61,6 +61,8 @@ As `RTSharp.Daemon` is a .NET application, you will have to [install dotnet SDK 
 
 You can run the service by building it `dotnet build -c Release` and running the executable `./bin/Release/net9.0/RTSharp.Daemon`, or just by running `dotnet run -c Release`.
 
+Optionally, enable `Prometheus` in `appsettings.json` to expose tracker upload/download totals at the configured `Path` (default `/metrics`). `PollInterval` controls how often the daemon refreshes metrics.
+
 Note that `RTSharp.Daemon` is able to perform file operations related to torrent data, so it's a good idea to run it under the same user as your torrent daemons. If you are not running daemon under docker, systemd or any other orchestrator with an ability to set process user, you can set `setuid` and `setgid` config properties at root level to your users and group ID.
 
 ---

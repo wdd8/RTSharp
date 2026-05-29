@@ -32,6 +32,9 @@ public static class Program
         builder.Services.AddSingleton<SessionsService>();
         builder.Services.AddSingleton<ChannelsService>();
         builder.Services.AddSingleton<TorrentService>();
+        builder.Services.Configure<RTSharp.Daemon.Services.Prometheus.PrometheusOptions>(builder.Configuration.GetSection("Prometheus"));
+        builder.Services.AddSingleton<RTSharp.Daemon.Services.Prometheus.PrometheusMetricsService>();
+        builder.Services.AddHostedService(services => services.GetRequiredService<RTSharp.Daemon.Services.Prometheus.PrometheusMetricsService>());
 
         foreach (var key in builder.Configuration.GetSection("DataProviders:rtorrent").GetChildren().Select(x => x.Key)) {
             builder.Services.Configure<RTSharp.Daemon.Services.rtorrent.ConfigModel>(key, builder.Configuration.GetSection("DataProviders:rtorrent:" + key));
@@ -175,6 +178,11 @@ public static class Program
         app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.RtorrentSettingsService>();
         app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.QBittorrentSettingsService>();
         app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.TransmissionSettingsService>();
+
+        var prometheusOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<RTSharp.Daemon.Services.Prometheus.PrometheusOptions>>().Value;
+        if (prometheusOptions.Enabled) {
+            app.MapGet(prometheusOptions.Path, (RTSharp.Daemon.Services.Prometheus.PrometheusMetricsService metrics) => Results.Text(metrics.Render(), "text/plain; charset=utf-8"));
+        }
 
         app.Run();
     }

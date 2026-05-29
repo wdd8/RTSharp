@@ -17,7 +17,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
         public T Resolve<T>() where T : notnull => ServiceProvider.GetRequiredKeyedService<T>(InstanceKey);
     }
 
-    public class RegisteredDataProviders(IServiceProvider ServiceProvider)
+    public class RegisteredDataProviders(IServiceProvider ServiceProvider, IConfiguration Configuration)
     {
         public RegisteredDataProvider GetDataProvider(ServerCallContext Ctx)
         {
@@ -29,6 +29,18 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
                 throw new RpcException(new Status(StatusCode.InvalidArgument, $"data-provider header '{dpNameRaw.Value}' unknown"));
             
             return dp;
+        }
+
+        public IEnumerable<RegisteredDataProvider> GetDataProviders()
+        {
+            foreach (var type in Enum.GetValues<DataProviderType>()) {
+                foreach (var key in Configuration.GetSection($"DataProviders:{type}").GetChildren().Select(x => x.Key)) {
+                    var dp = ServiceProvider.GetKeyedService<RegisteredDataProvider>(key);
+
+                    if (dp != null)
+                        yield return dp;
+                }
+            }
         }
     }
 }

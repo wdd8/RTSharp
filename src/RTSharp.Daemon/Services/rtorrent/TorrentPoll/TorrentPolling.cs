@@ -191,6 +191,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     curTrackers.Add(tracker);
                 }
 
+                var primaryTracker = curTrackers.OrderByDescending(x => x.Peers).ThenByDescending(x => x.Status == TorrentTrackerStatus.Active).FirstOrDefault();
+
                 if (torrentComment.StartsWith("VRS24mrker"))
                     torrentComment = torrentComment[10..];
 
@@ -217,6 +219,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     ChunkSize = (uint)chunkSize,
                     Wasted = skippedTotal,
                     // trackers
+                    PrimaryTracker = primaryTracker,
                     StatusMessage = statusMessage,
                     SeedersConnected = (uint)seedersConnected,
                     PeersConnected = (uint)peersConnected,

@@ -25,6 +25,7 @@ See [setting up data providers](setup-dataproviders.md)
    - Torrent data copy to other servers
    - Mediainfo
    - Runtime scripting
+   - Prometheus tracker metrics endpoint
  - Standalone built-in torrent creation
  - Peer AS listing
  - Custom names for trackers
