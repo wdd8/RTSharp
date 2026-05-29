@@ -1,3 +1,4 @@
+﻿using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Media;
 
@@ -30,6 +31,7 @@ namespace RTSharp.ViewModels.TorrentListing
     public partial class TorrentTrackersViewModel : ObservableObject
     {
         public ObservableCollection<Models.Tracker> Trackers { get; } = new();
+        public DataGridCollectionView TrackersView { get; }
 
         public Func<Window, Task<string?>> BrowseForIconDialog { get; set; } = null!; // view set
 
@@ -47,6 +49,7 @@ namespace RTSharp.ViewModels.TorrentListing
         public TorrentTrackersViewModel(TorrentListingViewModel Parent)
         {
             this.Parent = Parent;
+            TrackersView = new DataGridCollectionView(Trackers);
         }
 
         static readonly FrozenDictionary<string, Func<DataProviderTrackerCapabilities, bool>> StrToCap = new Dictionary<string, Func<DataProviderTrackerCapabilities, bool>>() {
@@ -139,6 +142,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
             trackers[0].DisplayName = In.Text;
             trackers[0].UpdateDisplay();
+            TrackersView.Refresh();
 
             try {
                 var trackerInfo = await trackerDb.GetTrackerInfo(trackers[0].Domain);

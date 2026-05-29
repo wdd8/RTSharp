@@ -90,7 +90,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
                     }
 
-                    foreach (var oldTracker in TrackersViewModel.Trackers) {
+                    foreach (var oldTracker in TrackersViewModel.Trackers.ToArray()) {
                         bool foundInNew = false;
                         foreach (var newTracker in trackers) {
                             if (newTracker.Uri == oldTracker.Uri) {
@@ -157,6 +157,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             }
                         }
                     }
+                    TrackersViewModel.TrackersView.Refresh();
 
                     lastFetchedFor = fetchedFor;
                 }

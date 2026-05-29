@@ -1,5 +1,7 @@
 ﻿using Avalonia.Media;
 
+using Avalonia.Collections;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -21,6 +23,7 @@ namespace RTSharp.ViewModels.TorrentListing
     public partial class TorrentPeersViewModel : ObservableObject
     {
         public ObservableCollection<Peer> Peers { get; } = new();
+        public DataGridCollectionView PeersView { get; }
 
         [ObservableProperty]
         public partial Models.Torrent Torrent { get; set; }
@@ -77,6 +80,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public TorrentPeersViewModel()
         {
+            PeersView = new DataGridCollectionView(Peers);
         }
 
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-user-group");

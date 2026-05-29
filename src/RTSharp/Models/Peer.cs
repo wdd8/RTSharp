@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 
 using Avalonia.Media;
@@ -25,6 +25,7 @@ namespace RTSharp.Models
         /// Peer IP:Port
         /// </summary>
         public required IPEndPoint IPPort { get; init; }
+        public string IPPortDisplay => IPPort.ToString();
 
         /// <summary>
         /// Peer client

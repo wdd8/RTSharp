@@ -82,6 +82,7 @@ namespace RTSharp.ViewModels.TorrentListing
                                     x.Icon = DefaultImage;
                                     x.Origin = "Unknown";
                                 }
+                                PeersViewModel.PeersView.Refresh();
                             }, DispatcherPriority.Default);
                             return;
                         }
@@ -100,6 +101,7 @@ namespace RTSharp.ViewModels.TorrentListing
                                 x.Icon = peerIcon;
                                 x.Origin = whois.Organization + (whois.Domain != null ? $" [{whois.Domain}]" : "");
                             }
+                            PeersViewModel.PeersView.Refresh();
                         }, DispatcherPriority.Default);
 
                         System.IO.Stream? favicon = null;
@@ -182,11 +184,13 @@ namespace RTSharp.ViewModels.TorrentListing
                                     Dispatcher.UIThread.Post(() => {
                                         peer.Origin = asInfo.Organization + (asInfo.Domain != null ? $" [{asInfo.Domain}]" : "");
                                         peer.Icon = cachedImage;
+                                        PeersViewModel.PeersView.Refresh();
                                     }, DispatcherPriority.Default);
                                 } else {
                                     // Just started fetching info but there is no cached info, wait 3 seconds later and start fetching
                                     Dispatcher.UIThread.Post(() => {
                                         peer.Origin = "Inactive peer";
+                                        PeersViewModel.PeersView.Refresh();
                                     }, DispatcherPriority.MaxValue);
                                 }
                             }
@@ -197,6 +201,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             PeerInfoFetches!.Writer.TryWrite(peer);
                         }
                     }
+                    PeersViewModel.PeersView.Refresh();
 
                     lastFetchedFor = fetchedFor;
                 }

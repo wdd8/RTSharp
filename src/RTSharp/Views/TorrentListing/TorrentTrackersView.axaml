@@ -1,4 +1,4 @@
-<UserControl x:Class="RTSharp.Views.TorrentListing.TorrentTrackersView"
+﻿<UserControl x:Class="RTSharp.Views.TorrentListing.TorrentTrackersView"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -77,11 +77,13 @@
         </dialogHost:DialogHost.DialogContent>
 
         <DataGrid Name="grid"
-                      ItemsSource="{Binding Trackers}"
+                      ItemsSource="{Binding TrackersView}"
                       SelectedItem="{Binding SelectedItem}"
                       CanUserReorderColumns="True"
                       CanUserResizeColumns="True"
                       CanUserSortColumns="True"
+                      OwnsSortDescriptions="True"
+                      SortCycleMode="AscendingDescendingNone"
                       GridLinesVisibility="Horizontal"
                       IsReadOnly="True"
                       SelectionMode="Extended">
@@ -124,14 +126,14 @@
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.Columns>
-                <DataGridTemplateColumn Header="Icon">
+                <DataGridTemplateColumn Header="Icon" CanUserSort="False">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:Tracker">
                             <Image Source="{Binding Icon}" Width="16" Height="16" Stretch="Uniform" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="">
+                <DataGridTemplateColumn Header="" SortMemberPath="Display">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:Tracker">
                             <Border ToolTip.Tip="{Binding Uri, Mode=OneWay}">
@@ -140,13 +142,13 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status, Mode=OneWay}" />
-                <DataGridTextColumn Header="Seeders" Binding="{Binding Seeders, Mode=OneWay}" />
-                <DataGridTextColumn Header="Peers" Binding="{Binding Peers, Mode=OneWay}" />
-                <DataGridTextColumn Header="Downloaded" Binding="{Binding Downloaded, Mode=OneWay}" />
-                <DataGridTextColumn Header="Last updated" Binding="{Binding LastUpdatedDate, Mode=OneWay}" />
-                <DataGridTextColumn Header="Interval" Binding="{Binding Interval, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" />
-                <DataGridTextColumn Header="Message" Binding="{Binding Message, Mode=OneWay}" />
+                <DataGridTextColumn Header="Status" x:DataType="models:Tracker" Binding="{Binding Status, Mode=OneWay}" SortMemberPath="Status" />
+                <DataGridTextColumn Header="Seeders" x:DataType="models:Tracker" Binding="{Binding Seeders, Mode=OneWay}" SortMemberPath="Seeders" />
+                <DataGridTextColumn Header="Peers" x:DataType="models:Tracker" Binding="{Binding Peers, Mode=OneWay}" SortMemberPath="Peers" />
+                <DataGridTextColumn Header="Downloaded" x:DataType="models:Tracker" Binding="{Binding Downloaded, Mode=OneWay}" SortMemberPath="Downloaded" />
+                <DataGridTextColumn Header="Last updated" x:DataType="models:Tracker" Binding="{Binding LastUpdatedDate, Mode=OneWay}" SortMemberPath="LastUpdatedDate" />
+                <DataGridTextColumn Header="Interval" x:DataType="models:Tracker" Binding="{Binding Interval, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" SortMemberPath="Interval" />
+                <DataGridTextColumn Header="Message" x:DataType="models:Tracker" Binding="{Binding Message, Mode=OneWay}" SortMemberPath="Message" />
             </DataGrid.Columns>
         </DataGrid>
     </dialogHost:DialogHost>

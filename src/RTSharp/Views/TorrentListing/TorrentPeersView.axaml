@@ -1,4 +1,4 @@
-<UserControl x:Class="RTSharp.Views.TorrentListing.TorrentPeersView"
+﻿<UserControl x:Class="RTSharp.Views.TorrentListing.TorrentPeersView"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -17,10 +17,12 @@
     </Design.DataContext>
 
     <DataGrid Name="grid"
-                  ItemsSource="{Binding Peers}"
+                  ItemsSource="{Binding PeersView}"
                   CanUserReorderColumns="True"
                   CanUserResizeColumns="True"
                   CanUserSortColumns="True"
+                  OwnsSortDescriptions="True"
+                  SortCycleMode="AscendingDescendingNone"
                   GridLinesVisibility="Horizontal"
                   IsReadOnly="True"
                   SelectionMode="Extended"
@@ -52,19 +54,19 @@
             </ContextMenu>
         </DataGrid.ContextMenu>
         <DataGrid.Columns>
-            <DataGridTemplateColumn Header="Icon">
+            <DataGridTemplateColumn Header="Icon" CanUserSort="False">
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="models:Peer">
                         <Image Source="{Binding Icon}" Width="16" Height="16" Stretch="Uniform" />
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="Origin" Binding="{Binding Origin, Mode=OneWay}" />
+            <DataGridTextColumn Header="Origin" x:DataType="models:Peer" Binding="{Binding Origin, Mode=OneWay}" SortMemberPath="Origin" />
             
-            <DataGridTextColumn Header="IP:Port" Binding="{Binding IPPort, Mode=OneWay}" />
-            <DataGridTextColumn Header="Client" Binding="{Binding Client, Mode=OneWay}" />
-            <DataGridTextColumn Header="Flags" Binding="{Binding Flags, Mode=OneWay}" />
-            <DataGridTemplateColumn Header="Done">
+            <DataGridTextColumn Header="IP:Port" x:DataType="models:Peer" Binding="{Binding IPPortDisplay, Mode=OneWay}" SortMemberPath="IPPortDisplay" />
+            <DataGridTextColumn Header="Client" x:DataType="models:Peer" Binding="{Binding Client, Mode=OneWay}" SortMemberPath="Client" />
+            <DataGridTextColumn Header="Flags" x:DataType="models:Peer" Binding="{Binding Flags, Mode=OneWay}" SortMemberPath="Flags" />
+            <DataGridTemplateColumn Header="Done" SortMemberPath="Done">
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="models:Peer">
                         <Grid>
@@ -74,11 +76,11 @@
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="DL Speed" Binding="{Binding DLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
-            <DataGridTextColumn Header="UP Speed" Binding="{Binding UPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
-            <DataGridTextColumn Header="Downloaded" Binding="{Binding Downloaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
-            <DataGridTextColumn Header="Uploaded" Binding="{Binding Uploaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" />
-            <DataGridTextColumn Header="Peer DL Speed" Binding="{Binding PeerDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+            <DataGridTextColumn Header="DL Speed" x:DataType="models:Peer" Binding="{Binding DLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="DLSpeed" />
+            <DataGridTextColumn Header="UP Speed" x:DataType="models:Peer" Binding="{Binding UPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="UPSpeed" />
+            <DataGridTextColumn Header="Downloaded" x:DataType="models:Peer" Binding="{Binding Downloaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" SortMemberPath="Downloaded" />
+            <DataGridTextColumn Header="Uploaded" x:DataType="models:Peer" Binding="{Binding Uploaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" SortMemberPath="Uploaded" />
+            <DataGridTextColumn Header="Peer DL Speed" x:DataType="models:Peer" Binding="{Binding PeerDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="PeerDLSpeed" />
         </DataGrid.Columns>
     </DataGrid>
 </UserControl>
