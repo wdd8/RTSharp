@@ -23,6 +23,8 @@ namespace QBittorrent.Client.Internal
 
         Uri GetTorrentProperties(string hash);
 
+        Uri GetTorrentFile(string hash);
+
         Uri GetTorrentContents(string hash, IEnumerable<string> indexes);
 
         Uri GetTorrentTrackers(string hash);

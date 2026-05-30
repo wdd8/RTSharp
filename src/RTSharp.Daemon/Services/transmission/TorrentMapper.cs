@@ -41,6 +41,8 @@ public class TorrentMapper
             Stored.Name = External.Name;
         if (External.Status != null)
             Stored.State = MapFromExternal(External.Status.Value);
+        if (External.RateUpload > 0 || External.RateDownload > 0)
+            Stored.State |= Protocols.DataProvider.TorrentState.Active;
         if (External.IsPrivate != null)
             Stored.IsPrivate = External.IsPrivate.Value;
         if (External.TotalSize != null)

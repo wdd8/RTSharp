@@ -297,9 +297,6 @@ namespace RTSharp.Daemon.Services.qbittorrent
         {
             var client = await Client.Init();
 
-            var buildUri = client.GetType().GetMethod("BuildUri", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            var rawClient = client.GetType().GetField("_client", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-
             for (var x = 0;x < Req.Hashes.Count;x++) {
                 var hash = Req.Hashes[x];
                 var idx = x.ToString();
@@ -312,11 +309,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 }, CancellationToken);
 
                 try {
-                    Uri uri = (Uri)buildUri!.Invoke(rawClient, [ "api/v2/torrents/export", new (string key , string value)[] { (key: "hash", value: Convert.ToHexString(hash.Span)) } ])!;
-                    var _client = (HttpClient)rawClient!.GetValue(rawClient)!;
-
-                    var req = await _client.GetAsync(uri, CancellationToken);
-                    var stm = req.Content.ReadAsStream(CancellationToken);
+                    var stm = await client.GetTorrentFileAsync(Convert.ToHexString(hash.Span), CancellationToken);
 
                     int read = 0;
                     Memory<byte> buffer = new byte[4096];
@@ -481,8 +474,9 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
 
             var internalTorrent = new Protocols.DataProvider.Torrent {
-                Hash = Hash.ToByteString()
+                Hash = ByteString.CopyFrom(Hash.Value.Span)
             };
+
             TorrentMapper.ApplyFromExternal(internalTorrent, torrent.First());
             return internalTorrent;
         }

@@ -924,7 +924,7 @@ namespace RTSharp.Daemon.Services.transmission
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
 
             var internalTorrent = new Protocols.DataProvider.Torrent {
-                Hash = Hash.ToByteString()
+                Hash = ByteString.CopyFrom(Hash.Value.Span)
             };
             TorrentMapper.ApplyFromExternal(internalTorrent, torrent.Torrents.First());
             return internalTorrent;

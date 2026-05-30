@@ -1,10 +1,12 @@
-﻿using System;
+﻿using JetBrains.Annotations;
+
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 
 namespace QBittorrent.Client
 {
@@ -610,6 +612,15 @@ namespace QBittorrent.Client
             [NotNull] string oldPath,
             [NotNull] string newPath,
             CancellationToken token = default);
+
+        /// <summary>
+        /// Gets the .torrent file
+        /// </summary>
+        /// <param name="hash">The torrent hash.</param>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns></returns>
+        [ApiLevel(ApiLevel.V2, MinVersion = "2.9.3")]
+        Task<Stream> GetTorrentFileAsync(string hash, CancellationToken token = default);
 
         #region RSS
 

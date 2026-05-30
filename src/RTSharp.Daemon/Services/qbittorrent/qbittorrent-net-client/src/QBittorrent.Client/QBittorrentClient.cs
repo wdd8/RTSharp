@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using QBittorrent.Client.Internal;
 using static QBittorrent.Client.Internal.Utils;
+using System.IO;
 
 namespace QBittorrent.Client
 {

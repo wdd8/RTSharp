@@ -1,16 +1,21 @@
-﻿using System;
+﻿using JetBrains.Annotations;
+
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+using QBittorrent.Client.Extensions;
+using QBittorrent.Client.Internal;
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using QBittorrent.Client.Extensions;
-using QBittorrent.Client.Internal;
+
 using static QBittorrent.Client.Internal.Utils;
 
 namespace QBittorrent.Client
@@ -893,6 +898,26 @@ namespace QBittorrent.Client
                 throw new ArgumentNullException(nameof(newPath));
 
             return PostAsync(p => p.RenameFolder(hash, oldPath, newPath), token, ApiLevel.V2, Version_2_8_0);
+        }
+
+        /// <summary>
+        /// Gets the .torrent file
+        /// </summary>
+        /// <param name="hash">The torrent hash.</param>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns></returns>
+        [ApiLevel(ApiLevel.V2, MinVersion = "2.9.3")]
+        public Task<Stream> GetTorrentFileAsync(string hash, CancellationToken token = default)
+        {
+            ValidateHash(hash);
+            return ExecuteAsync();
+
+            async Task<Stream> ExecuteAsync()
+            {
+                var uri = await BuildUriAsync(p => p.GetTorrentFile(hash), token).ConfigureAwait(false);
+                var stm = await _client.GetStreamAsync(uri, token).ConfigureAwait(false);
+                return stm;
+            }
         }
 
         #region RSS

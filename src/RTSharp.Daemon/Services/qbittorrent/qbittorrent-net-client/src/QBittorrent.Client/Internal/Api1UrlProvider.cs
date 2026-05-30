@@ -228,5 +228,7 @@ namespace QBittorrent.Client.Internal
         public Uri EnableDisableSearchPlugins() => throw new ApiNotSupportedException(ApiLevel.V2, new ApiVersion(2, 1, 1));
 
         public Uri UpdateSearchPlugins() => throw new ApiNotSupportedException(ApiLevel.V2, new ApiVersion(2, 1, 1));
+
+        public Uri GetTorrentFile(string hash) => throw new ApiNotSupportedException(ApiLevel.V2, new ApiVersion(2, 9, 3));
     }
 }

@@ -47,6 +47,8 @@ namespace QBittorrent.Client.Internal
 
         public Uri GetTorrentProperties(string hash) => Create("api/v2/torrents/properties", ("hash", hash));
 
+        public Uri GetTorrentFile(string hash) => Create("api/v2/torrents/export", ("hash", hash));
+
         public Uri GetTorrentContents(string hash, IEnumerable<string> indexes)
         {
             var indexesString = indexes != null ? string.Join("|", indexes) : null;
