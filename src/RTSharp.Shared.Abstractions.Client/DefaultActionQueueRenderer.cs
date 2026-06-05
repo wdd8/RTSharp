@@ -43,11 +43,12 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
     {
         foreach (var action in actions) {
             result.Add(new DefaultActionQueueActionViewModel {
+                Id = action.Id,
                 Name = action.Name,
+                Depth = depth,
                 State = action.State,
                 ProgressDone = action.ProgressDone,
-                ProgressString = action.ProgressString ?? "",
-                Depth = depth
+                ProgressString = action.ProgressString ?? ""
             });
             if (action.ChildActions.Any())
                 FlattenActions(action.ChildActions, result, depth + 1);
@@ -56,13 +57,46 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
 
     public virtual void RenderActionQueue(params IEnumerable<ActionQueueAction> Actions)
     {
-        var list = new List<DefaultActionQueueActionViewModel>();
-        FlattenActions(Actions, list, 0);
-        Dispatcher.UIThread.Post(() => {
-            ActionQueueVm.Actions.Clear();
-            foreach (var item in list)
-                ActionQueueVm.Actions.Add(item);
-        });
+        var desired = new List<DefaultActionQueueActionViewModel>();
+        FlattenActions(Actions, desired, 0);
+        Dispatcher.UIThread.Post(() => SyncWithVm(desired));
+    }
+
+    private void SyncWithVm(List<DefaultActionQueueActionViewModel> Actual)
+    {
+        var existingActions = ActionQueueVm.Actions;
+
+        var actualIds = new HashSet<Guid>(Actual.Count);
+        foreach (var x in Actual)
+            actualIds.Add(x.Id);
+
+        // Deletes
+        for (int x = existingActions.Count - 1; x >= 0; x--) {
+            if (!actualIds.Contains(existingActions[x].Id))
+                existingActions.RemoveAt(x);
+        }
+
+        var byId = new Dictionary<Guid, DefaultActionQueueActionViewModel>(existingActions.Count);
+        foreach (var x in existingActions)
+            byId[x.Id] = x;
+
+        // Updates and inserts
+        for (int x = 0; x < Actual.Count; x++) {
+            var item = Actual[x];
+
+            if (byId.TryGetValue(item.Id, out var existing)) {
+                int currentIndex = existingActions.IndexOf(existing);
+                if (currentIndex != x)
+                    existingActions.Move(currentIndex, x);
+
+                existing.State = item.State;
+                existing.ProgressDone = item.ProgressDone;
+                existing.ProgressString = item.ProgressString;
+            } else {
+                existingActions.Insert(x, item);
+                byId[item.Id] = item;
+            }
+        }
     }
 
     public virtual void ActionCreated(ActionQueueAction Action) { }

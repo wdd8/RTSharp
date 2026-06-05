@@ -1,13 +1,11 @@
-using System;
-
 using Avalonia;
 using Avalonia.Media;
 
-using RTSharp.Shared.Abstractions;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace RTSharp.Shared.Abstractions.Client.ViewModels;
 
-public class DefaultActionQueueActionViewModel
+public partial class DefaultActionQueueActionViewModel : ObservableObject
 {
     private static readonly IBrush WaitingBrush = new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
     private static readonly IBrush RunningBrush = new SolidColorBrush(Color.FromRgb(0x42, 0xA5, 0xF5));
@@ -15,11 +13,22 @@ public class DefaultActionQueueActionViewModel
     private static readonly IBrush FailedBrush = new SolidColorBrush(Color.FromRgb(0xEF, 0x53, 0x50));
     private static readonly IBrush CancelledBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xA7, 0x26));
 
+    public required Guid Id { get; init; }
     public required string Name { get; init; }
     public required int Depth { get; init; }
-    public required float ProgressDone { get; init; }
-    public required string ProgressString { get; init; }
-    public required ACTION_STATE State { get; init; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProgress))]
+    [NotifyPropertyChangedFor(nameof(ProgressLabel))]
+    public partial float ProgressDone { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ProgressLabel))]
+    public partial string ProgressString { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusBrush))]
+    public partial ACTION_STATE State { get; set; }
 
     public bool HasProgress => ProgressDone > 0;
 
