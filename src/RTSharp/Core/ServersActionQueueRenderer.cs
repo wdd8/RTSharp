@@ -5,7 +5,6 @@ using RTSharp.Shared.Controls;
 
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace RTSharp.Core;
@@ -20,11 +19,7 @@ public class ServersActionQueueRenderer(string ServerName, IDaemonService Daemon
             try {
                 var channel = DaemonService.StreamScriptsStatus(default);
                 await foreach (var update in channel.ReadAllAsync()) {
-                    if (update.FullUpdate) {
-                        ApplyFullUpdate(update);
-                    } else {
-                        ApplyPartialUpdate(update);
-                    }
+                    ApplyUpdate(update);
                 }
             } finally {
                 await Task.Delay(TimeSpan.FromSeconds(5));
@@ -32,50 +27,37 @@ public class ServersActionQueueRenderer(string ServerName, IDaemonService Daemon
         }
     }
 
-    private void ApplyFullUpdate(ScriptSessionStateUpdate update)
+    private void ApplyUpdate(ScriptSessionUpdate In)
     {
-        var sessionIds = update.Sessions.Select(x => x.Id).ToHashSet();
-
-        foreach (var session in update.Sessions) {
-            var rootAction = FindAction(session.Id);
-            if (rootAction == null) {
-                var tcs = ActionsTasks[session.Progress.Id] = new TaskCompletionSource();
-                rootAction = ActionQueueAction.New(session.Id, session.Name, _ => tcs.Task);
-                AddAction(rootAction);
-                rootAction.RunAction();
-                ChangeProgress(rootAction, session.Progress);
-                rootAction.Name = session.Name;
-                PopulateChain(rootAction, session.Progress.Chain ?? []);
-            } else {
-                UpdateAction(rootAction, session.Progress);
+        var action = FindAction(In.State.Id);
+        if (action != null) {
+            if (In.ParentStateId == null && In.SessionName != null) {
+                action.Name = In.SessionName;
             }
-        }
-    }
 
-    private void ApplyPartialUpdate(ScriptSessionStateUpdate update)
-    {
-        if (update.State == null) {
+            UpdateAction(action, In.State);
             return;
         }
 
-        var action = FindAction(update.State.Id);
-        if (action != null) {
-            UpdateAction(action, update.State);
-        } else {
-            if (update.ParentStateId == null) {
-                return;
-            }
-
-            var parent = FindAction(update.ParentStateId.Value);
-            if (parent == null) {
-                return;
-            }
-
-            var tcs = ActionsTasks[update.State.Id] = new TaskCompletionSource();
-            var child = parent.CreateChild(update.State.Id, update.State.Text, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, (_, _) => tcs.Task);
-            child.RunAction();
-            UpdateAction(child, update.State);
+        if (In.ParentStateId == null) {
+            var sessionName = In.SessionName ?? In.State.Text;
+            var tcs = ActionsTasks[In.State.Id] = new TaskCompletionSource();
+            var rootAction = ActionQueueAction.New(In.SessionId, sessionName, _ => tcs.Task);
+            AddAction(rootAction);
+            rootAction.RunAction();
+            UpdateAction(rootAction, In.State);
+            return;
         }
+
+        var parent = FindAction(In.ParentStateId.Value);
+        if (parent == null) {
+            return;
+        }
+
+        var childTcs = ActionsTasks[In.State.Id] = new TaskCompletionSource();
+        var child = parent.CreateChild(In.State.Id, In.State.Text, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, (_, _) => childTcs.Task);
+        child.RunAction();
+        UpdateAction(child, In.State);
     }
 
     public override void ActionExpired(ActionQueueAction Action)
@@ -108,19 +90,6 @@ public class ServersActionQueueRenderer(string ServerName, IDaemonService Daemon
             TASK_STATE.FAILED => ACTION_STATE.FAILED,
             _ => ACTION_STATE.CANCELLED
         }, state.Progress ?? 0, state.Text);
-    }
-
-    private void PopulateChain(ActionQueueAction parent, ScriptProgressState[] states)
-    {
-        foreach (var childState in states) {
-            var tcs = ActionsTasks[childState.Id] = new TaskCompletionSource();
-            var child = parent.CreateChild(childState.Id, childState.Text, RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT, (_, _) => tcs.Task);
-            ChangeProgress(child, childState);
-
-            if (childState.Chain != null) {
-                PopulateChain(child, childState.Chain);
-            }
-        }
     }
 
     private void UpdateAction(ActionQueueAction action, ScriptProgressState state)

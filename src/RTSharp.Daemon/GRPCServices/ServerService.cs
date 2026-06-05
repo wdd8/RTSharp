@@ -88,42 +88,29 @@ namespace RTSharp.Daemon.GRPCServices
             };
         }
 
-        Protocols.ScriptSessionState MapScriptSession(ScriptSession In)
+        Protocols.ScriptSessionUpdate MapScriptSessionUpdate(Shared.Abstractions.ScriptSessionUpdate In, bool IncludeChain)
         {
-            return new Protocols.ScriptSessionState {
-                Id = In.Id.ToByteString(),
-                Name = In.Name,
-                Progress = MapProgressState(In.Progress, includeChain: true)
+            var ret = new Protocols.ScriptSessionUpdate {
+                SessionId = In.SessionId.ToByteString(),
+                SessionName = In.SessionName ?? "",
+                State = MapProgressState(In.State, IncludeChain)
             };
-        }
 
-        Protocols.ScriptSessionsUpdate MapScriptSessionUpdate(ScriptSessionStatusUpdate In)
-        {
-            var ret = new Protocols.ScriptSessionsUpdate();
-
-            if (In.FullUpdate) {
-                ret.FullUpdate = new Protocols.ScriptSessionsFullUpdate {
-                    Sessions = { In.Sessions.Select(MapScriptSession) }
-                };
-            } else {
-                ret.DeltaUpdate = new Protocols.ScriptSessionDeltaUpdate {
-                    SessionId = In.SessionId.ToByteString(),
-                    State = In.Progress != null ? MapProgressState(In.Progress, In.IncludeChain) : null
-                };
-
-                if (In.ParentStateId != null) {
-                    ret.DeltaUpdate.ParentStateId = In.ParentStateId.Value.ToByteString();
-                }
+            if (In.ParentStateId != null) {
+                ret.ParentStateId = In.ParentStateId.Value.ToByteString();
             }
 
             return ret;
         }
 
-        public override async Task ScriptsStatus(Empty Req, IServerStreamWriter<Protocols.ScriptSessionsUpdate> Res, ServerCallContext Ctx)
+        public override async Task ScriptsStatus(ScriptSessionsStatusRequest Req, IServerStreamWriter<Protocols.ScriptSessionUpdate> Res, ServerCallContext Ctx)
         {
             var ct = Ctx.CancellationToken;
-            await foreach (var update in Sessions.MonitorSessionUpdates(ct).ReadAllAsync(ct)) {
-                await Res.WriteAsync(MapScriptSessionUpdate(update), ct);
+            var includeFullUpdate = Req.Mode.HasFlag(ScriptSessionsStatusMode.FullUpdate);
+            var streamUpdates = Req.Mode.HasFlag(ScriptSessionsStatusMode.Streaming);
+
+            await foreach (var (update, includeChain) in Sessions.MonitorSessionUpdates(includeFullUpdate, streamUpdates, ct).ReadAllAsync(ct)) {
+                await Res.WriteAsync(MapScriptSessionUpdate(update, includeChain), ct);
             }
         }
 

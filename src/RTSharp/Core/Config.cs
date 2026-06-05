@@ -75,12 +75,23 @@ public class Config
 
         public class Look
         {
+            public class DataProvidersConfig
+            {
+                public bool SpeedChartEnabled { get; set; }
+            }
+
             public class TorrentListingConfig
             {
                 public int RowHeight { get; set; }
             }
 
-            public required TorrentListingConfig TorrentListing { get; set; }
+            public DataProvidersConfig DataProviders { get; set; } = new() {
+                SpeedChartEnabled = true
+            };
+
+            public TorrentListingConfig TorrentListing { get; set; } = new() {
+                RowHeight = 32
+            };
         }
     }
 
@@ -158,6 +169,9 @@ public class Config
     "Maximized": false
   },
   "Look": {
+    "DataProviders": {
+      "SpeedChartEnabled": true
+    },
     "TorrentListing": {
       "RowHeight": 32
     }

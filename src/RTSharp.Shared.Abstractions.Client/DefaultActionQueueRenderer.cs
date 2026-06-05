@@ -74,11 +74,15 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
     private void TrackAction(ActionQueueAction Action)
     {
         ActionCreated(Action);
-        ActionQueueVm!.ActionsInQueue++;
 
-        RenderActionQueue(Actions);
-        Action.ProgressChanged += (sender, e) => {
+        lock (ActionsLock) {
+            ActionQueueVm!.ActionsInQueue++;
             RenderActionQueue(Actions);
+        }
+        Action.ProgressChanged += (sender, e) => {
+            lock (ActionsLock) {
+                RenderActionQueue(Actions);
+            }
         };
 
         foreach (var child in Action.ChildActions) {
@@ -86,7 +90,9 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
         }
 
         Action.OnRun(task => {
-            RenderActionQueue(Actions);
+            lock (ActionsLock) {
+                RenderActionQueue(Actions);
+            }
             ActionRun(Action);
         });
 
@@ -104,20 +110,26 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
                     _actions.Remove(Action);
                 }
                 ActionExpired(Action);
-                RenderActionQueue(_actions);
+                lock (ActionsLock) {
+                    RenderActionQueue(_actions);
+                }
             });
         }
 
         Action.OnFail((ex, task) => {
-            RenderActionQueue(Actions);
-            ActionQueueVm.ErroredActions++;
-            ActionQueueVm.ActionsInQueue--;
+            lock (ActionsLock) {
+                RenderActionQueue(Actions);
+                ActionQueueVm.ErroredActions++;
+                ActionQueueVm.ActionsInQueue--;
+            }
             queueActionExpiration(Action);
             ActionErrored(Action);
         });
         Action.OnDone((result, task) => {
-            RenderActionQueue(Actions);
-            ActionQueueVm!.ActionsInQueue--;
+            lock (ActionsLock) {
+                RenderActionQueue(Actions);
+                ActionQueueVm!.ActionsInQueue--;
+            }
             queueActionExpiration(Action);
             ActionCompleted(Action);
         });

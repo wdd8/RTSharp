@@ -40,28 +40,13 @@ public class ScriptSession : IScriptSession
     }
 }
 
-public class ScriptSessionStatusUpdate
-{
-    public required bool FullUpdate { get; init; }
-
-    public IReadOnlyList<ScriptSession> Sessions { get; init; } = [];
-
-    public Guid SessionId { get; init; }
-
-    public Guid? ParentStateId { get; init; }
-
-    public ScriptProgressState? Progress { get; init; }
-
-    public bool IncludeChain { get; init; }
-}
-
 public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<SessionsService> Logger)
 {
     private readonly List<ScriptSession> Sessions = new();
 
     private readonly object SessionsLock = new();
 
-    private readonly List<ChannelWriter<ScriptSessionStatusUpdate>> Subscribers = new();
+    private readonly List<ChannelWriter<(ScriptSessionUpdate Update, bool IncludeChain)>> Subscribers = new();
 
     public ScriptSession RunScript(string Name, DynamicScript<IScript> DynamicScript, Dictionary<string, string> Variables)
     {
@@ -129,7 +114,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         session.ProgressUpdated += PublishProgressChanged;
         lock (SessionsLock) {
             Sessions.Add(session);
-            Publish(session.Id, null, session.Progress, true);
+            Publish(session, null, session.Progress, true);
         }
     }
 
@@ -141,19 +126,30 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         }, TaskContinuationOptions.OnlyOnFaulted);
     }
 
-    public ChannelReader<ScriptSessionStatusUpdate> MonitorSessionUpdates(CancellationToken CancellationToken)
+    public ChannelReader<(ScriptSessionUpdate Update, bool IncludeChain)> MonitorSessionUpdates(bool IncludeFullUpdate, bool StreamUpdates, CancellationToken CancellationToken)
     {
-        var channel = Channel.CreateUnbounded<ScriptSessionStatusUpdate>(new UnboundedChannelOptions {
+        var channel = Channel.CreateUnbounded<(ScriptSessionUpdate Update, bool IncludeChain)>(new UnboundedChannelOptions {
             SingleReader = true,
             SingleWriter = false
         });
 
         lock (SessionsLock) {
-            channel.Writer.TryWrite(new ScriptSessionStatusUpdate {
-                FullUpdate = true,
-                Sessions = [.. Sessions]
-            });
-            Subscribers.Add(channel.Writer);
+            if (IncludeFullUpdate) {
+                foreach (var session in Sessions) {
+                    channel.Writer.TryWrite((new ScriptSessionUpdate {
+                        SessionId = session.Id,
+                        SessionName = session.Name,
+                        ParentStateId = null,
+                        State = session.Progress
+                    }, true));
+                }
+            }
+
+            if (StreamUpdates) {
+                Subscribers.Add(channel.Writer);
+            } else {
+                channel.Writer.TryComplete();
+            }
         }
 
         CancellationToken.Register(() => {
@@ -177,20 +173,19 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
                 }
             }
 
-            Publish(session.Id, parentStateId, progress, chainChanged);
+            Publish(session, parentStateId, progress, chainChanged);
         }
     }
 
-    private void Publish(Guid SessionId, Guid? ParentStateId, ScriptProgressState Progress, bool IncludeChain)
+    private void Publish(ScriptSession Session, Guid? ParentStateId, ScriptProgressState State, bool ChainChanged)
     {
-        for (var x = Subscribers.Count - 1; x >= 0; x--) {
-            var ret = Subscribers[x].TryWrite(new ScriptSessionStatusUpdate {
-                FullUpdate = false,
-                SessionId = SessionId,
+        for (var x = Subscribers.Count - 1;x >= 0;x--) {
+            var ret = Subscribers[x].TryWrite((new ScriptSessionUpdate {
+                SessionId = Session.Id,
+                SessionName = ParentStateId == null ? Session.Name : null,
                 ParentStateId = ParentStateId,
-                Progress = Progress,
-                IncludeChain = IncludeChain
-            });
+                State = State
+            }, ChainChanged));
 
             if (!ret) {
                 Subscribers.RemoveAt(x);
@@ -252,8 +247,6 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
             session.ProgressUpdated -= PublishProgressChanged;
             Sessions.Remove(session);
         }
-
-        Publish(session.Id, null, session.Progress, true);
 
         session.Cts.Dispose();
         session.Scope?.Dispose();

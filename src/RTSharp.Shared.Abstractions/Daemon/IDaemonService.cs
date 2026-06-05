@@ -68,11 +68,13 @@ public interface IDaemonService
     Task GetScriptProgress(Guid Req, Action<ScriptProgressState>? Progress);
 
     /// <summary>
-    /// Streams status updates of all scripts in the server
+    /// Gets script session updates from the server.
     /// </summary>
     /// <param name="cancellationToken"></param>
+    /// <param name="includeFullUpdate">Emit the current script sessions before live updates.</param>
+    /// <param name="streamUpdates">Keep streaming live updates after the initial populate.</param>
     /// <returns></returns>
-    ChannelReader<ScriptSessionStateUpdate> StreamScriptsStatus(CancellationToken cancellationToken);
+    ChannelReader<ScriptSessionUpdate> StreamScriptsStatus(CancellationToken cancellationToken, bool includeFullUpdate = true, bool streamUpdates = true);
 
     /// <summary>
     /// Checks files permissions to see if it's possible to delete provided files

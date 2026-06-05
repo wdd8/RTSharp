@@ -10,7 +10,7 @@ service GRPCServerService {
 
     rpc StartScript (StartScriptInput) returns (ScriptSessionReply);
     rpc ScriptStatus (google.protobuf.BytesValue) returns (stream ScriptProgressState);
-    rpc ScriptsStatus (google.protobuf.Empty) returns (stream ScriptSessionsUpdate);
+    rpc ScriptsStatus (ScriptSessionsStatusRequest) returns (stream ScriptSessionUpdate);
     rpc StopScript (google.protobuf.BytesValue) returns (google.protobuf.Empty);
     rpc RemoveScript (google.protobuf.BytesValue) returns (google.protobuf.Empty);
 }
@@ -37,27 +37,21 @@ message ScriptProgressState {
     google.protobuf.StringValue StateData = 6;
 }
 
-message ScriptSessionState {
-    bytes Id = 1;
-    string Name = 2;
-    ScriptProgressState Progress = 3;
+enum ScriptSessionsStatusMode {
+    NONE = 0;
+    STREAMING = 1;
+    FULL_UPDATE = 2;
 }
 
-message ScriptSessionsFullUpdate {
-    repeated ScriptSessionState Sessions = 1;
+message ScriptSessionsStatusRequest {
+    ScriptSessionsStatusMode Mode = 1;
 }
 
-message ScriptSessionDeltaUpdate {
+message ScriptSessionUpdate {
     bytes SessionId = 1;
-    google.protobuf.BytesValue ParentStateId = 2;
-    ScriptProgressState State = 3;
-}
-
-message ScriptSessionsUpdate {
-    oneof Update {
-        ScriptSessionsFullUpdate FullUpdate = 1;
-        ScriptSessionDeltaUpdate DeltaUpdate = 2;
-    }
+    string SessionName = 2;
+    google.protobuf.BytesValue ParentStateId = 3;
+    ScriptProgressState State = 4;
 }
 
 message ScriptSessionReply {

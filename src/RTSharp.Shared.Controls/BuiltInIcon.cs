@@ -15,6 +15,9 @@ public enum BuiltInIcons
     FLAT_QUESTION_MARK,
     KEYS,
     SERVER,
+    CERTIFICATE,
+    LINK_OK,
+    LINK_BROKEN,
 
     SERIOUS_EXCLAMATION,
     SERIOUS_INFO,
@@ -54,6 +57,9 @@ public static class BuiltInIcon
         { BuiltInIcons.FLAT_QUESTION_MARK, new Uri("avares://RTSharp/Assets/Icons/flat_question_mark.ico") },
         { BuiltInIcons.KEYS, new Uri("avares://RTSharp/Assets/Icons/keys.ico") },
         { BuiltInIcons.SERVER, new Uri("avares://RTSharp/Assets/Icons/server.ico") },
+        { BuiltInIcons.CERTIFICATE, new Uri("avares://RTSharp/Assets/Icons/certificate.ico") },
+        { BuiltInIcons.LINK_OK, new Uri("avares://RTSharp/Assets/Icons/link_ok.ico") },
+        { BuiltInIcons.LINK_BROKEN, new Uri("avares://RTSharp/Assets/Icons/link_broken.ico") },
 
         { BuiltInIcons.SERIOUS_EXCLAMATION, new Uri("avares://RTSharp/Assets/Icons/serious_exclamation.ico") },
         { BuiltInIcons.SERIOUS_INFO, new Uri("avares://RTSharp/Assets/Icons/serious_info.ico") },

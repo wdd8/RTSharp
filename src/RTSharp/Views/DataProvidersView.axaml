@@ -7,7 +7,7 @@
              xmlns:plugin="clr-namespace:RTSharp.Plugin"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:vm="clr-namespace:RTSharp.ViewModels"
-             xmlns:models="clr-namespace:RTSharp.Models"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              x:Class="RTSharp.Views.DataProvidersView"
              x:DataType="vm:DataProvidersViewModel"
@@ -19,28 +19,54 @@
     </Control.Resources>
     
     <ListBox ItemsSource="{Binding Items}">
+        <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+                <Setter Property="BorderThickness" Value="0,2,0,0" />
+                <Setter Property="BorderBrush" Value="#666666" />
+                <Setter Property="Padding" Value="6,0,6,6" />
+            </Style>
+        </ListBox.Styles>
         <ListBox.ItemTemplate>
-            <DataTemplate>
-                <StackPanel Orientation="Vertical">
-                    <TextBlock Text="{Binding DisplayName}" />
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding State}" />
-                        <TextBlock Padding="4 0 0 0" Text="(" />
-                        <TextBlock Text="{Binding Latency, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" />
-                        <TextBlock Text=")" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <i:Icon Margin="0 0 4 0" Value="fa7-solid fa7-download" />
-                        <TextBlock Padding="0 0 8 0" Text="{Binding TotalDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+            <DataTemplate x:DataType="vm:DataProviderItemViewModel">
+                <Border BorderThickness="2">
+                    <StackPanel Orientation="Vertical">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding DataProvider.DisplayName}" Padding="0 0 12 0" />
+                            <Image Width="16" Height="16" VerticalAlignment="Center" Source="{Binding DataProvider.StateIcon}" />
+                            <TextBlock Padding="4 0 0 0" VerticalAlignment="Center" Text="{Binding DataProvider.Latency, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Border Background="#3373B7" CornerRadius="10" Padding="6,2" Margin="0 0 4 0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding DataProvider.ActiveTorrentCount}" Foreground="White" FontSize="11" />
+                            </Border>
 
-                        <i:Icon Margin="0 0 4 0" Value="fa7-solid fa7-upload" />
-                        <TextBlock Text="{Binding TotalUPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+                            <i:Icon Margin="0 0 4 0" Value="fa7-solid fa7-download" />
+                            <TextBlock Padding="0 0 8 0" Text="{Binding DataProvider.TotalDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+
+                            <i:Icon Margin="0 0 4 0" Value="fa7-solid fa7-upload" />
+                            <TextBlock Text="{Binding DataProvider.TotalUPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
+                        </StackPanel>
+                        <Grid Height="76" MinHeight="76" Margin="0 4 0 2" IsVisible="{Binding SpeedChartEnabled}">
+                            <lvc:CartesianChart Series="{Binding SpeedChartSeries}"
+                                                XAxes="{Binding SpeedChartXAxes}"
+                                                YAxes="{Binding SpeedChartYAxes}"
+                                                LegendPosition="Hidden"
+                                                TooltipPosition="Hidden"
+                                                AnimationsSpeed="0:0:0.12"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Stretch" />
+                            <Border HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Padding="4 1"
+                                    IsVisible="{Binding SpeedChartTopLabelVisible}"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                                <TextBlock Text="{Binding SpeedChartTopLabel}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                            </Border>
+                        </Grid>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding ActiveTorrentCount}" />
-                        <TextBlock Text=" active torrents" />
-                    </StackPanel>
-                </StackPanel>
+                </Border>
             </DataTemplate>
         </ListBox.ItemTemplate>
     </ListBox>

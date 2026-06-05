@@ -302,31 +302,13 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         };
     }
 
-    Shared.Abstractions.ScriptSessionState MapScriptSessionState(RTSharp.Daemon.Protocols.ScriptSessionState In)
+    Shared.Abstractions.ScriptSessionUpdate MapScriptSessionUpdate(RTSharp.Daemon.Protocols.ScriptSessionUpdate In)
     {
-        return new Shared.Abstractions.ScriptSessionState {
-            Id = new Guid(In.Id.ToByteArray()),
-            Name = In.Name,
-            Progress = MapProgressState(In.Progress)
-        };
-    }
-
-    ScriptSessionStateUpdate MapScriptSessionUpdate(RTSharp.Daemon.Protocols.ScriptSessionsUpdate In)
-    {
-        return In.UpdateCase switch {
-            ScriptSessionsUpdate.UpdateOneofCase.FullUpdate => new ScriptSessionStateUpdate {
-                FullUpdate = true,
-                Sessions = [.. In.FullUpdate.Sessions.Select(MapScriptSessionState)]
-            },
-            ScriptSessionsUpdate.UpdateOneofCase.DeltaUpdate => new ScriptSessionStateUpdate {
-                FullUpdate = false,
-                SessionId = new Guid(In.DeltaUpdate.SessionId.ToByteArray()),
-                ParentStateId = In.DeltaUpdate.ParentStateId != null ? new Guid(In.DeltaUpdate.ParentStateId.ToByteArray()) : null,
-                State = MapProgressState(In.DeltaUpdate.State)
-            },
-            _ => new ScriptSessionStateUpdate {
-                FullUpdate = false
-            }
+        return new Shared.Abstractions.ScriptSessionUpdate {
+            SessionId = new Guid(In.SessionId.ToByteArray()),
+            SessionName = string.IsNullOrWhiteSpace(In.SessionName) ? null : In.SessionName,
+            ParentStateId = In.ParentStateId != null ? new Guid(In.ParentStateId.ToByteArray()) : null,
+            State = MapProgressState(In.State)
         };
     }
 
@@ -345,22 +327,39 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         } catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled) { }
     }
 
-    public ChannelReader<ScriptSessionStateUpdate> StreamScriptsStatus(CancellationToken cancellationToken)
+    public ChannelReader<Shared.Abstractions.ScriptSessionUpdate> StreamScriptsStatus(CancellationToken CancellationToken, bool IncludeFullUpdate = true, bool StreamUpdates = true)
     {
-        var channel = Channel.CreateUnbounded<ScriptSessionStateUpdate>(new UnboundedChannelOptions {
+        var channel = Channel.CreateUnbounded<Shared.Abstractions.ScriptSessionUpdate>(new UnboundedChannelOptions {
             SingleReader = false,
             SingleWriter = true
         });
+
+        if (!IncludeFullUpdate && !StreamUpdates) {
+            channel.Writer.TryComplete();
+            return channel.Reader;
+        }
+
+        var mode = ScriptSessionsStatusMode.None;
+        if (IncludeFullUpdate) {
+            mode |= ScriptSessionsStatusMode.FullUpdate;
+        }
+
+        if (StreamUpdates) {
+            mode |= ScriptSessionsStatusMode.Streaming;
+        }
+
         _ = Task.Run(async () => {
             try {
-                var stream = ServerClient.ScriptsStatus(new Empty(), cancellationToken: cancellationToken);
-                await foreach (var state in stream.ResponseStream.ReadAllAsync(cancellationToken: cancellationToken)) {
-                    await channel.Writer.WriteAsync(MapScriptSessionUpdate(state), cancellationToken);
+                var stream = ServerClient.ScriptsStatus(new ScriptSessionsStatusRequest {
+                    Mode = mode
+                }, cancellationToken: CancellationToken);
+                await foreach (var state in stream.ResponseStream.ReadAllAsync(cancellationToken: CancellationToken)) {
+                    await channel.Writer.WriteAsync(MapScriptSessionUpdate(state), CancellationToken);
                 }
             } finally {
                 channel.Writer.TryComplete();
             }
-        }, cancellationToken);
+        }, CancellationToken);
         return channel;
     }
     

@@ -1,9 +1,7 @@
 using Serilog;
 
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Immutable;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace RTSharp.Shared.Abstractions
 {
@@ -168,6 +166,8 @@ namespace RTSharp.Shared.Abstractions
 
         public Task<object?> RunAction()
         {
+            Debug.Assert(RunningTask == null);
+
             this.State = ACTION_STATE.RUNNING;
             RunningTask = FxCreateTask!(this);
             foreach (var fx in OnRunFxs)

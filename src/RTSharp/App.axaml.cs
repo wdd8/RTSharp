@@ -151,7 +151,7 @@ public class App : Application
         AvaloniaXamlLoader.Load(this);
 
 #if DEBUG
-        //this.AttachDevTools();
+        this.AttachDevTools();
 #endif
 
         /*var diagnosticsExporter = new DiagnosticsUdpExporter(new DiagnosticsUdpOptions {

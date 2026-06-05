@@ -147,6 +147,8 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                 var stateObserved = new InfoHashDictionary<QBittorrent.Client.TorrentState>();
                 var stateObserved2 = new InfoHashDictionary<QBittorrent.Client.TorrentState>();
+                var progressObserved = new InfoHashDictionary<double>();
+                var progressLastMoved = new InfoHashDictionary<TimeSpan>();
                 foreach (var torrentResult in res) {
                     stateObserved[torrentResult.Hash] = QBittorrent.Client.TorrentState.Unknown;
                     stateObserved2[torrentResult.Hash] = QBittorrent.Client.TorrentState.Unknown;
@@ -154,117 +156,137 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                 int rid = 1;
 
-                while (true) {
-                    if (cts.IsCancellationRequested)
-                        break;
+                try {
+                    while (true) {
+                        if (cts.IsCancellationRequested)
+                            break;
 
-                    Logger.LogDebug("Getting partial data inside session");
+                        Logger.LogDebug("Getting partial data inside session");
 
-                    var partialData = await client.GetPartialDataAsync(rid, CancellationToken);
+                        var partialData = await client.GetPartialDataAsync(rid, CancellationToken);
 
-                    rid = partialData.ResponseId;
+                        rid = partialData.ResponseId;
 
-                    Logger.LogDebug("Got partial data inside session " + rid);
+                        Logger.LogDebug("Got partial data inside session " + rid);
 
-                    foreach (var hash in hashes) {
-                        var hashStr = Convert.ToHexStringLower(hash);
-
-                        var torrentState = partialData.TorrentsChanged?.FirstOrDefault(x => x.Key == hashStr).Value?.State;
-
-                        if (torrentState == null) {
-                            Logger.LogDebug($"Torrent {hashStr} no changes");
-                            continue;
-                        }
-
-                        Logger.LogDebug($"Torrent {hashStr} state: {torrentState.Value}");
-
-                        var currentValue =
-                            torrentState.Value == QBittorrent.Client.TorrentState.CheckingDownload ||
-                            torrentState.Value == QBittorrent.Client.TorrentState.CheckingUpload ||
-                            torrentState.Value == QBittorrent.Client.TorrentState.QueuedForChecking ? QBittorrent.Client.TorrentState.CheckingDownload : torrentState.Value;
-
-                        if (stateObserved2[hash] != currentValue) {
-                            stateObserved[hash] = stateObserved2[hash];
-                            stateObserved2[hash] = currentValue;
-
-                            Logger.LogDebug($"State transition for {hashStr}: {stateObserved[hash]} -> {stateObserved2[hash]}");
-                        }
-                    }
-
-                    if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
-                        // Torrents at this point are seeding (did not enter hashing state), hashing, or completed hashing
-
-                        bool pass = true;
                         foreach (var hash in hashes) {
-                            var s = stateObserved[hash];
-                            var s2 = stateObserved2[hash];
+                            var hashStr = Convert.ToHexStringLower(hash);
 
-                            // Can't retrieve
-                            if (s == QBittorrent.Client.TorrentState.Unknown && s2 == QBittorrent.Client.TorrentState.Unknown) {
-                                Logger.LogDebug($"(2) Cannot retrieve state for {Convert.ToHexStringLower(hash)}");
+                            var torrentInfo = partialData.TorrentsChanged != null &&
+                                partialData.TorrentsChanged.TryGetValue(hashStr, out var changedTorrentInfo)
+                                    ? changedTorrentInfo
+                                    : null;
+
+                            if (torrentInfo == null) {
+                                Logger.LogDebug($"Torrent {hashStr} no changes");
                                 continue;
                             }
 
-                            // Only one state transition
-                            if (s == QBittorrent.Client.TorrentState.Unknown && s2 != QBittorrent.Client.TorrentState.Unknown) {
-                                Logger.LogDebug($"(2) {Convert.ToHexStringLower(hash)} only one state transision");
+                            var currentValue = stateObserved2[hash];
+                            if (torrentInfo.State != null) {
+                                Logger.LogDebug($"Torrent {hashStr} state: {torrentInfo.State.Value}");
+
+                                currentValue =
+                                    torrentInfo.State.Value == QBittorrent.Client.TorrentState.CheckingDownload ||
+                                    torrentInfo.State.Value == QBittorrent.Client.TorrentState.CheckingUpload ||
+                                    torrentInfo.State.Value == QBittorrent.Client.TorrentState.QueuedForChecking ? QBittorrent.Client.TorrentState.CheckingDownload : torrentInfo.State.Value;
+
+                                if (stateObserved2[hash] != currentValue) {
+                                    stateObserved[hash] = stateObserved2[hash];
+                                    stateObserved2[hash] = currentValue;
+
+                                    Logger.LogDebug($"State transition for {hashStr}: {stateObserved[hash]} -> {stateObserved2[hash]}");
+                                }
+                            }
+
+                            if (torrentInfo.Progress != null) {
+                                var currentProgress = torrentInfo.Progress.Value;
+
+                                if (currentValue == QBittorrent.Client.TorrentState.CheckingDownload && progressObserved.TryGetValue(hash, out var previousProgress) && previousProgress != currentProgress) {
+                                    progressLastMoved[hash] = sw.Elapsed;
+                                }
+
+                                progressObserved[hash] = currentProgress;
+                            }
+                        }
+
+                        if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
+                            // Torrents at this point are seeding (did not enter hashing state), hashing, or completed hashing
+
+                            bool pass = true;
+                            foreach (var hash in hashes) {
+                                var s = stateObserved[hash];
+                                var s2 = stateObserved2[hash];
+
+                                // Can't retrieve
+                                if (s == QBittorrent.Client.TorrentState.Unknown && s2 == QBittorrent.Client.TorrentState.Unknown) {
+                                    Logger.LogDebug($"(2) Cannot retrieve state for {Convert.ToHexStringLower(hash)}");
+                                    continue;
+                                }
+
+                                // Only one state transition
+                                if (s == QBittorrent.Client.TorrentState.Unknown && s2 != QBittorrent.Client.TorrentState.Unknown) {
+                                    Logger.LogDebug($"(2) {Convert.ToHexStringLower(hash)} only one state transision");
+                                    pass = false;
+                                    break;
+                                }
+
+                                // Hashing
+                                if (s2 == QBittorrent.Client.TorrentState.CheckingDownload) {
+                                    Logger.LogDebug($"(2) {Convert.ToHexStringLower(hash)} still hashing");
+                                    pass = false;
+                                    break;
+                                }
+
+                                // Still hashing
                                 pass = false;
                                 break;
                             }
 
-                            // Hashing
-                            if (s2 == QBittorrent.Client.TorrentState.CheckingDownload) {
-                                Logger.LogDebug($"(2) {Convert.ToHexStringLower(hash)} still hashing");
-                                pass = false;
+                            if (pass) {
+                                Logger.LogDebug("(2) Observed all");
                                 break;
                             }
+                        } else {
+                            bool pass = true;
+                            foreach (var hash in hashes) {
+                                var s = stateObserved[hash];
+                                var s2 = stateObserved2[hash];
 
-                            // Still hashing
-                            pass = false;
-                            break;
-                        }
+                                // Can't retrieve
+                                if (s == QBittorrent.Client.TorrentState.Unknown && s2 == QBittorrent.Client.TorrentState.Unknown) {
+                                    Logger.LogDebug($"(1) Cannot retrieve state for {Convert.ToHexStringLower(hash)}");
+                                    continue;
+                                }
 
-                        if (pass) {
-                            Logger.LogDebug("(2) Observed all");
-                            break;
-                        }
-                    } else if (sw.Elapsed < TimeSpan.FromMinutes(10)) {
-                        // Torrents at this point should be hashing or completed hashing
+                                // Still hashing
+                                if (s2 == QBittorrent.Client.TorrentState.CheckingDownload) {
+                                    if (progressLastMoved.TryGetValue(hash, out var lastMoved) &&
+                                        sw.Elapsed - lastMoved > TimeSpan.FromMinutes(1)) {
 
-                        bool pass = true;
-                        foreach (var hash in hashes) {
-                            var s = stateObserved[hash];
-                            var s2 = stateObserved2[hash];
+                                        Logger.LogDebug($"(1) {Convert.ToHexStringLower(hash)} done% stuck for more than a minute");
+                                        session.Progress.State = TASK_STATE.FAILED;
+                                        break;
+                                    }
 
-                            // Can't retrieve
-                            if (s == QBittorrent.Client.TorrentState.Unknown && s2 == QBittorrent.Client.TorrentState.Unknown) {
-                                Logger.LogDebug($"(1) Cannot retrieve state for {Convert.ToHexStringLower(hash)}");
-                                continue;
+                                    Logger.LogDebug($"(1) {Convert.ToHexStringLower(hash)} still hashing");
+                                    pass = false;
+                                    break;
+                                }
                             }
 
-                            // Still hashing
-                            if (s2 == QBittorrent.Client.TorrentState.CheckingDownload) {
-                                Logger.LogDebug($"(1) {Convert.ToHexStringLower(hash)} still hashing");
-                                pass = false;
+                            if (pass) {
+                                Logger.LogDebug("(1) Observed all");
+                                session.Progress.State = TASK_STATE.DONE;
                                 break;
                             }
                         }
 
-                        if (pass) {
-                            Logger.LogDebug("(1) Observed all");
-                            session.Progress.State = TASK_STATE.DONE;
-                            break;
-                        }
-                    } else {
-                        Logger.LogWarning("Finishing checking for rehash state after 10 minutes");
-                        session.Progress.State = TASK_STATE.FAILED;
-                        break;
+                        await Task.Delay(1000); // TODO: Customizable?
                     }
-
-                    await Task.Delay(1000); // TODO: Customizable?
+                } finally {
+                    session.Progress.State = TASK_STATE.DONE;
                 }
-
-                session.Progress.State = TASK_STATE.DONE;
             });
 
             Logger.LogDebug("Returning");
