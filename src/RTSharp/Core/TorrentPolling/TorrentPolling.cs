@@ -64,7 +64,7 @@ public static class TorrentPolling
                 var removed = listingChanges.Removed.ToHashSet(HashEqualityComparer.Instance);
                 var toRemove = new List<int>();
 
-                Torrents.Edit((torrents) => {
+                Torrents.Edit(dp, (torrents) => {
                     {
                         // Since it is possible to remove torrent and add it right after in same change, we must handle removals first
                         if (removed.Count > 0) {

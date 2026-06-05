@@ -22,6 +22,7 @@ using SkiaSharp;
 
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 
 namespace RTSharp.ViewModels
@@ -74,29 +75,28 @@ namespace RTSharp.ViewModels
 
         private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)
         {
-            var torrents = TorrentPolling.Torrents.GetSnapshot();
-            foreach (var item in Items.ToArray()) {
-                var totalDLSpeed = 0UL;
-                var totalUPSpeed = 0UL;
-                var activeTorrentCount = 0U;
+            var torrents = TorrentPolling.Torrents.GetSnapshot(); // TODO: could probably fetch only the first time and then sync changes
 
-                foreach (var torrent in torrents) {
-                    if (torrent.DataOwner.PluginInstance.InstanceId != item.DataProvider.InstanceId) {
-                        continue;
-                    }
+            var vm = Items.FirstOrDefault(x => x.DataProvider.InstanceId == e.DataProvider.PluginInstance.InstanceId);
 
-                    totalDLSpeed += torrent.DLSpeed;
-                    totalUPSpeed += torrent.UPSpeed;
-                    activeTorrentCount += (torrent.InternalState & Shared.Abstractions.TORRENT_STATE.ACTIVE) == Shared.Abstractions.TORRENT_STATE.ACTIVE ? 1U : 0U;
-                }
+            Debug.Assert(vm != null);
 
-                item.DataProvider.TotalDLSpeed = totalDLSpeed;
-                item.DataProvider.TotalUPSpeed = totalUPSpeed;
-                item.DataProvider.ActiveTorrentCount = activeTorrentCount;
+            var totalDLSpeed = 0UL;
+            var totalUPSpeed = 0UL;
+            var activeTorrentCount = 0U;
 
-                if (SpeedChartEnabled) {
-                    item.AddSpeedChartSample(totalDLSpeed, totalUPSpeed);
-                }
+            foreach (var torrent in torrents.Where(x => x.DataOwner == e.DataProvider)) {
+                totalDLSpeed += torrent.DLSpeed;
+                totalUPSpeed += torrent.UPSpeed;
+                activeTorrentCount += torrent.InternalState.HasFlag(Shared.Abstractions.TORRENT_STATE.ACTIVE) ? 1U : 0U;
+            }
+
+            vm.DataProvider.TotalDLSpeed = totalDLSpeed;
+            vm.DataProvider.TotalUPSpeed = totalUPSpeed;
+            vm.DataProvider.ActiveTorrentCount = activeTorrentCount;
+
+            if (SpeedChartEnabled) {
+                vm.AddSpeedChartSample(totalDLSpeed, totalUPSpeed);
             }
         }
     }
@@ -267,7 +267,7 @@ namespace RTSharp.ViewModels
             SpeedChartYAxis.MaxLimit = SpeedChartYAxisTopValue;
             SpeedChartYAxis.MinStep = SpeedChartYAxisTopValue;
             SpeedChartTopLabelVisible = maxValue > 0;
-            SpeedChartTopLabel = SpeedChartTopLabelVisible ? (Shared.Utils.Converters.GetSIDataSize((ulong)SpeedChartYAxisTopValue) + "/s") : String.Empty;
+            SpeedChartTopLabel = SpeedChartTopLabelVisible ? (Shared.Utils.Converters.GetSIDataSize((ulong)maxValue) + "/s") : String.Empty;
         }
 
         private static double GetAxisCeiling(double In)

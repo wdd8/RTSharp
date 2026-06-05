@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 
 using RTSharp.Models;
+using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
 
 using System;
@@ -15,18 +16,21 @@ namespace RTSharp.Core.TorrentPolling;
 public record class TorrentStoreChangeSet
 {
     public TorrentStoreChangeSet(
-        IReadOnlyList<Models.Torrent> added,
-        IReadOnlyList<Models.Torrent> refreshed,
-        IReadOnlyList<Models.Torrent> removed)
+        IReadOnlyList<Models.Torrent> Added,
+        IReadOnlyList<Models.Torrent> Refreshed,
+        IReadOnlyList<Models.Torrent> Removed,
+        RTSharpDataProvider DataProvider)
     {
-        Added = added;
-        Refreshed = refreshed;
-        Removed = removed;
+        this.Added = Added;
+        this.Refreshed = Refreshed;
+        this.Removed = Removed;
+        this.DataProvider = DataProvider;
     }
 
     public IReadOnlyList<Models.Torrent> Added { get; }
     public IReadOnlyList<Models.Torrent> Refreshed { get; }
     public IReadOnlyList<Models.Torrent> Removed { get; }
+    public RTSharpDataProvider DataProvider { get; }
 
     public bool IsEmpty => Added.Count == 0 && Refreshed.Count == 0 && Removed.Count == 0;
 }
@@ -81,7 +85,7 @@ public sealed class TorrentStore
         Rebuild();
     }
 
-    public void Edit(Action<TorrentStore> update)
+    public void Edit(RTSharpDataProvider Dp, Action<TorrentStore> Update)
     {
 #if DEBUG
         if (InEdit) {
@@ -90,8 +94,8 @@ public sealed class TorrentStore
         InEdit = true;
 #endif
 
-        update(this);
-        PublishPending();
+        Update(this);
+        PublishPending(Dp);
 
 #if DEBUG
         InEdit = false;
@@ -150,7 +154,7 @@ public sealed class TorrentStore
         }
     }
 
-    private void PublishPending()
+    private void PublishPending(RTSharpDataProvider Dp)
     {
         TorrentStoreChangeSet changeSet;
         lock (Lock) {
@@ -163,7 +167,8 @@ public sealed class TorrentStore
             changeSet = new TorrentStoreChangeSet(
                 [.. PendingAdded],
                 [.. PendingRefreshed],
-                [.. PendingRemoved]);
+                [.. PendingRemoved],
+                Dp);
 
             PendingAdded.Clear();
             PendingRefreshed.Clear();
