@@ -104,9 +104,25 @@ namespace RTSharp.Core.Services.Cache.ASCache
                     Domain = In.Domain,
                     Organization = In.Organization,
                     Country = In.Country,
-                    ImageHash = In.ImageHash 
+                    ImageHash = In.ImageHash
                 });
             }
+        }
+
+        public async Task<(long Count, long SizeBytes)> GetStats()
+        {
+            await using var conn = await New();
+            var count = await conn.QuerySingleAsync<long>("SELECT COUNT(*) FROM ASCache");
+            var builder = new SqliteConnectionStringBuilder(Consts.ConnectionString);
+            var info = new System.IO.FileInfo(builder.DataSource);
+            return (count, info.Exists ? info.Length : 0L);
+        }
+
+        public async Task Clear()
+        {
+            await using var conn = await New();
+            await conn.ExecuteAsync("DELETE FROM ASCache");
+            await conn.ExecuteAsync("VACUUM");
         }
     }
 }

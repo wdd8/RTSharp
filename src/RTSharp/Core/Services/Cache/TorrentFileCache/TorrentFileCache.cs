@@ -69,5 +69,21 @@ namespace RTSharp.Core.Services.Cache.TorrentFileCache
                 }));
             }
         }
+
+        public async Task<(long Count, long SizeBytes)> GetStats()
+        {
+            await using var conn = await New();
+            var count = await conn.QuerySingleAsync<long>("SELECT COUNT(DISTINCT TorrentHash) FROM FileCache");
+            var builder = new SqliteConnectionStringBuilder(Consts.ConnectionString);
+            var info = new System.IO.FileInfo(builder.DataSource);
+            return (count, info.Exists ? info.Length : 0L);
+        }
+
+        public async Task Clear()
+        {
+            await using var conn = await New();
+            await conn.ExecuteAsync("DELETE FROM FileCache");
+            await conn.ExecuteAsync("VACUUM");
+        }
     }
 }

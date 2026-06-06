@@ -134,6 +134,23 @@ namespace RTSharp.Core.Services.Cache.Images
             return CacheInMemory(ImageHash, image);
         }
 
+        public async Task<(long Count, long SizeBytes)> GetStats()
+        {
+            await using var conn = await New();
+            var count = await conn.QuerySingleAsync<long>("SELECT COUNT(*) FROM Images");
+            var builder = new SqliteConnectionStringBuilder(Consts.ConnectionString);
+            var info = new FileInfo(builder.DataSource);
+            return (count, info.Exists ? info.Length : 0L);
+        }
+
+        public async Task Clear()
+        {
+            await using var conn = await New();
+            await conn.ExecuteAsync("DELETE FROM Images");
+            await conn.ExecuteAsync("VACUUM");
+            Images.Clear();
+        }
+
         public async Task<(byte[] Hash, Bitmap Image)?> AddImage(Stream Image)
         {
             await using var conn = await New();
