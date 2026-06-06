@@ -99,10 +99,6 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
 
     public DataGridColumnDefinition NameColumn, LabelsColumn, TrackerColumn;
 
-    public DateTime LastSearchKey { get; set; }
-    public TimeSpan SearchAsYouGoDelay { get; private set; }
-    public string CurrentSearchText { get; set; } = "";
-
     public ObservableCollection<TemplatedControl> LabelsWithAdd { get; } = new();
     public GeneralTorrentInfoViewModel GeneralInfoViewModel { get; } = new();
 
@@ -146,7 +142,10 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
 
         using (var scope = Core.ServiceProvider.CreateScope()) {
             var config = scope.ServiceProvider.GetRequiredService<IOptions<Config.Models.Behavior>>();
-            SearchAsYouGoDelay = config.Value.SearchAsYouGoDelay;
+            SearchClearTimer = new DispatcherTimer(config.Value.SearchAsYouGoDelay, DispatcherPriority.Normal, (_, _) => {
+                CurrentSearchText = "";
+                SearchClearTimer!.Stop();
+            });
         }
 
         VisibleTorrents = TorrentPolling.Torrents.VisibleItems;

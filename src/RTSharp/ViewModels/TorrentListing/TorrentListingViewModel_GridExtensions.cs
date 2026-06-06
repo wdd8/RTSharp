@@ -4,6 +4,9 @@ using Avalonia.Controls.DataGridFiltering;
 using Avalonia.Controls.DataGridSearching;
 using Avalonia.Controls.DataGridSorting;
 using Avalonia.Data.Converters;
+using Avalonia.Threading;
+
+using CommunityToolkit.Mvvm.ComponentModel;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,6 +23,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace RTSharp.ViewModels.TorrentListing;
@@ -192,6 +196,14 @@ public partial class TorrentListingViewModel
         }
     }
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSearching))]
+    public partial string CurrentSearchText { get; set; } = "";
+
+    public bool IsSearching => CurrentSearchText.Length > 0;
+
+    private readonly DispatcherTimer SearchClearTimer;
+
     public void PostGridStateRestore()
     {
         foreach (var desc in FilteringModel.Descriptors) {
@@ -241,19 +253,14 @@ public partial class TorrentListingViewModel
 
     public void EvGridKeyUp(Avalonia.Input.KeyEventArgs e)
     {
-        var now = DateTime.UtcNow;
-        if (now - LastSearchKey > SearchAsYouGoDelay) {
-            CurrentSearchText = "";
-            SearchModel.Clear();
-        }
         if (e.KeySymbol == null)
             return;
 
         CurrentSearchText += e.KeySymbol;
         if (CurrentSearchText.Length > 0) {
             SearchModel.SetOrUpdate(new SearchDescriptor(
-                query: CurrentSearchText.Trim(),
-                matchMode: SearchMatchMode.StartsWith,
+                query: "^" + Regex.Escape(CurrentSearchText.Trim()),
+                matchMode: SearchMatchMode.Regex,
                 termMode: SearchTermCombineMode.All,
                 scope: SearchScope.ExplicitColumns,
                 columnIds: [
@@ -271,7 +278,8 @@ public partial class TorrentListingViewModel
             SearchModel.Clear();
         }
 
-        LastSearchKey = now;
+        SearchClearTimer.Stop();
+        SearchClearTimer.Start();
     }
 
     public void EvCopyingRowClipboardContent(DataGridRowClipboardEventArgs e)

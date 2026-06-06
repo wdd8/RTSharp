@@ -235,6 +235,7 @@
 					  ColumnDefinitionsSource="{Binding ColumnDefinitions}"
 					  SortingModel="{Binding SortingModel}"
 					  FilteringModel="{Binding FilteringModel}"
+					  SearchModel="{Binding SearchModel}"
 					  KeyUp="EvGridKeyUp"
 					  IsReadOnly="True"
 					  IsMultiSortEnabled="True"
@@ -314,6 +315,19 @@
 				</Style>
 			  </DataGrid.Styles>
 			</DataGrid>
+			<Border Grid.Row="1"
+					IsVisible="{Binding IsSearching}"
+					IsHitTestVisible="False"
+					VerticalAlignment="Center"
+					HorizontalAlignment="Center"
+					ZIndex="1"
+					Padding="8,4"
+					CornerRadius="4"
+					Background="#CC202020">
+				<TextBlock Text="{Binding CurrentSearchText}"
+						   Foreground="White"
+						   FontSize="13" />
+			</Border>
 			<GridSplitter Grid.Row="2" ResizeDirection="Rows" />
 			<TabControl Grid.Row="3">
 				<TabControl.Styles>
