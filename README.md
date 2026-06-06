@@ -85,6 +85,16 @@ _* - not directly supported by torrent daemon_
 |File previews|🟡mpv only|
 |File icons (as determined by OS)|🟡Not on macOS|
 
-### Configuration
+### Built-in plugins
 
-Currently configuration can be edited only in `config.json`. First setup emits a config with all possible entries.
+#### AutoIntegrify
+
+Searches for files in specified directories, (ref/hard)links files to torrent directory to recheck torrent to 100% integrity
+
+#### ColoredRatio
+
+Example plugin. Makes ratio column colored.
+
+#### MassTrackerRewrite
+
+Rewrites tracker in torrents to some other URI.
