@@ -28,11 +28,18 @@ service GRPCTorrentService {
     rpc EditTracker (EditTrackerArgs) returns (google.protobuf.Empty);
     rpc AddTracker (SingleTrackerArgs) returns (google.protobuf.Empty);
     rpc RemoveTracker (SingleTrackerArgs) returns (google.protobuf.Empty);
+    rpc AddPeer (SinglePeerArgs) returns (google.protobuf.Empty);
 }
 
 message SingleTrackerArgs {
     bytes InfoHash = 1;
     string Tracker = 2;
+}
+
+message SinglePeerArgs {
+    bytes InfoHash = 1;
+    bytes IPAddress = 2;
+    uint32 Port = 3;
 }
 
 message EditTrackerArgs {

@@ -199,10 +199,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             xml.Append("</data></array></value></param></params></methodCall>");
 
             // TODO: more error handling
-            Logger.LogInformation($"Add torrent xml: {xml.ToString()}");
             var result = await Scgi.Get(xml.ToString());
-
-            Logger.LogInformation("Add torrent: " + Encoding.UTF8.GetString(result.Span));
 
             xml.Clear();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
@@ -211,7 +208,6 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
             xml.Append("</data></array></value></param></params></methodCall>");
             var result2 = await Scgi.Get(xml.ToString());
-            Logger.LogInformation("Sessions: " + Encoding.UTF8.GetString(result2.Span));
 
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<params>\r\n<param><value><array><data>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<fault>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Call XML not a proper XML-RPC call.  Incorrect Base64 padding</string></value></member>\r\n</struct></value>\r\n</fault>\r\n</methodResponse>\r\n
@@ -1248,6 +1244,23 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             File.Move(resumeFilePath, resumeFilePath + ".old_bak");
             File.Move(resumeFilePath + ".trackers_replaced", resumeFilePath);
+
+            return new();
+        }
+
+        public async Task<Empty> AddPeer(ByteString InfoHash, ByteString IPAddress, uint Port, CancellationToken cancellationToken)
+        {
+            var sHash = Convert.ToHexString(InfoHash.Span);
+            var ip = new System.Net.IPAddress(IPAddress.Span).ToString();
+            var peer = $"{ip}:{Port}";
+
+            var xml = new StringBuilder();
+            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>add_peer</methodName><params>");
+            xml.Append($"<param><value><string>{sHash}</string></value></param>");
+            xml.Append($"<param><value><string>{peer}</string></value></param>");
+            xml.Append("</params></methodCall>");
+
+            var res = await Scgi.Get(xml.ToString(), cancellationToken);
 
             return new();
         }

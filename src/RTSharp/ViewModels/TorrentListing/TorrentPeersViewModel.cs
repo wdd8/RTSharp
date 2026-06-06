@@ -5,8 +5,12 @@ using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using DialogHostAvalonia;
+
 using RTSharp.Core;
 using RTSharp.Shared.Abstractions;
+
+using Serilog;
 
 using System;
 using System.Collections;
@@ -14,6 +18,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Net;
 using System.Threading.Tasks;
 
 using Peer = RTSharp.Models.Peer;
@@ -27,6 +32,9 @@ namespace RTSharp.ViewModels.TorrentListing
 
         [ObservableProperty]
         public partial Models.Torrent Torrent { get; set; }
+
+        [ObservableProperty]
+        public partial string AddPeerEndpointText { get; set; } = "";
 
         static readonly FrozenDictionary<string, Func<DataProviderPeerCapabilities, bool>> StrToCap = new Dictionary<string, Func<DataProviderPeerCapabilities, bool>>() {
             { "Add peers", x => x.AddPeer },
@@ -45,9 +53,20 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public bool CanExecuteAddPeers() => CanExecuteAction("Add peers");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddPeers))]
-        public async Task AddPeers(IList Input)
+        public async Task AddPeers()
         {
+            if (!IPEndPoint.TryParse(AddPeerEndpointText, out var endpoint)) {
+                return;
+            }
 
+            try {
+                await Torrent.DataOwner.Instance.Peer.AddPeer(Torrent.ToPluginModel(), endpoint);
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, "Adding peer failed");
+            } finally {
+                DialogHost.GetDialogSession("AddPeerHost")!.Close(false);
+                AddPeerEndpointText = "";
+            }
         }
 
         public bool CanExecuteBanPeer() => CanExecuteAction("Ban peer");

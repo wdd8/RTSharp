@@ -2,6 +2,8 @@
 using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Abstractions.Client;
 
+using System.Net;
+
 namespace RTSharp.DataProvider.Qbittorrent.Plugin
 {
     public class DataProviderPeer : IDataProviderPeer
@@ -10,7 +12,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
         public IPluginHost PluginHost { get; }
 
         public DataProviderPeerCapabilities Capabilities { get; } = new(
-            AddPeer: false,
+            AddPeer: true,
             BanPeer: false,
             KickPeer: false,
             SnubPeer: false,
@@ -21,6 +23,13 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
         {
             this.ThisPlugin = ThisPlugin;
             this.PluginHost = ThisPlugin.Host;
+        }
+
+        public async Task AddPeer(Torrent Torrent, IPEndPoint Peer, CancellationToken cancellationToken = default)
+        {
+            var client = PluginHost.AttachedDaemonService.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+
+            await client.AddPeer(Torrent.Hash, Peer, cancellationToken);
         }
     }
 }

@@ -52,7 +52,7 @@ See [setting up data providers](setup-dataproviders.md)
 |Remove torrent & data|🟢Supported|🟢Supported|🟢Supported|
 |Add label|🟢Supported|🟢Supported|🟢Supported|
 |Set labels|🟢Supported|🟢Supported|🟢Supported|
-|Add peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Add peer|🟢Supported|🟢Supported|🔴Unsupported by daemon|
 |Ban peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Kick peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Snub peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|

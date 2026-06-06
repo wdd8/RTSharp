@@ -52,4 +52,6 @@ public interface IDaemonTorrentsService
     Task AddNewTracker(byte[] Hash, string New, CancellationToken cancellationToken);
 
     Task RemoveTracker(byte[] Hash, string Existing, CancellationToken cancellationToken);
+
+    Task AddPeer(byte[] Hash, System.Net.IPEndPoint Peer, CancellationToken cancellationToken);
 }

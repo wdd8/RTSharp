@@ -484,5 +484,14 @@ namespace RTSharp.Core.Services.Daemon
                 Tracker = Existing
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
         }
+
+        public async Task AddPeer(byte[] Hash, System.Net.IPEndPoint Peer, CancellationToken cancellationToken)
+        {
+            await TorrentClient.AddPeerAsync(new SinglePeerArgs {
+                InfoHash = Hash.ToByteString(),
+                IPAddress = Peer.Address.GetAddressBytes().ToByteString(),
+                Port = (uint)Peer.Port
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        }
     }
 }

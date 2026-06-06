@@ -4,6 +4,8 @@ using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Abstractions.Client;
 
+using System.Net;
+
 namespace RTSharp.DataProvider.Transmission.Plugin;
 
 public class DataProviderPeer : IDataProviderPeer
@@ -24,4 +26,7 @@ public class DataProviderPeer : IDataProviderPeer
         this.ThisPlugin = ThisPlugin;
         this.PluginHost = ThisPlugin.Host;
     }
+
+    public Task AddPeer(Torrent Torrent, IPEndPoint Peer, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
 }

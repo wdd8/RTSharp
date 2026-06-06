@@ -229,5 +229,16 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }
+
+        public override async Task<Empty> AddPeer(SinglePeerArgs Req, ServerCallContext Ctx)
+        {
+            var dp = RegisteredDataProviders.GetDataProvider(Ctx);
+            return dp.Type switch {
+                DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().AddPeer(Req.InfoHash, Req.IPAddress, Req.Port, Ctx.CancellationToken),
+                DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().AddPeer(Req.InfoHash, Req.IPAddress, Req.Port, Ctx.CancellationToken),
+                DataProviderType.transmission => throw new RpcException(new Grpc.Core.Status(StatusCode.Unimplemented, "")),
+                _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
+            };
+        }
     }
 }

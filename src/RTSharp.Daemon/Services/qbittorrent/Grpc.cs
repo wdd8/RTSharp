@@ -949,5 +949,16 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
             return new();
         }
+
+        public async Task<Empty> AddPeer(ByteString InfoHash, ByteString IPAddress, uint Port, CancellationToken cancellationToken)
+        {
+            var client = await Client.Init();
+
+            var ip = new System.Net.IPAddress(IPAddress.Span).ToString();
+
+            await client.AddTorrentPeersAsync([Convert.ToHexString(InfoHash.Span)], [$"{ip}:{Port}"], cancellationToken);
+
+            return new();
+        }
     }
 }

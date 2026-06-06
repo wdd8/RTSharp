@@ -5,6 +5,7 @@
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
+             xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              d:DesignWidth="1100" d:DesignHeight="450"
 			 x:DataType="torrentListing:TorrentPeersViewModel">
 
@@ -15,6 +16,20 @@
     <Design.DataContext>
         <torrentListing:TorrentPeersViewModel />
     </Design.DataContext>
+
+    <dialogHost:DialogHost Name="DialogHostAddPeer" Identifier="AddPeerHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
+        <dialogHost:DialogHost.DialogContent>
+            <StackPanel>
+                <TextBlock FontWeight="Bold">Add peer</TextBlock>
+                <TextBox Name="AddPeerEndpoint" PlaceholderText="IP:Port" Text="{Binding AddPeerEndpointText}" />
+                <Button
+                    Margin="0 -6 0 -7"
+                    Width="0"
+                    IsDefault="True"
+                    Command="{Binding AddPeersCommand}"
+                />
+            </StackPanel>
+        </dialogHost:DialogHost.DialogContent>
 
     <DataGrid Name="grid"
                   ItemsSource="{Binding PeersView}"
@@ -29,9 +44,8 @@
                   VerticalAlignment="Stretch">
         <DataGrid.ContextMenu>
             <ContextMenu x:DataType="torrentListing:TorrentPeersViewModel">
-                <MenuItem Header="Add peers..."
-                          Command="{Binding AddPeersCommand}"
-                          CommandParameter="{Binding #grid.SelectedItems}"
+                <MenuItem Header="Add peer..."
+                          Command="{Binding #DialogHostAddPeer.OpenDialogCommand}"
                     />
                 <Separator />
                 <MenuItem Header="Ban peer"
@@ -83,4 +97,5 @@
             <DataGridTextColumn Header="Peer DL Speed" x:DataType="models:Peer" Binding="{Binding PeerDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="PeerDLSpeed" />
         </DataGrid.Columns>
     </DataGrid>
+    </dialogHost:DialogHost>
 </UserControl>
