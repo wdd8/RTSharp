@@ -1,3 +1,5 @@
+using ExCSS;
+
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
@@ -41,6 +43,16 @@ internal partial class RequestReceivePathsContext : JsonSerializerContext { }
 
 public class DaemonService : IDaemonService
 {
+    /// See <see cref="ConfigureServices.AddDaemonServices"/>
+    /// 
+    /// Populated from the TLS validation callback in ConfigureServices. A cleaner
+    /// solution would be to establish a connection, then extract the peer certificate
+    /// from that channel — but gRPC doesn't expose any accessors for that
+    public static Dictionary<string, System.Security.Cryptography.X509Certificates.X509Certificate2> RemoteCerts { get; } = new();
+
+    /// See <see cref="ConfigureServices.AddDaemonServices"/>
+    public static Dictionary<string, string> RemoteCipherSuites { get; } = new();
+
     GRPCServerService.GRPCServerServiceClient ServerClient;
     GRPCFilesService.GRPCFilesServiceClient FilesClient;
     IHostApplicationLifetime Lifetime;

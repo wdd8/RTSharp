@@ -1,24 +1,29 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+using Avalonia.Media.Imaging;
 
-using MsBox.Avalonia;
-using MsBox.Avalonia.Enums;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+using RTSharp.Core.Services.Daemon;
+using RTSharp.Shared.Controls;
 
 using Serilog;
 
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace RTSharp.ViewModels
 {
     public partial class ServersWindowViewModel : ObservableObject
     {
+        public Bitmap ServerIcon { get; } = BuiltInIcon.Get(BuiltInIcons.SERVER);
+        public Bitmap CertificateIcon { get; } = BuiltInIcon.Get(BuiltInIcons.CERTIFICATE);
+
         [ObservableProperty]
         public partial ObservableCollection<Models.Server> Servers { get; set; }
 
         [ObservableProperty]
-        public partial Models.Server SelectedServer { get; set; }
+        public partial Models.Server? SelectedServer { get; set; }
 
         public ServersWindowViewModel()
         {
@@ -28,24 +33,49 @@ namespace RTSharp.ViewModels
                 Servers.Add(new Models.Server {
                     ServerId = id,
                     Host = server.Host,
-                    DaemonPort = server.Port
+                    Port = server.Port
                 });
             }
         }
 
-        [RelayCommand]
-        public async Task Test(Models.Server Server)
+        partial void OnSelectedServerChanged(Models.Server? value)
         {
-            try {
-                await Core.Servers.Value[Server.ServerId].Ping(default);
+            if (value != null)
+                _ = TestConnectionAsync(value);
+        }
 
-                var msgBox = MessageBoxManager.GetMessageBoxStandard(title: "RT#", text: "Connection successful", @enum: ButtonEnum.Ok, icon: Icon.Success);
-                await msgBox.ShowAsync();
+        private async Task TestConnectionAsync(Models.Server server)
+        {
+            server.ConnectionStatus = "Testing...";
+            server.Latency = null;
+            server.CertThumbprint = null;
+            server.CertNotBefore = null;
+            server.CertNotAfter = null;
+            server.CertAlgorithm = null;
+
+            try {
+                var sw = Stopwatch.StartNew();
+                await Core.Servers.Value[server.ServerId].Ping(default);
+                sw.Stop();
+
+                server.ConnectionStatus = "OK";
+                server.Latency = Shared.Utils.Converters.ToAgoString(sw.Elapsed);
+
+                if (DaemonService.RemoteCerts.TryGetValue(server.ServerId, out var cert)) {
+                    server.CertThumbprint = cert.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256);
+                    server.CertNotBefore = cert.NotBefore.ToString("o");
+                    server.CertNotAfter = cert.NotAfter.ToString("o");
+                }
+
+                if (DaemonService.RemoteCipherSuites.TryGetValue(server.ServerId, out var cipherSuite))
+                    server.CertAlgorithm = cipherSuite;
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Ping to daemon has failed");
 
-                var msgBox = MessageBoxManager.GetMessageBoxStandard(title: "RT#", text: "Connection failed", @enum: ButtonEnum.Ok, icon: Icon.Error);
-                await msgBox.ShowAsync();
+                while (ex.InnerException != null)
+                    ex = ex.InnerException;
+
+                server.ConnectionStatus = ex.Message.ToString();
             }
         }
     }

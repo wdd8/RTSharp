@@ -76,11 +76,11 @@ namespace RTSharp.Core.Services.Daemon
             var x509 = X509Certificate2.CreateFromPemFile(CertPath, KeyPath);
             var pkcs12 = X509CertificateLoader.LoadPkcs12(x509.Export(X509ContentType.Pkcs12), null);
 
-            void register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(string name, Config.Models.Server server)
+            void register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(string name, string serverId, Config.Models.Server server)
                 where T : class
             {
                 services
-                    .AddGrpcClient<T>(name, o => {
+                    .AddGrpcClient<T>(name + "_" + serverId, o => {
                         o.Address = server.GetUri();
                         o.ChannelOptionsActions.Add(opts => {
                             opts.MaxReceiveMessageSize = int.MaxValue;
@@ -88,6 +88,13 @@ namespace RTSharp.Core.Services.Daemon
                     })
                     .ConfigurePrimaryHttpMessageHandler((provider) => {
                         var handler = new SocketsHttpHandler();
+                        handler.PlaintextStreamFilter = (context, cancellationToken) => {
+                            if (context.PlaintextStream is System.Net.Security.SslStream tlsStm)
+                                DaemonService.RemoteCipherSuites[serverId] = tlsStm.NegotiatedCipherSuite.ToString();
+
+                            return ValueTask.FromResult(context.PlaintextStream);
+                        };
+
                         handler.SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
                             ClientCertificates = [ pkcs12 ],
 
@@ -145,8 +152,14 @@ It is also possible that a host key has just been changed.
                                         config.Rewrite().GetAwaiter().GetResult();
                                     }
 
+                                    if (result && cert is X509Certificate2 acceptedCert)
+                                        DaemonService.RemoteCerts[serverId] = acceptedCert;
+
                                     return result;
                                 }
+
+                                if (cert is X509Certificate2 trustedCert)
+                                    DaemonService.RemoteCerts[serverId] = trustedCert;
 
                                 return true;
                             }
@@ -157,14 +170,14 @@ It is also possible that a host key has just been changed.
 
             if (servers != null) {
                 foreach (var server in servers) {
-                    register<RTSharp.Daemon.Protocols.GRPCServerService.GRPCServerServiceClient>(nameof(RTSharp.Daemon.Protocols.GRPCServerService.GRPCServerServiceClient) + "_" + server.Key, server.Value);
-                    register<RTSharp.Daemon.Protocols.GRPCFilesService.GRPCFilesServiceClient>(nameof(RTSharp.Daemon.Protocols.GRPCFilesService.GRPCFilesServiceClient) + "_" + server.Key, server.Value);
-                    register<RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentService.GRPCTorrentServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentService.GRPCTorrentServiceClient) + "_" + server.Key, server.Value);
-                    register<RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentsService.GRPCTorrentsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentsService.GRPCTorrentsServiceClient) + "_" + server.Key, server.Value);
-                    register<RTSharp.Daemon.Protocols.DataProvider.GRPCStatsService.GRPCStatsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.GRPCStatsService.GRPCStatsServiceClient) + "_" + server.Key, server.Value);
-                    register<RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient) + "_" + server.Key, server.Value);
-                    register<RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient) + "_" + server.Key, server.Value);
-                    register<RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient) + "_" + server.Key, server.Value);
+                    register<RTSharp.Daemon.Protocols.GRPCServerService.GRPCServerServiceClient>(nameof(RTSharp.Daemon.Protocols.GRPCServerService.GRPCServerServiceClient), server.Key, server.Value);
+                    register<RTSharp.Daemon.Protocols.GRPCFilesService.GRPCFilesServiceClient>(nameof(RTSharp.Daemon.Protocols.GRPCFilesService.GRPCFilesServiceClient), server.Key, server.Value);
+                    register<RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentService.GRPCTorrentServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentService.GRPCTorrentServiceClient), server.Key, server.Value);
+                    register<RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentsService.GRPCTorrentsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.GRPCTorrentsService.GRPCTorrentsServiceClient), server.Key, server.Value);
+                    register<RTSharp.Daemon.Protocols.DataProvider.GRPCStatsService.GRPCStatsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.GRPCStatsService.GRPCStatsServiceClient), server.Key, server.Value);
+                    register<RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient), server.Key, server.Value);
+                    register<RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient), server.Key, server.Value);
+                    register<RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>(nameof(RTSharp.Daemon.Protocols.DataProvider.Settings.GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient), server.Key, server.Value);
                 }
             }
         }

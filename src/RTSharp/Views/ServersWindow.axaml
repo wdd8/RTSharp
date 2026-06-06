@@ -3,40 +3,93 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RTSharp.ViewModels"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        Width="400" Height="300"
+        xmlns:models="clr-namespace:RTSharp.Models"
+        xmlns:i="https://github.com/projektanker/icons.avalonia"
+        mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="380"
+        Width="700" Height="380"
         x:Class="RTSharp.Views.ServersWindow"
-		x:DataType="vm:ServersWindowViewModel"
+        x:DataType="vm:ServersWindowViewModel"
+        Icon="/Assets/rtsharp.ico"
         Title="RT# - Servers">
 
     <Design.DataContext>
         <vm:ServersWindowViewModel />
     </Design.DataContext>
 
-    <DataGrid
-            Name="MainGrid"
-            AutoGenerateColumns="False"
-            CanUserReorderColumns="True"
-            CanUserResizeColumns="True"
-            CanUserSortColumns="True"
-            GridLinesVisibility="Horizontal"
-            SelectionMode="Extended"
-            CanUserAddRows="False"
-            ItemsSource="{Binding Servers}"
-            SelectedItem="{Binding SelectedServer}"
-        >
-        <DataGrid.ContextMenu>
-            <ContextMenu>
-                <MenuItem Header="Test"
-                          Command="{Binding TestCommand}"
-                          CommandParameter="{Binding #MainGrid.SelectedItem}"
-                />
-            </ContextMenu>
-        </DataGrid.ContextMenu>
-        <DataGrid.Columns>
-            <DataGridTextColumn Header="Id" IsReadOnly="True" Binding="{Binding ServerId, Mode=OneWay}" />
-            <DataGridTextColumn Header="Host" IsReadOnly="True" Binding="{Binding Host, Mode=OneWay}" />
-            <DataGridTextColumn Header="Daemon port" IsReadOnly="True" Binding="{Binding DaemonPort, Mode=OneWay}" />
-        </DataGrid.Columns>
-    </DataGrid>
+    <Window.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Padding" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.value">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Separator">
+            <Setter Property="Margin" Value="0,6,0,6" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" MinWidth="100" />
+            <ColumnDefinition Width="4" />
+            <ColumnDefinition Width="4*" />
+        </Grid.ColumnDefinitions>
+
+        <ListBox Grid.Column="0"
+                 ItemsSource="{Binding Servers}"
+                 SelectedItem="{Binding SelectedServer}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="models:Server">
+                    <StackPanel Orientation="Horizontal">
+                        <i:Icon Value="fa7-solid fa7-server" Margin="0,0,6,0" FontSize="12" />
+                        <TextBlock Text="{Binding ServerId}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
+
+        <Grid Grid.Column="2"
+              ColumnDefinitions="Auto,*"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+              Margin="8,0,0,0">
+
+            <StackPanel Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2"
+                        Orientation="Horizontal" Margin="0,0,0,6">
+                <Image Source="{Binding ServerIcon}" Width="16" Height="16" Margin="0,0,6,0" />
+                <TextBlock FontWeight="SemiBold" VerticalAlignment="Center">Connection</TextBlock>
+            </StackPanel>
+
+            <TextBlock Grid.Column="0" Grid.Row="1" Classes="label">Endpoint:</TextBlock>
+            <TextBlock Grid.Column="1" Grid.Row="1" Classes="value" Text="{Binding SelectedServer.Endpoint}" />
+
+            <TextBlock Grid.Column="0" Grid.Row="2" Classes="label">Status:</TextBlock>
+            <TextBlock Grid.Column="1" Grid.Row="2" Classes="value" Text="{Binding SelectedServer.ConnectionStatus}" />
+
+            <TextBlock Grid.Column="0" Grid.Row="3" Classes="label">Latency:</TextBlock>
+            <TextBlock Grid.Column="1" Grid.Row="3" Classes="value" Text="{Binding SelectedServer.Latency}" />
+
+            <Separator Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" />
+
+            <StackPanel Grid.Column="0" Grid.Row="5" Grid.ColumnSpan="2"
+                        Orientation="Horizontal" Margin="0,0,0,6">
+                <Image Source="{Binding CertificateIcon}" Width="16" Height="16" Margin="0,0,6,0" />
+                <TextBlock FontWeight="SemiBold" VerticalAlignment="Center">Certificate</TextBlock>
+            </StackPanel>
+
+            <TextBlock Grid.Column="0" Grid.Row="6" Classes="label">Thumbprint:</TextBlock>
+            <TextBlock Grid.Column="1" Grid.Row="6" Classes="value" Text="{Binding SelectedServer.CertThumbprint}" TextWrapping="Wrap" />
+
+            <TextBlock Grid.Column="0" Grid.Row="7" Classes="label">Not before:</TextBlock>
+            <TextBlock Grid.Column="1" Grid.Row="7" Classes="value" Text="{Binding SelectedServer.CertNotBefore}" />
+
+            <TextBlock Grid.Column="0" Grid.Row="8" Classes="label">Not after:</TextBlock>
+            <TextBlock Grid.Column="1" Grid.Row="8" Classes="value" Text="{Binding SelectedServer.CertNotAfter}" />
+
+            <TextBlock Grid.Column="0" Grid.Row="9" Classes="label">TLS algorithm:</TextBlock>
+            <TextBlock Grid.Column="1" Grid.Row="9" Classes="value" Text="{Binding SelectedServer.CertAlgorithm}" />
+        </Grid>
+    </Grid>
 </Window>
