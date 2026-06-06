@@ -369,6 +369,9 @@
     <Compile Update="Views\Options\Pages\CachingPageView.axaml.cs">
       <DependentUpon>CachingPageView.axaml</DependentUpon>
     </Compile>
+    <Compile Update="Views\Options\Pages\LookPageView.axaml.cs">
+      <DependentUpon>LookPageView.axaml</DependentUpon>
+    </Compile>
     <Compile Update="Views\Statistics\StatisticsView.axaml.cs">
       <DependentUpon>StatisticsView.axaml</DependentUpon>
     </Compile>

@@ -2,7 +2,85 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="RTSharp.Views.Options.Pages.BehaviorPageView">
-    <TextBlock FontSize="72">yoooooooo</TextBlock>
+             xmlns:pages="clr-namespace:RTSharp.ViewModels.Options.Pages"
+             xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+             xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="450"
+             x:Class="RTSharp.Views.Options.Pages.BehaviorPageView"
+             x:DataType="pages:BehaviorPageViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0 0 8 0" />
+        </Style>
+    </UserControl.Styles>
+
+    <dialogHost:DialogHost Name="AddReplacementDialog" Identifier="AddReplacementDialog" CloseOnClickAway="True">
+        <dialogHost:DialogHost.DialogContent>
+            <StackPanel Margin="16" Spacing="10" MinWidth="280">
+                <TextBlock FontWeight="Bold">Add peer origin replacement</TextBlock>
+                <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,Auto">
+                    <TextBlock Grid.Column="0" Grid.Row="0">Pattern:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding NewReplacementPattern}" />
+                    <TextBlock Grid.Column="0" Grid.Row="1">Replacement:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding NewReplacementReplacement}" />
+                </Grid>
+                <Button Width="0" Margin="0 -6 0 -7" IsDefault="True" Command="{Binding AddReplacementCommand}" />
+            </StackPanel>
+        </dialogHost:DialogHost.DialogContent>
+
+        <StackPanel Margin="8" Spacing="12">
+            <views:GroupBox Label="Polling intervals">
+                <Grid ColumnDefinitions="170,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <Grid.Styles>
+                        <Style Selector="TextBlock.unit">
+                            <Setter Property="Margin" Value="4 0 0 6" />
+                        </Style>
+                    </Grid.Styles>
+
+                    <TextBlock Grid.Column="0" Grid.Row="0">Files polling interval:</TextBlock>
+                    <NumericUpDown Grid.Column="1" Grid.Row="0" Value="{Binding FilesPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
+                    <TextBlock Grid.Column="2" Grid.Row="0" Classes="unit">seconds</TextBlock>
+
+                    <TextBlock Grid.Column="0" Grid.Row="1">Peers polling interval:</TextBlock>
+                    <NumericUpDown Grid.Column="1" Grid.Row="1" Value="{Binding PeersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
+                    <TextBlock Grid.Column="2" Grid.Row="1" Classes="unit">seconds</TextBlock>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2">Trackers polling interval:</TextBlock>
+                    <NumericUpDown Grid.Column="1" Grid.Row="2" Value="{Binding TrackersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
+                    <TextBlock Grid.Column="2" Grid.Row="2" Classes="unit">seconds</TextBlock>
+
+                    <TextBlock Grid.Column="0" Grid.Row="3">Search-as-you-go delay:</TextBlock>
+                    <NumericUpDown Grid.Column="1" Grid.Row="3" Value="{Binding SearchAsYouGoDelaySeconds}" Minimum="0" FormatString="F1" />
+                    <TextBlock Grid.Column="2" Grid.Row="3" Classes="unit">seconds</TextBlock>
+                </Grid>
+            </views:GroupBox>
+
+            <views:GroupBox Label="Peer origin replacements">
+                <StackPanel Spacing="6">
+                    <DataGrid ItemsSource="{Binding PeerOriginReplacements}"
+                              SelectedItem="{Binding SelectedPeerOriginReplacement}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              CanUserReorderColumns="False"
+                              CanUserResizeColumns="True"
+                              GridLinesVisibility="Horizontal"
+                              Height="150">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Pattern" Binding="{Binding Pattern}" Width="*" />
+                            <DataGridTextColumn Header="Replacement" Binding="{Binding Replacement}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Command="{Binding #AddReplacementDialog.OpenDialogCommand}">Add</Button>
+                        <Button Command="{Binding RemoveReplacementCommand}"
+                                CommandParameter="{Binding SelectedPeerOriginReplacement}"
+                                IsEnabled="{Binding SelectedPeerOriginReplacement, Converter={x:Static ObjectConverters.IsNotNull}}">Remove</Button>
+                    </StackPanel>
+                </StackPanel>
+            </views:GroupBox>
+        </StackPanel>
+    </dialogHost:DialogHost>
 </UserControl>

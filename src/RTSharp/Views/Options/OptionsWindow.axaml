@@ -4,17 +4,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:options="clr-namespace:RTSharp.ViewModels.Options"
         xmlns:i="https://github.com/projektanker/icons.avalonia"
-        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
-        Width="600" Height="500"
+        mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+        Width="700" Height="500"
         x:Class="RTSharp.Views.Options.OptionsWindow"
-		x:DataType="options:OptionsWindowViewModel"
+        x:DataType="options:OptionsWindowViewModel"
         Title="Options">
 
     <Design.DataContext>
         <options:OptionsWindowViewModel />
     </Design.DataContext>
-    
+
     <Window.Styles>
+        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
         <Style Selector="TextBlock,TextBox">
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
@@ -23,27 +24,34 @@
         </Style>
     </Window.Styles>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" MinWidth="100" />
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <TreeView Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" ItemsSource="{Binding Items,Mode=OneWay}" SelectedItem="{Binding CurrentlySelectedItem}">
-            <TreeView.ItemTemplate>
-                <TreeDataTemplate DataType="options:OptionsItem" ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal" MinWidth="150">
-                        <i:Icon FontSize="16" Value="{Binding Icon}" Margin="0 0 20 0" />
-                        <TextBlock TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding Text}"/>
-                    </StackPanel>
-                </TreeDataTemplate>
-            </TreeView.ItemTemplate>
-        </TreeView>
-        <GridSplitter Grid.Column="1" ResizeDirection="Columns" Margin="0,0,4,0" MinWidth="4" />
-        <Grid Grid.Column="2" RowDefinitions="*,*">
-            <ScrollViewer Grid.Row="0" VerticalAlignment="Top">
+    <Grid RowDefinitions="*,Auto">
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" MinWidth="100" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TreeView Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" ItemsSource="{Binding Items, Mode=OneWay}" SelectedItem="{Binding CurrentlySelectedItem}">
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate DataType="options:OptionsItem" ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal" MinWidth="150">
+                            <i:Icon FontSize="16" Value="{Binding Icon}" Margin="0 0 20 0" />
+                            <TextBlock TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding Text}"/>
+                        </StackPanel>
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+            <GridSplitter Grid.Column="1" ResizeDirection="Columns" Margin="0,0,4,0" MinWidth="4" />
+            <ScrollViewer Grid.Column="2" VerticalAlignment="Top">
                 <ContentControl Content="{Binding SettingsContent}" />
             </ScrollViewer>
         </Grid>
+        <Border Grid.Row="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="8,6">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Command="{Binding OkCommand}">OK</Button>
+                <Button Command="{Binding CancelCommand}">Cancel</Button>
+                <Button Command="{Binding ApplyCommand}">Apply</Button>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

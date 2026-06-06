@@ -1,12 +1,98 @@
-﻿using System;
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
-namespace RTSharp.ViewModels.Options.Pages
+using Microsoft.Extensions.DependencyInjection;
+
+namespace RTSharp.ViewModels.Options.Pages;
+
+public partial class PeerOriginReplacement : ObservableObject
 {
-    public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
+    [ObservableProperty]
+    public partial string Pattern { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string Replacement { get; set; } = "";
+}
+
+public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
+{
+    [ObservableProperty]
+    public partial double FilesPollingIntervalSeconds { get; set; }
+
+    [ObservableProperty]
+    public partial double PeersPollingIntervalSeconds { get; set; }
+
+    [ObservableProperty]
+    public partial double TrackersPollingIntervalSeconds { get; set; }
+
+    [ObservableProperty]
+    public partial double SearchAsYouGoDelaySeconds { get; set; }
+
+    public ObservableCollection<PeerOriginReplacement> PeerOriginReplacements { get; } = [];
+
+    [ObservableProperty]
+    public partial PeerOriginReplacement? SelectedPeerOriginReplacement { get; set; }
+
+    [ObservableProperty]
+    public partial string NewReplacementPattern { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string NewReplacementReplacement { get; set; } = "";
+
+    public BehaviorPageViewModel()
     {
-        [ObservableProperty]
-        public partial TimeSpan FilesPollingInterval { get; set; }
+        if (!Avalonia.Controls.Design.IsDesignMode)
+            Load();
     }
+
+    public void Load()
+    {
+        using var scope = Core.ServiceProvider.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
+        var behavior = config.Behavior.Value;
+
+        FilesPollingIntervalSeconds = behavior.FilesPollingInterval.TotalSeconds;
+        PeersPollingIntervalSeconds = behavior.PeersPollingInterval.TotalSeconds;
+        TrackersPollingIntervalSeconds = behavior.TrackersPollingInterval.TotalSeconds;
+        SearchAsYouGoDelaySeconds = behavior.SearchAsYouGoDelay.TotalSeconds;
+
+        PeerOriginReplacements.Clear();
+        foreach (var (pattern, replacement) in behavior.PeerOriginReplacements)
+            PeerOriginReplacements.Add(new PeerOriginReplacement { Pattern = pattern, Replacement = replacement });
+    }
+
+    public void ApplyToConfig(Core.Config config)
+    {
+        var behavior = config.Behavior.Value;
+        behavior.FilesPollingInterval = TimeSpan.FromSeconds(FilesPollingIntervalSeconds);
+        behavior.PeersPollingInterval = TimeSpan.FromSeconds(PeersPollingIntervalSeconds);
+        behavior.TrackersPollingInterval = TimeSpan.FromSeconds(TrackersPollingIntervalSeconds);
+        behavior.SearchAsYouGoDelay = TimeSpan.FromSeconds(SearchAsYouGoDelaySeconds);
+
+        behavior.PeerOriginReplacements.Clear();
+        foreach (var item in PeerOriginReplacements.Where(x => !String.IsNullOrEmpty(x.Pattern)))
+            behavior.PeerOriginReplacements[item.Pattern] = item.Replacement;
+    }
+
+    [RelayCommand]
+    public void AddReplacement()
+    {
+        if (String.IsNullOrEmpty(NewReplacementPattern) || String.IsNullOrEmpty(NewReplacementReplacement))
+            return;
+
+        PeerOriginReplacements.Add(new PeerOriginReplacement {
+            Pattern = NewReplacementPattern,
+            Replacement = NewReplacementReplacement
+        });
+        NewReplacementPattern = "";
+        NewReplacementReplacement = "";
+        DialogHostAvalonia.DialogHost.Close("AddReplacementDialog");
+    }
+
+    [RelayCommand]
+    public void RemoveReplacement(PeerOriginReplacement item) => PeerOriginReplacements.Remove(item);
 }

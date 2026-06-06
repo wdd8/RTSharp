@@ -42,7 +42,7 @@ public class Config
 
         public class Caching
         {
-            public bool FilesCachingEnabled { get; init; }
+            public bool FilesCachingEnabled { get; set; }
 
             public int ConcurrentPeerCachingRequests { get; set; }
 

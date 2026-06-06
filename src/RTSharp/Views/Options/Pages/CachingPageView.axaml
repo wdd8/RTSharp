@@ -2,7 +2,37 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="RTSharp.Views.Options.Pages.CachingPageView">
-    <TextBlock FontSize="72">bbbbbbbbbbb</TextBlock>
+             xmlns:pages="clr-namespace:RTSharp.ViewModels.Options.Pages"
+             xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="300"
+             x:Class="RTSharp.Views.Options.Pages.CachingPageView"
+             x:DataType="pages:CachingPageViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0 0 8 0" />
+        </Style>
+        <Style Selector="NumericUpDown">
+            <Setter Property="Margin" Value="0 0 0 6" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Margin="8" Spacing="12">
+        <views:GroupBox Label="Files cache">
+            <StackPanel Spacing="8">
+                <CheckBox IsChecked="{Binding FilesCachingEnabled}">Enable files caching</CheckBox>
+                <Grid ColumnDefinitions="200,Auto" RowDefinitions="Auto,Auto">
+                    <TextBlock Grid.Column="0" Grid.Row="0">Concurrent peer caching requests:</TextBlock>
+                    <NumericUpDown Grid.Column="1" Grid.Row="0"
+                                   Value="{Binding ConcurrentPeerCachingRequests}"
+                                   Minimum="1"
+                                   IsEnabled="{Binding FilesCachingEnabled}" />
+
+                    <TextBlock Grid.Column="0" Grid.Row="1">In-memory images:</TextBlock>
+                    <NumericUpDown Grid.Column="1" Grid.Row="1" Value="{Binding InMemoryImages}" Minimum="0" />
+                </Grid>
+            </StackPanel>
+        </views:GroupBox>
+    </StackPanel>
 </UserControl>
