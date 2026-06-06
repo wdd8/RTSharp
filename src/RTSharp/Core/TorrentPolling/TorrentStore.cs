@@ -10,7 +10,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
 
 namespace RTSharp.Core.TorrentPolling;
 
@@ -40,14 +39,13 @@ public sealed class TorrentStore
 {
     private const int ResetThreshold = 500;
 
-    private readonly Lock Lock = new();
+    // reentrant lock
+    private readonly object Lock = new();
     private readonly Dictionary<GlobalTorrentKey, Models.Torrent> InternalDict = new(new GlobalTorrentKeyComparer());
-    private readonly List<Models.Torrent> PendingAdded = new();
-    private readonly List<Models.Torrent> PendingRefreshed = new();
-    private readonly List<Models.Torrent> PendingRemoved = new();
-#if DEBUG
+    private List<Models.Torrent> PendingAdded = new();
+    private List<Models.Torrent> PendingRefreshed = new();
+    private List<Models.Torrent> PendingRemoved = new();
     private bool InEdit;
-#endif
 
     private readonly VisibleCollection Visible = new();
     private readonly ReadOnlyObservableCollection<Models.Torrent> _readOnly;
@@ -96,92 +94,28 @@ public sealed class TorrentStore
     public void Edit(RTSharpDataProvider Dp, Action<TorrentStore> Update)
     {
 #if DEBUG
-        if (InEdit) {
+        if (InEdit)
             throw new InvalidOperationException("Nested edits are not allowed.");
-        }
+#endif
         InEdit = true;
-#endif
 
-        Update(this);
-        PublishPending(Dp);
+        List<Models.Torrent> added, refreshed, removed;
+        lock (Lock) {
+            Update(this);
 
-#if DEBUG
+            added = PendingAdded;
+            PendingAdded = [];
+            refreshed = PendingRefreshed;
+            PendingRefreshed = [];
+            removed = PendingRemoved;
+            PendingRemoved = [];
+        }
         InEdit = false;
-#endif
-    }
 
-    public void Add(Models.Torrent torrent)
-    {
-        ArgumentNullException.ThrowIfNull(torrent);
+        if (added.Count == 0 && refreshed.Count == 0 && removed.Count == 0)
+            return;
 
-#if DEBUG
-        if (!InEdit) {
-            throw new InvalidOperationException("Must be in edit");
-        }
-#endif
-
-        lock (Lock) {
-            InternalDict.Add(GetKey(torrent), torrent);
-            PendingAdded.Add(torrent);
-        }
-    }
-
-    public void RemoveKeys(IEnumerable<GlobalTorrentKey> keys)
-    {
-        ArgumentNullException.ThrowIfNull(keys);
-
-#if DEBUG
-        if (!InEdit) {
-            throw new InvalidOperationException("Must be in edit");
-        }
-#endif
-
-        lock (Lock) {
-            foreach (var key in keys) {
-                if (InternalDict.Remove(key, out var removed)) {
-                    PendingRemoved.Add(removed);
-                }
-            }
-        }
-    }
-
-    public void Refresh(Models.Torrent torrent)
-    {
-        ArgumentNullException.ThrowIfNull(torrent);
-
-#if DEBUG
-        if (!InEdit) {
-            throw new InvalidOperationException("Must be in edit");
-        }
-#endif
-
-        lock (Lock) {
-            if (InternalDict.ContainsKey(GetKey(torrent))) {
-                PendingRefreshed.Add(torrent);
-            }
-        }
-    }
-
-    private void PublishPending(RTSharpDataProvider Dp)
-    {
-        TorrentStoreChangeSet changeSet;
-        lock (Lock) {
-            if (PendingAdded.Count == 0 &&
-                PendingRefreshed.Count == 0 &&
-                PendingRemoved.Count == 0) {
-                return;
-            }
-
-            changeSet = new TorrentStoreChangeSet(
-                [.. PendingAdded],
-                [.. PendingRefreshed],
-                [.. PendingRemoved],
-                Dp);
-
-            PendingAdded.Clear();
-            PendingRefreshed.Clear();
-            PendingRemoved.Clear();
-        }
+        var changeSet = new TorrentStoreChangeSet(added, refreshed, removed, Dp);
 
         Dispatcher.UIThread.Post(() => {
             foreach (var t in changeSet.Refreshed)
@@ -189,6 +123,44 @@ public sealed class TorrentStore
             Changed?.Invoke(this, changeSet);
             ApplyChanges(changeSet);
         });
+    }
+
+    public void Add(Models.Torrent torrent)
+    {
+        ArgumentNullException.ThrowIfNull(torrent);
+#if DEBUG
+        if (!InEdit)
+            throw new InvalidOperationException("Must be in edit");
+#endif
+
+        InternalDict.Add(GetKey(torrent), torrent);
+        PendingAdded.Add(torrent);
+    }
+
+    public void RemoveKeys(IEnumerable<GlobalTorrentKey> keys)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+#if DEBUG
+        if (!InEdit)
+            throw new InvalidOperationException("Must be in edit");
+#endif
+
+        foreach (var key in keys) {
+            if (InternalDict.Remove(key, out var removed))
+                PendingRemoved.Add(removed);
+        }
+    }
+
+    public void Refresh(Models.Torrent torrent)
+    {
+        ArgumentNullException.ThrowIfNull(torrent);
+#if DEBUG
+        if (!InEdit)
+            throw new InvalidOperationException("Must be in edit");
+#endif
+
+        if (InternalDict.ContainsKey(GetKey(torrent)))
+            PendingRefreshed.Add(torrent);
     }
 
     private void ApplyChanges(TorrentStoreChangeSet changes)
@@ -199,12 +171,52 @@ public sealed class TorrentStore
             return;
         }
 
-        foreach (var torrent in changes.Removed)
-            RemoveVisible(torrent);
-        foreach (var torrent in changes.Added)
-            AddVisible(torrent);
-        foreach (var torrent in changes.Refreshed)
-            RefreshVisible(torrent);
+        List<Models.Torrent>? pendingMoves = null;
+
+        Visible.BeginBatch(); {
+            var removed = (List<Models.Torrent>)changes.Removed;
+
+            // Evaluate filter on Refreshed so they sort and execute with explicit removes
+            foreach (var t in changes.Refreshed) {
+                if (t.VisibleIndex >= 0 && !FxFilter(t))
+                    removed.Add(t);
+            }
+
+            /*
+             * Sort descending so that each removal leaves earlier indices untouched, keeping
+             * VisibleIndex values accurate for subsequent removals without re-indexing
+             */
+            if (removed.Count > 1)
+                removed.Sort((a, b) => b.VisibleIndex.CompareTo(a.VisibleIndex));
+
+            foreach (var t in removed)
+                RemoveVisible(t);
+            foreach (var t in changes.Added) {
+                if (!FxFilter(t))
+                    continue;
+
+                AddVisible(t);
+            }
+
+            // Add to visible if refreshed item now passed the filter
+            foreach (var t in changes.Refreshed) {
+                if (t.VisibleIndex < 0) {
+                    if (FxFilter(t))
+                        AddVisible(t);
+                } else
+                    (pendingMoves ??= []).Add(t);
+            }
+        } Visible.EndBatch();
+
+        if (pendingMoves != null && HasSort) {
+            foreach (var t in pendingMoves) {
+                var idx = t.VisibleIndex;
+
+                var newIdx = Visible.BinarySearchSkipping(t, idx, SortComparer);
+                if (newIdx != idx)
+                    Visible.Move(idx, newIdx);
+            }
+        }
     }
 
     private void Rebuild()
@@ -212,17 +224,17 @@ public sealed class TorrentStore
         var snapshot = GetSnapshot();
         var visible = new List<Models.Torrent>(snapshot.Count);
         foreach (var item in snapshot) {
-            if (FxFilter(item)) visible.Add(item);
+            if (FxFilter(item))
+                visible.Add(item);
         }
 
-        if (HasSort) visible.Sort(SortComparer);
+        if (HasSort)
+            visible.Sort(SortComparer);
         Visible.ResetWith(visible);
     }
 
     private void AddVisible(Models.Torrent torrent)
     {
-        if (!FxFilter(torrent)) return;
-
         if (!HasSort) {
             Visible.Add(torrent);
         } else {
@@ -231,39 +243,12 @@ public sealed class TorrentStore
         }
     }
 
-    private void RefreshVisible(Models.Torrent torrent)
-    {
-        var index = IndexOf(torrent);
-        var passes = FxFilter(torrent);
-
-        if (!passes) {
-            if (index >= 0) Visible.RemoveAt(index);
-            return;
-        }
-
-        if (index < 0) {
-            if (!HasSort) {
-                Visible.Add(torrent);
-            } else {
-                var pos = Visible.BinarySearch(torrent, SortComparer);
-                Visible.Insert(pos < 0 ? ~pos : pos, torrent);
-            }
-            return;
-        }
-
-        if (HasSort) {
-            var newIndex = Visible.BinarySearchSkipping(torrent, index, SortComparer);
-            if (newIndex != index) Visible.Move(index, newIndex);
-        }
-    }
-
     private void RemoveVisible(Models.Torrent torrent)
     {
-        var index = IndexOf(torrent);
-        if (index >= 0) Visible.RemoveAt(index);
+        var index = torrent.VisibleIndex;
+        if (index >= 0)
+            Visible.RemoveAt(index);
     }
-
-    private static int IndexOf(Models.Torrent torrent) => torrent.VisibleIndex;
 
     internal static GlobalTorrentKey GetKey(Models.Torrent torrent) => new(torrent.Hash, torrent.DataOwner.PluginInstance.InstanceId);
 
@@ -278,6 +263,8 @@ public sealed class TorrentStore
 
     private sealed class VisibleCollection : ObservableCollection<Models.Torrent>
     {
+        private bool InBatch;
+
         public int BinarySearch(Models.Torrent item, IComparer<Models.Torrent> comparer) => ((List<Models.Torrent>)Items).BinarySearch(item, comparer);
 
         public int BinarySearchSkipping(Models.Torrent item, int skipIndex, IComparer<Models.Torrent> comparer)
@@ -300,6 +287,16 @@ public sealed class TorrentStore
             return skipIndex;
         }
 
+        public void BeginBatch() => InBatch = true;
+
+        public void EndBatch()
+        {
+            InBatch = false;
+            var list = (List<Models.Torrent>)Items;
+            for (var i = 0; i < list.Count; i++)
+                list[i].VisibleIndex = i;
+        }
+
         public void ResetWith(IReadOnlyList<Models.Torrent> items)
         {
             foreach (var t in (List<Models.Torrent>)Items)
@@ -319,16 +316,24 @@ public sealed class TorrentStore
         protected override void InsertItem(int index, Models.Torrent item)
         {
             base.InsertItem(index, item);
-            for (var i = index; i < this.Count; i++)
-                this[i].VisibleIndex = i;
+            if (InBatch)
+                return;
+
+            var list = (List<Models.Torrent>)Items;
+            for (var i = index; i < list.Count; i++)
+                list[i].VisibleIndex = i;
         }
 
         protected override void RemoveItem(int index)
         {
             this[index].VisibleIndex = -1;
             base.RemoveItem(index);
-            for (var i = index; i < this.Count; i++)
-                this[i].VisibleIndex = i;
+            if (InBatch)
+                return;
+
+            var list = (List<Models.Torrent>)Items;
+            for (var i = index; i < list.Count; i++)
+                list[i].VisibleIndex = i;
         }
 
         protected override void SetItem(int index, Models.Torrent item)
@@ -343,8 +348,9 @@ public sealed class TorrentStore
             base.MoveItem(oldIndex, newIndex);
             var low = Math.Min(oldIndex, newIndex);
             var high = Math.Max(oldIndex, newIndex);
+            var list = (List<Models.Torrent>)Items;
             for (var i = low; i <= high; i++)
-                this[i].VisibleIndex = i;
+                list[i].VisibleIndex = i;
         }
 
         protected override void ClearItems()

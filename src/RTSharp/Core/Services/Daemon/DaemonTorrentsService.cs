@@ -4,7 +4,6 @@ using Grpc.Core;
 using Grpc.Net.ClientFactory;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Plugin;
@@ -19,7 +18,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Utils;
-using Serilog;
 
 namespace RTSharp.Core.Services.Daemon
 {
@@ -54,7 +52,7 @@ namespace RTSharp.Core.Services.Daemon
                 Interval = Duration.FromTimeSpan(DataProvider.DataProviderInstanceConfig.ListUpdateInterval)
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
-            var channel = System.Threading.Channels.Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>>(new System.Threading.Channels.UnboundedChannelOptions() {
+            var channel = Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>>(new UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });

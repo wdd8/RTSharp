@@ -4,8 +4,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using DynamicData;
 
-using Google.Protobuf.WellKnownTypes;
-
 using LiveChartsCore;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
