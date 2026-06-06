@@ -38,6 +38,8 @@ public class Config
             public TimeSpan SearchAsYouGoDelay { get; set; }
 
             public Dictionary<string, string> PeerOriginReplacements { get; set; } = new();
+
+            public bool UseFaviconGoogleAPI { get; set; }
         }
 
         public class Caching
@@ -154,7 +156,8 @@ public class Config
     "TrackersPollingInterval": "00:00:01",
     "PeerOriginReplacements": {
     },
-    "SearchAsYouGoDelay": "00:00:01"
+    "SearchAsYouGoDelay": "00:00:01",
+    "UseFaviconGoogleAPI": false
   },
   "Caching": {
     "FilesCachingEnabled": true,

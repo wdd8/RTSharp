@@ -11,10 +11,12 @@ namespace RTSharp.Core.Services
     public class Favicon
     {
         private readonly HttpClient HttpClient;
+        private readonly Core.Config Config;
 
-        public Favicon(HttpClient HttpClient)
+        public Favicon(HttpClient HttpClient, Core.Config Config)
         {
             this.HttpClient = HttpClient;
+            this.Config = Config;
         }
 
         public async Task<Stream?> GetFavicon(string Domain)
@@ -23,12 +25,12 @@ namespace RTSharp.Core.Services
             cts.CancelAfter(5000);
 
             try {
-                /*var response = await HttpClient.GetAsync($"https://www.google.com/s2/favicons?domain_url={HttpUtility.UrlEncode(Domain)}", cts.Token);
+                if (Config.Behavior.Value.UseFaviconGoogleAPI) {
+                    var googleResponse = await HttpClient.GetAsync($"https://www.google.com/s2/favicons?domain_url={Uri.EscapeDataString(Domain)}", cts.Token);
+                    if (googleResponse.IsSuccessStatusCode)
+                        return await googleResponse.Content.ReadAsStreamAsync();
+                }
 
-                if (!response.IsSuccessStatusCode)
-                    return null;
-
-                return await response.Content.ReadAsStreamAsync();*/
                 var response = await HttpClient.GetAsync($"https://{Domain}/favicon.ico", cts.Token);
 
                 if (response.IsSuccessStatusCode)

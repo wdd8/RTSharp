@@ -2,10 +2,14 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 
+using Avalonia.Media.Imaging;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Microsoft.Extensions.DependencyInjection;
+
+using RTSharp.Shared.Controls;
 
 namespace RTSharp.ViewModels.Options.Pages;
 
@@ -43,6 +47,11 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
     [ObservableProperty]
     public partial string NewReplacementReplacement { get; set; } = "";
 
+    [ObservableProperty]
+    public partial bool UseFaviconGoogleAPI { get; set; }
+
+    public Bitmap FlatQuestionMarkIcon { get; } = BuiltInIcon.Get(BuiltInIcons.FLAT_QUESTION_MARK);
+
     public BehaviorPageViewModel()
     {
         if (!Avalonia.Controls.Design.IsDesignMode)
@@ -59,6 +68,7 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
         PeersPollingIntervalSeconds = behavior.PeersPollingInterval.TotalSeconds;
         TrackersPollingIntervalSeconds = behavior.TrackersPollingInterval.TotalSeconds;
         SearchAsYouGoDelaySeconds = behavior.SearchAsYouGoDelay.TotalSeconds;
+        UseFaviconGoogleAPI = behavior.UseFaviconGoogleAPI;
 
         PeerOriginReplacements.Clear();
         foreach (var (pattern, replacement) in behavior.PeerOriginReplacements)
@@ -72,6 +82,7 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
         behavior.PeersPollingInterval = TimeSpan.FromSeconds(PeersPollingIntervalSeconds);
         behavior.TrackersPollingInterval = TimeSpan.FromSeconds(TrackersPollingIntervalSeconds);
         behavior.SearchAsYouGoDelay = TimeSpan.FromSeconds(SearchAsYouGoDelaySeconds);
+        behavior.UseFaviconGoogleAPI = UseFaviconGoogleAPI;
 
         behavior.PeerOriginReplacements.Clear();
         foreach (var item in PeerOriginReplacements.Where(x => !String.IsNullOrEmpty(x.Pattern)))
