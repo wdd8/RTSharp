@@ -74,10 +74,9 @@ namespace RTSharp.Core.Services.Daemon
                         }
 
                         foreach (var torrent in update.FullUpdate) {
-                            var hash = torrent.Hash.ToByteArray();
                             var mapped = Mapper.MapFromProto(torrent, DataProvider.Instance);
                             fullUpdate.Add(mapped);
-                            Existing[hash] = mapped;
+                            Existing[mapped.Hash] = mapped;
                         }
 
                         var incomplete = update.Incomplete.Select(x => {

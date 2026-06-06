@@ -170,7 +170,7 @@ namespace RTSharp.ViewModels
         public void OptionsClick()
         {
             var optionsWindow = new OptionsWindow() {
-                DataContext = new()
+                ViewModel = new()
             };
             optionsWindow.Show();
         }

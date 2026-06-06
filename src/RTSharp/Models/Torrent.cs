@@ -22,7 +22,7 @@ namespace RTSharp.Models
 {
     public static class TorrentUpdateExt
     {
-        public static async ValueTask<List<Torrent>> NewOrUpdateFromPluginModelMulti(ConcurrentInfoHashOwnerDictionary<Torrent> Domain, RTSharpDataProvider DataProvider, InfoHashDictionary<Shared.Abstractions.Torrent> Plugin)
+        public static async ValueTask<List<Torrent>> NewOrUpdateFromPluginModelMulti(Core.TorrentPolling.TorrentStore Domain, RTSharpDataProvider DataProvider, InfoHashDictionary<Shared.Abstractions.Torrent> Plugin)
         {
             var ret = new List<Torrent>();
             if (Plugin.Count == 0)
@@ -32,7 +32,7 @@ namespace RTSharp.Models
 
             var trackers = new HashSet<string>();
             foreach (var (hash, plugin) in Plugin) {
-                Domain.TryGetValue((hash, dpId), out var domain);
+                Domain.TryGet(new GlobalTorrentKey(hash, dpId), out var domain);
                 if (domain?.TrackerSingle != plugin.TrackerSingle && plugin.TrackerSingle != null) {
                     trackers.Add(plugin.TrackerSingle);
                 }
@@ -54,7 +54,7 @@ namespace RTSharp.Models
             }
 
             foreach (var (hash, plugin) in Plugin) {
-                if (!Domain.TryGetValue((hash, dpId), out var torrent)) {
+                if (!Domain.TryGet(new GlobalTorrentKey(hash, dpId), out var torrent)) {
                     torrent = new Torrent(hash, DataProvider) {
                         Comment = ""
                     };
@@ -129,6 +129,12 @@ namespace RTSharp.Models
         public byte[] Hash { get; set; }
 
         public Plugin.RTSharpDataProvider DataOwner { get; set; }
+
+        /// <summary>
+        /// Position in <see cref="Core.TorrentPolling.TorrentStore.VisibleItems"/>, or -1 if not currently visible.
+        /// <see cref="Core.TorrentPolling.TorrentStore" /> usage only
+        /// </summary>
+        internal int VisibleIndex = -1;
 
         /// <summary>
         /// Torrent name
@@ -660,8 +666,10 @@ namespace RTSharp.Models
             _upSpeedDisplay = Converters.GetSIDataSpeed(In.UPSpeed);
             _eta = In.ETA;
             _etaDisplay = Converters.ToAgoString(In.ETA);
-            _labels = [.. In.Labels];
-            _labelsDisplay = String.Join(", ", _labels);
+            if (In.Labels.Count != _labels.Length || !In.Labels.SetEquals(_labels)) {
+                _labels = [.. In.Labels];
+                _labelsDisplay = String.Join(", ", _labels);
+            }
             _peers = new ConnectedTotalPair(In.Peers.Connected, In.Peers.Total);
             _peersDisplay = _peers.ToString();
             _seeders = new ConnectedTotalPair(In.Seeders.Connected, In.Seeders.Total);

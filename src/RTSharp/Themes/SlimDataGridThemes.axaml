@@ -1,0 +1,169 @@
+<!--
+  Slimmer DataGrid themes. All DataGrids in RTSharp are read-only, so the default
+  ProDataGrid cell/row templates' validation components (DataValidationErrors
+  wrapper + InvalidVisualElement) are useless. Drop those parts and use
+  StaticResource for theme-independent resources. Brushes stay DynamicResource so
+  base theme changes still propagate.
+-->
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ControlTheme x:Key="SlimDataGridCellTheme" TargetType="DataGridCell">
+        <Setter Property="Background" Value="{DynamicResource DataGridCellBackgroundBrush}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="FontSize" Value="{DynamicResource DataGridCellFontSize}" />
+        <Setter Property="MinHeight" Value="{StaticResource DataGridCellMinHeight}" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border x:Name="CellBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}">
+              <Grid x:Name="PART_CellRoot" ColumnDefinitions="*,Auto">
+                <Rectangle x:Name="CurrencyVisual"
+                           IsVisible="False"
+                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                           Fill="Transparent" IsHitTestVisible="False"
+                           Stroke="{DynamicResource DataGridCurrencyVisualPrimaryBrush}"
+                           StrokeThickness="{StaticResource DataGridCellValidationStrokeThickness}" />
+                <Grid Grid.Column="0" x:Name="FocusVisual" IsHitTestVisible="False" IsVisible="False">
+                  <Rectangle HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                             Fill="Transparent" IsHitTestVisible="False"
+                             Stroke="{DynamicResource DataGridCellFocusVisualPrimaryBrush}"
+                             StrokeThickness="{StaticResource DataGridCellFocusPrimaryStrokeThickness}" />
+                  <Rectangle Margin="{StaticResource DataGridCellFocusSecondaryMargin}"
+                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                             Fill="Transparent" IsHitTestVisible="False"
+                             Stroke="{DynamicResource DataGridCellFocusVisualSecondaryBrush}"
+                             StrokeThickness="{StaticResource DataGridCellFocusSecondaryStrokeThickness}" />
+                </Grid>
+                <ContentPresenter Grid.Column="0"
+                                  Name="PART_ContentPresenter"
+                                  Padding="{TemplateBinding Padding}"
+                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  Background="{TemplateBinding Background}"
+                                  Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  Foreground="{TemplateBinding Foreground}" />
+                <Rectangle Name="PART_RightGridLine"
+                           Grid.Column="1"
+                           Width="{StaticResource DataGridCellGridLineWidth}"
+                           VerticalAlignment="Stretch"
+                           Fill="{DynamicResource DataGridFillerColumnGridLinesBrush}" />
+              </Grid>
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:current /template/ Rectangle#CurrencyVisual">
+          <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="^:focus /template/ Grid#FocusVisual">
+          <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="^:searchmatch">
+          <Setter Property="Background" Value="{DynamicResource DataGridSearchMatchBrush}" />
+          <Setter Property="Foreground" Value="{DynamicResource DataGridSearchMatchForegroundBrush}" />
+        </Style>
+        <Style Selector="^:searchcurrent">
+          <Setter Property="Background" Value="{DynamicResource DataGridSearchCurrentBrush}" />
+          <Setter Property="Foreground" Value="{DynamicResource DataGridSearchMatchForegroundBrush}" />
+        </Style>
+        <Style Selector="^:cell-selected">
+          <Setter Property="Background" Value="{DynamicResource DataGridCellSelectedUnfocusedBackgroundBrush}" />
+        </Style>
+        <Style Selector="^:cell-selected:pointerover">
+          <Setter Property="Background" Value="{DynamicResource DataGridCellSelectedHoveredUnfocusedBackgroundBrush}" />
+        </Style>
+        <Style Selector="^:cell-selected:focus">
+          <Setter Property="Background" Value="{DynamicResource DataGridCellSelectedBackgroundBrush}" />
+        </Style>
+        <Style Selector="^:cell-selected:pointerover:focus">
+          <Setter Property="Background" Value="{DynamicResource DataGridCellSelectedHoveredBackgroundBrush}" />
+        </Style>
+      </ControlTheme>
+
+      <ControlTheme x:Key="SlimDataGridRowTheme" TargetType="DataGridRow">
+        <Setter Property="Background" Value="{Binding $parent[DataGrid].RowBackground}" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border x:Name="RowBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}">
+              <DataGridFrozenGrid Name="PART_Root"
+                                  ColumnDefinitions="Auto,*"
+                                  RowDefinitions="*,Auto,Auto">
+                <Rectangle Name="BackgroundRectangle"
+                           Fill="{DynamicResource DataGridRowBackgroundBrush}"
+                           Grid.RowSpan="2"
+                           Grid.ColumnSpan="2" />
+                <DataGridRowHeader Name="PART_RowHeader"
+                                   Grid.RowSpan="3"
+                                   DataGridFrozenGrid.IsFrozen="True" />
+                <DataGridCellsPresenter Name="PART_CellsPresenter"
+                                        Grid.Column="1"
+                                        DataGridFrozenGrid.IsFrozen="True" />
+                <DataGridDetailsPresenter Name="PART_DetailsPresenter"
+                                          Grid.Row="1"
+                                          Grid.Column="1"
+                                          Background="{DynamicResource DataGridDetailsPresenterBackgroundBrush}" />
+                <Rectangle Name="PART_BottomGridLine"
+                           Grid.Row="2"
+                           Grid.Column="1"
+                           Height="{StaticResource DataGridRowBottomGridLineHeight}"
+                           HorizontalAlignment="Stretch" />
+              </DataGridFrozenGrid>
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Rectangle#BackgroundRectangle">
+          <Setter Property="Fill" Value="{DynamicResource DataGridRowHoveredBackgroundBrush}" />
+        </Style>
+        <Style Selector="^:searchmatch /template/ Rectangle#BackgroundRectangle">
+          <Setter Property="Fill" Value="{DynamicResource DataGridSearchMatchBrush}" />
+          <Setter Property="Opacity" Value="{StaticResource DataGridRowSearchMatchOpacity}" />
+        </Style>
+        <Style Selector="^:searchcurrent /template/ Rectangle#BackgroundRectangle">
+          <Setter Property="Fill" Value="{DynamicResource DataGridSearchCurrentBrush}" />
+          <Setter Property="Opacity" Value="{StaticResource DataGridRowSearchCurrentOpacity}" />
+        </Style>
+        <Style Selector="^:selected">
+          <Style Selector="^ /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource DataGridRowSelectedUnfocusedBackgroundBrush}" />
+            <Setter Property="Opacity" Value="{StaticResource DataGridRowSelectedUnfocusedBackgroundOpacity}" />
+          </Style>
+          <Style Selector="^:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource DataGridRowSelectedHoveredUnfocusedBackgroundBrush}" />
+            <Setter Property="Opacity" Value="{StaticResource DataGridRowSelectedHoveredUnfocusedBackgroundOpacity}" />
+          </Style>
+          <Style Selector="^:focus /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource DataGridRowSelectedBackgroundBrush}" />
+            <Setter Property="Opacity" Value="{StaticResource DataGridRowSelectedBackgroundOpacity}" />
+          </Style>
+          <Style Selector="^:pointerover:focus /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource DataGridRowSelectedHoveredBackgroundBrush}" />
+            <Setter Property="Opacity" Value="{StaticResource DataGridRowSelectedHoveredBackgroundOpacity}" />
+          </Style>
+        </Style>
+        <Style Selector="^:dragging /template/ Rectangle#BackgroundRectangle">
+          <Setter Property="Opacity" Value="{StaticResource DataGridRowDraggingOpacity}" />
+        </Style>
+        <Style Selector="^:drag-over-inside /template/ Rectangle#BackgroundRectangle">
+          <Setter Property="Fill" Value="{DynamicResource DataGridRowDropIndicatorBrush}" />
+          <Setter Property="Opacity" Value="{StaticResource DataGridRowDragOverInsideOpacity}" />
+        </Style>
+      </ControlTheme>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <Style Selector="DataGridCell">
+    <Setter Property="Theme" Value="{StaticResource SlimDataGridCellTheme}" />
+  </Style>
+  <Style Selector="DataGridRow">
+    <Setter Property="Theme" Value="{StaticResource SlimDataGridRowTheme}" />
+  </Style>
+</Styles>

@@ -7,7 +7,7 @@ namespace RTSharp.ViewModels.Options
 {
     public record OptionsItem(string Icon, string Path, string Text, IList<OptionsItem> Children);
 
-    public partial class OptionsViewModel : ObservableObject
+    public partial class OptionsWindowViewModel : ObservableObject
     {
         public List<OptionsItem> Items { get; }
 
@@ -21,7 +21,7 @@ namespace RTSharp.ViewModels.Options
         [ObservableProperty]
         public partial object? SettingsContent { get; set; }
 
-        public OptionsViewModel()
+        public OptionsWindowViewModel()
         {
             Items = new List<OptionsItem> {
                 new OptionsItem("fa7-solid fa7-gears", "Behavior", "Behavior", new[] {

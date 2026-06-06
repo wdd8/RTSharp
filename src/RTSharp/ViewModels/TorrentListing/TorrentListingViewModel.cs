@@ -469,7 +469,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
     public void ShowOptions()
     {
         var optionsWindow = new OptionsWindow() {
-            DataContext = new OptionsViewModel()
+            DataContext = new OptionsWindowViewModel()
         };
         optionsWindow.Show();
     }

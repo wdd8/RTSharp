@@ -1,7 +1,5 @@
 using Avalonia.Threading;
 
-using DynamicData;
-
 using Nito.AsyncEx;
 
 using RTSharp.Plugin;
@@ -35,7 +33,6 @@ public static class TorrentPolling
     });
 
     public static TorrentStore Torrents { get; } = new();
-    public static ConcurrentInfoHashOwnerDictionary<Models.Torrent> TorrentsLookup { get; } = new();
 
     public static Dictionary<string, int> AllLabelReferences { get; } = new();
     public static IObservable<string[]> AllLabelReferencesObservable { get; private set; }
@@ -65,25 +62,24 @@ public static class TorrentPolling
                 var toRemove = new List<int>();
 
                 Torrents.Edit(dp, (torrents) => {
+                    var dpId = dp.PluginInstance.InstanceId;
+
                     {
                         // Since it is possible to remove torrent and add it right after in same change, we must handle removals first
                         if (removed.Count > 0) {
-                            torrents.RemoveKeys(removed.Select(x => new GlobalTorrentKey(x, dp.PluginInstance.InstanceId)));
-                            foreach (var hash in removed) {
-                                TorrentsLookup.Remove((hash, dp.PluginInstance.InstanceId), out var _);
-                            }
+                            torrents.RemoveKeys(removed.Select(x => new GlobalTorrentKey(x, dpId)));
                         }
                     }
 
                     {
                         // Full update
-                        var vmTorrents = Models.TorrentUpdateExt.NewOrUpdateFromPluginModelMulti(TorrentsLookup, dp, fullUpdate).GetAwaiter().GetResult();
+                        var vmTorrents = Models.TorrentUpdateExt.NewOrUpdateFromPluginModelMulti(torrents, dp, fullUpdate).GetAwaiter().GetResult();
 
                         foreach (var torrent in vmTorrents) {
-                            if (TorrentsLookup.TryAdd((torrent.Hash, torrent.DataOwner.PluginInstance.InstanceId), torrent)) {
-                                torrents.Add(torrent);
-                            } else {
+                            if (torrents.TryGet(new GlobalTorrentKey(torrent.Hash, dpId), out _)) {
                                 torrents.Refresh(torrent);
+                            } else {
+                                torrents.Add(torrent);
                             }
                         }
                     }
@@ -117,7 +113,7 @@ public static class TorrentPolling
                         }
 
                         foreach (var change in listingChanges.FullUpdate) {
-                            if (TorrentsLookup.TryGetValue((change.Hash, dp.PluginInstance.InstanceId), out var torrent)) {
+                            if (torrents.TryGet(new GlobalTorrentKey(change.Hash, dpId), out var torrent)) {
                                 foreach (var label in torrent.Labels)
                                     subtract(label);
                                 foreach (var label in change.Labels)
@@ -125,7 +121,7 @@ public static class TorrentPolling
                             }
                         }
                         foreach (var change in changes) {
-                            if (TorrentsLookup.TryGetValue((change.Hash, dp.PluginInstance.InstanceId), out var torrent)) {
+                            if (torrents.TryGet(new GlobalTorrentKey(change.Hash, dpId), out var torrent)) {
                                 foreach (var label in torrent.Labels)
                                     subtract(label);
                                 foreach (var label in change.Labels)
@@ -144,7 +140,7 @@ public static class TorrentPolling
                     {
                         // Changed torrents
                         foreach (var change in changes) {
-                            if (TorrentsLookup.TryGetValue((change.Hash, dp.PluginInstance.InstanceId), out var torrent)) {
+                            if (torrents.TryGet(new GlobalTorrentKey(change.Hash, dpId), out var torrent)) {
                                 torrent.UpdateFromPluginModel(change).GetAwaiter().GetResult(); // async??
                                 torrents.Refresh(torrent);
                             }

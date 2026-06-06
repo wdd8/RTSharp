@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
 namespace RTSharp.Core.TorrentPolling;
@@ -69,6 +70,13 @@ public sealed class TorrentStore
             var snapshot = new List<Models.Torrent>(InternalDict.Count);
             snapshot.AddRange(InternalDict.Values);
             return snapshot;
+        }
+    }
+
+    public bool TryGet(GlobalTorrentKey key, [MaybeNullWhen(false)] out Models.Torrent torrent)
+    {
+        lock (Lock) {
+            return InternalDict.TryGetValue(key, out torrent);
         }
     }
 
@@ -191,9 +199,12 @@ public sealed class TorrentStore
             return;
         }
 
-        foreach (var torrent in changes.Removed) RemoveVisible(torrent);
-        foreach (var torrent in changes.Added) AddVisible(torrent);
-        foreach (var torrent in changes.Refreshed) RefreshVisible(torrent);
+        foreach (var torrent in changes.Removed)
+            RemoveVisible(torrent);
+        foreach (var torrent in changes.Added)
+            AddVisible(torrent);
+        foreach (var torrent in changes.Refreshed)
+            RefreshVisible(torrent);
     }
 
     private void Rebuild()
@@ -252,11 +263,9 @@ public sealed class TorrentStore
         if (index >= 0) Visible.RemoveAt(index);
     }
 
-    private int IndexOf(Models.Torrent torrent)
-        => Visible.IndexOf(GetKey(torrent));
+    private static int IndexOf(Models.Torrent torrent) => torrent.VisibleIndex;
 
-    internal static GlobalTorrentKey GetKey(Models.Torrent torrent)
-        => new(torrent.Hash, torrent.DataOwner.PluginInstance.InstanceId);
+    internal static GlobalTorrentKey GetKey(Models.Torrent torrent) => new(torrent.Hash, torrent.DataOwner.PluginInstance.InstanceId);
 
     internal sealed class GlobalTorrentKeyComparer : IEqualityComparer<GlobalTorrentKey>
     {
@@ -269,10 +278,6 @@ public sealed class TorrentStore
 
     private sealed class VisibleCollection : ObservableCollection<Models.Torrent>
     {
-        private readonly Dictionary<GlobalTorrentKey, int> IndexByKey = new(new GlobalTorrentKeyComparer());
-
-        public int IndexOf(GlobalTorrentKey key) => IndexByKey.TryGetValue(key, out var idx) ? idx : -1;
-
         public int BinarySearch(Models.Torrent item, IComparer<Models.Torrent> comparer) => ((List<Models.Torrent>)Items).BinarySearch(item, comparer);
 
         public int BinarySearchSkipping(Models.Torrent item, int skipIndex, IComparer<Models.Torrent> comparer)
@@ -297,12 +302,15 @@ public sealed class TorrentStore
 
         public void ResetWith(IReadOnlyList<Models.Torrent> items)
         {
+            foreach (var t in (List<Models.Torrent>)Items)
+                t.VisibleIndex = -1;
+
             Items.Clear();
-            IndexByKey.Clear();
             for (var i = 0; i < items.Count; i++) {
-                IndexByKey[GetKey(items[i])] = i;
+                items[i].VisibleIndex = i;
                 Items.Add(items[i]);
             }
+
             OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
             OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -312,21 +320,22 @@ public sealed class TorrentStore
         {
             base.InsertItem(index, item);
             for (var i = index; i < this.Count; i++)
-                IndexByKey[GetKey(this[i])] = i;
+                this[i].VisibleIndex = i;
         }
 
         protected override void RemoveItem(int index)
         {
-            IndexByKey.Remove(GetKey(this[index]));
+            this[index].VisibleIndex = -1;
             base.RemoveItem(index);
             for (var i = index; i < this.Count; i++)
-                IndexByKey[GetKey(this[i])] = i;
+                this[i].VisibleIndex = i;
         }
 
         protected override void SetItem(int index, Models.Torrent item)
         {
+            this[index].VisibleIndex = -1;
             base.SetItem(index, item);
-            IndexByKey[GetKey(item)] = index;
+            item.VisibleIndex = index;
         }
 
         protected override void MoveItem(int oldIndex, int newIndex)
@@ -335,12 +344,13 @@ public sealed class TorrentStore
             var low = Math.Min(oldIndex, newIndex);
             var high = Math.Max(oldIndex, newIndex);
             for (var i = low; i <= high; i++)
-                IndexByKey[GetKey(this[i])] = i;
+                this[i].VisibleIndex = i;
         }
 
         protected override void ClearItems()
         {
-            IndexByKey.Clear();
+            foreach (var t in (List<Models.Torrent>)Items)
+                t.VisibleIndex = -1;
             base.ClearItems();
         }
     }
