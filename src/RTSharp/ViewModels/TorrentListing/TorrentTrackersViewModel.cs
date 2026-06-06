@@ -203,6 +203,55 @@ namespace RTSharp.ViewModels.TorrentListing
             await Parent.UpdateTrackersInTorrents();
         }
 
+        public bool CanExecuteFetchIcon() => HasSelectedItem;
+        [RelayCommand(CanExecute = nameof(CanExecuteFetchIcon))]
+        public async Task FetchIcon(IList In)
+        {
+            using var scope = Core.ServiceProvider.CreateScope();
+            var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
+            var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
+            var favicon = scope.ServiceProvider.GetRequiredService<Core.Services.Favicon>();
+            var domainParser = scope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>();
+
+            var domains = In.Cast<Models.Tracker>().Select(x => x.Domain).Distinct().ToArray();
+
+            foreach (var domain in domains) {
+                var domainInfo = domainParser.Parse(domain);
+
+                if (domainInfo == null) {
+                    Log.Logger.Warning($"Failed to parse domain \"{domain}\"");
+                    continue;
+                }
+
+                var icon = await favicon.GetFavicon(domainInfo!.RegistrableDomain!);
+                if (icon == null) {
+                    Log.Logger.Warning($"No favicon found for domain \"{domainInfo!.RegistrableDomain}\"");
+                    continue;
+                }
+
+                var trackerInfo = await trackerDb.GetTrackerInfo(domain);
+                trackerInfo ??= new TrackerInfo(domain, null, null);
+
+                var img = await imageCache.AddImage(icon);
+                if (img == null) {
+                    Log.Logger.Error($"Invalid image fetched for domain \"{domainInfo!.RegistrableDomain}\"");
+                    continue;
+                }
+
+                trackerInfo.ImageHash = img.Value.Hash;
+                foreach (var tracker in Trackers) {
+                    if (tracker.Domain != domain)
+                        continue;
+
+                    tracker.Icon = img.Value.Image;
+                }
+
+                await trackerDb.AddOrUpdateTrackerInfo(domain, trackerInfo);
+            }
+
+            await Parent.UpdateTrackersInTorrents();
+        }
+
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-address-book");
 
         public bool CanExecuteReplaceTracker() => CanExecuteAction("Replace");

@@ -74,6 +74,7 @@ See [setting up data providers](setup-dataproviders.md)
 |Sequential downloads|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |File renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Torrent renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Remote daemon settings|🔴Not implemented|🟢Supported|🟢Supported|
 
 _* - not directly supported by torrent daemon_
 

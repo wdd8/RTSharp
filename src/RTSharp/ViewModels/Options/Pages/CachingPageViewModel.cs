@@ -129,6 +129,7 @@ public partial class CachingPageViewModel : ObservableObject, ISettingsLoadable
     {
         using var scope = Core.ServiceProvider.CreateScope();
         await scope.ServiceProvider.GetRequiredService<Core.Services.Cache.Images.ImageCache>().Clear();
+        await scope.ServiceProvider.GetRequiredService<Core.Services.Database.TrackerDb.TrackerDb>().ClearImageHashes();
         _ = LoadCacheStatsAsync();
     }
 }

@@ -82,7 +82,6 @@ namespace RTSharp.ViewModels.TorrentListing
                                     x.Icon = DefaultImage;
                                     x.Origin = "Unknown";
                                 }
-                                PeersViewModel.PeersView.Refresh();
                             }, DispatcherPriority.Default);
                             return;
                         }
@@ -101,7 +100,6 @@ namespace RTSharp.ViewModels.TorrentListing
                                 x.Icon = peerIcon;
                                 x.Origin = whois.Organization + (whois.Domain != null ? $" [{whois.Domain}]" : "");
                             }
-                            PeersViewModel.PeersView.Refresh();
                         }, DispatcherPriority.Default);
 
                         System.IO.Stream? favicon = null;
@@ -145,8 +143,12 @@ namespace RTSharp.ViewModels.TorrentListing
                 PeersViewModel.Peers.Clear();
 
                 await foreach (var (fetchedFor, peers) in PeersChanges.Reader.ReadAllAsync()) {
-                    if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner)
+                    bool refresh = false;
+
+                    if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner) {
                         PeersViewModel.Peers.Clear();
+                        refresh = true;
+                    }
 
                     var hs = PeersViewModel.Peers.ToDictionary(x => x.IPPort, x => x);
 
@@ -154,6 +156,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     foreach (var removed in peers.Removed) {
                         if (hs.TryGetValue(removed, out var removePeer)) {
                             PeersViewModel.Peers.Remove(removePeer);
+                            refresh = true;
                         }
                     }
 
@@ -167,6 +170,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             peer.ObservedOn = DateTime.UtcNow;
                             peer.Origin = null;
                             PeersViewModel.Peers.Add(peer);
+                            refresh = true;
                         }
                     }
 
@@ -184,13 +188,11 @@ namespace RTSharp.ViewModels.TorrentListing
                                     Dispatcher.UIThread.Post(() => {
                                         peer.Origin = asInfo.Organization + (asInfo.Domain != null ? $" [{asInfo.Domain}]" : "");
                                         peer.Icon = cachedImage;
-                                        PeersViewModel.PeersView.Refresh();
                                     }, DispatcherPriority.Default);
                                 } else {
                                     // Just started fetching info but there is no cached info, wait 3 seconds later and start fetching
                                     Dispatcher.UIThread.Post(() => {
                                         peer.Origin = "Inactive peer";
-                                        PeersViewModel.PeersView.Refresh();
                                     }, DispatcherPriority.MaxValue);
                                 }
                             }
@@ -201,7 +203,8 @@ namespace RTSharp.ViewModels.TorrentListing
                             PeerInfoFetches!.Writer.TryWrite(peer);
                         }
                     }
-                    PeersViewModel.PeersView.Refresh();
+                    if (refresh)
+                        PeersViewModel.PeersView.Refresh();
 
                     lastFetchedFor = fetchedFor;
                 }

@@ -65,6 +65,12 @@ namespace RTSharp.Core.Services.Database.TrackerDb
             return d;
         }
 
+        public async Task ClearImageHashes()
+        {
+            await using var conn = await New();
+            await conn.ExecuteAsync("UPDATE TrackerDb SET ImageHash = NULL");
+        }
+
         public async Task AddOrUpdateTrackerInfo(string Domain, TrackerInfo Info)
         {
             await using var conn = await New();

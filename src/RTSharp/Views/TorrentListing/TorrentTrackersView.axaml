@@ -25,7 +25,7 @@
                     <TextBlock FontWeight="Bold">Set a new name for tracker</TextBlock>
                     <TextBlock FontWeight="Bold" Margin="4 0 0 0" Text="{Binding #grid.((models:Tracker)SelectedItem).Domain}" />
                 </StackPanel>
-                <TextBox Name="TrackerName" Text="{Binding #grid.((models:Tracker)SelectedItem).DisplayName, Mode=OneWay}" />
+                <TextBox Name="TrackerName" Text="{Binding #grid.((models:Tracker)SelectedItem).DisplayName, Mode=OneTime}" />
                 <Button
                     Margin="0 -6 0 -7"
                     Width="0"
@@ -45,7 +45,7 @@
         <dialogHost:DialogHost.DialogContent>
             <StackPanel>
                 <TextBlock FontWeight="Bold">Replace tracker to</TextBlock>
-                <TextBox Name="NewTracker" Text="{Binding #grid.((models:Tracker)SelectedItem).Uri, Mode=OneWay}" />
+                <TextBox Name="NewTracker" Text="{Binding #grid.((models:Tracker)SelectedItem).Uri, Mode=OneTime}" />
                 <Button
                     Margin="0 -6 0 -7"
                     Width="0"
@@ -121,6 +121,10 @@
                     />
                     <MenuItem Header="Set icon..."
                               Command="{Binding SetIconCommand}"
+                              CommandParameter="{Binding #grid.SelectedItems}"
+                    />
+                    <MenuItem Header="Fetch icon"
+                              Command="{Binding FetchIconCommand}"
                               CommandParameter="{Binding #grid.SelectedItems}"
                     />
                 </ContextMenu>
