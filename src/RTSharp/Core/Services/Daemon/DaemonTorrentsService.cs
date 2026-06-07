@@ -61,8 +61,10 @@ namespace RTSharp.Core.Services.Daemon
                 try {
                     var ownerId = DataProvider.PluginInstance.InstanceId;
 
+                    _ = await updates.ResponseHeadersAsync;
+                    DataProvider.State.Change(DataProviderState.ACTIVE);
+
                     await foreach (var update in updates.ResponseStream.ReadAllAsync(CancellationToken)) {
-                        DataProvider.State.Change(DataProviderState.ACTIVE);
                         var fullUpdate = new List<Shared.Abstractions.Torrent>();
                         var changes = new List<Shared.Abstractions.Torrent>();
                         var removed = update.Removed.Select(x => x.ToByteArray()).ToList();

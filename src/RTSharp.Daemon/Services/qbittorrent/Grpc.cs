@@ -527,6 +527,9 @@ namespace RTSharp.Daemon.Services.qbittorrent
         {
             var client = await Client.Init();
 
+            // Respond so that client sees we're alive
+            await Res.WriteAsync(new(), CancellationToken);
+
             int rid = 0;
 
             var pollInternal = Req.Interval.ToTimeSpan();
