@@ -7,4 +7,315 @@ import "google/protobuf/wrappers.proto";
 
 service GRPCQBittorrentSettingsService {
     rpc GetDefaultSavePath (google.protobuf.Empty) returns (google.protobuf.StringValue);
+    rpc GetSettings (google.protobuf.Empty) returns (QBittorrentSettings);
+    rpc SetSettings (QBittorrentSettings) returns (google.protobuf.Empty);
+    rpc GetNetworkInterfaces (google.protobuf.Empty) returns (QBittorrentNetworkInterfaces);
+    rpc GetNetworkInterfaceAddresses (QBittorrentNetworkInterfaceAddressRequest) returns (QBittorrentNetworkInterfaceAddresses);
+}
+
+message QBittorrentNetworkInterface {
+    string Id = 1;
+    string Name = 2;
+}
+
+message QBittorrentNetworkInterfaces {
+    repeated QBittorrentNetworkInterface Interfaces = 1;
+}
+
+message QBittorrentNetworkInterfaceAddressRequest {
+    string InterfaceId = 1;
+}
+
+message QBittorrentNetworkInterfaceAddresses {
+    repeated string Addresses = 1;
+}
+
+enum QBittorrentEncryption {
+    QBittorrentEncryption_PREFER = 0;
+    QBittorrentEncryption_FORCE_ON = 1;
+    QBittorrentEncryption_FORCE_OFF = 2;
+}
+
+enum QBittorrentBittorrentProtocol {
+    QBittorrentBittorrentProtocol_BOTH = 0;
+    QBittorrentBittorrentProtocol_TCP = 1;
+    QBittorrentBittorrentProtocol_UTP = 2;
+}
+
+enum QBittorrentProxyType {
+    QBittorrentProxyType_NONE = 0;
+    QBittorrentProxyType_HTTP = 1;
+    QBittorrentProxyType_SOCKS5 = 2;
+    QBittorrentProxyType_HTTP_AUTH = 3;
+    QBittorrentProxyType_SOCKS5_AUTH = 4;
+    QBittorrentProxyType_SOCKS4 = 5;
+}
+
+enum QBittorrentMaxRatioAction {
+    QBittorrentMaxRatioAction_STOP = 0;
+    QBittorrentMaxRatioAction_REMOVE = 1;
+    QBittorrentMaxRatioAction_ENABLE_SUPER_SEEDING = 2;
+    QBittorrentMaxRatioAction_REMOVE_WITH_CONTENT = 3;
+}
+
+enum QBittorrentSchedulerDay {
+    QBittorrentSchedulerDay_EVERY = 0;
+    QBittorrentSchedulerDay_WEEKDAY = 1;
+    QBittorrentSchedulerDay_WEEKEND = 2;
+    QBittorrentSchedulerDay_MONDAY = 3;
+    QBittorrentSchedulerDay_TUESDAY = 4;
+    QBittorrentSchedulerDay_WEDNESDAY = 5;
+    QBittorrentSchedulerDay_THURSDAY = 6;
+    QBittorrentSchedulerDay_FRIDAY = 7;
+    QBittorrentSchedulerDay_SATURDAY = 8;
+    QBittorrentSchedulerDay_SUNDAY = 9;
+}
+
+enum QBittorrentChokingAlgorithm {
+    QBittorrentChokingAlgorithm_FIXED_SLOTS = 0;
+    QBittorrentChokingAlgorithm_RATE_BASED = 1;
+}
+
+enum QBittorrentSeedChokingAlgorithm {
+    QBittorrentSeedChokingAlgorithm_ROUND_ROBIN = 0;
+    QBittorrentSeedChokingAlgorithm_FASTEST_UPLOAD = 1;
+    QBittorrentSeedChokingAlgorithm_ANTI_LEECH = 2;
+}
+
+enum QBittorrentUtpTcpMixedModeAlgorithm {
+    QBittorrentUtpTcpMixedModeAlgorithm_PREFER_TCP = 0;
+    QBittorrentUtpTcpMixedModeAlgorithm_PEER_PROPORTIONAL = 1;
+}
+
+enum QBittorrentDynamicDnsService {
+    QBittorrentDynamicDnsService_NONE = 0;
+    QBittorrentDynamicDnsService_DYNDNS = 1;
+    QBittorrentDynamicDnsService_NOIP = 2;
+}
+
+message QBittorrentSettings {
+    // Behaviour
+    google.protobuf.BoolValue LogEnabled = 1;
+    google.protobuf.StringValue LogPath = 2;
+    google.protobuf.BoolValue LogBackupEnabled = 3;
+    google.protobuf.Int32Value LogMaxSize = 4;
+    google.protobuf.BoolValue LogDeleteOld = 5;
+    google.protobuf.Int32Value LogAge = 6;
+    google.protobuf.Int32Value LogAgeType = 7;
+
+    // Downloads
+    google.protobuf.StringValue TorrentContentLayout = 8;
+    google.protobuf.BoolValue AddToTopOfQueue = 9;
+    google.protobuf.BoolValue AddTorrentPaused = 10;
+    google.protobuf.StringValue TorrentStopCondition = 11;
+    google.protobuf.BoolValue MergeTrackers = 12;
+    google.protobuf.Int32Value AutoDeleteMode = 13;
+    google.protobuf.BoolValue PreallocateAll = 14;
+    google.protobuf.BoolValue AppendExtensionToIncompleteFiles = 15;
+    google.protobuf.BoolValue UseUnwantedFolder = 16;
+    google.protobuf.BoolValue AutoTMMEnabledByDefault = 17;
+    google.protobuf.BoolValue AutoTMMRetainedWhenCategoryChanges = 18;
+    google.protobuf.BoolValue AutoTMMRetainedWhenDefaultSavePathChanges = 19;
+    google.protobuf.BoolValue AutoTMMRetainedWhenCategorySavePathChanges = 20;
+    google.protobuf.BoolValue UseSubcategories = 21;
+    google.protobuf.BoolValue UseCategoryPathsInManualMode = 22;
+    google.protobuf.StringValue SavePath = 23;
+    google.protobuf.BoolValue TempPathEnabled = 24;
+    google.protobuf.StringValue TempPath = 25;
+    google.protobuf.StringValue ExportDirectory = 26;
+    google.protobuf.StringValue ExportDirectoryForFinished = 27;
+    map<string, string> ScanDirectories = 28;
+    google.protobuf.BoolValue ExcludedFileNamesEnabled = 29;
+    google.protobuf.StringValue ExcludedFileNames = 30;
+    google.protobuf.BoolValue MailNotificationEnabled = 31;
+    google.protobuf.StringValue MailNotificationSender = 32;
+    google.protobuf.StringValue MailNotificationEmailAddress = 33;
+    google.protobuf.StringValue MailNotificationSmtpServer = 34;
+    google.protobuf.BoolValue MailNotificationSslEnabled = 35;
+    google.protobuf.BoolValue MailNotificationAuthenticationEnabled = 36;
+    google.protobuf.StringValue MailNotificationUsername = 37;
+    google.protobuf.StringValue MailNotificationPassword = 38;
+    google.protobuf.BoolValue AutorunOnTorrentAddedEnabled = 39;
+    google.protobuf.StringValue AutorunOnTorrentAddedProgram = 40;
+    google.protobuf.BoolValue AutorunEnabled = 41;
+    google.protobuf.StringValue AutorunProgram = 42;
+
+    // Connection
+    QBittorrentBittorrentProtocol BittorrentProtocol = 43;
+    google.protobuf.Int32Value ListenPort = 44;
+    google.protobuf.BoolValue UpnpEnabled = 45;
+    google.protobuf.BoolValue RandomPort = 46;
+    google.protobuf.Int32Value MaxConnections = 47;
+    google.protobuf.Int32Value MaxConnectionsPerTorrent = 48;
+    google.protobuf.Int32Value MaxUploads = 49;
+    google.protobuf.Int32Value MaxUploadsPerTorrent = 50;
+    QBittorrentProxyType ProxyType = 51;
+    google.protobuf.StringValue ProxyAddress = 52;
+    google.protobuf.Int32Value ProxyPort = 53;
+    google.protobuf.BoolValue ProxyHostnameLookup = 54;
+    google.protobuf.BoolValue ProxyAuthenticationEnabled = 55;
+    google.protobuf.StringValue ProxyUsername = 56;
+    google.protobuf.StringValue ProxyPassword = 57;
+    google.protobuf.BoolValue ProxyBittorrent = 58;
+    google.protobuf.BoolValue ProxyPeerConnections = 59;
+    google.protobuf.BoolValue ProxyRss = 60;
+    google.protobuf.BoolValue ProxyMisc = 61;
+    google.protobuf.BoolValue IpFilterEnabled = 62;
+    google.protobuf.StringValue IpFilterPath = 63;
+    google.protobuf.BoolValue IpFilterTrackers = 64;
+    repeated string BannedIpAddresses = 65;
+
+    // Speed
+    google.protobuf.Int32Value UploadLimit = 66;
+    google.protobuf.Int32Value DownloadLimit = 67;
+    google.protobuf.Int32Value AlternativeUploadLimit = 68;
+    google.protobuf.Int32Value AlternativeDownloadLimit = 69;
+    google.protobuf.BoolValue SchedulerEnabled = 70;
+    google.protobuf.Int32Value ScheduleFromHour = 71;
+    google.protobuf.Int32Value ScheduleFromMinute = 72;
+    google.protobuf.Int32Value ScheduleToHour = 73;
+    google.protobuf.Int32Value ScheduleToMinute = 74;
+    QBittorrentSchedulerDay SchedulerDays = 75;
+    google.protobuf.BoolValue LimitUTPRate = 76;
+    google.protobuf.BoolValue LimitTcpOverhead = 77;
+    google.protobuf.BoolValue LimitLAN = 78;
+
+    // BitTorrent
+    google.protobuf.BoolValue DHT = 79;
+    google.protobuf.BoolValue PeerExchange = 80;
+    google.protobuf.BoolValue LocalPeerDiscovery = 81;
+    QBittorrentEncryption Encryption = 82;
+    google.protobuf.BoolValue AnonymousMode = 83;
+    google.protobuf.BoolValue QueueingEnabled = 84;
+    google.protobuf.Int32Value MaxActiveDownloads = 85;
+    google.protobuf.Int32Value MaxActiveUploads = 86;
+    google.protobuf.Int32Value MaxActiveTorrents = 87;
+    google.protobuf.BoolValue DoNotCountSlowTorrents = 88;
+    google.protobuf.Int32Value SlowTorrentDownloadRateThreshold = 89;
+    google.protobuf.Int32Value SlowTorrentUploadRateThreshold = 90;
+    google.protobuf.Int32Value SlowTorrentInactiveTime = 91;
+    google.protobuf.BoolValue MaxRatioEnabled = 92;
+    google.protobuf.DoubleValue MaxRatio = 93;
+    google.protobuf.BoolValue MaxSeedingTimeEnabled = 94;
+    google.protobuf.Int32Value MaxSeedingTime = 95;
+    google.protobuf.BoolValue MaxInactiveSeedingTimeEnabled = 96;
+    google.protobuf.Int32Value MaxInactiveSeedingTime = 97;
+    QBittorrentMaxRatioAction MaxRatioAction = 98;
+    google.protobuf.BoolValue AdditionalTrackersEnabled = 99;
+    repeated string AdditionalTrackers = 100;
+    google.protobuf.BoolValue TrackerListEnabled = 101;
+    google.protobuf.StringValue TrackerListUrl = 102;
+    google.protobuf.StringValue TrackerListContent = 103;
+
+    // RSS
+    google.protobuf.BoolValue RssProcessingEnabled = 104;
+    google.protobuf.UInt32Value RssRefreshInterval = 105;
+    google.protobuf.Int32Value RssFetchDelay = 106;
+    google.protobuf.Int32Value RssMaxArticlesPerFeed = 107;
+    google.protobuf.BoolValue RssAutoDownloadingEnabled = 108;
+    google.protobuf.BoolValue RssDownloadRepackProperEpisodes = 109;
+    repeated string RssSmartEpisodeFilters = 110;
+
+    // WebUI
+    google.protobuf.StringValue WebUIAddress = 111;
+    google.protobuf.Int32Value WebUIPort = 112;
+    google.protobuf.BoolValue WebUIUpnp = 113;
+    google.protobuf.BoolValue WebUIHttps = 114;
+    google.protobuf.StringValue WebUISslCertificatePath = 115;
+    google.protobuf.StringValue WebUISslKeyPath = 116;
+    google.protobuf.StringValue WebUIUsername = 117;
+    google.protobuf.StringValue WebUIPassword = 118;
+    google.protobuf.StringValue WebUIPasswordHash = 119;
+    google.protobuf.BoolValue BypassLocalAuthentication = 120;
+    google.protobuf.BoolValue BypassAuthenticationSubnetWhitelistEnabled = 121;
+    repeated string BypassAuthenticationSubnetWhitelist = 122;
+    google.protobuf.Int32Value WebUIMaxAuthenticationFailures = 123;
+    google.protobuf.Int32Value WebUIBanDuration = 124;
+    google.protobuf.Int32Value WebUISessionTimeout = 125;
+    google.protobuf.BoolValue AlternativeWebUIEnabled = 126;
+    google.protobuf.StringValue AlternativeWebUIPath = 127;
+    google.protobuf.BoolValue WebUIClickjackingProtection = 128;
+    google.protobuf.BoolValue WebUICsrfProtection = 129;
+    google.protobuf.BoolValue WebUISecureCookie = 130;
+    google.protobuf.BoolValue WebUIHostHeaderValidation = 131;
+    google.protobuf.StringValue WebUIDomain = 132;
+    google.protobuf.BoolValue WebUICustomHttpHeadersEnabled = 133;
+    repeated string WebUICustomHttpHeaders = 134;
+    google.protobuf.BoolValue ReverseProxyEnabled = 135;
+    google.protobuf.StringValue ReverseProxiesList = 136;
+    google.protobuf.BoolValue DynamicDnsEnabled = 137;
+    QBittorrentDynamicDnsService DynamicDnsService = 138;
+    google.protobuf.StringValue DynamicDnsDomain = 139;
+    google.protobuf.StringValue DynamicDnsUsername = 140;
+    google.protobuf.StringValue DynamicDnsPassword = 141;
+
+    // Advanced
+    google.protobuf.StringValue ResumeDataStorageType = 142;
+    google.protobuf.StringValue TorrentContentRemoveOption = 143;
+    google.protobuf.Int32Value MemoryWorkingSetLimit = 144;
+    google.protobuf.StringValue CurrentNetworkInterface = 145;
+    google.protobuf.StringValue CurrentInterfaceAddress = 146;
+    google.protobuf.Int32Value SaveResumeDataInterval = 147;
+    google.protobuf.Int32Value SaveStatisticsInterval = 148;
+    google.protobuf.Int32Value TorrentFileSizeLimit = 149;
+    google.protobuf.BoolValue ConfirmTorrentRecheck = 150;
+    google.protobuf.BoolValue RecheckCompletedTorrents = 151;
+    google.protobuf.StringValue AppInstanceName = 152;
+    google.protobuf.Int32Value RefreshInterval = 153;
+    google.protobuf.BoolValue ResolvePeerCountries = 154;
+    google.protobuf.BoolValue ReannounceWhenAddressChanged = 155;
+    google.protobuf.BoolValue LibtorrentEnableEmbeddedTracker = 156;
+    google.protobuf.Int32Value LibtorrentEmbeddedTrackerPort = 157;
+    google.protobuf.BoolValue EmbeddedTrackerPortForwarding = 158;
+    google.protobuf.BoolValue IgnoreSslErrors = 159;
+    google.protobuf.StringValue PythonExecutablePath = 160;
+    google.protobuf.Int32Value LibtorrentBdecodeDepthLimit = 161;
+    google.protobuf.Int32Value LibtorrentBdecodeTokenLimit = 162;
+    google.protobuf.Int32Value LibtorrentAsynchronousIOThreads = 163;
+    google.protobuf.Int32Value LibtorrentHashingThreads = 164;
+    google.protobuf.Int32Value LibtorrentFilePoolSize = 165;
+    google.protobuf.Int32Value LibtorrentOutstandingMemoryWhenCheckingTorrent = 166;
+    google.protobuf.Int32Value LibtorrentDiskCache = 167;
+    google.protobuf.Int32Value LibtorrentDiskCacheExpiryInterval = 168;
+    google.protobuf.BoolValue LibtorrentUseOSCache = 169;
+    google.protobuf.Int32Value LibtorrentDiskQueueSize = 170;
+    google.protobuf.Int32Value LibtorrentDiskIOReadMode = 171;
+    google.protobuf.Int32Value LibtorrentDiskIOWriteMode = 172;
+    google.protobuf.BoolValue LibtorrentCoalesceReadsAndWrites = 173;
+    google.protobuf.BoolValue LibtorrentPieceExtentAffinity = 174;
+    google.protobuf.BoolValue LibtorrentSendUploadPieceSuggestions = 175;
+    google.protobuf.Int32Value LibtorrentSendBufferWatermark = 176;
+    google.protobuf.Int32Value LibtorrentSendBufferLowWatermark = 177;
+    google.protobuf.Int32Value LibtorrentSendBufferWatermarkFactor = 178;
+    google.protobuf.Int32Value LibtorrentOutgoingConnectionsPerSecond = 179;
+    google.protobuf.Int32Value LibtorrentSocketSendBufferSize = 180;
+    google.protobuf.Int32Value LibtorrentSocketReceiveBufferSize = 181;
+    google.protobuf.Int32Value LibtorrentSocketBacklogSize = 182;
+    google.protobuf.Int32Value LibtorrentOutgoingPortsMin = 183;
+    google.protobuf.Int32Value LibtorrentOutgoingPortsMax = 184;
+    google.protobuf.Int32Value LibtorrentUpnpLeaseDuration = 185;
+    google.protobuf.Int32Value LibtorrentPeerTos = 186;
+    QBittorrentUtpTcpMixedModeAlgorithm LibtorrentUtpTcpMixedModeAlgorithm = 187;
+    google.protobuf.BoolValue LibtorrentIdnSupportEnabled = 188;
+    google.protobuf.BoolValue LibtorrentAllowMultipleConnectionsFromSameIp = 189;
+    google.protobuf.BoolValue LibtorrentValidateHttpsTrackerCertificate = 190;
+    google.protobuf.BoolValue LibtorrentSsrfMitigation = 191;
+    google.protobuf.BoolValue LibtorrentBlockPeersOnPrivilegedPorts = 192;
+    QBittorrentChokingAlgorithm LibtorrentUploadSlotsBehavior = 193;
+    QBittorrentSeedChokingAlgorithm LibtorrentUploadChokingAlgorithm = 194;
+    google.protobuf.BoolValue LibtorrentAnnounceToAllTrackers = 195;
+    google.protobuf.BoolValue LibtorrentAnnounceToAllTiers = 196;
+    google.protobuf.StringValue LibtorrentAnnounceIp = 197;
+    google.protobuf.Int32Value LibtorrentAnnouncePort = 198;
+    google.protobuf.Int32Value LibtorrentMaxConcurrentHttpAnnounces = 199;
+    google.protobuf.Int32Value LibtorrentStopTrackerTimeout = 200;
+    google.protobuf.Int32Value LibtorrentPeerTurnover = 201;
+    google.protobuf.Int32Value LibtorrentPeerTurnoverCutoff = 202;
+    google.protobuf.Int32Value LibtorrentPeerTurnoverInterval = 203;
+    google.protobuf.Int32Value LibtorrentRequestQueueSize = 204;
+    google.protobuf.StringValue LibtorrentDhtBootstrapNodes = 205;
+    google.protobuf.Int32Value LibtorrentI2pInboundQuantity = 206;
+    google.protobuf.Int32Value LibtorrentI2pOutboundQuantity = 207;
+    google.protobuf.Int32Value LibtorrentI2pInboundLength = 208;
+    google.protobuf.Int32Value LibtorrentI2pOutboundLength = 209;
 }

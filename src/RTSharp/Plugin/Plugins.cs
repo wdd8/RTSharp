@@ -202,7 +202,8 @@ namespace RTSharp.Plugin
             builder.AddJsonFile(Path, false, true);
             IConfigurationRoot? configRaw;
             PluginInstanceConfig config;
-            string moduleContentsPath, rawInstanceId;
+            string moduleContentsPath;
+            string? rawInstanceId;
 
             try {
                 configRaw = builder.Build();
@@ -214,8 +215,6 @@ namespace RTSharp.Plugin
                     throw new NullReferenceException(nameof(config));
                 if (moduleContentsPath == null)
                     throw new NullReferenceException(nameof(moduleContentsPath));
-                if (rawInstanceId == null)
-                    throw new NullReferenceException(nameof(rawInstanceId));
             } catch (Exception ex) {
                 Exception inner = ex;
                 while (inner.InnerException != null)

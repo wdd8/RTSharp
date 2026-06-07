@@ -19,6 +19,7 @@ using RTSharp.Shared.Utils;
 using Serilog;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -48,10 +49,10 @@ public class DaemonService : IDaemonService
     /// Populated from the TLS validation callback in ConfigureServices. A cleaner
     /// solution would be to establish a connection, then extract the peer certificate
     /// from that channel — but gRPC doesn't expose any accessors for that
-    public static Dictionary<string, System.Security.Cryptography.X509Certificates.X509Certificate2> RemoteCerts { get; } = new();
+    public static ConcurrentDictionary<string, System.Security.Cryptography.X509Certificates.X509Certificate2> RemoteCerts { get; } = new();
 
     /// See <see cref="ConfigureServices.AddDaemonServices"/>
-    public static Dictionary<string, string> RemoteCipherSuites { get; } = new();
+    public static ConcurrentDictionary<string, string> RemoteCipherSuites { get; } = new();
 
     GRPCServerService.GRPCServerServiceClient ServerClient;
     GRPCFilesService.GRPCFilesServiceClient FilesClient;

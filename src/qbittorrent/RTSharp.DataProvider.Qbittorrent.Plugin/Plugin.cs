@@ -3,6 +3,10 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 
+using Google.Protobuf.WellKnownTypes;
+
+using RTSharp.Daemon.Protocols.DataProvider.Settings;
+using RTSharp.DataProvider.Qbittorrent.Plugin.Mappers;
 using RTSharp.DataProvider.Qbittorrent.Plugin.ViewModels;
 using RTSharp.DataProvider.Qbittorrent.Plugin.Views;
 using RTSharp.Shared.Abstractions;
@@ -68,15 +72,27 @@ public class Plugin : BasePlugin
 
     public override async Task ShowPluginSettings(object ParentWindow)
     {
+        var client = Host.AttachedDaemonService!.GetGrpcService<GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>();
+        var headers = DataProvider.GetBuiltInDataProviderGrpcHeaders();
+
+        var settings = await client.GetSettingsAsync(new Empty(), headers: headers);
+        var ifaces = await client.GetNetworkInterfacesAsync(new Empty(), headers: headers);
+        var currentIfaceId = settings.CurrentNetworkInterface ?? "";
+        var addrs = await client.GetNetworkInterfaceAddressesAsync(
+            new QBittorrentNetworkInterfaceAddressRequest { InterfaceId = currentIfaceId },
+            headers: headers);
+
         var settingsWindow = new MainWindow {
             ViewModel = new MainWindowViewModel() {
                 PluginHost = Host,
                 ThisPlugin = this,
                 Title = Host.PluginInstanceConfig.Name + " qbittorrent settings",
-                //Settings = SettingsMapper.MapFromProto(settings)
+                Settings = SettingsMapper.MapFromProto(settings)
             }
         };
-        ((MainWindowViewModel)settingsWindow.DataContext!).ThisWindow = settingsWindow;
+        var vm = (MainWindowViewModel)settingsWindow.DataContext!;
+        vm.ThisWindow = settingsWindow;
+        await vm.InitializeNetworkDataAsync(ifaces.Interfaces, addrs.Addresses);
         await settingsWindow.ShowDialog((Window)ParentWindow);
     }
 
