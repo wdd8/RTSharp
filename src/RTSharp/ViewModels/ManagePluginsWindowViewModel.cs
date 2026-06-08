@@ -44,10 +44,17 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
     {
         var existingConfig = Plugins.GetFirstPluginConfigOrDefault(Path.GetFullPath(Path.Combine(Shared.Abstractions.Consts.PLUGINS_PATH, SelectedUnloadedDir!)));
         string? config = null;
-        if (existingConfig != null)
-            config = existingConfig;
-        else
+        if (existingConfig != null) {
+            if (existingConfig.EndsWith(".disabled")) {
+                var enabledPath = existingConfig[..^".disabled".Length];
+                File.Move(existingConfig, enabledPath);
+                config = enabledPath;
+            } else {
+                config = existingConfig;
+            }
+        } else {
             config = await Plugins.GeneratePluginConfig(SelectedUnloadedDir!);
+        }
 
         var wBox = new WaitingBox($"Loading {SelectedUnloadedDir}", $"Loading {config}...", BuiltInIcons.VISTA_WAIT);
         wBox.Show();
@@ -75,7 +82,10 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanExecuteUnload))]
     public async Task UnloadClick()
     {
+        var configPath = SelectedActivePlugin!.PluginConfigPath;
         await SelectedActivePlugin!.Unload();
+        if (File.Exists(configPath))
+            File.Move(configPath, configPath + ".disabled");
         RepopulateUnloadedPlugins();
     }
 

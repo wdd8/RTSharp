@@ -146,13 +146,17 @@ namespace RTSharp.Plugin
 
         public static string? GetFirstPluginConfigOrDefault(string FullModuleContentsPath)
         {
-            foreach (var json in Directory.GetFiles(Consts.PLUGINS_PATH, "*.json")) {
+            var candidates = Directory.GetFiles(Consts.PLUGINS_PATH, "*.json")
+                .Concat(Directory.EnumerateFiles(Consts.PLUGINS_PATH).Where(f => f.EndsWith(".json.disabled")));
+
+            foreach (var json in candidates) {
                 try {
+                    string? moduleContentsPath;
+
                     var builder = new ConfigurationBuilder();
                     builder.AddJsonFile(json, false, true);
                     var configRaw = builder.Build();
-                    var config = configRaw.GetSection("Plugin").Get<PluginInstanceConfig>();
-                    var moduleContentsPath = configRaw.GetSection("Plugin").GetValue<string>("Path");
+                    moduleContentsPath = configRaw.GetSection("Plugin").GetValue<string>("Path");
 
                     if (moduleContentsPath == null)
                         continue;

@@ -22,7 +22,7 @@ public partial class DataProvider : ObservableObject
     };
 
     [ObservableProperty]
-    public partial TimeSpan Latency { get; set; }
+    public partial string Latency { get; set; }
 
     [ObservableProperty]
     public partial ulong TotalDLSpeed { get; set; }

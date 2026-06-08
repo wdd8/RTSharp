@@ -71,6 +71,7 @@ namespace RTSharp.ViewModels
                     server.CertAlgorithm = cipherSuite;
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Ping to daemon has failed");
+                server.Latency = "?";
 
                 while (ex.InnerException != null)
                     ex = ex.InnerException;

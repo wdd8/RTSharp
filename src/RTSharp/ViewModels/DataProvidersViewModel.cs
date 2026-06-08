@@ -54,7 +54,7 @@ namespace RTSharp.ViewModels
                                 DisplayName = change.Item.Current.PluginInstance.PluginInstanceConfig.Name,
                                 InstanceId = change.Item.Current.PluginInstance.InstanceId,
                                 State = change.Item.Current.State.Value,
-                                Latency = change.Item.Current.PluginInstance.AttachedDaemonService.Latency.Value,
+                                Latency = Shared.Utils.Converters.ToAgoString(change.Item.Current.PluginInstance.AttachedDaemonService.Latency.Value),
                                 TotalDLSpeed = 0,
                                 TotalUPSpeed = 0,
                                 ActiveTorrentCount = 0
@@ -62,8 +62,16 @@ namespace RTSharp.ViewModels
 
                             Items.Add(new DataProviderItemViewModel(model, SpeedChartEnabled));
                         } else {
+                            if (change.Reason == ListChangeReason.Remove) {
+                                Items.Remove(item);
+                                continue;
+                            }
+
                             item.DataProvider.State = change.Item.Current.State.Value;
-                            item.DataProvider.Latency = change.Item.Current.PluginInstance.AttachedDaemonService.Latency.Value;
+                            if (item.DataProvider.State != Shared.Abstractions.DataProviderState.INACTIVE)
+                                item.DataProvider.Latency = Shared.Utils.Converters.ToAgoString(change.Item.Current.PluginInstance.AttachedDaemonService.Latency.Value);
+                            else
+                                item.DataProvider.Latency = "?";
                         }
                     }
                 });
