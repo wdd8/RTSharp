@@ -1,0 +1,9 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)Version.props" />
+  <PropertyGroup Condition="!$(MSBuildProjectDirectory.Contains('ProDataGrid'))">
+    <Version>$(RTSharpVersion)</Version>
+    <AssemblyVersion>$(RTSharpVersion)</AssemblyVersion>
+    <FileVersion>$(RTSharpVersion)</FileVersion>
+    <InformationalVersion>$(RTSharpVersion)</InformationalVersion>
+  </PropertyGroup>
+</Project>

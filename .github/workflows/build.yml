@@ -5,6 +5,9 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rid: [linux-x64, linux-arm64, win-x64, win-arm64]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -14,17 +17,67 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Publish linux x64
-        run: pwsh scripts/publish.ps1 linux-x64
-      - name: Publish windows x64
-        run: pwsh scripts/publish.ps1 win-x64
-      - name: Upload build linux-x64
+      - name: Publish ${{ matrix.rid }}
+        run: pwsh scripts/publish.ps1 ${{ matrix.rid }}
+      - name: Publish daemon ${{ matrix.rid }}
+        if: startsWith(matrix.rid, 'linux-')
+        run: dotnet publish ./src/RTSharp.Daemon -c Release -r ${{ matrix.rid }} --no-self-contained -o ${{ matrix.rid }}-daemon
+      - name: Upload build ${{ matrix.rid }}
         uses: actions/upload-artifact@v4
         with:
-          name: Linux x64
-          path: linux-x64
-      - name: Upload build win-x64
+          name: ${{ matrix.rid }}
+          path: ${{ matrix.rid }}
+      - name: Upload daemon ${{ matrix.rid }}
+        if: startsWith(matrix.rid, 'linux-')
         uses: actions/upload-artifact@v4
         with:
-          name: Windows x64
-          path: win-x64
+          name: ${{ matrix.rid }}-daemon
+          path: ${{ matrix.rid }}-daemon
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          VERSION=$(grep -oP '(?<=<RTSharpVersion>)[^<]+' Version.props)
+          if gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" &>/dev/null 2>&1; then
+            echo "Release v${VERSION} already exists, skipping."
+            exit 0
+          fi
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            git log --format="- %s" HEAD > release_notes.txt
+          else
+            git log --format="- %s" "${LAST_TAG}..HEAD" > release_notes.txt
+          fi
+          for RID in linux-x64 linux-arm64 win-x64 win-arm64; do
+            (cd "$RID" && zip -r "../RTSharp-${RID}-v${VERSION}.zip" .)
+          done
+          for RID in linux-x64 linux-arm64; do
+            dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" client
+            dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" daemon
+          done
+          gh release create "v${VERSION}" \
+            --title "RTSharp v${VERSION}" \
+            --notes-file release_notes.txt \
+            RTSharp-linux-x64-v${VERSION}.zip \
+            RTSharp-linux-arm64-v${VERSION}.zip \
+            RTSharp-win-x64-v${VERSION}.zip \
+            RTSharp-win-arm64-v${VERSION}.zip \
+            rtsharp_${VERSION}_amd64.deb \
+            rtsharp_${VERSION}_arm64.deb \
+            rtsharp-daemon_${VERSION}_amd64.deb \
+            rtsharp-daemon_${VERSION}_arm64.deb
