@@ -99,7 +99,9 @@ public class Config
 
     private readonly IServiceProvider Provider;
 
-    public static string ConfigPath { get; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+    public static string UserDataPath { get; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.USER_DATA_PATH);
+
+    public static string ConfigPath { get; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.APP_CONFIG_PATH);
 
     private static AsyncLock GlobalRewriteLock = new AsyncLock();
 
@@ -123,6 +125,7 @@ public class Config
 
     public static async Task WriteDefaultConfig()
     {
+        Directory.CreateDirectory(UserDataPath);
         if (!File.Exists(ConfigPath))
             await File.WriteAllTextAsync(ConfigPath, DefaultConfig);
     }

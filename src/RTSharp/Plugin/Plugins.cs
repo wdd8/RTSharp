@@ -146,8 +146,8 @@ namespace RTSharp.Plugin
 
         public static string? GetFirstPluginConfigOrDefault(string FullModuleContentsPath)
         {
-            var candidates = Directory.GetFiles(Consts.PLUGINS_PATH, "*.json")
-                .Concat(Directory.EnumerateFiles(Consts.PLUGINS_PATH).Where(f => f.EndsWith(".json.disabled")));
+            var candidates = Directory.GetFiles(Consts.PLUGINS_CONFIG_PATH, "*.json")
+                .Concat(Directory.EnumerateFiles(Consts.PLUGINS_CONFIG_PATH).Where(f => f.EndsWith(".json.disabled")));
 
             foreach (var json in candidates) {
                 try {
@@ -183,7 +183,9 @@ namespace RTSharp.Plugin
             json["Plugin"]!["InstanceId"] = Guid.NewGuid();
             json["Plugin"]!["Name"] = modName;
 
-            var existing = Directory.GetFiles(Shared.Abstractions.Consts.PLUGINS_PATH, $"{modName}-*.json").OrderBy(file => Regex.Replace(file, @"\d+", match => match.Value.PadLeft(4, '0')));
+            Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH));
+
+            var existing = Directory.GetFiles(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH), $"{modName}-*.json").OrderBy(file => Regex.Replace(file, @"\d+", match => match.Value.PadLeft(4, '0')));
             int next = 1;
             foreach (var file in existing) {
                 if ($"{modName}-{next}.json" == file) {
@@ -191,16 +193,16 @@ namespace RTSharp.Plugin
                 }
             }
 
-            await System.IO.File.WriteAllTextAsync(System.IO.Path.Combine(Shared.Abstractions.Consts.PLUGINS_PATH, $"{modName}-{next}.json"), json.ToJsonString(new JsonSerializerOptions() {
+            await System.IO.File.WriteAllTextAsync(System.IO.Path.Combine(Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH, $"{modName}-{next}.json"), json.ToJsonString(new JsonSerializerOptions() {
                 WriteIndented = true
             }));
 
-            return $"{Shared.Abstractions.Consts.PLUGINS_PATH}/{modName}-{next}.json";
+            return System.IO.Path.Combine(Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH, $"{modName}-{next}.json");
         }
 
         public static async Task LoadPlugin(string Path, Action<(string Status, float Percentage)> Progress)
         {
-            var pluginName = Path[(Shared.Abstractions.Consts.PLUGINS_PATH.Length + 1)..];
+            var pluginName = Path[(Path.LastIndexOfAny(['/', '\\']) + 1)..];
 
             var builder = new ConfigurationBuilder();
             builder.AddJsonFile(Path, false, true);
@@ -356,13 +358,13 @@ namespace RTSharp.Plugin
 
         public static async Task LoadPlugins(Action<float, string> Progress)
         {
-            if (!Directory.Exists(Shared.Abstractions.Consts.PLUGINS_PATH)) {
+            if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH))) {
                 Log.Logger.Information("No plugins loaded");
                 Progress(100, $"No plugins loaded");
                 return;
             }
 
-            var files = Directory.GetFiles(Shared.Abstractions.Consts.PLUGINS_PATH, "*.json");
+            var files = Directory.GetFiles(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH), "*.json");
 
             for (var x = 0;x < files.Length;x++) {
                 int progress = (int)((float)x / files.Length * 100);
