@@ -161,7 +161,7 @@ namespace RTSharp.Plugin
                     if (moduleContentsPath == null)
                         continue;
 
-                    moduleContentsPath = System.IO.Path.IsPathRooted(moduleContentsPath) ? moduleContentsPath : System.IO.Path.GetFullPath(System.IO.Path.Combine(Shared.Abstractions.Consts.PLUGINS_PATH, moduleContentsPath));
+                    moduleContentsPath = Path.IsPathRooted(moduleContentsPath) ? moduleContentsPath : Path.GetFullPath(Path.Combine(Consts.PLUGINS_PATH, moduleContentsPath));
 
                     if (moduleContentsPath == FullModuleContentsPath)
                         return json;
@@ -183,9 +183,9 @@ namespace RTSharp.Plugin
             json["Plugin"]!["InstanceId"] = Guid.NewGuid();
             json["Plugin"]!["Name"] = modName;
 
-            Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH));
+            Directory.CreateDirectory(Consts.PLUGINS_CONFIG_PATH);
 
-            var existing = Directory.GetFiles(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH), $"{modName}-*.json").OrderBy(file => Regex.Replace(file, @"\d+", match => match.Value.PadLeft(4, '0')));
+            var existing = Directory.GetFiles(Consts.PLUGINS_CONFIG_PATH, $"{modName}-*.json").OrderBy(file => Regex.Replace(file, @"\d+", match => match.Value.PadLeft(4, '0')));
             int next = 1;
             foreach (var file in existing) {
                 if ($"{modName}-{next}.json" == file) {
@@ -193,11 +193,11 @@ namespace RTSharp.Plugin
                 }
             }
 
-            await System.IO.File.WriteAllTextAsync(System.IO.Path.Combine(Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH, $"{modName}-{next}.json"), json.ToJsonString(new JsonSerializerOptions() {
+            await System.IO.File.WriteAllTextAsync(Path.Combine(Consts.PLUGINS_CONFIG_PATH, $"{modName}-{next}.json"), json.ToJsonString(new JsonSerializerOptions() {
                 WriteIndented = true
             }));
 
-            return System.IO.Path.Combine(Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH, $"{modName}-{next}.json");
+            return Path.Combine(Consts.PLUGINS_CONFIG_PATH, $"{modName}-{next}.json");
         }
 
         public static async Task LoadPlugin(string Path, Action<(string Status, float Percentage)> Progress)
@@ -229,7 +229,7 @@ namespace RTSharp.Plugin
                 throw new InvalidPluginConfigurationException($"Plugin {pluginName}: Invalid configuration file.\n{inner.Message}");
             }
 
-            moduleContentsPath = System.IO.Path.IsPathRooted(moduleContentsPath) ? moduleContentsPath : System.IO.Path.GetFullPath(System.IO.Path.Combine(Shared.Abstractions.Consts.PLUGINS_PATH, moduleContentsPath));
+            moduleContentsPath = System.IO.Path.IsPathRooted(moduleContentsPath) ? moduleContentsPath : System.IO.Path.GetFullPath(System.IO.Path.Combine(Consts.PLUGINS_PATH, moduleContentsPath));
 
             var manifest = System.IO.Path.Combine(moduleContentsPath, "manifest.json");
             if (!System.IO.File.Exists(manifest)) {
@@ -358,13 +358,13 @@ namespace RTSharp.Plugin
 
         public static async Task LoadPlugins(Action<float, string> Progress)
         {
-            if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH))) {
+            if (!Directory.Exists(Consts.PLUGINS_CONFIG_PATH)) {
                 Log.Logger.Information("No plugins loaded");
                 Progress(100, $"No plugins loaded");
                 return;
             }
 
-            var files = Directory.GetFiles(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.PLUGINS_CONFIG_PATH), "*.json");
+            var files = Directory.GetFiles(Consts.PLUGINS_CONFIG_PATH, "*.json");
 
             for (var x = 0;x < files.Length;x++) {
                 int progress = (int)((float)x / files.Length * 100);
@@ -380,11 +380,11 @@ namespace RTSharp.Plugin
 
         public static List<string> ListUnloadedPluginDirs()
         {
-            var dirs = Directory.GetDirectories(Shared.Abstractions.Consts.PLUGINS_PATH);
+            var dirs = Directory.GetDirectories(Consts.PLUGINS_PATH);
             var ret = new List<string>();
 
             foreach (var dir in dirs) {
-                if (!LoadedPlugins.Any(x => x.FullModulePath.StartsWith(Path.GetFullPath(dir)))) {
+                if (!LoadedPlugins.Any(x => x.ModulePath.StartsWith(Path.GetFullPath(dir)))) {
                     ret.Add(dir);
                 }
             }

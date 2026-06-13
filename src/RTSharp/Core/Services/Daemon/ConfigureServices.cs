@@ -44,8 +44,8 @@ namespace RTSharp.Core.Services.Daemon
             return (publicKey, privateKey);
         }
 
-        static readonly string CertPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RTSharp.Shared.Abstractions.Consts.USER_DATA_PATH, "client.pem");
-        static readonly string KeyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RTSharp.Shared.Abstractions.Consts.USER_DATA_PATH, "client.key");
+        static readonly string CertPath = Path.Combine(RTSharp.Shared.Abstractions.Consts.USER_DATA_PATH, "client.pem");
+        static readonly string KeyPath = Path.Combine(RTSharp.Shared.Abstractions.Consts.USER_DATA_PATH, "client.key");
 
         public static async Task GenerateCertificatesIfNeeded()
         {

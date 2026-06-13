@@ -99,10 +99,6 @@ public class Config
 
     private readonly IServiceProvider Provider;
 
-    public static string UserDataPath { get; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.USER_DATA_PATH);
-
-    public static string ConfigPath { get; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Shared.Abstractions.Consts.APP_CONFIG_PATH);
-
     private static AsyncLock GlobalRewriteLock = new AsyncLock();
 
     public static IServiceCollection AddConfig(IConfiguration Config, IServiceCollection Services)
@@ -125,15 +121,15 @@ public class Config
 
     public static async Task WriteDefaultConfig()
     {
-        Directory.CreateDirectory(UserDataPath);
-        if (!File.Exists(ConfigPath))
-            await File.WriteAllTextAsync(ConfigPath, DefaultConfig);
+        Directory.CreateDirectory(Shared.Abstractions.Consts.USER_DATA_PATH);
+        if (!File.Exists(Shared.Abstractions.Consts.APP_CONFIG_PATH))
+            await File.WriteAllTextAsync(Shared.Abstractions.Consts.APP_CONFIG_PATH, DefaultConfig);
     }
 
     public async Task Rewrite()
     {
         using (await GlobalRewriteLock.LockAsync()) {
-            var jsonRaw = await File.ReadAllTextAsync(ConfigPath);
+            var jsonRaw = await File.ReadAllTextAsync(Shared.Abstractions.Consts.APP_CONFIG_PATH);
             var json = JsonNode.Parse(jsonRaw)!;
 
             var sourceGenOptions = new JsonSerializerOptions {
@@ -145,7 +141,7 @@ public class Config
             json[nameof(UIState)] = JsonSerializer.SerializeToNode(UIState.Value, SourceGenerationContext.Default.UIState);
             json[nameof(Servers)] = JsonSerializer.SerializeToNode(Servers.Value, SourceGenerationContext.Default.DictionaryStringServer);
             json[nameof(Look)] = JsonSerializer.SerializeToNode(Look.Value, SourceGenerationContext.Default.Look);
-            await File.WriteAllTextAsync(ConfigPath, json.ToJsonString(new JsonSerializerOptions() {
+            await File.WriteAllTextAsync(Shared.Abstractions.Consts.APP_CONFIG_PATH, json.ToJsonString(new JsonSerializerOptions() {
                 WriteIndented = true
             }));
         }

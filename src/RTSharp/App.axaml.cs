@@ -62,7 +62,7 @@ public static class Services
         await Core.Config.WriteDefaultConfig();
 
         var cfgBuilder = new ConfigurationBuilder();
-        cfgBuilder.AddJsonFile(Core.Config.ConfigPath, false, true);
+        cfgBuilder.AddJsonFile(RTSharp.Shared.Abstractions.Consts.APP_CONFIG_PATH, false, true);
         var config = cfgBuilder.Build();
 
         await ConfigureServices.GenerateCertificatesIfNeeded();

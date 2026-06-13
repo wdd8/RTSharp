@@ -11,9 +11,24 @@ public static class Program
 {
     public static ReloadableServerCertificate ServerCertificate = null!; // set later
 
+    private static string ResolveDaemonConfigPath()
+    {
+        if (OperatingSystem.IsLinux()) {
+            const string etcPath = "/etc/rtsharp";
+            if (Directory.Exists(etcPath))
+                return etcPath;
+        }
+        return AppContext.BaseDirectory;
+    }
+
     public static void Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        var daemonConfigPath = ResolveDaemonConfigPath();
+
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
+            Args = args,
+            ContentRootPath = daemonConfigPath
+        });
         builder.Services.AddLogging(options =>
         {
             options.AddSimpleConsole(c =>

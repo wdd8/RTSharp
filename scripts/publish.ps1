@@ -1,49 +1,56 @@
+param(
+    [Parameter(Mandatory=$true, Position=0)]
+    [string]$Rid,
+    [switch]$SelfContained
+)
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $pwd = Get-Location
 
-dotnet publish ./src/RTSharp -c Release -r $args[0] --no-self-contained -o $args[0]
-dotnet build ./src/plugins/RTSharp.AutoIntegrify.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/AutoIntegrify')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
-dotnet build ./src/plugins/RTSharp.MassTrackerRewrite.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/MassTrackerRewrite')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
-dotnet build ./src/plugins/RTSharp.ColoredRatio.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/ColoredRatio')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
-dotnet build ./src/rtorrent/RTSharp.DataProvider.Rtorrent.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/DataProvider.Rtorrent')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
-dotnet build ./src/qbittorrent/RTSharp.DataProvider.Qbittorrent.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/DataProvider.Qbittorrent')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
-dotnet build ./src/transmission/RTSharp.DataProvider.Transmission.Plugin -c Release -r $args[0] --no-self-contained /p:OutputPath="$(Join-Path $pwd $args[0] 'plugins/DataProvider.Transmission')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
-rm -r "$($args[0])/clidriver"
-rm "$($args[0])/TestConn.*"
-rm "$($args[0])/*.xml"
-rm "$($args[0])/Azure.*.dll"
-rm "$($args[0])/FluentMigrator.Extensions.MySql.dll"
-rm "$($args[0])/FluentMigrator.Extensions.Oracle.dll"
-rm "$($args[0])/FluentMigrator.Extensions.Postgres.dll"
-rm "$($args[0])/FluentMigrator.Extensions.Snowflake.dll"
-rm "$($args[0])/FluentMigrator.Extensions.SqlServer.dll"
-rm "$($args[0])/FluentMigrator.Runner.Db2.dll"
-rm "$($args[0])/FluentMigrator.Runner.Firebird.dll"
-rm "$($args[0])/FluentMigrator.Runner.Hana.dll"
-rm "$($args[0])/FluentMigrator.Runner.MySql.dll"
-rm "$($args[0])/FluentMigrator.Runner.Oracle.dll"
-rm "$($args[0])/FluentMigrator.Runner.Postgres.dll"
-rm "$($args[0])/FluentMigrator.Runner.Redshift.dll"
-rm "$($args[0])/FluentMigrator.Runner.Snowflake.dll"
-rm "$($args[0])/FluentMigrator.Runner.SqlServer.dll"
-rm "$($args[0])/FirebirdSql.Data.FirebirdClient.dll"
-rm "$($args[0])/IBM.Data.Db2.dll"
-rm "$($args[0])/Microsoft.Data.SqlClient.dll"
-#rm "$($args[0])/Microsoft.Data.SqlClient.SNI.dll"
-rm "$($args[0])/Microsoft.IdentityModel.*.dll"
-rm "$($args[0])/Microsoft.Identity.*.dll"
-rm "$($args[0])/Microsoft.SqlServer.Server.dll"
-rm "$($args[0])/Microsoft.Bcl.AsyncInterfaces.dll"
-rm "$($args[0])/Microsoft.Bcl.Cryptography.dll"
-rm "$($args[0])/System.ClientModel.dll"
-rm "$($args[0])/System.Configuration.ConfigurationManager.dll"
-#rm "$($args[0])/System.Diagnostics.EventLog.dll"
-rm "$($args[0])/System.IdentityModel.Tokens.Jwt.dll"
-rm "$($args[0])/System.Memory.Data.dll"
-#rm "$($args[0])/System.Security.Cryptography.Pkcs.dll"
-rm "$($args[0])/System.Security.Cryptography.ProtectedData.dll"
-rm "$($args[0])/RTSharp.deps.json"
+$scFlag = if ($SelfContained) { "--self-contained" } else { "--no-self-contained" }
+$outDir = if ($SelfContained) { "$Rid-self-contained" } else { $Rid }
 
-rm "$($args[0])/plugins/*/*.xml"
-rm "$($args[0])/plugins/*/*.runtimeconfig.json"
+dotnet publish ./src/RTSharp -c Release -r $Rid $scFlag -o $outDir
+dotnet build ./src/plugins/RTSharp.AutoIntegrify.Plugin -c Release -r $Rid --no-self-contained /p:OutputPath="$(Join-Path $pwd $outDir 'plugins/AutoIntegrify')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
+dotnet build ./src/plugins/RTSharp.MassTrackerRewrite.Plugin -c Release -r $Rid --no-self-contained /p:OutputPath="$(Join-Path $pwd $outDir 'plugins/MassTrackerRewrite')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
+dotnet build ./src/plugins/RTSharp.ColoredRatio.Plugin -c Release -r $Rid --no-self-contained /p:OutputPath="$(Join-Path $pwd $outDir 'plugins/ColoredRatio')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
+dotnet build ./src/rtorrent/RTSharp.DataProvider.Rtorrent.Plugin -c Release -r $Rid --no-self-contained /p:OutputPath="$(Join-Path $pwd $outDir 'plugins/DataProvider.Rtorrent')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
+dotnet build ./src/qbittorrent/RTSharp.DataProvider.Qbittorrent.Plugin -c Release -r $Rid --no-self-contained /p:OutputPath="$(Join-Path $pwd $outDir 'plugins/DataProvider.Qbittorrent')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
+dotnet build ./src/transmission/RTSharp.DataProvider.Transmission.Plugin -c Release -r $Rid --no-self-contained /p:OutputPath="$(Join-Path $pwd $outDir 'plugins/DataProvider.Transmission')/" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
+rm -r "$outDir/clidriver" -ErrorAction SilentlyContinue
+rm "$outDir/TestConn.*" -ErrorAction SilentlyContinue
+rm "$outDir/*.xml" -ErrorAction SilentlyContinue
+rm "$outDir/Azure.*.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Extensions.MySql.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Extensions.Oracle.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Extensions.Postgres.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Extensions.Snowflake.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Extensions.SqlServer.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Runner.Db2.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Runner.Firebird.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Runner.Hana.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Runner.MySql.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Runner.Oracle.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Runner.Postgres.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Runner.Redshift.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Runner.Snowflake.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FluentMigrator.Runner.SqlServer.dll" -ErrorAction SilentlyContinue
+rm "$outDir/FirebirdSql.Data.FirebirdClient.dll" -ErrorAction SilentlyContinue
+rm "$outDir/IBM.Data.Db2.dll" -ErrorAction SilentlyContinue
+rm "$outDir/Microsoft.Data.SqlClient.dll" -ErrorAction SilentlyContinue
+#rm "$outDir/Microsoft.Data.SqlClient.SNI.dll"
+rm "$outDir/Microsoft.IdentityModel.*.dll" -ErrorAction SilentlyContinue
+rm "$outDir/Microsoft.Identity.*.dll" -ErrorAction SilentlyContinue
+rm "$outDir/Microsoft.SqlServer.Server.dll" -ErrorAction SilentlyContinue
+rm "$outDir/Microsoft.Bcl.AsyncInterfaces.dll" -ErrorAction SilentlyContinue
+rm "$outDir/Microsoft.Bcl.Cryptography.dll" -ErrorAction SilentlyContinue
+rm "$outDir/System.ClientModel.dll" -ErrorAction SilentlyContinue
+rm "$outDir/System.Configuration.ConfigurationManager.dll" -ErrorAction SilentlyContinue
+#rm "$outDir/System.Diagnostics.EventLog.dll"
+rm "$outDir/System.IdentityModel.Tokens.Jwt.dll" -ErrorAction SilentlyContinue
+rm "$outDir/System.Memory.Data.dll" -ErrorAction SilentlyContinue
+#rm "$outDir/System.Security.Cryptography.Pkcs.dll"
+rm "$outDir/System.Security.Cryptography.ProtectedData.dll" -ErrorAction SilentlyContinue
+
+rm "$outDir/plugins/*/*.xml" -ErrorAction SilentlyContinue
+rm "$outDir/plugins/*/*.runtimeconfig.json" -ErrorAction SilentlyContinue

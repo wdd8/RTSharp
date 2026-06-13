@@ -8,39 +8,48 @@ jobs:
     strategy:
       matrix:
         rid: [linux-x64, linux-arm64, win-x64, win-arm64]
+        self_contained: [false, true]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          token: ${{ secrets.PAT_TOKEN }}
       - name: Setup .NET Core SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Publish ${{ matrix.rid }}
-        run: pwsh scripts/publish.ps1 ${{ matrix.rid }}
-      - name: Publish daemon ${{ matrix.rid }}
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      - name: Publish ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
+        run: pwsh scripts/publish.ps1 ${{ matrix.rid }}${{ matrix.self_contained == true && ' -SelfContained' || '' }}
+      - name: Publish daemon ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
         if: startsWith(matrix.rid, 'linux-')
-        run: dotnet publish ./src/RTSharp.Daemon -c Release -r ${{ matrix.rid }} --no-self-contained -o ${{ matrix.rid }}-daemon
-      - name: Upload build ${{ matrix.rid }}
+        run: dotnet publish ./src/RTSharp.Daemon -c Release -r ${{ matrix.rid }} ${{ matrix.self_contained == true && '--self-contained' || '--no-self-contained' }} -o ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}
+      - name: Upload build ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.rid }}
-          path: ${{ matrix.rid }}
-      - name: Upload daemon ${{ matrix.rid }}
+          name: ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
+          path: ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
+      - name: Upload daemon ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
         if: startsWith(matrix.rid, 'linux-')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.rid }}-daemon
-          path: ${{ matrix.rid }}-daemon
+          name: ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}
+          path: ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}
 
   release:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
       - name: Setup .NET Core SDK
         uses: actions/setup-dotnet@v4
@@ -50,7 +59,7 @@ jobs:
         uses: actions/download-artifact@v4
       - name: Create GitHub release
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(grep -oP '(?<=<RTSharpVersion>)[^<]+' Version.props)
           if gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" &>/dev/null 2>&1; then
@@ -65,19 +74,30 @@ jobs:
           fi
           for RID in linux-x64 linux-arm64 win-x64 win-arm64; do
             (cd "$RID" && zip -r "../RTSharp-${RID}-v${VERSION}.zip" .)
+            (cd "${RID}-self-contained" && zip -r "../RTSharp-${RID}-self-contained-v${VERSION}.zip" .)
           done
           for RID in linux-x64 linux-arm64; do
             dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" client
+            dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" client-self-contained
             dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" daemon
+            dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" daemon-self-contained
           done
           gh release create "v${VERSION}" \
             --title "RTSharp v${VERSION}" \
             --notes-file release_notes.txt \
             RTSharp-linux-x64-v${VERSION}.zip \
+            RTSharp-linux-x64-self-contained-v${VERSION}.zip \
             RTSharp-linux-arm64-v${VERSION}.zip \
+            RTSharp-linux-arm64-self-contained-v${VERSION}.zip \
             RTSharp-win-x64-v${VERSION}.zip \
+            RTSharp-win-x64-self-contained-v${VERSION}.zip \
             RTSharp-win-arm64-v${VERSION}.zip \
+            RTSharp-win-arm64-self-contained-v${VERSION}.zip \
             rtsharp_${VERSION}_amd64.deb \
+            rtsharp-self-contained_${VERSION}_amd64.deb \
             rtsharp_${VERSION}_arm64.deb \
+            rtsharp-self-contained_${VERSION}_arm64.deb \
             rtsharp-daemon_${VERSION}_amd64.deb \
-            rtsharp-daemon_${VERSION}_arm64.deb
+            rtsharp-daemon-self-contained_${VERSION}_amd64.deb \
+            rtsharp-daemon_${VERSION}_arm64.deb \
+            rtsharp-daemon-self-contained_${VERSION}_arm64.deb

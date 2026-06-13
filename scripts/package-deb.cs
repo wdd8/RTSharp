@@ -11,16 +11,28 @@ var arch = rid switch {
     _ => throw new ArgumentException($"Unsupported RID: {rid}")
 };
 
-var (pkgName, srcDir, installDir, execName, binName, depends, recommends, description) = type switch {
+var (pkgName, srcDir, installDir, execName, binName, depends, recommends, description, conflicts) = type switch {
     "client" => (
         "rtsharp",
         rid,
         "usr/lib/rtsharp",
         "RTSharp",
         "rtsharp",
-        "dotnet-apphost-pack-10.0",
+        "",
         "mpv",
-        "RTSharp client GUI"
+        "RTSharp client GUI",
+        "rtsharp-self-contained"
+    ),
+    "client-self-contained" => (
+        "rtsharp-self-contained",
+        $"{rid}-self-contained",
+        "usr/lib/rtsharp",
+        "RTSharp",
+        "rtsharp",
+        "",
+        "mpv",
+        "RTSharp client GUI (self-contained)",
+        "rtsharp"
     ),
     "daemon" => (
         "rtsharp-daemon",
@@ -28,9 +40,21 @@ var (pkgName, srcDir, installDir, execName, binName, depends, recommends, descri
         "usr/lib/rtsharp-daemon",
         "RTSharp.Daemon",
         "rtsharp-daemon",
-        "dotnet-apphost-pack-10.0",
         "",
-        "RTSharp daemon service"
+        "",
+        "RTSharp daemon service",
+        "rtsharp-daemon-self-contained"
+    ),
+    "daemon-self-contained" => (
+        "rtsharp-daemon-self-contained",
+        $"{rid}-daemon-self-contained",
+        "usr/lib/rtsharp-daemon",
+        "RTSharp.Daemon",
+        "rtsharp-daemon",
+        "",
+        "",
+        "RTSharp daemon service (self-contained)",
+        "rtsharp-daemon"
     ),
     _ => throw new ArgumentException($"Unknown type: {type}")
 };
@@ -62,14 +86,71 @@ control.AppendLine($"Version: {version}");
 control.AppendLine($"Architecture: {arch}");
 control.AppendLine("Maintainer: wdd8 <wdd@riseup.net>");
 control.AppendLine($"Installed-Size: {size}");
-control.AppendLine($"Depends: {depends}");
+if (!String.IsNullOrEmpty(depends))
+    control.AppendLine($"Depends: {depends}");
 if (!String.IsNullOrEmpty(recommends))
     control.AppendLine($"Recommends: {recommends}");
+if (!String.IsNullOrEmpty(conflicts)) {
+    control.AppendLine($"Conflicts: {conflicts}");
+    control.AppendLine($"Replaces: {conflicts}");
+}
 control.AppendLine("Section: utils");
 control.AppendLine("Priority: optional");
 control.AppendLine($"Description: {description}");
 
 File.WriteAllText(Path.Combine(pkgDir, "DEBIAN", "control"), control.ToString());
+
+if (type == "daemon" || type == "daemon-self-contained") {
+    var execMode =
+        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+        UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+        UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
+
+    var systemdDir = Path.Combine(pkgDir, "lib", "systemd", "system");
+    Directory.CreateDirectory(systemdDir);
+    File.WriteAllText(Path.Combine(systemdDir, "rtsharp-daemon.service"),
+"""
+[Unit]
+Description=RTSharp Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/rtsharp-daemon/RTSharp.Daemon
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+LockPersonality=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
+""");
+
+    var postinst = Path.Combine(pkgDir, "DEBIAN", "postinst");
+    File.WriteAllText(postinst, "#!/bin/bash\nset -e\nsystemctl daemon-reload || true\n");
+    File.SetUnixFileMode(postinst, execMode);
+
+    var prerm = Path.Combine(pkgDir, "DEBIAN", "prerm");
+    File.WriteAllText(prerm,
+"""
+#!/bin/bash
+set -e
+if systemctl is-active --quiet rtsharp-daemon 2>/dev/null; then
+    systemctl stop rtsharp-daemon || true
+fi
+if systemctl is-enabled --quiet rtsharp-daemon 2>/dev/null; then
+    systemctl disable rtsharp-daemon || true
+fi
+""");
+    File.SetUnixFileMode(prerm, execMode);
+}
 
 Run("dpkg-deb", ["--build", "--root-owner-group", pkgDir]);
 
