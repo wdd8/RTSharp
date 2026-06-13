@@ -145,7 +145,7 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var addr in result.Addresses)
                 InterfaceAddresses.Add(addr);
 
-            if (!InterfaceAddresses.Contains(SelectedInterfaceAddress))
+            if (SelectedInterfaceAddress != null && !InterfaceAddresses.Contains(SelectedInterfaceAddress))
                 SelectedInterfaceAddress = AnyAddressDisplay;
         } catch { }
     }
@@ -156,12 +156,12 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     public partial bool SaveSettingsEnabled { get; set; } = true;
 
-    public Plugin ThisPlugin { private get; init; }
-    public IPluginHost PluginHost { get; init; }
+    public required Plugin ThisPlugin { private get; init; }
+    public required IPluginHost PluginHost { get; init; }
 
-    public Window ThisWindow { get; set; }
+    public Window ThisWindow { get; set; } = null!; // init set
 
-    public string Title { get; init; }
+    public required string Title { get; init; }
 
     [ObservableProperty]
     public partial Settings Settings { get; set; }

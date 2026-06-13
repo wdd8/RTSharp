@@ -38,7 +38,7 @@ public interface IPlugin
     /// <remarks>Used to access data from plugin to plugin. See target plugin documentation for input and output formats</remarks>
     /// <param name="In">Anything and everything</param>
     /// <returns>Anything and everything</returns>
-    Task<dynamic> CustomAccess(dynamic In) => throw new NotImplementedException();
+    Task<dynamic?> CustomAccess(dynamic? In) => throw new NotImplementedException();
 
     /// <summary>
     /// Form for plugin settings

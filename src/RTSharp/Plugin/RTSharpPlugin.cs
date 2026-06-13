@@ -35,8 +35,6 @@ public class RTSharpPlugin : IPluginHost
 
     public string ModulePath { get; init; }
 
-    public string FullModulePath => Path.GetFullPath(Path.Combine(Consts.PLUGINS_PATH, ModulePath));
-
     public Guid InstanceId { get; init; }
 
     public IConfigurationRoot PluginConfig { get; }
@@ -67,6 +65,10 @@ public class RTSharpPlugin : IPluginHost
         this.PluginInstanceConfig = PluginConfig.GetSection("Plugin").Get<PluginInstanceConfig>()!;
 
         this.InstanceId = InstanceId;
+
+        if (!Path.IsPathRooted(ModulePath))
+            throw new InvalidOperationException($"{nameof(ModulePath)} must be rooted");
+
         this.ModulePath = ModulePath;
     }
 
@@ -140,12 +142,13 @@ public class RTSharpPlugin : IPluginHost
     {
         Dispatcher.UIThread.VerifyAccess();
 
-        var fx = (System.Collections.IList items) => {
+        MenuItem fx(System.Collections.IList items)
+        {
             var control = In();
             Debug.Assert(control.GetVisualParent() == null);
             items.Add(control);
             return control;
-        };
+        }
         RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Add(fx);
         return Disposable.Create(() => {
             RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Remove(fx);

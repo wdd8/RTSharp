@@ -5,6 +5,7 @@
         <EnableDynamicLoading>true</EnableDynamicLoading>
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
         <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
         <OutputPath>$(SolutionDir)src\RTSharp\bin\$(Configuration)\$(TargetFramework)\plugins\DataProvider.Qbittorrent</OutputPath>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     </PropertyGroup>

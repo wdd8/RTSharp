@@ -18,15 +18,14 @@ public partial class MainWindowViewModel : ObservableObject
 {
     public MainWindowViewModel()
     {
-        currentlySelectedCategory = Categories[0];
+        CurrentlySelectedCategory = Categories[0];
     }
 
     [RelayCommand]
     public async Task SaveSettingsClick()
     {
         SavingSettings = true;
-        var daemon = PluginHost.AttachedDaemonService;
-        var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
+        var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
         Func<ActionQueueAction, Task<CommandReply>> setSettingsTask = async (task) => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
@@ -47,27 +46,27 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    public bool savingSettings;
+    public partial bool SavingSettings { get; set; }
 
     [ObservableProperty]
-    public bool saveSettingsEnabled = true;
+    public partial bool SaveSettingsEnabled { get; set; } = true;
 
-    public Plugin ThisPlugin { private get; init; }
-    public IPluginHost PluginHost { get; init; }
+    public required Plugin ThisPlugin { private get; init; }
+    public required IPluginHost PluginHost { get; init; }
 
-    public Window ThisWindow { get; set; }
+    public Window ThisWindow { get; set; } = null!; // init set
 
-    public string Title { get; init; }
+    public required string Title { get; init; }
 
     [ObservableProperty]
-    public Settings settings;
+    public required partial Settings Settings { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(GeneralSelected))]
     [NotifyPropertyChangedFor(nameof(PeersSelected))]
     [NotifyPropertyChangedFor(nameof(ConnectionSelected))]
     [NotifyPropertyChangedFor(nameof(AdvancedSelected))]
-    public Category currentlySelectedCategory;
+    public partial Category CurrentlySelectedCategory { get; set; }
 
     public bool GeneralSelected => CurrentlySelectedCategory?.Name == "General";
     public bool PeersSelected => CurrentlySelectedCategory?.Name == "Peers";

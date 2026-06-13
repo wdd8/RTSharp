@@ -21,6 +21,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -607,6 +608,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         [GeneratedRegex(@"^rsync: (sent [\d,]+ bytes +received [\d,]+ bytes +[\d,\.]+ bytes\/sec)|(total size is [\d,]+ +speedup is [\d\.,]+)$")]
         private static partial Regex RsyncEndRegex();
 
+        [UnsupportedOSPlatform("windows")]
         public async Task<BytesValue> MoveDownloadDirectory(MoveDownloadDirectoryArgs Req, CancellationToken CancellationToken)
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);

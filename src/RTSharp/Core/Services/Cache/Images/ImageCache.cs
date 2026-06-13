@@ -118,16 +118,16 @@ namespace RTSharp.Core.Services.Cache.Images
 
             await using var conn = await New();
 
-            var d = await conn.QueryFirstOrDefaultAsync<CachedImage>("select Image from Images where ImageHash = @Hash", new
+            var d = await conn.QueryFirstOrDefaultAsync<CachedImage?>("select Image from Images where ImageHash = @Hash", new
             {
                 Hash = ImageHash
             });
 
-            if (d == default)
+            if (d == null || d.Value.Image == default)
                 return null;
 
             using var mem = new MemoryStream();
-            mem.Write(d.Image);
+            mem.Write(d.Value.Image);
             mem.Position = 0;
             var image = new Bitmap(mem);
 

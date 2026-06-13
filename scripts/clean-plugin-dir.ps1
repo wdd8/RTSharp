@@ -20,7 +20,7 @@ Function OtherExts {
     $Input
   )
 
-  $Input | Where-Object { $_.Name -like "*.pdb" -or $_.Name -like "*.exe" -or $_.Name -like "*.runtimeconfig.json" -or $_.Name -like "*.so" }
+  $Input | Where-Object { $_.Name -like "*.pdb" -or $_.Name -like "*.exe" -or $_.Name -like "*.xml" -or $_.Name -like "*.runtimeconfig.json" -or $_.Name -like "*.so" }
 }
 
 Function AlwaysDelete {
@@ -28,7 +28,7 @@ Function AlwaysDelete {
     $Input
   )
 
-  $Input | Where-Object { $_.Name -like "*.deps.json" -or $_.Name -eq "RTSharp" -or $_.Name -eq "clidriver" -or $_.Name -eq "runtimes" }
+  $Input | Where-Object { $_.Name -eq "RTSharp" -or $_.Name -eq "runtimes" }
 }
 
 $mainOther = Get-ChildItem -Path $mainDirPath | OtherExts;

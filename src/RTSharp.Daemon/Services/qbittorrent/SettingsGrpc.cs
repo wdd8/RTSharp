@@ -215,7 +215,7 @@ public class SettingsGrpc
             ProxyAddress = p.ProxyAddress,
             ProxyPort = p.ProxyPort,
             ProxyHostnameLookup = p.ProxyHostnameLookup,
-            ProxyAuthenticationEnabled = p.ProxyAuthenticationEnabled,
+            ProxyAuthenticationEnabled = p.ProxyType != ProxyType.None,
             ProxyUsername = p.ProxyUsername,
             ProxyPassword = p.ProxyPassword,
             ProxyBittorrent = p.ProxyBittorrent,
@@ -478,7 +478,9 @@ public class SettingsGrpc
             ProxyAddress = r.ProxyAddress,
             ProxyPort = r.ProxyPort,
             ProxyHostnameLookup = r.ProxyHostnameLookup,
+#pragma warning disable CS0618 // Type or member is obsolete
             ProxyAuthenticationEnabled = r.ProxyAuthenticationEnabled,
+#pragma warning restore CS0618 // Type or member is obsolete
             ProxyUsername = r.ProxyUsername,
             ProxyPassword = r.ProxyPassword,
             ProxyBittorrent = r.ProxyBittorrent,

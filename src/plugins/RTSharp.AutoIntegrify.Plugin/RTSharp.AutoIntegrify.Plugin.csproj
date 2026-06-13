@@ -1,9 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <Nullable>enable</Nullable>
     <OutputPath>$(SolutionDir)src\RTSharp\bin\$(Configuration)\$(TargetFramework)\plugins\AutoIntegrify</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
@@ -11,10 +13,6 @@
   <PropertyGroup Label="Avalonia">
     <AvaloniaUseCompiledBindingsByDefault>True</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
-
-  <ItemGroup>
-    <TrimmerRootDescriptor Include="Roots.xml" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.4" />

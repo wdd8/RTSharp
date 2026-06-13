@@ -45,7 +45,9 @@ public sealed class TorrentStore
     private List<Models.Torrent> PendingAdded = new();
     private List<Models.Torrent> PendingRefreshed = new();
     private List<Models.Torrent> PendingRemoved = new();
+#if DEBUG
     private bool InEdit;
+#endif
 
     private readonly VisibleCollection Visible = new();
     private readonly ReadOnlyObservableCollection<Models.Torrent> _readOnly;
@@ -96,8 +98,8 @@ public sealed class TorrentStore
 #if DEBUG
         if (InEdit)
             throw new InvalidOperationException("Nested edits are not allowed.");
-#endif
         InEdit = true;
+#endif
 
         List<Models.Torrent> added, refreshed, removed;
         lock (Lock) {
@@ -110,7 +112,9 @@ public sealed class TorrentStore
             removed = PendingRemoved;
             PendingRemoved = [];
         }
+#if DEBUG
         InEdit = false;
+#endif
 
         if (added.Count == 0 && refreshed.Count == 0 && removed.Count == 0)
             return;

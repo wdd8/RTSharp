@@ -1,6 +1,7 @@
 ﻿using RTSharp.Daemon.Protocols.DataProvider.Settings;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
@@ -32,6 +33,8 @@ public static class SettingsMapper
         "network_proxy_address",
         "network_bind_address"
     };
+
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RtorrentSettings))]
 
     public static Models.Settings MapFromProto(RtorrentSettings In)
     {
@@ -69,13 +72,14 @@ public static class SettingsMapper
         foreach (var setting in AdvancedSettings) {
             var upperCamel = String.Join("", setting.Split('_').Select(i => Char.ToUpper(i[0]) + i[1..]));
 
-            var val = In.GetType().GetProperty(upperCamel).GetValue(In);
-            ret.Advanced.Add(new Models.AdvancedSetting(setting, val.ToString()));
+            var val = In.GetType().GetProperty(upperCamel)!.GetValue(In)!;
+            ret.Advanced.Add(new Models.AdvancedSetting(setting, val.ToString()!));
         }
 
         return ret;
     }
 
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Models.Settings))]
     public static RtorrentSettings MapToProto(Models.Settings In)
     {
         var ret = new RtorrentSettings() {
@@ -108,7 +112,7 @@ public static class SettingsMapper
             var upperCamel = String.Join("", setting.Split('_').Select(i => Char.ToUpper(i[0]) + i[1..]));
 
             var val = In.Advanced.First(x => x.Key == setting).Value;
-            var prop = ret.GetType().GetProperty(upperCamel);
+            var prop = ret.GetType().GetProperty(upperCamel)!;
             if (prop.PropertyType == typeof(long)) {
                 prop.SetValue(ret, Int64.Parse(val));
             } else if (prop.PropertyType == typeof(bool)) {

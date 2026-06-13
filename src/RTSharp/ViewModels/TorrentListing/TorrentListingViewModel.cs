@@ -32,6 +32,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading;
@@ -445,6 +446,8 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
         AddLabelMenuItem = new MenuItem { Command = ShowAddLabelCommand, Header = "Add..." };
     }
 
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Torrent))]
+    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Accesses Torrent")]
     public void AttachGridData()
     {
         View = new DataGridCollectionView(VisibleTorrents);

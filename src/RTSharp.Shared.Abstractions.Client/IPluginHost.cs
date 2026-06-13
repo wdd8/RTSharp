@@ -43,14 +43,9 @@ public interface IPluginHost
     object MainWindow { get; }
 
     /// <summary>
-    /// Module path as in specified in config + manifest
+    /// Full module path as resolved from config + manifest
     /// </summary>
     string ModulePath { get; }
-
-    /// <summary>
-    /// Full module path
-    /// </summary>
-    string FullModulePath { get; }
 
     /// <summary>
     /// Instance ID

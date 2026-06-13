@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.Loader;
 
 namespace RTSharp.Plugin
 {
+    [RequiresUnreferencedCode("Plugins")]
     public class PluginAssemblyLoadContext : AssemblyLoadContext
     {
         private AssemblyDependencyResolver Resolver;
@@ -16,13 +17,14 @@ namespace RTSharp.Plugin
 
         protected override Assembly? Load(AssemblyName name)
         {
-            if (AssemblyLoadContext.Default.Assemblies.Any(a => a.FullName == name.FullName))
-                return null;
-
             var assemblyPath = Resolver.ResolveAssemblyToPath(name);
             if (assemblyPath != null)
                 return LoadFromAssemblyPath(assemblyPath);
 
+            // Not a plugin-private dependency: return null so the runtime resolves it from
+            // the host's Default ALC. Since the host is published untrimmed, every framework
+            // and shared assembly is present there with its full surface, keeping a single
+            // Type identity across the host and every plugin.
             return null;
         }
 

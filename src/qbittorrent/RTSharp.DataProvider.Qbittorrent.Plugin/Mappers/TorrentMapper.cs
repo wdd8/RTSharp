@@ -26,6 +26,7 @@
                 QBittorrent.Client.TorrentState.QueuedForChecking => Shared.Abstractions.TORRENT_STATE.HASHING,
                 QBittorrent.Client.TorrentState.CheckingResumeData => Shared.Abstractions.TORRENT_STATE.HASHING | Shared.Abstractions.TORRENT_STATE.ACTIVE,
                 QBittorrent.Client.TorrentState.Moving => Shared.Abstractions.TORRENT_STATE.ALLOCATING | Shared.Abstractions.TORRENT_STATE.HASHING, // ???
+                _ => throw new ArgumentOutOfRangeException(nameof(In))
             };
         }
 
@@ -229,6 +230,7 @@
                 QBittorrent.Client.TorrentTrackerStatus.Working => Shared.Abstractions.Tracker.TRACKER_STATUS.ENABLED | Shared.Abstractions.Tracker.TRACKER_STATUS.ACTIVE,
                 QBittorrent.Client.TorrentTrackerStatus.Updating => Shared.Abstractions.Tracker.TRACKER_STATUS.ENABLED,
                 QBittorrent.Client.TorrentTrackerStatus.NotWorking => Shared.Abstractions.Tracker.TRACKER_STATUS.ENABLED | Shared.Abstractions.Tracker.TRACKER_STATUS.NOT_ACTIVE,
+                _ => throw new ArgumentOutOfRangeException(nameof(In))
             };
         }
 
@@ -237,7 +239,7 @@
             return new Shared.Abstractions.Tracker {
                 ID = In.Url.OriginalString,
                 Uri = In.Url.ToString(),
-                Status = MapFromExternal(In.TrackerStatus.Value),
+                Status = MapFromExternal(In.TrackerStatus!.Value),
                 Seeders = (uint)(In.Seeds ?? 0),
                 Peers = (uint)(In.Peers ?? 0),
                 // Where do leeches come in?

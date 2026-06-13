@@ -8,7 +8,7 @@ public class PluginInstanceConfig
         this.Color = Color;
     }
 
-    [Obsolete("For serialization only", true)]
+    [Obsolete("For serialization only", false)]
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
     public PluginInstanceConfig()
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
@@ -16,5 +16,5 @@ public class PluginInstanceConfig
     }
 
     public string Name { get; set; }
-    public string Color { get; init; }
+    public string Color { get; set; }
 }

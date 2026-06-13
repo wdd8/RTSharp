@@ -8,6 +8,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 
@@ -291,8 +292,10 @@ namespace RTSharp.ViewModels.TorrentListing
             return false;
         }
 
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Accesses columns")]
         private sealed class DynamicDataFilteringAdapter(IFilteringModel model, Func<IEnumerable<DataGridColumn>> columns, Action<IReadOnlyList<FilteringDescriptor>> FxUpdate) : DataGridFilteringAdapter(model, columns)
         {
+            [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TorrentListingViewModel))]
             protected override bool TryApplyModelToView(
                 IReadOnlyList<FilteringDescriptor> descriptors,
                 IReadOnlyList<FilteringDescriptor> previousDescriptors,

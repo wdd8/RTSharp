@@ -27,7 +27,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
 
         public async Task AddPeer(Torrent Torrent, IPEndPoint Peer, CancellationToken cancellationToken = default)
         {
-            var client = PluginHost.AttachedDaemonService.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+            var client = PluginHost.AttachedDaemonService!.GetTorrentsService(ThisPlugin.DataProvider.Instance);
 
             await client.AddPeer(Torrent.Hash, Peer, cancellationToken);
         }

@@ -3,6 +3,7 @@ using Grpc.Core;
 using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Utils;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Threading.Channels;
 
@@ -110,7 +111,7 @@ public interface IDaemonService
     /// <returns></returns>
     Task LinkFiles(List<KeyValuePair<string, string>> SrcToDst, bool Reflink, bool Hardlink);
 
-    T GetGrpcService<T>()
+    T GetGrpcService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>()
         where T : ClientBase<T>;
 
     IDaemonTorrentsService GetTorrentsService(IDataProvider DataProvider);

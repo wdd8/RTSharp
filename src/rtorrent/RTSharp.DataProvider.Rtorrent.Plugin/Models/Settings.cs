@@ -7,55 +7,55 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.Models
     public partial class General : ObservableObject
     {
         [ObservableProperty]
-        public long maximumMemoryUsage;
+        public partial long MaximumMemoryUsage { get; set; }
         [ObservableProperty]
-        public bool checkHashAfterDownload;
+        public partial bool CheckHashAfterDownload { get; set; }
         [ObservableProperty]
-        public string defaultDirectoryForDownloads;
+        public partial string DefaultDirectoryForDownloads { get; set; }
     }
 
     public partial class Peers : ObservableObject
     {
         [ObservableProperty]
-        public long numberOfUploadSlots;
+        public partial long NumberOfUploadSlots { get; set; }
         [ObservableProperty]
-        public long minimumNumberOfPeers;
+        public partial long MinimumNumberOfPeers { get; set; }
         [ObservableProperty]
-        public long maximumNumberOfPeers;
+        public partial long MaximumNumberOfPeers { get; set; }
         [ObservableProperty]
-        public long minimumNumberOfPeersForSeeding;
+        public partial long MinimumNumberOfPeersForSeeding { get; set; }
         [ObservableProperty]
-        public long maximumNumberOfPeersForSeeding;
+        public partial long MaximumNumberOfPeersForSeeding { get; set; }
         [ObservableProperty]
-        public long wishedNumberOfPeers;
+        public partial long WishedNumberOfPeers { get; set; }
     }
 
     public partial class Connection : ObservableObject
     {
         [ObservableProperty]
-        public long maximumDownloadRate;
+        public partial long MaximumDownloadRate { get; set; }
         [ObservableProperty]
-        public long maximumUploadRate;
+        public partial long MaximumUploadRate { get; set; }
         [ObservableProperty]
-        public bool openListeningPort;
+        public partial bool OpenListeningPort { get; set; }
         [ObservableProperty]
-        public bool randomizePort;
+        public partial bool RandomizePort { get; set; }
         [ObservableProperty]
-        public string portUsedForIncomingConnections;
+        public partial string PortUsedForIncomingConnections { get; set; }
         [ObservableProperty]
-        public long globalNumberOfUploadSlots;
+        public partial long GlobalNumberOfUploadSlots { get; set; }
         [ObservableProperty]
-        public long globalNumberOfDownloadSlots;
+        public partial long GlobalNumberOfDownloadSlots { get; set; }
         [ObservableProperty]
-        public long maximumNumberOfOpenFiles;
+        public partial long MaximumNumberOfOpenFiles { get; set; }
         [ObservableProperty]
-        public long maximumNumberOfOpenHttpConnections;
+        public partial long MaximumNumberOfOpenHttpConnections { get; set; }
         [ObservableProperty]
-        public int dhtPort;
+        public partial int DhtPort { get; set; }
         [ObservableProperty]
-        public bool enablePeerExchange;
+        public partial bool EnablePeerExchange { get; set; }
         [ObservableProperty]
-        public string ipToReportToTracker;
+        public partial string IpToReportToTracker { get; set; }
     }
 
     public class AdvancedSetting : ObservableObject
@@ -72,10 +72,10 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.Models
 
     public partial class Settings : ObservableObject
     {
-        public General General { get; set; }
-        public Peers Peers { get; set; }
-        public Connection Connection { get; set; }
+        public required General General { get; set; }
+        public required Peers Peers { get; set; }
+        public required Connection Connection { get; set; }
         [ObservableProperty]
-        public List<AdvancedSetting> advanced;
+        public required partial List<AdvancedSetting> Advanced { get; set; }
     }
 }

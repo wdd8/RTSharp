@@ -5,10 +5,23 @@
             <PluginName>$(ProjectName.TrimStart("RTSharp.").TrimEnd(".Plugin"))</PluginName>
             <ScriptsDir Condition="'$(ScriptsDir)' == ''">$(SolutionDir)scripts/</ScriptsDir>
         </PropertyGroup>
-        <Message Text="Removing redundant files..." />
+        <Message Importance="High" Text="Removing redundant files from build output..." />
         <Exec
             LogStandardErrorAsError="true"
             Command="pwsh -NonInteractive -ExecutionPolicy Unrestricted -File &quot;$(ScriptsDir)clean-plugin-dir.ps1&quot; &quot;$(MainAppExeDir.TrimEnd('\'))&quot; &quot;$(OutputPath.TrimEnd('\'))&quot;"
+        />
+    </Target>
+
+    <Target Name="PluginPostPublish" AfterTargets="Publish">
+        <PropertyGroup>
+            <MainAppExeDir>$(PublishDir)../../</MainAppExeDir>
+            <PluginName>$(ProjectName.TrimStart("RTSharp.").TrimEnd(".Plugin"))</PluginName>
+            <ScriptsDir Condition="'$(ScriptsDir)' == ''">$(SolutionDir)scripts/</ScriptsDir>
+        </PropertyGroup>
+        <Message Importance="High" Text="Removing redundant files from publish output..." />
+        <Exec
+            LogStandardErrorAsError="true"
+            Command="pwsh -NonInteractive -ExecutionPolicy Unrestricted -File &quot;$(ScriptsDir)clean-plugin-dir.ps1&quot; &quot;$(MainAppExeDir.TrimEnd('\'))&quot; &quot;$(PublishDir.TrimEnd('\'))&quot;"
         />
     </Target>
 </Project>

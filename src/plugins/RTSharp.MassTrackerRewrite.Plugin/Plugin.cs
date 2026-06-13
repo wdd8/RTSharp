@@ -26,11 +26,11 @@ public class Plugin : BasePlugin
         HasSettingsWindow: false
     );
 
-    public override IPluginHost Host { get; set; }
+    public required override IPluginHost Host { get; set; }
 
-    IDisposable Hook;
+    IDisposable? Hook;
 
-    public override Task<dynamic> CustomAccess(dynamic In) => Task.FromResult<dynamic>(null);
+    public override Task<dynamic?> CustomAccess(dynamic? In) => Task.FromResult<dynamic?>(null);
 
     public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
     {

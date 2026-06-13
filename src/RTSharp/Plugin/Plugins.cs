@@ -17,6 +17,7 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -200,6 +201,9 @@ namespace RTSharp.Plugin
             return Path.Combine(Consts.PLUGINS_CONFIG_PATH, $"{modName}-{next}.json");
         }
 
+        [RequiresUnreferencedCode("Plugins")]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPlugin))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Shared.Abstractions.DataProvider.IDataProvider))]
         public static async Task LoadPlugin(string Path, Action<(string Status, float Percentage)> Progress)
         {
             var pluginName = Path[(Path.LastIndexOfAny(['/', '\\']) + 1)..];
@@ -356,6 +360,7 @@ namespace RTSharp.Plugin
             Progress(($"Loaded plugin {pluginName}", 100f));
         }
 
+        [RequiresUnreferencedCode("Plugins")]
         public static async Task LoadPlugins(Action<float, string> Progress)
         {
             if (!Directory.Exists(Consts.PLUGINS_CONFIG_PATH)) {

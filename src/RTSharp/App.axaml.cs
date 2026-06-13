@@ -25,8 +25,6 @@ using RTSharp.Core.Services.Cache.TorrentPropertiesCache;
 using RTSharp.Core.Services.Daemon;
 using RTSharp.Core.Services.Database.TrackerDb;
 using RTSharp.Core.TorrentPolling;
-using RTSharp.Shared.Controls;
-using RTSharp.Shared.Controls.Views;
 using RTSharp.ViewModels;
 using RTSharp.Views;
 
@@ -196,7 +194,9 @@ public class App : Application
                         Task.Run(scope.ServiceProvider.GetRequiredService<ASCache>().Initialize),
                         Task.Run(scope.ServiceProvider.GetRequiredService<ImageCache>().Initialize),
                         Task.Run(scope.ServiceProvider.GetRequiredService<TrackerDb>().Initialize),
+#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
                         Task.Run(() => Plugin.Plugins.LoadPlugins((progress, text) => { })),
+#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
                         Task.Run(scope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>().Initialize)
                     );
 

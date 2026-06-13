@@ -68,7 +68,7 @@ public class Config
 
         public class Server
         {
-            public required string Host { get; set; }
+            public string Host { get; set; } = null!; // set by deserializer
 
             public ushort DaemonPort { get; set; }
 

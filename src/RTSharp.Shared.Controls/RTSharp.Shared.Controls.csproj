@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Version>1.0.0.0</Version>
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <Nullable>enable</Nullable>
         <LangVersion>preview</LangVersion>
     </PropertyGroup>
 

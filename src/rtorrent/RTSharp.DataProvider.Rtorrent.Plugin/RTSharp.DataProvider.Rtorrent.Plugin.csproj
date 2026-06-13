@@ -3,6 +3,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <EnableDynamicLoading>true</EnableDynamicLoading>
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+        <Nullable>enable</Nullable>
         <OutputPath>$(SolutionDir)src\RTSharp\bin\$(Configuration)\$(TargetFramework)\plugins\DataProvider.Rtorrent</OutputPath>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     </PropertyGroup>

@@ -27,8 +27,7 @@ public class DataProviderFiles : IDataProviderFiles
 
     public async Task<string> GetDefaultSavePath()
     {
-        var daemon = PluginHost.AttachedDaemonService;
-        var client = daemon.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
+        var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
         var settings = await client.GetSettingsAsync(new Empty(), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
 

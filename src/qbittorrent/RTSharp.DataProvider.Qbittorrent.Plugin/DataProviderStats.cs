@@ -22,8 +22,8 @@ public class DataProviderStats : IDataProviderStats
 
     public Task<AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken)
     {
-        var client = PluginHost.AttachedDaemonService.GetStatsService(ThisPlugin.DataProvider.Instance);
-
+        var client = PluginHost.AttachedDaemonService!.GetStatsService(ThisPlugin.DataProvider.Instance);
+        
         return client.GetAllTimeDataStats(cancellationToken);
     }
 }

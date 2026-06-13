@@ -40,17 +40,17 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
 
     public partial class FileInfo : ObservableObject
     {
-        public TorrentFile File { get; init; }
+        public required TorrentFile File { get; init; }
 
-        public (ulong Start, ulong End, byte[] Hash)[] PieceHashes { get; init; }
+        public required (ulong Start, ulong End, byte[] Hash)[] PieceHashes { get; init; }
 
         public Range PieceRange { get; init; }
 
         [ObservableProperty]
-        public string? resolvedPath;
+        public partial string? ResolvedPath { get; set; }
 
         [ObservableProperty]
-        public Bitmap? statusIcon;
+        public partial Bitmap? StatusIcon { get; set; }
 
         public RESOLVE_STATE Resolved {
             get {
@@ -71,25 +71,25 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
     }
 
     [ObservableProperty]
-    public ObservableCollection<FileInfo> files = new();
+    public partial ObservableCollection<FileInfo> Files { get; set; } = new();
 
     [ObservableProperty]
-    public FileInfo selectedFile;
+    public partial FileInfo SelectedFile { get; set; }
 
     [ObservableProperty]
-    List<PieceState> pieces;
+    public partial List<PieceState> Pieces { get; set; }
 
     [ObservableProperty]
-    public string progressText = "Loading...";
+    public partial string ProgressText { get; set; } = "Loading...";
 
     [ObservableProperty]
-    public bool progressDialogShown;
+    public partial bool ProgressDialogShown { get; set; }
 
     [ObservableProperty]
-    public string statusText = "There are files still unresolved";
+    public partial string StatusText { get; set; } = "There are files still unresolved";
 
     [ObservableProperty]
-    public string actionButtonText = "Perform pending hardlinks";
+    public partial string ActionButtonText { get; set; } = "Perform pending hardlinks";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
@@ -99,9 +99,9 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
 
     private bool IsMultiFile;
 
-    Dictionary<string, string> PendingLinks = new();
+    Dictionary<string, string> PendingLinks = [];
 
-    List<string> AdditionalPaths;
+    List<string> AdditionalPaths = null!; // OnContextPopulated
     int RandomPiecesToCheck;
     int SearchRecursionLimit;
     bool Reflink;
@@ -621,7 +621,7 @@ done:;
         await Integrify();
     }
 
-    partial void OnSelectedFileChanging(FileInfo? oldValue, FileInfo newValue)
+    partial void OnSelectedFileChanging(FileInfo oldValue, FileInfo newValue)
     {
         if (oldValue != null && oldValue.PieceHashes.Length != 0) {
             RefreshPieces(oldValue, newValue);

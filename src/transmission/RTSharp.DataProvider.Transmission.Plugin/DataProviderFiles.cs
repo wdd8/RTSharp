@@ -24,7 +24,7 @@ public class DataProviderFiles : IDataProviderFiles
 
     public async Task<string> GetDefaultSavePath()
     {
-        var client = PluginHost.AttachedDaemonService.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
+        var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
 
         return (await client.GetSessionInformationAsync(new Empty(), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders())).DownloadDirectory;
     }

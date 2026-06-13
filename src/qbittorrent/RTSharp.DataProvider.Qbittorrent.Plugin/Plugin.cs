@@ -32,18 +32,18 @@ public class Plugin : BasePlugin
         HasSettingsWindow: true
     );
 
-    public override Task<dynamic> CustomAccess(dynamic In)
+    public override Task<dynamic?> CustomAccess(dynamic? In)
     {
-        return null;
+        return null!;
     }
 
-    public override IPluginHost Host { get; set; }
+    public required override IPluginHost Host { get; set; }
 
-    public IDataProviderHost DataProvider { get; set; }
+    public required IDataProviderHost DataProvider { get; set; }
 
-    internal DefaultActionQueueRenderer ActionQueue { get; set; }
+    internal DefaultActionQueueRenderer ActionQueue { get; set; } = null!; // init set
 
-    private CancellationTokenSource DataProviderActive { get; set; }
+    private CancellationTokenSource DataProviderActive { get; set; } = null!; // init set
 
     public override async Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
     {

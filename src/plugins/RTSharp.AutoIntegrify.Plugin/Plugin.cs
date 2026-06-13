@@ -31,11 +31,11 @@ public class Plugin : BasePlugin
         HasSettingsWindow: true
     );
 
-    IDisposable MenuItem;
+    IDisposable? MenuItem;
 
-    public override IPluginHost Host { get; set; }
+    public required override IPluginHost Host { get; set; }
 
-    public override Task<dynamic> CustomAccess(dynamic In) => Task.FromResult<dynamic>(null);
+    public override Task<dynamic?> CustomAccess(dynamic? In) => Task.FromResult<dynamic?>(null);
 
     public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
     {
@@ -43,7 +43,7 @@ public class Plugin : BasePlugin
         Progress(("Initializing...", 0f));
 
         Dispatcher.UIThread.Invoke(() => {
-            Host.RegisterTorrentContextMenuItem(list => {
+            MenuItem = Host.RegisterTorrentContextMenuItem(list => {
                 var newMenuItem = new MenuItem {
                     Header = "Align file integrity & recheck",
                     Command = new AsyncRelayCommand<IReadOnlyList<Torrent>>(selected => {

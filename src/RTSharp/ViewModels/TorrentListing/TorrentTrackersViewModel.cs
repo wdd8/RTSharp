@@ -22,6 +22,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -46,6 +47,8 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public bool HasSelectedItem => SelectedItem != null;
 
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Models.Tracker))]
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Accesses Tracker")]
         public TorrentTrackersViewModel(TorrentListingViewModel Parent)
         {
             this.Parent = Parent;

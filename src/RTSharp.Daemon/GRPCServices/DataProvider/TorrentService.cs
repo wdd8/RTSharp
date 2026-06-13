@@ -131,11 +131,19 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
         public override async Task<BytesValue> MoveDownloadDirectory(MoveDownloadDirectoryArgs Req, ServerCallContext Ctx)
         {
             var dp = RegisteredDataProviders.GetDataProvider(Ctx);
-            return dp.Type switch {
-                DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().MoveDownloadDirectory(Req, Ctx.CancellationToken),
-                DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().MoveDownloadDirectory(Req, Ctx.CancellationToken),
-                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().MoveDownloadDirectory(Req, Ctx.CancellationToken),
-                _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
+            switch (dp.Type) {
+                case DataProviderType.rtorrent:
+                    if (OperatingSystem.IsWindows()) {
+                        throw new RpcException(new Grpc.Core.Status(StatusCode.Unimplemented, "Operating system not supported"));
+                    }
+
+                    return await dp.Resolve<Services.rtorrent.Grpc>().MoveDownloadDirectory(Req, Ctx.CancellationToken);
+                case DataProviderType.qbittorrent:
+                    return await dp.Resolve<Services.qbittorrent.Grpc>().MoveDownloadDirectory(Req, Ctx.CancellationToken);
+                case DataProviderType.transmission:
+                    return await dp.Resolve<Services.transmission.Grpc>().MoveDownloadDirectory(Req, Ctx.CancellationToken);
+                default:
+                    throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"));
             };
         }
 

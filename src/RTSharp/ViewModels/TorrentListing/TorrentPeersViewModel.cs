@@ -22,6 +22,7 @@ using System.Net;
 using System.Threading.Tasks;
 
 using Peer = RTSharp.Models.Peer;
+using System.Diagnostics.CodeAnalysis;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
@@ -31,7 +32,7 @@ namespace RTSharp.ViewModels.TorrentListing
         public DataGridCollectionView PeersView { get; }
 
         [ObservableProperty]
-        public partial Models.Torrent Torrent { get; set; }
+        public partial Models.Torrent? Torrent { get; set; }
 
         [ObservableProperty]
         public partial string AddPeerEndpointText { get; set; } = "";
@@ -48,6 +49,9 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             Debug.Assert(StrToCap.ContainsKey(Action));
 
+            if (Torrent == null)
+                return false;
+
             return StrToCap[Action](Torrent.DataOwner.Instance.Peer.Capabilities);
         }
 
@@ -55,7 +59,7 @@ namespace RTSharp.ViewModels.TorrentListing
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddPeers))]
         public async Task AddPeers()
         {
-            if (!IPEndPoint.TryParse(AddPeerEndpointText, out var endpoint)) {
+            if (!IPEndPoint.TryParse(AddPeerEndpointText, out var endpoint) || Torrent == null) {
                 return;
             }
 
@@ -97,6 +101,8 @@ namespace RTSharp.ViewModels.TorrentListing
 
         }
 
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Peer))]
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Accesses Peer")]
         public TorrentPeersViewModel()
         {
             PeersView = new DataGridCollectionView(Peers);

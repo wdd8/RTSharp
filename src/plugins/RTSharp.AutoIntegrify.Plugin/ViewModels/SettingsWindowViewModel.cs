@@ -7,6 +7,7 @@ using RTSharp.Shared.Abstractions.Client;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -23,40 +24,43 @@ public enum LinkOptions
 public partial class SettingsWindowViewModel(IPluginHost PluginHost) : ObservableObject, IContextPopulatedNotifyable
 {
     [ObservableProperty]
-    public ObservableCollection<string> items;
+    public partial ObservableCollection<string> Items { get; set; }
 
     [ObservableProperty]
-    public int randomPiecesToCheck;
+    public partial int RandomPiecesToCheck { get; set; }
 
     [ObservableProperty]
-    public int searchRecursionLimit;
+    public partial int SearchRecursionLimit { get; set; }
 
     [ObservableProperty]
-    public string newPath;
+    public partial string NewPath { get; set; }
 
     [ObservableProperty]
-    public LinkOptions linkOptions;
+    public partial LinkOptions LinkOptions { get; set; }
 
     [RelayCommand]
     public async Task Remove(string In)
     {
         Items.Remove(In);
     }
-
+    
     [RelayCommand]
     public async Task Add()
     {
         Items.Add(NewPath);
     }
 
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(LinkOptions))]
     [RelayCommand]
     public async Task Save()
     {
         await PluginHost.SavePluginConfig(json => {
+#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
             json["SearchPaths"] = JsonSerializer.SerializeToNode(Items.ToList());
             json["RandomPiecesToCheck"] = JsonSerializer.SerializeToNode(RandomPiecesToCheck);
             json["SearchRecursionLimit"] = JsonSerializer.SerializeToNode(SearchRecursionLimit);
             json["LinkOptions"] = JsonSerializer.SerializeToNode(LinkOptions);
+#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
         });
     }
 

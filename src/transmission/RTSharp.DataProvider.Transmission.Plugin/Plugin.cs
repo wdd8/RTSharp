@@ -29,18 +29,18 @@ public class Plugin : BasePlugin
         HasSettingsWindow: true
     );
 
-    public override Task<dynamic> CustomAccess(dynamic In)
+    public override Task<dynamic?> CustomAccess(dynamic? In)
     {
-        return null;
+        return null!;
     }
 
-    public override IPluginHost Host { get; set; }
+    public required override IPluginHost Host { get; set; }
 
-    public IDataProviderHost DataProvider { get; set; }
+    public required IDataProviderHost DataProvider { get; set; }
 
-    internal DefaultActionQueueRenderer ActionQueue { get; set; }
+    internal DefaultActionQueueRenderer ActionQueue { get; set; } = null!; // on init
 
-    private CancellationTokenSource DataProviderActive { get; set; }
+    private CancellationTokenSource DataProviderActive { get; set; } = null!; // on init
 
     public override async Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
     {
@@ -69,8 +69,7 @@ public class Plugin : BasePlugin
 
     public override async Task ShowPluginSettings(object ParentWindow)
     {
-        var daemon = Host.AttachedDaemonService;
-        var client = daemon.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
+        var client = Host.AttachedDaemonService!.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
 
         var settings = await client.GetSessionInformationAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
@@ -82,7 +81,7 @@ public class Plugin : BasePlugin
                 Settings = SettingsMapper.MapFromProto(settings)
             }
         };
-        ((MainWindowViewModel)settingsWindow.DataContext).ThisWindow = settingsWindow;
+        ((MainWindowViewModel)settingsWindow.DataContext!).ThisWindow = settingsWindow;
         await settingsWindow.ShowDialog((Window)ParentWindow);
     }
 

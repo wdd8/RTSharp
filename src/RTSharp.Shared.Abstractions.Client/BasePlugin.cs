@@ -30,7 +30,7 @@ public abstract class BasePlugin : IPlugin, IPluginInit
 
     public abstract Task ShowPluginSettings(object ParentWindow);
 
-    public abstract Task<dynamic> CustomAccess(dynamic In);
+    public abstract Task<dynamic?> CustomAccess(dynamic? In);
 
     public abstract Task Unload();
 }

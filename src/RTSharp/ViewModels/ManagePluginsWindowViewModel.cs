@@ -12,6 +12,7 @@ using RTSharp.Shared.Controls.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,9 +41,10 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
     public bool CanExecuteLoad() => !String.IsNullOrEmpty(SelectedUnloadedDir);
 
     [RelayCommand(CanExecute = nameof(CanExecuteLoad))]
+    [RequiresUnreferencedCode("Plugins")]
     public async Task LoadClick()
     {
-        var existingConfig = Plugins.GetFirstPluginConfigOrDefault(Path.GetFullPath(Path.Combine(Shared.Abstractions.Consts.PLUGINS_PATH, SelectedUnloadedDir!)));
+        var existingConfig = Plugins.GetFirstPluginConfigOrDefault(Path.Combine(Shared.Abstractions.Consts.PLUGINS_PATH, SelectedUnloadedDir!));
         string? config = null;
         if (existingConfig != null) {
             if (existingConfig.EndsWith(".disabled")) {

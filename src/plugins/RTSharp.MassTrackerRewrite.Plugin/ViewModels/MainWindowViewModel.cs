@@ -54,7 +54,7 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : 
         StatusText = "Fetching torrents...";
         ProgressValue = 0;
 
-        var affectedCountExpected = SelectedTracker.Count;
+        var affectedCountExpected = SelectedTracker!.Count;
 
         var affectedTorrents = new List<Torrent>();
 
