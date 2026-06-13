@@ -9,12 +9,8 @@
     <LangVersion>preview</LangVersion>
     <VerifyReferenceAotCompatibility>true</VerifyReferenceAotCompatibility>
     <InterceptorsPreviewNamespaces>$(InterceptorsPreviewNamespaces);Dapper.AOT</InterceptorsPreviewNamespaces>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <ApplicationIcon>Assets/rtsharp.ico</ApplicationIcon>
-    <!-- Not trimmed: plugins are framework-dependent and borrow the host's assemblies, but
-         reference a superset of the members the host itself uses. A host-driven trimmer can't
-         see plugin needs, so trimming shared assemblies silently breaks plugins. The small FD
-         publish covers size-conscious users; the self-contained build prioritizes "just works". -->
+    <!-- Not compatible with plugin system -->
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
   <PropertyGroup Label="Avalonia">
