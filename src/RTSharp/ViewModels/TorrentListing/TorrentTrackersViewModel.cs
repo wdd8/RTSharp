@@ -152,7 +152,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 trackerInfo ??= new TrackerInfo("", null, null);
                 trackerInfo.Name = In.Text;
                 await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, trackerInfo);
-                await Parent.UpdateTrackersInTorrents();
+                await TorrentListingViewModel.UpdateTrackersInTorrents();
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Setting tracker name failed");
             } finally {
@@ -203,7 +203,7 @@ namespace RTSharp.ViewModels.TorrentListing
             }
 
             await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, trackerInfo);
-            await Parent.UpdateTrackersInTorrents();
+            await TorrentListingViewModel.UpdateTrackersInTorrents();
         }
 
         public bool CanExecuteFetchIcon() => HasSelectedItem;
@@ -252,7 +252,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 await trackerDb.AddOrUpdateTrackerInfo(domain, trackerInfo);
             }
 
-            await Parent.UpdateTrackersInTorrents();
+            await TorrentListingViewModel.UpdateTrackersInTorrents();
         }
 
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-address-book");

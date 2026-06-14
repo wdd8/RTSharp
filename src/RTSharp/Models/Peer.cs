@@ -74,7 +74,6 @@ namespace RTSharp.Models
         /// </summary>
         [ObservableProperty]
         public partial ulong PeerDLSpeed { get; set; }
-        public DateTime ObservedOn { get; set; }
 
         public void UpdateFromPluginModel(Shared.Abstractions.Peer In)
         {

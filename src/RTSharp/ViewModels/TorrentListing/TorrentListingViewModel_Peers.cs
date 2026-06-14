@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using RTSharp.Shared.Abstractions;
@@ -57,14 +56,10 @@ namespace RTSharp.ViewModels.TorrentListing
             }
 
             var fetchingPeers = new ConcurrentHashSet<IPAddress>();
-            var peerCheckLock = new object();
 
             await foreach (var peer in PeerInfoFetches.Reader.ReadAllAsync()) {
-                lock (peerCheckLock) {
-                    if (fetchingPeers.Contains(peer.IPPort.Address))
-                        continue;
-                    fetchingPeers.Add(peer.IPPort.Address);
-                }
+                if (!fetchingPeers.Add(peer.IPPort.Address)) // could be different port
+                    continue;
 
                 _ = PeerInfoFetchQueue.ExecuteAsync(async () => {
                     using var innerScope = Core.ServiceProvider.CreateScope();
@@ -74,6 +69,19 @@ namespace RTSharp.ViewModels.TorrentListing
                     var imageCache = innerScope.ServiceProvider.GetRequiredService<ImageCache>();
 
                     try {
+                        var asInfo = await asCache.GetCachedAS(peer.IPPort.Address);
+                        if (asInfo != null) {
+                            var cachedImage = await imageCache.GetCachedImage(asInfo.ImageHash);
+                            var cachedOrigin = asInfo.Organization + (asInfo.Domain != null ? $" [{asInfo.Domain}]" : "");
+                            Dispatcher.UIThread.Post(() => {
+                                foreach (var x in PeersViewModel.Peers.Where(x => x.IPPort.Address.Equals(peer.IPPort.Address))) {
+                                    x.Origin = cachedOrigin;
+                                    x.Icon = cachedImage;
+                                }
+                            });
+                            return;
+                        }
+
                         var whois = await Core.Services.Whois.GetWhoisInfo(peer.IPPort.Address, config.Behavior.Value.PeerOriginReplacements ?? new());
 
                         if (whois == null) {
@@ -167,39 +175,16 @@ namespace RTSharp.ViewModels.TorrentListing
                         } else {
                             // Add
                             var peer = Models.Peer.FromPluginModel(changedPeer);
-                            peer.ObservedOn = DateTime.UtcNow;
                             peer.Origin = null;
                             PeersViewModel.Peers.Add(peer);
                             refresh = true;
                         }
                     }
 
-                    foreach (var peer in PeersViewModel.Peers.Where(x => x.Origin == null)) {
-                        peer.Origin = "Loading...";
-                        _ = Task.Run(async () => {
-                            using (var scope = Core.ServiceProvider.CreateScope()) {
-                                var config = scope.ServiceProvider.GetRequiredService<Config>();
-                                var asCache = scope.ServiceProvider.GetRequiredService<ASCache>();
-                                var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
+                    foreach (var peer in PeersViewModel.Peers) {
+                        peer.Origin ??= "Loading...";
 
-                                CachedAS asInfo;
-                                if ((asInfo = await asCache.GetCachedAS(peer.IPPort.Address)) != null) {
-                                    var cachedImage = await imageCache.GetCachedImage(asInfo.ImageHash);
-                                    Dispatcher.UIThread.Post(() => {
-                                        peer.Origin = asInfo.Organization + (asInfo.Domain != null ? $" [{asInfo.Domain}]" : "");
-                                        peer.Icon = cachedImage;
-                                    }, DispatcherPriority.Default);
-                                } else {
-                                    // Just started fetching info but there is no cached info, wait 3 seconds later and start fetching
-                                    Dispatcher.UIThread.Post(() => {
-                                        peer.Origin = "Inactive peer";
-                                    }, DispatcherPriority.MaxValue);
-                                }
-                            }
-                        });
-                    }
-                    foreach (var peer in PeersViewModel.Peers.Where(x => x.Origin == "Inactive peer")) {
-                        if (DateTime.UtcNow - peer.ObservedOn > TimeSpan.FromSeconds(3)) {
+                        if (peer.Origin == "Loading..." && peer.DLSpeed > 0 || peer.UPSpeed > 0) {
                             PeerInfoFetches!.Writer.TryWrite(peer);
                         }
                     }

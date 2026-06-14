@@ -12,6 +12,8 @@ using System.Threading.Channels;
 using RTSharp.Shared.Utils;
 using RTSharp.Core;
 using RTSharp.Core.Services.Database.TrackerDb;
+using Avalonia.Threading;
+using Avalonia.Media;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
@@ -32,31 +34,45 @@ namespace RTSharp.ViewModels.TorrentListing
             );
         }
 
-        public async Task UpdateTrackersInTorrents()
+        public static async Task UpdateTrackersInTorrents()
         {
-            var infos = new Dictionary<string, TrackerInfo>();
-            using var scope = Core.ServiceProvider.CreateScope();
-            var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
-            var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
+            var resolved = new Dictionary<string, (bool Found, string? Name, IImage? Icon)>();
+            var updates = new List<(Models.Torrent Torrent, string? Name, IImage? Icon)>();
 
-            foreach (var torrent in Core.TorrentPolling.TorrentPolling.Torrents.GetSnapshot()) {
-                var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle);
+            await Task.Run(async () => {
+                using var scope = Core.ServiceProvider.CreateScope();
+                var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
+                var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
-                if (!infos.TryGetValue(domain, out var trackerInfo))
-                    trackerInfo = await trackerDb.GetTrackerInfo(domain);
+                foreach (var torrent in Core.TorrentPolling.TorrentPolling.Torrents.GetSnapshot()) {
+                    var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle);
 
-                if (trackerInfo == null)
-                    continue;
+                    if (!resolved.TryGetValue(domain, out var info)) {
+                        var trackerInfo = await trackerDb.GetTrackerInfo(domain);
+                        IImage? icon = null;
+                        if (trackerInfo?.ImageHash != null)
+                            icon = await imageCache.GetCachedImage(trackerInfo.ImageHash);
+                        info = (trackerInfo != null, trackerInfo?.Name, icon);
+                        resolved[domain] = info;
+                    }
 
-                torrent.TrackerDisplayName = trackerInfo.Name;
+                    if (!info.Found)
+                        continue;
 
-                if (trackerInfo.ImageHash == null)
-                    continue;
+                    updates.Add((torrent, info.Name, info.Icon));
+                }
+            });
 
-                var image = await imageCache.GetCachedImage(trackerInfo.ImageHash);
-                if (image != null)
-                    torrent.TrackerIcon = image;
-            }
+            if (updates.Count == 0)
+                return;
+
+            await Dispatcher.UIThread.InvokeAsync(() => {
+                foreach (var (torrent, name, icon) in updates) {
+                    torrent.TrackerDisplayName = name;
+                    if (icon != null)
+                        torrent.TrackerIcon = icon;
+                }
+            });
         }
 
         private async Task TrackersModelUpdates()
@@ -77,18 +93,16 @@ namespace RTSharp.ViewModels.TorrentListing
                         refresh = true;
                     }
 
-                    foreach (var newTracker in trackers) {
-                        bool foundInOld = false;
-                        foreach (var oldTracker in TrackersViewModel.Trackers) {
-                            if (newTracker.Uri == oldTracker.Uri) {
-                                // Update
-                                oldTracker.UpdateFromPluginModel(newTracker);
-                                foundInOld = true;
-                                break;
-                            }
-                        }
+                    var existing = TrackersViewModel.Trackers.ToDictionary(x => x.Uri);
+                    var @new = new HashSet<string>(trackers.Count);
 
-                        if (!foundInOld) {
+                    foreach (var newTracker in trackers) {
+                        @new.Add(newTracker.Uri);
+
+                        if (existing.TryGetValue(newTracker.Uri, out var oldTracker)) {
+                            // Update
+                            oldTracker.UpdateFromPluginModel(newTracker);
+                        } else {
                             // Add
                             TrackersViewModel.Trackers.Add(Models.Tracker.FromPluginModel(newTracker));
                             refresh = true;
@@ -96,15 +110,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     }
 
                     foreach (var oldTracker in TrackersViewModel.Trackers.ToArray()) {
-                        bool foundInNew = false;
-                        foreach (var newTracker in trackers) {
-                            if (newTracker.Uri == oldTracker.Uri) {
-                                foundInNew = true;
-                                break;
-                            }
-                        }
-
-                        if (!foundInNew) {
+                        if (!@new.Contains(oldTracker.Uri)) {
                             // Remove
                             TrackersViewModel.Trackers.Remove(oldTracker);
                             refresh = true;
@@ -130,7 +136,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             } else {
                                 tracker.Icon = DefaultImage;
 
-                                _ = Task.Factory.StartNew(async () => {
+                                _ = Task.Run(async () => {
                                     using var innerScope = Core.ServiceProvider.CreateScope();
                                     var favicons = innerScope.ServiceProvider.GetRequiredService<Core.Services.Favicon>();
                                     var innerTrackerDb = innerScope.ServiceProvider.GetRequiredService<TrackerDb>();
@@ -151,7 +157,8 @@ namespace RTSharp.ViewModels.TorrentListing
                                             var img = await innerImageCache.AddImage(favicon);
                                             if (img != null) {
                                                 hash = img.Value.Hash;
-                                                tracker.Icon = img.Value.Image;
+                                                var icon = img.Value.Image;
+                                                Dispatcher.UIThread.Post(() => tracker.Icon = icon);
                                             }
                                         }
                                         trackerInfo = new TrackerInfo(tracker.Domain, tracker.Domain, hash);
@@ -159,7 +166,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                                         await UpdateTrackersInTorrents();
                                     } catch { }
-                                }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext());
+                                });
                             }
                         }
                     }
