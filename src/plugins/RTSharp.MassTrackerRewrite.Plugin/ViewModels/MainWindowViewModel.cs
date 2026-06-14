@@ -13,7 +13,7 @@ using System.Collections.ObjectModel;
 
 namespace RTSharp.MassTrackerRewrite.Plugin.ViewModels;
 
-public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : ObservableObject, IContextPopulatedNotifyable
+public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : ObservableViewModel
 {
     public record TrackerInfo(string Uri, int Count)
     {
@@ -110,7 +110,7 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : 
         OnContextPopulated();
     }
 
-    public void OnContextPopulated()
+    public override void OnContextPopulated()
     {
         _ = Task.Run(async () => {
             var trackers = new Dictionary<string, int>();

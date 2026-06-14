@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Core;
 using RTSharp.Core.TorrentPolling;
+using RTSharp.Shared.Abstractions.Client;
 
 using SkiaSharp;
 
@@ -22,10 +23,11 @@ using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Reactive.Disposables;
 
 namespace RTSharp.ViewModels
 {
-    public class DataProvidersViewModel : ObservableObject
+    public class DataProvidersViewModel : ObservableViewModel
     {
         private readonly bool SpeedChartEnabled;
 
@@ -42,7 +44,7 @@ namespace RTSharp.ViewModels
                 SpeedChartEnabled = config.Look.Value.DataProviders.SpeedChartEnabled;
             }
 
-            Plugin.Plugins.DataProviders
+            AddDisposable(Plugin.Plugins.DataProviders
                 .Connect()
                 .AutoRefreshOnObservable(x => x.State)
                 .AutoRefreshOnObservable(x => x.PluginInstance.AttachedDaemonService.Latency)
@@ -74,9 +76,10 @@ namespace RTSharp.ViewModels
                                 item.DataProvider.Latency = "?";
                         }
                     }
-                });
+                }));
 
             TorrentPolling.Torrents.Changed += TorrentPolling_TorrentBatchChange;
+            AddDisposable(Disposable.Create(() => TorrentPolling.Torrents.Changed -= TorrentPolling_TorrentBatchChange));
         }
 
         private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)

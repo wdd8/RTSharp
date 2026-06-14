@@ -14,6 +14,7 @@ namespace RTSharp.ServerScriptPlayground.Plugin.Views
     public class DocumentTextBindingBehavior : Behavior<TextEditor>
     {
         private TextEditor _textEditor = null;
+        private IDisposable? _textPropertySub;
 
         public static readonly StyledProperty<string> TextProperty =
             AvaloniaProperty.Register<DocumentTextBindingBehavior, string>(nameof(Text));
@@ -30,7 +31,7 @@ namespace RTSharp.ServerScriptPlayground.Plugin.Views
             if (AssociatedObject is TextEditor textEditor) {
                 _textEditor = textEditor;
                 _textEditor.TextChanged += TextChanged;
-                this.GetObservable(TextProperty).Subscribe(TextPropertyChanged);
+                _textPropertySub = this.GetObservable(TextProperty).Subscribe(TextPropertyChanged);
             }
         }
 
@@ -41,6 +42,7 @@ namespace RTSharp.ServerScriptPlayground.Plugin.Views
             if (_textEditor != null) {
                 _textEditor.TextChanged -= TextChanged;
             }
+            _textPropertySub?.Dispose();
         }
 
         private void TextChanged(object sender, EventArgs eventArgs)

@@ -25,7 +25,7 @@ using System.Threading.Tasks;
 
 namespace RTSharp.AutoIntegrify.Plugin.ViewModels;
 
-public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, Torrent Torrent) : ObservableObject, IContextPopulatedNotifyable
+public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, Torrent Torrent) : ObservableViewModel
 {
     public enum RESOLVE_STATE
     {
@@ -107,7 +107,7 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
     bool Reflink;
     bool Hardlink;
 
-    public void OnContextPopulated()
+    public override void OnContextPopulated()
     {
         AdditionalPaths = Host.PluginConfig.GetSection("SearchPaths").Get<List<string>>() ?? [];
         RandomPiecesToCheck = Host.PluginConfig.GetSection("RandomPiecesToCheck").Get<int?>() ?? 5;

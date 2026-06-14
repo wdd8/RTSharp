@@ -30,8 +30,8 @@ public interface IVmContentControl<T>
 
         PreviousViewModel = ViewModel;
 
-        if (ViewModel is IContextPopulatedNotifyable notifyable) {
-            notifyable.OnContextPopulated();
+        if (ViewModel is ObservableViewModel vm) {
+            vm.OnContextPopulated();
         }
     }
 }

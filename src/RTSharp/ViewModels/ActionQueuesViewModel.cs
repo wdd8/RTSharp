@@ -13,7 +13,7 @@ using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.ViewModels;
 
-public partial class ActionQueuesViewModel : ObservableObject
+public partial class ActionQueuesViewModel : ObservableViewModel
 {
     public SourceList<ActionQueueEntry> ActionQueue => Core.ActionQueue.ActionQueues;
 
@@ -22,7 +22,7 @@ public partial class ActionQueuesViewModel : ObservableObject
 
     public ActionQueuesViewModel()
     {
-        ActionQueue.Connect().ObserveOn(AvaloniaSynchronizationContext.Current!).Transform(x => x.Queue).Bind(out var observable).Subscribe();
+        AddDisposable(ActionQueue.Connect().ObserveOn(AvaloniaSynchronizationContext.Current!).Transform(x => x.Queue).Bind(out var observable).Subscribe());
         QueueRenderers = observable;
     }
 }

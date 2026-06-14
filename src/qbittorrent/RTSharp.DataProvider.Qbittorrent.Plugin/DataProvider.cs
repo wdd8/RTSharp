@@ -123,6 +123,7 @@ public class DataProvider : IDataProvider
         var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
 
         var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
+        combined.Token.Register(combined.Dispose);
 
         return client.GetTorrentChanges(combined.Token);
     }

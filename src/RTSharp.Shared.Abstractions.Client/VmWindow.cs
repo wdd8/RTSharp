@@ -13,6 +13,11 @@ public class VmWindow<T> : Window, IVmContentControl<T>
         }
     }
 
+    public VmWindow()
+    {
+        Closed += (_, _) => (ViewModel as IDisposable)?.Dispose();
+    }
+
     public void BindViewModelActions(Action<T> FxBind, Action<T>? FxUnbind) => ((IVmContentControl<T>)this).BindViewModelActions(this, FxBind, FxUnbind);
 
     public void BindViewModelActions(Action<T> FxBind) => ((IVmContentControl<T>)this).BindViewModelActions(this, FxBind);

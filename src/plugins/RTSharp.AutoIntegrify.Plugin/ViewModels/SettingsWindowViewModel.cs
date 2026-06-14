@@ -21,7 +21,7 @@ public enum LinkOptions
     Hardlink
 }
 
-public partial class SettingsWindowViewModel(IPluginHost PluginHost) : ObservableObject, IContextPopulatedNotifyable
+public partial class SettingsWindowViewModel(IPluginHost PluginHost) : ObservableViewModel
 {
     [ObservableProperty]
     public partial ObservableCollection<string> Items { get; set; }
@@ -64,7 +64,7 @@ public partial class SettingsWindowViewModel(IPluginHost PluginHost) : Observabl
         });
     }
 
-    public void OnContextPopulated()
+    public override void OnContextPopulated()
     {
         var paths = PluginHost.PluginConfig.GetSection("SearchPaths").Get<List<string>>();
         paths ??= [];

@@ -2,21 +2,18 @@ using System;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 
-using Avalonia.Media;
-
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using RTSharp.Core;
 using RTSharp.Models;
 using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.ViewModels;
 
-public partial class LogEntriesViewModel : ObservableObject, IContextPopulatedNotifyable
+public partial class LogEntriesViewModel : ObservableViewModel
 {
     public ObservableCollection<LogEntry> LogEntries => Core.LogWindowSink.LogEntries;
 
@@ -43,13 +40,14 @@ public partial class LogEntriesViewModel : ObservableObject, IContextPopulatedNo
             ScrollToBottom();
     }
 
-    public void OnContextPopulated()
+    public override void OnContextPopulated()
     {
         if (ContextPopulated)
             return;
 
         ContextPopulated = true;
         LogEntries.CollectionChanged += EvLogEntriesChanged;
+        AddDisposable(Disposable.Create(() => LogEntries.CollectionChanged -= EvLogEntriesChanged));
     }
 }
 

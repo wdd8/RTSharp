@@ -60,7 +60,7 @@ public readonly struct TrackerFilterContext : IComparable
     public override int GetHashCode() => String.GetHashCode(Name);
 }
 
-public partial class TorrentListingViewModel : ObservableObject, IContextPopulatedNotifyable
+public partial class TorrentListingViewModel : ObservableViewModel
 {
     public ReadOnlyObservableCollection<Torrent> VisibleTorrents;
 
@@ -130,8 +130,7 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
         };
     }
 
-    private List<IDisposable> VMDisposables = new();
-    private bool contextPopulated;
+    private bool ContextPopulated;
 
     private readonly Dictionary<string, (MenuItem Container, CheckBox Icon)> LabelControlCache = new();
     private readonly Separator LabelSeparator = new();
@@ -453,14 +452,6 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
         View = new DataGridCollectionView(VisibleTorrents);
     }
 
-    ~TorrentListingViewModel() // TODO: this doesn't work
-    {
-        foreach (var item in VMDisposables)
-            item.Dispose();
-
-        VMDisposables.Clear();
-    }
-
     [RelayCommand]
     public void ShowAddLabel()
     {
@@ -594,13 +585,13 @@ public partial class TorrentListingViewModel : ObservableObject, IContextPopulat
         }
     }
 
-    public void OnContextPopulated()
+    public override void OnContextPopulated()
     {
-        if (contextPopulated)
+        if (ContextPopulated)
             return;
 
-        contextPopulated = true;
-        VMDisposables.Add(TorrentPolling.AllLabelReferencesObservable.Subscribe(x => UpdateLabelsWithAdd(x)));
+        ContextPopulated = true;
+        AddDisposable(TorrentPolling.AllLabelReferencesObservable.Subscribe(UpdateLabelsWithAdd));
     }
 
     private void CurrentlySelectedTorrentsChanged(object? sender, SelectionModelSelectionChangedEventArgs<Torrent> e)

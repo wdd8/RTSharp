@@ -15,11 +15,12 @@ using DynamicData.Binding;
 using RTSharp.Core.Services.Daemon;
 using RTSharp.Models;
 using RTSharp.Plugin;
+using RTSharp.Shared.Abstractions.Client;
 using Serilog;
 
 namespace RTSharp.ViewModels;
 
-public partial class DirectorySelectorWindowViewModel : ObservableObject
+public partial class DirectorySelectorWindowViewModel : ObservableViewModel
 {
     public required string WindowTitle { get; set; }
 
@@ -50,7 +51,7 @@ public partial class DirectorySelectorWindowViewModel : ObservableObject
     public DirectorySelectorWindowViewModel(Plugin.RTSharpDataProvider DataProvider)
     {
         this.DataProvider = DataProvider;
-        _itemsSource.Connect().Sort(SortExpressionComparer<FileSystemItem>.Ascending(x => x.Path)).Bind(out _items).Subscribe();
+        AddDisposable(_itemsSource.Connect().Sort(SortExpressionComparer<FileSystemItem>.Ascending(x => x.Path)).Bind(out _items).Subscribe());
 
         Server = Core.Servers.Value[DataProvider.DataProviderInstanceConfig.ServerId];
     }
