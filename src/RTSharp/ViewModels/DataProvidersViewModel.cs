@@ -20,10 +20,12 @@ using RTSharp.Shared.Abstractions.Client;
 using SkiaSharp;
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
+using System.Runtime.InteropServices;
 
 namespace RTSharp.ViewModels
 {
@@ -84,29 +86,13 @@ namespace RTSharp.ViewModels
 
         private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)
         {
-            var torrents = TorrentPolling.Torrents.GetSnapshot(); // TODO: could probably fetch only the first time and then sync changes
-
             var vm = Items.FirstOrDefault(x => x.DataProvider.InstanceId == e.DataProvider.PluginInstance.InstanceId);
 
             Debug.Assert(vm != null);
+            if (vm == null)
+                return;
 
-            var totalDLSpeed = 0UL;
-            var totalUPSpeed = 0UL;
-            var activeTorrentCount = 0U;
-
-            foreach (var torrent in torrents.Where(x => x.DataOwner == e.DataProvider)) {
-                totalDLSpeed += torrent.DLSpeed;
-                totalUPSpeed += torrent.UPSpeed;
-                activeTorrentCount += torrent.InternalState.HasFlag(Shared.Abstractions.TORRENT_STATE.ACTIVE) ? 1U : 0U;
-            }
-
-            vm.DataProvider.TotalDLSpeed = totalDLSpeed;
-            vm.DataProvider.TotalUPSpeed = totalUPSpeed;
-            vm.DataProvider.ActiveTorrentCount = activeTorrentCount;
-
-            if (SpeedChartEnabled) {
-                vm.AddSpeedChartSample(totalDLSpeed, totalUPSpeed);
-            }
+            vm.ApplyTorrentsChanges(e);
         }
     }
 
@@ -119,6 +105,13 @@ namespace RTSharp.ViewModels
         }
 
         private const int MAX_SPEED_CHART_SAMPLES = 120;
+
+        private readonly record struct TorrentStats(ulong DLSpeed, ulong UPSpeed, bool Active);
+        private readonly Dictionary<Models.Torrent, TorrentStats> PreviousTorrentStats = new(ReferenceEqualityComparer.Instance);
+
+        private ulong DLSpeed;
+        private ulong UPSpeed;
+        private uint ActiveTorrentCount;
 
         private SPEED_CHART_MODE? CurrentSpeedChartMode;
 
@@ -207,6 +200,82 @@ namespace RTSharp.ViewModels
             };
 
             SpeedChartYAxes = [SpeedChartYAxis];
+        }
+
+        public void ApplyTorrentsChanges(TorrentStoreChangeSet e)
+        {
+            foreach (var t in e.Removed) {
+                if (PreviousTorrentStats.Remove(t, out var prev)) {
+                    DLSpeed -= prev.DLSpeed;
+                    UPSpeed -= prev.UPSpeed;
+                    if (prev.Active)
+                        ActiveTorrentCount--;
+                }
+            }
+
+            foreach (var torrent in e.Added)
+                ApplyTorrentChanges(torrent);
+
+            foreach (var torrent in e.Refreshed)
+                ApplyTorrentChanges(torrent);
+
+            DataProvider.TotalDLSpeed = DLSpeed;
+            DataProvider.TotalUPSpeed = UPSpeed;
+            DataProvider.ActiveTorrentCount = ActiveTorrentCount;
+
+#if DEBUG
+            VerifyAgainstSnapshot();
+#endif
+
+            if (SpeedChartEnabled) {
+                AddSpeedChartSample(DLSpeed, UPSpeed);
+            }
+        }
+
+#if DEBUG
+        private void VerifyAgainstSnapshot()
+        {
+            var expectedDLSpeed = 0UL;
+            var expectedUPSpeed = 0UL;
+            var expectedActiveCount = 0U;
+
+            foreach (var t in TorrentPolling.Torrents.GetSnapshot()) {
+                if (t.DataOwner.PluginInstance.InstanceId != DataProvider.InstanceId)
+                    continue;
+
+                expectedDLSpeed += t.DLSpeed;
+                expectedUPSpeed += t.UPSpeed;
+                if (t.InternalState.HasFlag(Shared.Abstractions.TORRENT_STATE.ACTIVE))
+                    expectedActiveCount++;
+            }
+
+            Debug.Assert(DLSpeed == expectedDLSpeed);
+            Debug.Assert(UPSpeed == expectedUPSpeed);
+            Debug.Assert(ActiveTorrentCount == expectedActiveCount);
+        }
+#endif
+
+        private void ApplyTorrentChanges(Models.Torrent In)
+        {
+            var active = In.InternalState.HasFlag(Shared.Abstractions.TORRENT_STATE.ACTIVE);
+
+            ref var prev = ref CollectionsMarshal.GetValueRefOrAddDefault(PreviousTorrentStats, In, out var exists);
+
+            if (exists) {
+                DLSpeed += In.DLSpeed - prev.DLSpeed;
+                UPSpeed += In.UPSpeed - prev.UPSpeed;
+                if (active && !prev.Active)
+                    ActiveTorrentCount++;
+                else if (!active && prev.Active)
+                    ActiveTorrentCount--;
+            } else {
+                DLSpeed += In.DLSpeed;
+                UPSpeed += In.UPSpeed;
+                if (active)
+                    ActiveTorrentCount++;
+            }
+
+            prev = new TorrentStats(In.DLSpeed, In.UPSpeed, active);
         }
 
         public void AddSpeedChartSample(ulong DLSpeed, ulong UPSpeed)
