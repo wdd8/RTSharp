@@ -10,68 +10,102 @@ namespace RTSharp.Shared.Controls.Views;
 
 public partial class PieceProgressBar : UserControl
 {
-    private IList<PieceState> _pieces = [];
+    private WriteableBitmap? Bitmap;
+    private Rect Size;
+    private bool ResetPending = true;
 
-    /// <summary>
-    /// Defines the <see cref="Pieces"/> property.
-    /// </summary>
     public static readonly DirectProperty<PieceProgressBar, IList<PieceState>> PiecesProperty =
         AvaloniaProperty.RegisterDirect<PieceProgressBar, IList<PieceState>>(
             nameof(Pieces),
             o => o.Pieces,
             (o, v) => o.Pieces = v);
 
-    /// <summary>
-    /// Gets or sets pieces list
-    /// </summary>
+    private IList<PieceState> _pieces = [];
     public IList<PieceState> Pieces {
         get { return _pieces; }
-        set { SetAndRaise(PiecesProperty, ref _pieces, value); }
+        set {
+            SetAndRaise(PiecesProperty, ref _pieces, value);
+            ResetPending = true;
+        }
     }
 
-    public override unsafe void Render(DrawingContext Ctx)
+    public override void Render(DrawingContext ctx)
     {
-        if (_pieces == null || _pieces.Count == 0 || Double.IsNaN(Height) || Height == 0)
+        if (_pieces == null || _pieces.Count == 0 || Bounds.Width <= 1 || Bounds.Height <= 1)
             return;
 
-        using var writeableBitmap = new WriteableBitmap(new PixelSize(_pieces.Count, (int)Height), new Vector(96, 96), PixelFormat.Bgra8888);
+        int boundsW = (int)Bounds.Width;
+        int boundsH = (int)Bounds.Height;
 
-        using (var lockedFrameBuffer = writeableBitmap.Lock()) {
-            unsafe {
-                IntPtr origPtr = new IntPtr(lockedFrameBuffer.Address.ToInt64());
-                IntPtr bufferPtr = new IntPtr(lockedFrameBuffer.Address.ToInt64());
-
-                for (int x = 0;x < _pieces.Count;x++) {
-                    var piece = _pieces[x];
-
-                    byte r = 0, g = 0, b = 0;
-                    if (piece == PieceState.NotDownloaded) {
-                        r = g = b = 255;
-                    } else if (piece == PieceState.Downloading) {
-                        r = 0;
-                        g = 255;
-                        b = 0;
-                    } else if (piece == PieceState.Downloaded) {
-                        r = 0;
-                        g = 0;
-                        b = 255;
-                    } else if (piece == PieceState.Highlighted) {
-                        r = 200;
-                        g = 40;
-                        b = 40;
-                    }
-
-                    *(int*)bufferPtr = (255 << 24) | (r << 16) | (g << 8) | (b << 0);
-                    bufferPtr += 4;
-                }
-                for (int y = 1;y < (int)Height;y++) {
-                    Buffer.MemoryCopy((void*)origPtr, (void*)bufferPtr, _pieces.Count * 4, _pieces.Count * 4);
-                    bufferPtr += 4 * _pieces.Count;
-                }
-            }
+        if (Bitmap == null || ResetPending || (int)Size.Width != boundsW || (int)Size.Height != boundsH) {
+            Bitmap?.Dispose();
+            Size = Bounds;
+            ResetPending = true;
         }
 
-        Ctx.DrawImage(writeableBitmap, Bounds);
+        if (ResetPending) {
+            Bitmap = BuildBitmap();
+            ResetPending = false;
+        }
+
+        ctx.DrawImage(Bitmap!, Bounds);
+    }
+
+    private unsafe WriteableBitmap BuildBitmap()
+    {
+        var w = Math.Min(_pieces.Count, (int)Bounds.Width);
+        var h = (int)Bounds.Height;
+
+        var bitmap = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888);
+        int count = _pieces.Count;
+
+        using var fb = bitmap.Lock();
+        var origPtr = fb.Address;
+        var bufferPtr = fb.Address;
+
+        for (int x = 0; x < w; x++) {
+            // Highlighted > Downloading > Downloaded > NotDownloaded
+            PieceState state = PieceState.NotDownloaded;
+            for (int i = x * count / w; i < (x + 1) * count / w; i++) {
+                var curState = _pieces[i];
+                if (curState == PieceState.Highlighted) {
+                    state = curState;
+                    break;
+                } else if (curState == PieceState.Downloading)
+                    state = curState;
+                else if (curState == PieceState.Downloaded && state == PieceState.NotDownloaded)
+                    state = curState;
+            }
+
+            byte r, g, b;
+            if (state == PieceState.NotDownloaded) {
+                r = g = b = 255;
+            } else if (state == PieceState.Downloading) {
+                r = 0;
+                g = 255;
+                b = 0;
+            } else if (state == PieceState.Downloaded) {
+                r = 0;
+                g = 0;
+                b = 255;
+            } else if (state == PieceState.Highlighted) {
+                r = 200;
+                g = 40;
+                b = 40;
+            } else {
+                throw new ArgumentOutOfRangeException(nameof(Pieces));
+            }
+
+            *(int*)bufferPtr = (255 << 24) | (r << 16) | (g << 8) | b;
+            bufferPtr += 4;
+        }
+
+        for (int y = 1; y < h; y++) {
+            Buffer.MemoryCopy((void*)origPtr, (void*)bufferPtr, w * 4L, w * 4L);
+            bufferPtr += 4 * w;
+        }
+
+        return bitmap;
     }
 
     static PieceProgressBar()
@@ -82,5 +116,9 @@ public partial class PieceProgressBar : UserControl
     public PieceProgressBar()
     {
         InitializeComponent();
+        Unloaded += (_, _) => {
+            Bitmap?.Dispose();
+            Bitmap = null;
+        };
     }
 }
