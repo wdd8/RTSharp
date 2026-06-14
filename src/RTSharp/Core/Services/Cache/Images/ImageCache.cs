@@ -13,6 +13,7 @@ using RTSharp.Shared.Utils;
 using RTSharp.Core.Services.Cache.Images.Migrations;
 using Microsoft.Data.Sqlite;
 using Avalonia;
+using System.Threading;
 
 namespace RTSharp.Core.Services.Cache.Images
 {
@@ -59,60 +60,58 @@ namespace RTSharp.Core.Services.Cache.Images
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         private static Dictionary<byte[], WeakReference<Bitmap>> Images;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+        private static readonly Lock ImagesLock = new();
 
         private Bitmap CacheInMemory(byte[] ImageHash, Bitmap Image)
         {
-            if (Images.TryGetValue(ImageHash, out var weakRef))
-            {
-                if (weakRef.TryGetTarget(out var cached))
-                {
-                    return cached;
-                }
-            }
-
-            if (weakRef != null)
-            {
-                weakRef.SetTarget(Image);
+            var maxCacheImages = Config.Caching.Value.InMemoryImages;
+            if (maxCacheImages == 0)
                 return Image;
-            }
 
-            if (Images.Count > Config.Caching.Value.InMemoryImages)
-            {
-                var toRemove = new List<byte[]>();
-                foreach (var img in Images)
+            lock (ImagesLock) {
+                if (Images.TryGetValue(ImageHash, out var weakRef))
                 {
-                    if (!img.Value.TryGetTarget(out var _))
+                    if (weakRef.TryGetTarget(out var cached))
+                        return cached;
+                }
+
+                if (weakRef != null)
+                {
+                    weakRef.SetTarget(Image);
+                    return Image;
+                }
+
+                if (Images.Count > maxCacheImages)
+                {
+                    var toRemove = new List<byte[]>();
+                    foreach (var img in Images)
                     {
-                        toRemove.Add(img.Key);
+                        if (!img.Value.TryGetTarget(out _))
+                            toRemove.Add(img.Key);
+
+                        if (Images.Count - toRemove.Count <= maxCacheImages)
+                            break;
                     }
 
-                    if (Images.Count - toRemove.Count <= Config.Caching.Value.InMemoryImages)
-                    {
-                        break;
-                    }
+                    foreach (var item in toRemove)
+                        Images.Remove(item);
+
+                    while (Images.Count != 0 && Images.Count > maxCacheImages)
+                        Images.Remove(Images.First().Key);
                 }
 
-                foreach (var item in toRemove)
-                {
-                    Images.Remove(item);
-                }
-
-                while (Images.Count == 0 || Images.Count > Config.Caching.Value.InMemoryImages)
-                {
-                    Images.Remove(Images.First().Key);
-                }
+                Images[ImageHash] = new WeakReference<Bitmap>(Image);
             }
-
-            Images[ImageHash] = new WeakReference<Bitmap>(Image);
 
             return Image;
         }
 
         public async ValueTask<Bitmap?> GetCachedImage(byte[] ImageHash)
         {
-            if (Images.TryGetValue(ImageHash, out var weakRef)) {
-                if (weakRef.TryGetTarget(out var bitmap)) {
-                    return bitmap;
+            lock (ImagesLock) {
+                if (Images.TryGetValue(ImageHash, out var weakRef)) {
+                    if (weakRef.TryGetTarget(out var bitmap))
+                        return bitmap;
                 }
             }
 
@@ -150,7 +149,9 @@ namespace RTSharp.Core.Services.Cache.Images
             await using var conn = await New();
             await conn.ExecuteAsync("DELETE FROM Images");
             await conn.ExecuteAsync("VACUUM");
-            Images.Clear();
+            lock (ImagesLock) {
+                Images.Clear();
+            }
         }
 
         public async Task<(byte[] Hash, Bitmap Image)?> AddImage(Stream Image)
@@ -175,6 +176,7 @@ namespace RTSharp.Core.Services.Cache.Images
 
             Bitmap? alreadyCached;
             if ((alreadyCached = await GetCachedImage(sha256)) != null) {
+                scaled.Dispose();
                 return (sha256, alreadyCached);
             }
 

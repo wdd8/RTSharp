@@ -30,7 +30,7 @@
                                    IsEnabled="{Binding FilesCachingEnabled}" />
 
                     <TextBlock Grid.Column="0" Grid.Row="1">In-memory images:</TextBlock>
-                    <NumericUpDown Grid.Column="1" Grid.Row="1" Value="{Binding InMemoryImages}" Minimum="0" />
+                    <NumericUpDown Grid.Column="1" Grid.Row="1" Value="{Binding InMemoryImages}" Minimum="0" ToolTip.Tip="Set to 0 to disable in-memory image caching." />
                 </Grid>
             </StackPanel>
         </views:GroupBox>
