@@ -53,56 +53,6 @@ public static class SerilogSinkExtensions
     }
 }
 
-public static class Services
-{
-    public static async Task RegisterServices()
-    {
-        await Core.Config.WriteDefaultConfig();
-
-        var cfgBuilder = new ConfigurationBuilder();
-        cfgBuilder.AddJsonFile(RTSharp.Shared.Abstractions.Consts.APP_CONFIG_PATH, false, true);
-        var config = cfgBuilder.Build();
-
-        await ConfigureServices.GenerateCertificatesIfNeeded();
-
-        var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>() ?? [];
-
-        var host = Host.CreateDefaultBuilder()
-            .ConfigureServices((_, services) => {
-                services.UseMicrosoftDependencyResolver();
-
-                services.AddSingleton<IConfiguration>(config);
-                Core.Config.AddConfig(config, services);
-
-                services.AddDaemonServices(servers);
-
-                services.AddTransient<Core.Services.Cache.TorrentFileCache.TorrentFileCache>();
-                services.AddTransient<Core.Services.Cache.TorrentPropertiesCache.TorrentPropertiesCache>();
-                services.AddTransient<Core.Services.Cache.ASCache.ASCache>();
-                services.AddTransient<Core.Services.Cache.Images.ImageCache>();
-                services.AddTransient<TrackerDb>();
-                services.AddSingleton<Shared.Abstractions.ISpeedMovingAverageService, Core.Services.SpeedMovingAverageService>();
-                services.AddSingleton<Core.Services.DomainParser>();
-                services.AddSingleton<Core.Services.MediaPreviewService>();
-                services.AddHttpClient<Core.Services.Favicon>();
-            })
-            .Build();
-
-        Core.ServiceProvider._provider = host.Services;
-        Core.ServiceProvider._provider.UseMicrosoftDependencyResolver();
-
-        foreach (var server in servers) {
-            var instance = ActivatorUtilities.CreateInstance<DaemonService>(Core.ServiceProvider._provider, server.Key);
-            Core.Servers.Value.Add(server.Key, instance);
-            Dispatcher.UIThread.Invoke(() => {
-                var renderer = new ServersActionQueueRenderer(server.Key, instance);
-                ActionQueue.RegisterActionQueue(instance, renderer);
-                _ = renderer.TrackServerActions();
-            });
-        }
-    }
-}
-
 public class App : Application
 {
     [STAThread]
@@ -146,6 +96,24 @@ public class App : Application
 
     public override void Initialize()
     {
+        _ = Task.Run(async () => {
+            try {
+                await Task.Run(PreInitServices);
+            } catch (Exception ex) {
+                await Dispatcher.UIThread.InvokeAsync(async () => {
+                    var msgbox = MessageBoxManager.GetMessageBoxStandard(
+                        title: "RTSharp has crashed",
+                        text: $"RTSharp has crashed.\n{ex}",
+                        @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
+                        icon: MsBox.Avalonia.Enums.Icon.Error,
+                        windowStartupLocation: WindowStartupLocation.CenterOwner);
+                    await msgbox.ShowAsync();
+                });
+                Environment.Exit(1);
+                return;
+            }
+        });
+
         AvaloniaXamlLoader.Load(this);
 
 #if DEBUG
@@ -173,86 +141,143 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        var tcs = new TaskCompletionSource();
-        var thread = new Thread(() => {
-            Services.RegisterServices().GetAwaiter().GetResult();
-            tcs.SetResult();
-        });
-        thread.Start();
-
-        tcs.Task.ContinueWith((task) => {
-            Dispatcher.UIThread.Invoke(async () => {
-                try {
-                    this.DataContext = new AppViewModel();
-                    MainWindowViewModel = new MainWindowViewModel();
-                    MainWindow = new MainWindow(MainWindowViewModel);
-
-                    using var scope = Core.ServiceProvider.CreateScope();
-                    var tasks = Task.WhenAll(
-                        Task.Run(scope.ServiceProvider.GetRequiredService<TorrentFileCache>().Initialize),
-                        Task.Run(scope.ServiceProvider.GetRequiredService<TorrentPropertiesCache>().Initialize),
-                        Task.Run(scope.ServiceProvider.GetRequiredService<ASCache>().Initialize),
-                        Task.Run(scope.ServiceProvider.GetRequiredService<ImageCache>().Initialize),
-                        Task.Run(scope.ServiceProvider.GetRequiredService<TrackerDb>().Initialize),
-#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
-                        Task.Run(() => Plugin.Plugins.LoadPlugins((progress, text) => { })),
-#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
-                        Task.Run(scope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>().Initialize)
-                    );
-
-                    TorrentPolling.Start();
-                    await tasks;
-
-                    Log.Logger.Information("Ready");
-
-                    MainWindowViewModel!.PostStartup();
-                } catch (Exception ex) {
+        _ = Task.Run(async () => {
+            try {
+                await Task.Run(PostInitServices);
+            } catch (Exception ex) {
+                await Dispatcher.UIThread.InvokeAsync(async () => {
                     var msgbox = MessageBoxManager.GetMessageBoxStandard(
-                        title: "RTSharp has crashed", 
-                        text: $"RTSharp has crashed.\n{ex}", 
-                        @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok, 
-                        icon: MsBox.Avalonia.Enums.Icon.Error, 
+                        title: "RTSharp has crashed",
+                        text: $"RTSharp has crashed.\n{ex}",
+                        @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
+                        icon: MsBox.Avalonia.Enums.Icon.Error,
                         windowStartupLocation: WindowStartupLocation.CenterOwner);
-                    var task = msgbox.ShowAsync();
-                    var cts = new CancellationTokenSource();
-                    _ = task.ContinueWith((task) => cts.Cancel());
-                    Dispatcher.UIThread.MainLoop(cts.Token);
-#if !DEBUG
-                    Environment.Exit(1);
-#endif
-                    throw;
-                }
+                    await msgbox.ShowAsync();
+                });
+                Environment.Exit(1);
+                return;
+            }
 
-                if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime) {
-                    desktopLifetime.MainWindow = MainWindow;
-
-                    bool firstExit = true;
-
-                    desktopLifetime.ShutdownRequested += (sender, e) => {
-                        if (firstExit) {
-                            e.Cancel = true;
-
-                            var tcs = new TaskCompletionSource();
-                            var thread = new Thread(() => {
-                                foreach (var (_, fx) in FxOnExit) {
-                                    fx().GetAwaiter().GetResult();
-                                }
-
-                                firstExit = false;
-                                Dispatcher.UIThread.Post(() => {
-                                    desktopLifetime.Shutdown();
-                                });
-                            });
-                            thread.Start();
-                        }
-                    };
-                }
-
-                MainWindow.Show();
-            });
+            await Dispatcher.UIThread.InvokeAsync(InitUI);
         });
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    public static async Task PreInitServices()
+    {
+        await Core.Config.WriteDefaultConfig();
+
+        var cfgBuilder = new ConfigurationBuilder();
+        cfgBuilder.AddJsonFile(RTSharp.Shared.Abstractions.Consts.APP_CONFIG_PATH, false, true);
+        var config = cfgBuilder.Build();
+
+        await ConfigureServices.GenerateCertificatesIfNeeded();
+
+        var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>() ?? [];
+
+        var host = Host.CreateDefaultBuilder()
+            .ConfigureServices((_, services) => {
+                services.UseMicrosoftDependencyResolver();
+
+                services.AddSingleton<IConfiguration>(config);
+                Core.Config.AddConfig(config, services);
+
+                services.AddDaemonServices(servers);
+
+                services.AddTransient<Core.Services.Cache.TorrentFileCache.TorrentFileCache>();
+                services.AddTransient<Core.Services.Cache.TorrentPropertiesCache.TorrentPropertiesCache>();
+                services.AddTransient<Core.Services.Cache.ASCache.ASCache>();
+                services.AddTransient<Core.Services.Cache.Images.ImageCache>();
+                services.AddTransient<TrackerDb>();
+                services.AddSingleton<Shared.Abstractions.ISpeedMovingAverageService, Core.Services.SpeedMovingAverageService>();
+                services.AddSingleton<Core.Services.DomainParser>();
+                services.AddSingleton<Core.Services.MediaPreviewService>();
+                services.AddHttpClient<Core.Services.Favicon>();
+            })
+            .Build();
+
+        Core.ServiceProvider._provider = host.Services;
+        Core.ServiceProvider._provider.UseMicrosoftDependencyResolver();
+    }
+
+    public static async Task PostInitServices()
+    {
+        using var scope = Core.ServiceProvider.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+        var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>() ?? [];
+
+        foreach (var server in servers) {
+            var instance = ActivatorUtilities.CreateInstance<DaemonService>(Core.ServiceProvider._provider, server.Key);
+            Core.Servers.Value.Add(server.Key, instance);
+            Dispatcher.UIThread.Invoke(() => {
+                var renderer = new ServersActionQueueRenderer(server.Key, instance);
+                ActionQueue.RegisterActionQueue(instance, renderer);
+                _ = renderer.TrackServerActions();
+            });
+        }
+
+        var tasks = Task.WhenAll(
+            Task.Run(scope.ServiceProvider.GetRequiredService<TorrentFileCache>().Initialize),
+            Task.Run(scope.ServiceProvider.GetRequiredService<TorrentPropertiesCache>().Initialize),
+            Task.Run(scope.ServiceProvider.GetRequiredService<ASCache>().Initialize),
+            Task.Run(scope.ServiceProvider.GetRequiredService<ImageCache>().Initialize),
+            Task.Run(scope.ServiceProvider.GetRequiredService<TrackerDb>().Initialize),
+#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
+            Task.Run(() => Plugin.Plugins.LoadPlugins((progress, text) => { })),
+#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
+            Task.Run(scope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>().Initialize)
+        );
+
+        await tasks;
+    }
+
+    private async Task InitUI()
+    {
+        try {
+            this.DataContext = new AppViewModel();
+            MainWindowViewModel = new MainWindowViewModel();
+            MainWindow = new MainWindow(MainWindowViewModel);
+
+#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
+            await Task.Run(() => Plugin.Plugins.InitPlugins((progress, text) => { }));
+#pragma warning restore IL2026
+
+            TorrentPolling.Start();
+
+            MainWindowViewModel!.PostStartup();
+        } catch (Exception ex) {
+            var msgbox = MessageBoxManager.GetMessageBoxStandard(
+                title: "RTSharp has crashed",
+                text: $"RTSharp has crashed.\n{ex}",
+                @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
+                icon: MsBox.Avalonia.Enums.Icon.Error,
+                windowStartupLocation: WindowStartupLocation.CenterOwner);
+            await msgbox.ShowAsync();
+            Environment.Exit(1);
+            return;
+        }
+
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime) {
+            desktopLifetime.MainWindow = MainWindow;
+
+            bool firstExit = true;
+
+            desktopLifetime.ShutdownRequested += async (sender, e) => {
+                if (firstExit) {
+                    e.Cancel = true;
+                    firstExit = false;
+                    await Task.Run(async () => {
+                        foreach (var (_, fx) in FxOnExit)
+                            await fx();
+                    });
+                    desktopLifetime.Shutdown();
+                }
+            };
+        }
+
+        MainWindow.Show();
     }
 
     public void Exit(object sender, EventArgs e)

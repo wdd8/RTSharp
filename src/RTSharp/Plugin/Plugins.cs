@@ -323,37 +323,7 @@ namespace RTSharp.Plugin
             }
 
             var plugin = new RTSharpPlugin(ctx, asm, configRaw, Path, instanceId, modulePath);
-
-            Progress(($"Initializing plugin {pluginName} ({init.Version.VersionDisplayString})...", 0f));
-            Log.Logger.Debug($"Initializing plugin {pluginName} ({init.Version.VersionDisplayString})...");
-
-            void evPluginProgress((string Status, float Percentage) e)
-            {
-                Progress(($"{pluginName}: {e.Status}", e.Percentage));
-            }
-
-            try {
-                var inst = await init.Init(plugin, evPluginProgress);
-                plugin.Instance = inst;
-            } catch (Exception ex) {
-                try {
-                    if (plugin.Instance != null)
-                        await plugin.Instance.Unload();
-                } catch { }
-
-                LoadedPlugins.Remove(plugin);
-                ctx.Unload();
-
-                Log.Logger.Error($"Failed to initialize plugin {modulePath}: {ex}");
-                await MessageBoxManager.GetMessageBoxStandard(
-                    title: "RT# - Failed to load plugin", 
-                    text: $"Failed to load plugin {modulePath}\n{ex}", 
-                    @enum: ButtonEnum.Ok, 
-                    icon: Icon.Error, 
-                    windowStartupLocation: WindowStartupLocation.CenterOwner).ShowAsync();
-
-                return;
-            }
+            plugin.PluginInit = init;
             LoadedPlugins.Add(plugin);
 
             Log.Logger.Information($"Loaded plugin {pluginName}");
@@ -381,6 +351,49 @@ namespace RTSharp.Plugin
             }
 
             Progress(100, $"Plugins loaded");
+        }
+
+        [RequiresUnreferencedCode("Plugins")]
+        public static async Task InitPlugins(Action<float, string> Progress)
+        {
+            var pending = LoadedPlugins.Where(x => x.Instance == null).ToList();
+
+            for (var x = 0; x < pending.Count; x++) {
+                var plugin = pending[x];
+                var pluginName = plugin.PluginInstanceConfig.Name;
+                var init = plugin.PluginInit!;
+
+                Progress((int)((float)x / pending.Count * 100), $"Initializing plugin {pluginName}...");
+                Log.Logger.Debug($"Initializing plugin {pluginName} ({init.Version.VersionDisplayString})...");
+
+                void evPluginProgress((string Status, float Percentage) e)
+                {
+                    Progress((int)(e.Percentage / pending.Count), $"{pluginName}: {e.Status}");
+                }
+
+                try {
+                    var inst = await init.Init(plugin, evPluginProgress);
+                    plugin.Instance = inst;
+                } catch (Exception ex) {
+                    try {
+                        if (plugin.Instance != null)
+                            await plugin.Instance.Unload();
+                    } catch { }
+
+                    LoadedPlugins.Remove(plugin);
+                    plugin.AssemblyLoadContext.Unload();
+
+                    Log.Logger.Error($"Failed to initialize plugin {plugin.ModulePath}: {ex}");
+                    await MessageBoxManager.GetMessageBoxStandard(
+                        title: "RT# - Failed to load plugin",
+                        text: $"Failed to load plugin {plugin.ModulePath}\n{ex}",
+                        @enum: ButtonEnum.Ok,
+                        icon: Icon.Error,
+                        windowStartupLocation: WindowStartupLocation.CenterOwner).ShowAsync();
+                }
+            }
+
+            Progress(100, "Plugins initialized");
         }
 
         public static List<string> ListUnloadedPluginDirs()
