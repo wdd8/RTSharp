@@ -62,7 +62,7 @@ namespace RTSharp.ViewModels.TorrentListing
             await foreach (var peer in PeerInfoFetches.Reader.ReadAllAsync()) {
                 lock (peerCheckLock) {
                     if (fetchingPeers.Contains(peer.IPPort.Address))
-                        return;
+                        continue;
                     fetchingPeers.Add(peer.IPPort.Address);
                 }
 
