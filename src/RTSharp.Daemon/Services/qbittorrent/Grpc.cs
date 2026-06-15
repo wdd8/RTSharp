@@ -622,22 +622,30 @@ namespace RTSharp.Daemon.Services.qbittorrent
                                 MagnetDummy = internalTorrent.MagnetDummy
                             });
                         } else {
-                            delta.Complete.Add(new CompleteDeltaTorrentResponse {
-                                Hash = internalTorrent.Hash,
-                                State = internalTorrent.State,
-                                WantedSize = internalTorrent.WantedSize,
-                                Uploaded = internalTorrent.Uploaded,
-                                UPSpeed = internalTorrent.UPSpeed,
-                                Labels = { internalTorrent.Labels },
-                                RemotePath = internalTorrent.RemotePath,
-                                FinishedOn = internalTorrent.FinishedOn,
-                                SeedersTotal = internalTorrent.SeedersTotal,
-                                PeersTotal = internalTorrent.PeersTotal,
-                                PeersConnected = internalTorrent.PeersConnected,
-                                Priority = internalTorrent.Priority,
-                                PrimaryTracker = internalTorrent.PrimaryTracker,
-                                StatusMessage = internalTorrent.StatusMessage
-                            });
+                            if (internalTorrent.State.HasFlag(Protocols.DataProvider.TorrentState.Active)) {
+                                /*
+                                 * qbit pushes so many seemingly fake peer count updates that just jump
+                                 * up and down for no reason, so lets only push active complete torrents.
+                                 * related? https://github.com/qbittorrent/qBittorrent/issues/22432 ->
+                                 * https://github.com/arvidn/libtorrent/issues/7700
+                                 */
+                                delta.Complete.Add(new CompleteDeltaTorrentResponse {
+                                    Hash = internalTorrent.Hash,
+                                    State = internalTorrent.State,
+                                    WantedSize = internalTorrent.WantedSize,
+                                    Uploaded = internalTorrent.Uploaded,
+                                    UPSpeed = internalTorrent.UPSpeed,
+                                    Labels = { internalTorrent.Labels },
+                                    RemotePath = internalTorrent.RemotePath,
+                                    FinishedOn = internalTorrent.FinishedOn,
+                                    SeedersTotal = internalTorrent.SeedersTotal,
+                                    PeersTotal = internalTorrent.PeersTotal,
+                                    PeersConnected = internalTorrent.PeersConnected,
+                                    Priority = internalTorrent.Priority,
+                                    PrimaryTracker = internalTorrent.PrimaryTracker,
+                                    StatusMessage = internalTorrent.StatusMessage
+                                });
+                            }
                         }
                     }
                 }
