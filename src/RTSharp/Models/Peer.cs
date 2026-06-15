@@ -77,23 +77,31 @@ namespace RTSharp.Models
 
         public void UpdateFromPluginModel(Shared.Abstractions.Peer In)
         {
-            this.Flags = FlagsMapper.MapConcat(In.Flags, x => x switch {
-                PEER_FLAGS.I_INCOMING => "I",
-                PEER_FLAGS.E_ENCRYPTED => "E",
-                PEER_FLAGS.S_SNUBBED => "S",
-                PEER_FLAGS.O_OBFUSCATED => "O",
-                PEER_FLAGS.P_PREFERRED => "P",
-                PEER_FLAGS.U_UNWANTED => "U",
-                _ => throw new ArgumentOutOfRangeException()
-            });
-            this.FlagsInternal = In.Flags;
+            if (In.Flags != this.FlagsInternal) {
+                this.Flags = FlagsMapper.MapConcat(In.Flags, x => x switch {
+                    PEER_FLAGS.I_INCOMING => "I",
+                    PEER_FLAGS.E_ENCRYPTED => "E",
+                    PEER_FLAGS.S_SNUBBED => "S",
+                    PEER_FLAGS.O_OBFUSCATED => "O",
+                    PEER_FLAGS.P_PREFERRED => "P",
+                    PEER_FLAGS.U_UNWANTED => "U",
+                    _ => throw new ArgumentOutOfRangeException()
+                });
+                this.FlagsInternal = In.Flags;
+            }
 
-            this.Done = In.Done;
-            this.Downloaded = In.Downloaded;
-            this.Uploaded = In.Uploaded;
-            this.DLSpeed = In.DLSpeed;
-            this.UPSpeed = In.UPSpeed;
-            this.PeerDLSpeed = In.PeerDLSpeed;
+            if (In.Done != this.Done)
+                this.Done = In.Done;
+            if (In.Downloaded != this.Downloaded)
+                this.Downloaded = In.Downloaded;
+            if (In.Uploaded != this.Uploaded)
+                this.Uploaded = In.Uploaded;
+            if (In.DLSpeed != this.DLSpeed)
+                this.DLSpeed = In.DLSpeed;
+            if (In.UPSpeed != this.UPSpeed)
+                this.UPSpeed = In.UPSpeed;
+            if (In.PeerDLSpeed != this.PeerDLSpeed)
+                this.PeerDLSpeed = In.PeerDLSpeed;
         }
 
         public static Peer FromPluginModel(Shared.Abstractions.Peer In)

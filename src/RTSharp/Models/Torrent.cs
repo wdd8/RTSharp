@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -613,7 +613,88 @@ namespace RTSharp.Models
             set => SetProperty(ref _magnetDummy, value);
         }
 
-        public void PostAllChanged() => Dispatcher.UIThread.Post(() => base.OnPropertyChanged(new PropertyChangedEventArgs(string.Empty)));
+        [Flags]
+        private enum CHANGED_FIELDS : ulong
+        {
+            None           = 0,
+            Name           = 1UL << 0,
+            State          = 1UL << 1,
+            Size           = 1UL << 2,
+            WantedSize     = 1UL << 3,
+            PieceSize      = 1UL << 4,
+            Wasted         = 1UL << 5,
+            Done           = 1UL << 6,
+            Downloaded     = 1UL << 7,
+            CompletedSize  = 1UL << 8,
+            Uploaded       = 1UL << 9,
+            Ratio          = 1UL << 10,
+            DLSpeed        = 1UL << 11,
+            UPSpeed        = 1UL << 12,
+            ETA            = 1UL << 13,
+            Labels         = 1UL << 14,
+            Peers          = 1UL << 15,
+            Seeders        = 1UL << 16,
+            Priority       = 1UL << 17,
+            CreatedOnDate  = 1UL << 18,
+            RemainingSize  = 1UL << 19,
+            FinishedOnDate = 1UL << 20,
+            TimeElapsed    = 1UL << 21,
+            AddedOnDate    = 1UL << 22,
+            TrackerSingle  = 1UL << 23,
+            StatusMsg      = 1UL << 24,
+            Comment        = 1UL << 25,
+            RemotePath     = 1UL << 26,
+            MagnetDummy    = 1UL << 27,
+        }
+
+        private static readonly PropertyChangedEventArgs[][] FlagsToFields =
+        [
+            [new(nameof(Name))],
+            [new(nameof(State)), new(nameof(InternalState))],
+            [new(nameof(Size)), new(nameof(SizeDisplay))],
+            [new(nameof(WantedSize))],
+            [new(nameof(PieceSize))],
+            [new(nameof(Wasted))],
+            [new(nameof(Done))],
+            [new(nameof(Downloaded)), new(nameof(DownloadedDisplay))],
+            [new(nameof(CompletedSize)), new(nameof(CompletedSizeDisplay))],
+            [new(nameof(Uploaded)), new(nameof(UploadedDisplay))],
+            [new(nameof(Ratio)), new(nameof(RatioDisplay))],
+            [new(nameof(DLSpeed)), new(nameof(DLSpeedDisplay))],
+            [new(nameof(UPSpeed)), new(nameof(UPSpeedDisplay))],
+            [new(nameof(ETA)), new(nameof(ETADisplay))],
+            [new(nameof(Labels)), new(nameof(LabelsDisplay))],
+            [new(nameof(Peers)), new(nameof(PeersDisplay))],
+            [new(nameof(Seeders)), new(nameof(SeedersDisplay))],
+            [new(nameof(Priority))],
+            [new(nameof(CreatedOnDate)), new(nameof(CreatedOnDateDisplay))],
+            [new(nameof(RemainingSize)), new(nameof(RemainingSizeDisplay))],
+            [new(nameof(FinishedOnDate)), new(nameof(FinishedOnDateDisplay))],
+            [new(nameof(TimeElapsed))],
+            [new(nameof(AddedOnDate)), new(nameof(AddedOnDateDisplay))],
+            [new(nameof(TrackerSingle))],
+            [new(nameof(StatusMsg))],
+            [new(nameof(Comment))],
+            [new(nameof(RemotePath))],
+            [new(nameof(MagnetDummy))],
+        ];
+
+        private ulong ChangesMask;
+
+        public void RaisePendingChanges()
+        {
+            var bits = ChangesMask;
+            ChangesMask = (ulong)CHANGED_FIELDS.None;
+
+            while (bits != 0) {
+                var index = BitOperations.TrailingZeroCount(bits);
+                bits &= bits - 1;
+
+                var notifications = FlagsToFields[index];
+                for (var i = 0; i < notifications.Length; i++)
+                    OnPropertyChanged(notifications[i]);
+            }
+        }
 
         public Torrent(byte[] Hash, Plugin.RTSharpDataProvider Owner)
         {
@@ -644,52 +725,143 @@ namespace RTSharp.Models
 
         public ValueTask UpdateFromPluginModel(Shared.Abstractions.Torrent In, bool updateTracker = true)
         {
-            _name = In.Name;
-            _state = EnumExt.ToString(In.State);
-            _internalState = In.State;
-            _size = In.Size; _sizeDisplay = Converters.GetSIDataSize(In.Size);
-            _wantedSize = In.WantedSize;
-            PieceSize = In.PieceSize;
-            _wasted = In.Wasted;
-            _done = In.Done;
-            _downloaded = In.Downloaded;
-            _downloadedDisplay = Converters.GetSIDataSize(In.Downloaded);
-            _completedSize = In.CompletedSize;
-            _completedSizeDisplay = Converters.GetSIDataSize(In.CompletedSize);
-            _uploaded = In.Uploaded;
-            _uploadedDisplay = Converters.GetSIDataSize(In.Uploaded);
-            _ratio = (In.Downloaded == 0 && In.Uploaded == 0) ? 0f : (float)In.Uploaded / In.Downloaded;
-            _ratioDisplay = _ratio.ToString("N3");
-            _dlSpeed = In.DLSpeed;
-            _dlSpeedDisplay = Converters.GetSIDataSpeed(In.DLSpeed);
-            _upSpeed = In.UPSpeed;
-            _upSpeedDisplay = Converters.GetSIDataSpeed(In.UPSpeed);
-            _eta = In.ETA;
-            _etaDisplay = Converters.ToAgoString(In.ETA);
+            var changed = CHANGED_FIELDS.None;
+
+            if (_name != In.Name) {
+                _name = In.Name;
+                changed |= CHANGED_FIELDS.Name;
+            }
+            if (_internalState != In.State) {
+                _state = EnumExt.ToString(In.State);
+                _internalState = In.State;
+                changed |= CHANGED_FIELDS.State;
+            }
+            if (_size != In.Size) {
+                _size = In.Size;
+                _sizeDisplay = Converters.GetSIDataSize(In.Size);
+                changed |= CHANGED_FIELDS.Size;
+            }
+            if (_wantedSize != In.WantedSize) {
+                _wantedSize = In.WantedSize;
+                changed |= CHANGED_FIELDS.WantedSize;
+            }
+            if (PieceSize != In.PieceSize) {
+                PieceSize = In.PieceSize;
+                changed |= CHANGED_FIELDS.PieceSize;
+            }
+            if (_wasted != In.Wasted) {
+                _wasted = In.Wasted;
+                changed |= CHANGED_FIELDS.Wasted;
+            }
+            if (_done != In.Done) {
+                _done = In.Done;
+                changed |= CHANGED_FIELDS.Done;
+            }
+            if (_downloaded != In.Downloaded) {
+                _downloaded = In.Downloaded;
+                _downloadedDisplay = Converters.GetSIDataSize(In.Downloaded);
+                changed |= CHANGED_FIELDS.Downloaded;
+            }
+            if (_completedSize != In.CompletedSize) {
+                _completedSize = In.CompletedSize;
+                _completedSizeDisplay = Converters.GetSIDataSize(In.CompletedSize);
+                changed |= CHANGED_FIELDS.CompletedSize;
+            }
+            if (_uploaded != In.Uploaded) {
+                _uploaded = In.Uploaded;
+                _uploadedDisplay = Converters.GetSIDataSize(In.Uploaded);
+                changed |= CHANGED_FIELDS.Uploaded;
+            }
+            var ratio = (In.Downloaded == 0 && In.Uploaded == 0) ? 0f : (float)In.Uploaded / In.Downloaded;
+            if (_ratio != ratio) {
+                _ratio = ratio;
+                _ratioDisplay = ratio.ToString("N3");
+                changed |= CHANGED_FIELDS.Ratio;
+            }
+            if (_dlSpeed != In.DLSpeed) {
+                _dlSpeed = In.DLSpeed;
+                _dlSpeedDisplay = Converters.GetSIDataSpeed(In.DLSpeed);
+                changed |= CHANGED_FIELDS.DLSpeed;
+            }
+            if (_upSpeed != In.UPSpeed) {
+                _upSpeed = In.UPSpeed;
+                _upSpeedDisplay = Converters.GetSIDataSpeed(In.UPSpeed);
+                changed |= CHANGED_FIELDS.UPSpeed;
+            }
+            if (_eta != In.ETA) {
+                _eta = In.ETA;
+                _etaDisplay = Converters.ToAgoString(In.ETA);
+                changed |= CHANGED_FIELDS.ETA;
+            }
             if (In.Labels.Count != _labels.Length || !In.Labels.SetEquals(_labels)) {
                 _labels = [.. In.Labels];
                 _labelsDisplay = String.Join(", ", _labels);
+                changed |= CHANGED_FIELDS.Labels;
             }
-            _peers = new ConnectedTotalPair(In.Peers.Connected, In.Peers.Total);
-            _peersDisplay = _peers.ToString();
-            _seeders = new ConnectedTotalPair(In.Seeders.Connected, In.Seeders.Total);
-            _seedersDisplay = _seeders.ToString();
-            _priority = EnumExt.ToString(In.Priority);
-            InternalPriority = In.Priority;
-            _createdOnDate = In.CreatedOnDate;
-            _createdOnDateDisplay = In.CreatedOnDate == null ? "" : In.CreatedOnDate.Value.ToString();
-            _remainingSize = In.RemainingSize;
-            _remainingSizeDisplay = Converters.GetSIDataSize(In.RemainingSize);
-            _finishedOnDate = In.FinishedOnDate;
-            _finishedOnDateDisplay = In.FinishedOnDate == null ? "" : In.FinishedOnDate.Value.ToString();
-            _timeElapsed = In.TimeElapsed;
-            _addedOnDate = In.AddedOnDate;
-            _addedOnDateDisplay = In.AddedOnDate.ToString();
-            _trackerSingle = In.TrackerSingle;
-            _statusMsg = In.StatusMessage;
-            Comment = In.Comment;
-            _remotePath = In.RemotePath;
-            _magnetDummy = In.MagnetDummy;
+            var peers = new ConnectedTotalPair(In.Peers.Connected, In.Peers.Total);
+            if (_peers != peers) {
+                _peers = peers;
+                _peersDisplay = peers.ToString();
+                changed |= CHANGED_FIELDS.Peers;
+            }
+            var seeders = new ConnectedTotalPair(In.Seeders.Connected, In.Seeders.Total);
+            if (_seeders != seeders) {
+                _seeders = seeders;
+                _seedersDisplay = seeders.ToString();
+                changed |= CHANGED_FIELDS.Seeders;
+            }
+            if (InternalPriority != In.Priority) {
+                _priority = EnumExt.ToString(In.Priority);
+                InternalPriority = In.Priority;
+                changed |= CHANGED_FIELDS.Priority;
+            }
+            if (_createdOnDate != In.CreatedOnDate) {
+                _createdOnDate = In.CreatedOnDate;
+                _createdOnDateDisplay = In.CreatedOnDate == null ? "" : In.CreatedOnDate.Value.ToString();
+                changed |= CHANGED_FIELDS.CreatedOnDate;
+            }
+            if (_remainingSize != In.RemainingSize) {
+                _remainingSize = In.RemainingSize;
+                _remainingSizeDisplay = Converters.GetSIDataSize(In.RemainingSize);
+                changed |= CHANGED_FIELDS.RemainingSize;
+            }
+            if (_finishedOnDate != In.FinishedOnDate) {
+                _finishedOnDate = In.FinishedOnDate;
+                _finishedOnDateDisplay = In.FinishedOnDate == null ? "" : In.FinishedOnDate.Value.ToString();
+                changed |= CHANGED_FIELDS.FinishedOnDate;
+            }
+            if (_timeElapsed != In.TimeElapsed) {
+                _timeElapsed = In.TimeElapsed;
+                changed |= CHANGED_FIELDS.TimeElapsed;
+            }
+            if (_addedOnDate != In.AddedOnDate) {
+                _addedOnDate = In.AddedOnDate;
+                _addedOnDateDisplay = In.AddedOnDate.ToString();
+                changed |= CHANGED_FIELDS.AddedOnDate;
+            }
+            if (_trackerSingle != In.TrackerSingle) {
+                _trackerSingle = In.TrackerSingle;
+                changed |= CHANGED_FIELDS.TrackerSingle;
+            }
+            if (_statusMsg != In.StatusMessage) {
+                _statusMsg = In.StatusMessage;
+                changed |= CHANGED_FIELDS.StatusMsg;
+            }
+            if (Comment != In.Comment) {
+                Comment = In.Comment;
+                changed |= CHANGED_FIELDS.Comment;
+            }
+            if (_remotePath != In.RemotePath) {
+                _remotePath = In.RemotePath;
+                changed |= CHANGED_FIELDS.RemotePath;
+            }
+            if (_magnetDummy != In.MagnetDummy) {
+                _magnetDummy = In.MagnetDummy;
+                changed |= CHANGED_FIELDS.MagnetDummy;
+            }
+
+            if (changed != CHANGED_FIELDS.None)
+                ChangesMask |= (ulong)changed;
 
             async ValueTask updateTrackerValues()
             {
