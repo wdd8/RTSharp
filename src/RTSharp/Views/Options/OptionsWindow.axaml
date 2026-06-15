@@ -33,7 +33,7 @@
             </Grid.ColumnDefinitions>
             <TreeView Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" ItemsSource="{Binding Items, Mode=OneWay}" SelectedItem="{Binding CurrentlySelectedItem}">
                 <TreeView.ItemTemplate>
-                    <TreeDataTemplate DataType="options:OptionsItem" ItemsSource="{Binding Children}">
+                    <TreeDataTemplate x:DataType="options:OptionsItem" ItemsSource="{Binding Children}">
                         <StackPanel Orientation="Horizontal" MinWidth="150">
                             <i:Icon FontSize="16" Value="{Binding Icon}" Margin="0 0 20 0" />
                             <TextBlock TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding Text}"/>

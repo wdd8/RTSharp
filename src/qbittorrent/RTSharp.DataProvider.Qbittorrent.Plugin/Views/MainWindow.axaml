@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="using:RTSharp.Shared.Controls.Views"
         xmlns:vm="clr-namespace:RTSharp.DataProvider.Qbittorrent.Plugin.ViewModels"
+        xmlns:models="clr-namespace:RTSharp.DataProvider.Qbittorrent.Plugin.Models"
         xmlns:i="https://github.com/projektanker/icons.avalonia"
         mc:Ignorable="d"
         Width="820" Height="600"
@@ -141,26 +142,26 @@
                                     <DataGrid.Columns>
                                         <DataGridTemplateColumn Header="Monitored Folder" Width="*">
                                             <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
+                                                <DataTemplate x:DataType="models:ScanDirectory">
                                                     <TextBlock Text="{Binding Path}" VerticalAlignment="Center" Margin="4,0" />
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                             <DataGridTemplateColumn.CellEditingTemplate>
-                                                <DataTemplate>
+                                                <DataTemplate x:DataType="models:ScanDirectory">
                                                     <TextBox Text="{Binding Path}" />
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellEditingTemplate>
                                         </DataGridTemplateColumn>
                                         <DataGridTemplateColumn Header="Override Save Location" Width="220">
                                             <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
+                                                <DataTemplate x:DataType="models:ScanDirectory">
                                                     <TextBlock Text="{Binding Action}" VerticalAlignment="Center" Margin="4,0" />
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                             <DataGridTemplateColumn.CellEditingTemplate>
-                                                <DataTemplate>
+                                                <DataTemplate x:DataType="models:ScanDirectory">
                                                     <StackPanel Orientation="Vertical" Spacing="2">
-                                                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.ScanDirectoryComboOptions}"
+                                                        <ComboBox ItemsSource="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ScanDirectoryComboOptions}"
                                                                   SelectedItem="{Binding ActionComboSelection}"
                                                                   HorizontalAlignment="Stretch" />
                                                         <TextBox Text="{Binding Action}"
@@ -620,7 +621,7 @@
                                           ItemsSource="{Binding NetworkInterfaces}"
                                           SelectedItem="{Binding SelectedNetworkInterface}">
                                     <ComboBox.ItemTemplate>
-                                        <DataTemplate>
+                                        <DataTemplate x:DataType="vm:NetworkInterfaceItem">
                                             <TextBlock Text="{Binding DisplayName}" />
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>

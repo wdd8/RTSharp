@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
 		xmlns:vm="using:RTSharp.ViewModels"
+		xmlns:plugin="clr-namespace:RTSharp.Plugin"
         mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
         Width="400"
         Height="300"
@@ -19,7 +20,7 @@
         <views:GroupBox Grid.Column="0" Label="Active">
             <ListBox ItemsSource="{Binding ActivePlugins}" SelectedItem="{Binding SelectedActivePlugin}">
                 <ListBox.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="plugin:RTSharpPlugin">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding PluginInstanceConfig.Name}" />
                             <TextBlock>  (</TextBlock>

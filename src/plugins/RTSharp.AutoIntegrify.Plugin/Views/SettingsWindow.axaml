@@ -5,6 +5,7 @@
 		xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
 		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
 		xmlns:vm="clr-namespace:RTSharp.AutoIntegrify.Plugin.ViewModels"
+		xmlns:sys="using:System"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="RTSharp.AutoIntegrify.Plugin.SettingsWindow"
 		x:DataType="vm:SettingsWindowViewModel"
@@ -31,11 +32,11 @@
 			ScrollViewer.VerticalScrollBarVisibility="Visible"
 			ItemsSource="{Binding Items}">
           <ListBox.ItemTemplate>
-			<DataTemplate>
+			<DataTemplate x:DataType="sys:String">
 			  <StackPanel Orientation="Horizontal">
 			    <Button
 					Content="X"
-					Command="{Binding #list.DataContext.RemoveCommand}"
+					Command="{Binding #list.((vm:SettingsWindowViewModel)DataContext).RemoveCommand}"
 					CommandParameter="{Binding}"
 					/>
 			    <TextBlock VerticalAlignment="Center" Text="{Binding}" />

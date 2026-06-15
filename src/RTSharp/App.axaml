@@ -53,7 +53,7 @@
 
         <Style Selector="DocumentControl">
           <Setter Property="IconTemplate">
-            <DataTemplate DataType="dock:IDockable">
+            <DataTemplate x:DataType="dock:IDockable">
                 <PathIcon
                     Data="{Binding ., Converter={StaticResource IconConverter}}"
                     Width="16"

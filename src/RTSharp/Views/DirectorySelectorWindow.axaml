@@ -5,6 +5,7 @@
         xmlns:vm="clr-namespace:RTSharp.ViewModels;assembly=RTSharp"
         xmlns:i="https://github.com/projektanker/icons.avalonia"
         xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters"
+        xmlns:models="clr-namespace:RTSharp.Models"
         d:DataContext="{x:Static vm:ExampleDirectorySelectorWindowViewModel.ViewModel}"
         x:DataType="vm:DirectorySelectorWindowViewModel"
         mc:Ignorable="d"
@@ -55,7 +56,7 @@
             <DataGrid.Columns>
                 <DataGridTemplateColumn Header="Name" IsReadOnly="True">
                     <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="models:FileSystemItem">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <PathIcon Data="{Binding Display.Icon}" Width="16" Height="16" />
                                 <TextBlock Text="{Binding Display.Name}" VerticalAlignment="Center" />
@@ -63,7 +64,7 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                     <DataGridTemplateColumn.CellEditingTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="models:FileSystemItem">
                             <TextBox Text="{Binding Display.Name}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellEditingTemplate>

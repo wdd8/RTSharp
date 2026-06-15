@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RTSharp.ViewModels"
         xmlns:models="clr-namespace:RTSharp.Models"
+        xmlns:plugin="clr-namespace:RTSharp.Plugin"
         mc:Ignorable="d" d:DesignWidth="570" d:DesignHeight="250"
         x:DataType="vm:PluginsViewModel"
         x:CompileBindings="True"
@@ -35,7 +36,7 @@
         <Grid RowDefinitions="*,Auto" Grid.Column="0">
             <ListBox Grid.Row="0" ItemsSource="{Binding Plugins}" SelectedItem="{Binding CurrentlySelectedPlugin}">
                 <ListBox.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="plugin:RTSharpPlugin">
                         <TextBlock Text="{Binding PluginInstanceConfig.Name}"/>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
