@@ -122,10 +122,13 @@ public sealed class TorrentStore
         var changeSet = new TorrentStoreChangeSet(added, refreshed, removed, Dp);
 
         Dispatcher.UIThread.Post(() => {
+            foreach (var t in changeSet.Added)
+                t.CommitUIChanges();
+            foreach (var t in changeSet.Refreshed)
+                t.CommitUIChanges();
+
             Changed?.Invoke(this, changeSet);
             ApplyChanges(changeSet);
-            foreach (var t in changeSet.Refreshed)
-                t.RaisePendingChanges();
         });
     }
 

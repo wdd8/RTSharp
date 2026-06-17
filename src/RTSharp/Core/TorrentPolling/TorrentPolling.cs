@@ -141,7 +141,7 @@ public static class TorrentPolling
                         // Changed torrents
                         foreach (var change in changes) {
                             if (torrents.TryGet(new GlobalTorrentKey(change.Hash, dpId), out var torrent)) {
-                                torrent.UpdateFromPluginModel(change).GetAwaiter().GetResult(); // async??
+                                torrent.PendingEdit(change).GetAwaiter().GetResult(); // async??
                                 torrents.Refresh(torrent);
                             }
                         }

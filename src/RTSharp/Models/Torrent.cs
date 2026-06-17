@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Avalonia.Media;
@@ -65,59 +66,18 @@ namespace RTSharp.Models
                     var info = trackerInfo.FirstOrDefault(x => x.Domain == domain);
 
                     if (info != null) {
-                        if (images.TryGetValue(info, out var image)) {
-                            torrent.TrackerIcon = image;
-                        }
-                        torrent.TrackerDisplayName = info.Name ?? domain;
+                        images.TryGetValue(info, out var image);
+                        torrent.PendingTrackerEdit(image, info.Name ?? domain);
                     } else {
-                        torrent.TrackerDisplayName = domain;
+                        torrent.PendingTrackerEdit(null, domain);
                     }
                 }
 
-                await torrent.UpdateFromPluginModel(plugin, false);
+                await torrent.PendingEdit(plugin, false);
                 ret.Add(torrent);
             }
 
             return ret;
-        }
-
-        public static async ValueTask UpdateTrackersMulti(IEnumerable<Torrent> Domain)
-        {
-            var torrents = new HashSet<Torrent>();
-            foreach (var torrent in Domain) {
-                if (torrent.TrackerDisplayName == null && torrent.TrackerSingle != null) {
-                    torrents.Add(torrent);
-                }
-            }
-
-            IEnumerable<TrackerInfo> trackerInfo = [];
-            Dictionary<TrackerInfo, Bitmap> images = [];
-
-            if (torrents.Count != 0) {
-                using var scope = Core.ServiceProvider.CreateScope();
-                var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
-                var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
-
-                trackerInfo = await trackerDb.GetTrackerInfo(torrents.Select(x => UriUtils.GetDomainForTracker(x.TrackerSingle!)));
-                var imagesTasks = trackerInfo.Where(x => x.ImageHash != null).ToDictionary(x => x, x => imageCache.GetCachedImage(x.ImageHash!).AsTask());
-                await Task.WhenAll(imagesTasks.Values.ToArray());
-
-                images = imagesTasks.ToDictionary(x => x.Key, x => x.Value.Result!);
-            }
-
-            foreach (var torrent in torrents) {
-                var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle!);
-                var info = trackerInfo.FirstOrDefault(x => x.Domain == domain);
-
-                if (info != null) {
-                    if (images.TryGetValue(info, out var image)) {
-                        torrent.TrackerIcon = image;
-                    }
-                    torrent.TrackerDisplayName = info.Name ?? domain;
-                } else {
-                    torrent.TrackerDisplayName = domain;
-                }
-            }
         }
     }
 
@@ -613,88 +573,8 @@ namespace RTSharp.Models
             set => SetProperty(ref _magnetDummy, value);
         }
 
-        [Flags]
-        private enum CHANGED_FIELDS : ulong
-        {
-            None           = 0,
-            Name           = 1UL << 0,
-            State          = 1UL << 1,
-            Size           = 1UL << 2,
-            WantedSize     = 1UL << 3,
-            PieceSize      = 1UL << 4,
-            Wasted         = 1UL << 5,
-            Done           = 1UL << 6,
-            Downloaded     = 1UL << 7,
-            CompletedSize  = 1UL << 8,
-            Uploaded       = 1UL << 9,
-            Ratio          = 1UL << 10,
-            DLSpeed        = 1UL << 11,
-            UPSpeed        = 1UL << 12,
-            ETA            = 1UL << 13,
-            Labels         = 1UL << 14,
-            Peers          = 1UL << 15,
-            Seeders        = 1UL << 16,
-            Priority       = 1UL << 17,
-            CreatedOnDate  = 1UL << 18,
-            RemainingSize  = 1UL << 19,
-            FinishedOnDate = 1UL << 20,
-            TimeElapsed    = 1UL << 21,
-            AddedOnDate    = 1UL << 22,
-            TrackerSingle  = 1UL << 23,
-            StatusMsg      = 1UL << 24,
-            Comment        = 1UL << 25,
-            RemotePath     = 1UL << 26,
-            MagnetDummy    = 1UL << 27,
-        }
-
-        private static readonly PropertyChangedEventArgs[][] FlagsToFields =
-        [
-            [new(nameof(Name))],
-            [new(nameof(State)), new(nameof(InternalState))],
-            [new(nameof(Size)), new(nameof(SizeDisplay))],
-            [new(nameof(WantedSize))],
-            [new(nameof(PieceSize))],
-            [new(nameof(Wasted))],
-            [new(nameof(Done))],
-            [new(nameof(Downloaded)), new(nameof(DownloadedDisplay))],
-            [new(nameof(CompletedSize)), new(nameof(CompletedSizeDisplay))],
-            [new(nameof(Uploaded)), new(nameof(UploadedDisplay))],
-            [new(nameof(Ratio)), new(nameof(RatioDisplay))],
-            [new(nameof(DLSpeed)), new(nameof(DLSpeedDisplay))],
-            [new(nameof(UPSpeed)), new(nameof(UPSpeedDisplay))],
-            [new(nameof(ETA)), new(nameof(ETADisplay))],
-            [new(nameof(Labels)), new(nameof(LabelsDisplay))],
-            [new(nameof(Peers)), new(nameof(PeersDisplay))],
-            [new(nameof(Seeders)), new(nameof(SeedersDisplay))],
-            [new(nameof(Priority))],
-            [new(nameof(CreatedOnDate)), new(nameof(CreatedOnDateDisplay))],
-            [new(nameof(RemainingSize)), new(nameof(RemainingSizeDisplay))],
-            [new(nameof(FinishedOnDate)), new(nameof(FinishedOnDateDisplay))],
-            [new(nameof(TimeElapsed))],
-            [new(nameof(AddedOnDate)), new(nameof(AddedOnDateDisplay))],
-            [new(nameof(TrackerSingle))],
-            [new(nameof(StatusMsg))],
-            [new(nameof(Comment))],
-            [new(nameof(RemotePath))],
-            [new(nameof(MagnetDummy))],
-        ];
-
-        private ulong ChangesMask;
-
-        public void RaisePendingChanges()
-        {
-            var bits = ChangesMask;
-            ChangesMask = (ulong)CHANGED_FIELDS.None;
-
-            while (bits != 0) {
-                var index = BitOperations.TrailingZeroCount(bits);
-                bits &= bits - 1;
-
-                var notifications = FlagsToFields[index];
-                for (var i = 0; i < notifications.Length; i++)
-                    OnPropertyChanged(notifications[i]);
-            }
-        }
+        private Shared.Abstractions.Torrent? PendingChanges;
+        private (IImage? Icon, string? DisplayName)? ResolvedTracker;
 
         public Torrent(byte[] Hash, Plugin.RTSharpDataProvider Owner)
         {
@@ -723,169 +603,147 @@ namespace RTSharp.Models
             _remotePath = "";
         }
 
-        public ValueTask UpdateFromPluginModel(Shared.Abstractions.Torrent In, bool updateTracker = true)
+        public ValueTask PendingEdit(Shared.Abstractions.Torrent In, bool updateTracker = true)
         {
-            var changed = CHANGED_FIELDS.None;
+            PendingChanges = In;
 
-            if (_name != In.Name) {
-                _name = In.Name;
-                changed |= CHANGED_FIELDS.Name;
-            }
-            if (_internalState != In.State) {
-                _state = EnumExt.ToString(In.State);
-                _internalState = In.State;
-                changed |= CHANGED_FIELDS.State;
-            }
-            if (_size != In.Size) {
-                _size = In.Size;
-                _sizeDisplay = Converters.GetSIDataSize(In.Size);
-                changed |= CHANGED_FIELDS.Size;
-            }
-            if (_wantedSize != In.WantedSize) {
-                _wantedSize = In.WantedSize;
-                changed |= CHANGED_FIELDS.WantedSize;
-            }
-            if (PieceSize != In.PieceSize) {
-                PieceSize = In.PieceSize;
-                changed |= CHANGED_FIELDS.PieceSize;
-            }
-            if (_wasted != In.Wasted) {
-                _wasted = In.Wasted;
-                changed |= CHANGED_FIELDS.Wasted;
-            }
-            if (_done != In.Done) {
-                _done = In.Done;
-                changed |= CHANGED_FIELDS.Done;
-            }
-            if (_downloaded != In.Downloaded) {
-                _downloaded = In.Downloaded;
-                _downloadedDisplay = Converters.GetSIDataSize(In.Downloaded);
-                changed |= CHANGED_FIELDS.Downloaded;
-            }
-            if (_completedSize != In.CompletedSize) {
-                _completedSize = In.CompletedSize;
-                _completedSizeDisplay = Converters.GetSIDataSize(In.CompletedSize);
-                changed |= CHANGED_FIELDS.CompletedSize;
-            }
-            if (_uploaded != In.Uploaded) {
-                _uploaded = In.Uploaded;
-                _uploadedDisplay = Converters.GetSIDataSize(In.Uploaded);
-                changed |= CHANGED_FIELDS.Uploaded;
-            }
-            var ratio = (In.Downloaded == 0 && In.Uploaded == 0) ? 0f : (float)In.Uploaded / In.Downloaded;
-            if (_ratio != ratio) {
-                _ratio = ratio;
-                _ratioDisplay = ratio.ToString("N3");
-                changed |= CHANGED_FIELDS.Ratio;
-            }
-            if (_dlSpeed != In.DLSpeed) {
-                _dlSpeed = In.DLSpeed;
-                _dlSpeedDisplay = Converters.GetSIDataSpeed(In.DLSpeed);
-                changed |= CHANGED_FIELDS.DLSpeed;
-            }
-            if (_upSpeed != In.UPSpeed) {
-                _upSpeed = In.UPSpeed;
-                _upSpeedDisplay = Converters.GetSIDataSpeed(In.UPSpeed);
-                changed |= CHANGED_FIELDS.UPSpeed;
-            }
-            if (_eta != In.ETA) {
-                _eta = In.ETA;
-                _etaDisplay = Converters.ToAgoString(In.ETA);
-                changed |= CHANGED_FIELDS.ETA;
-            }
-            if (In.Labels.Count != _labels.Length || !In.Labels.SetEquals(_labels)) {
-                _labels = [.. In.Labels];
-                _labelsDisplay = String.Join(", ", _labels);
-                changed |= CHANGED_FIELDS.Labels;
-            }
-            var peers = new ConnectedTotalPair(In.Peers.Connected, In.Peers.Total);
-            if (_peers != peers) {
-                _peers = peers;
-                _peersDisplay = peers.ToString();
-                changed |= CHANGED_FIELDS.Peers;
-            }
-            var seeders = new ConnectedTotalPair(In.Seeders.Connected, In.Seeders.Total);
-            if (_seeders != seeders) {
-                _seeders = seeders;
-                _seedersDisplay = seeders.ToString();
-                changed |= CHANGED_FIELDS.Seeders;
-            }
-            if (InternalPriority != In.Priority) {
-                _priority = EnumExt.ToString(In.Priority);
-                InternalPriority = In.Priority;
-                changed |= CHANGED_FIELDS.Priority;
-            }
-            if (_createdOnDate != In.CreatedOnDate) {
-                _createdOnDate = In.CreatedOnDate;
-                _createdOnDateDisplay = In.CreatedOnDate == null ? "" : In.CreatedOnDate.Value.ToString();
-                changed |= CHANGED_FIELDS.CreatedOnDate;
-            }
-            if (_remainingSize != In.RemainingSize) {
-                _remainingSize = In.RemainingSize;
-                _remainingSizeDisplay = Converters.GetSIDataSize(In.RemainingSize);
-                changed |= CHANGED_FIELDS.RemainingSize;
-            }
-            if (_finishedOnDate != In.FinishedOnDate) {
-                _finishedOnDate = In.FinishedOnDate;
-                _finishedOnDateDisplay = In.FinishedOnDate == null ? "" : In.FinishedOnDate.Value.ToString();
-                changed |= CHANGED_FIELDS.FinishedOnDate;
-            }
-            if (_timeElapsed != In.TimeElapsed) {
-                _timeElapsed = In.TimeElapsed;
-                changed |= CHANGED_FIELDS.TimeElapsed;
-            }
-            if (_addedOnDate != In.AddedOnDate) {
-                _addedOnDate = In.AddedOnDate;
-                _addedOnDateDisplay = In.AddedOnDate.ToString();
-                changed |= CHANGED_FIELDS.AddedOnDate;
-            }
-            if (_trackerSingle != In.TrackerSingle) {
-                _trackerSingle = In.TrackerSingle;
-                changed |= CHANGED_FIELDS.TrackerSingle;
-            }
-            if (_statusMsg != In.StatusMessage) {
-                _statusMsg = In.StatusMessage;
-                changed |= CHANGED_FIELDS.StatusMsg;
-            }
-            if (Comment != In.Comment) {
-                Comment = In.Comment;
-                changed |= CHANGED_FIELDS.Comment;
-            }
-            if (_remotePath != In.RemotePath) {
-                _remotePath = In.RemotePath;
-                changed |= CHANGED_FIELDS.RemotePath;
-            }
-            if (_magnetDummy != In.MagnetDummy) {
-                _magnetDummy = In.MagnetDummy;
-                changed |= CHANGED_FIELDS.MagnetDummy;
-            }
-
-            if (changed != CHANGED_FIELDS.None)
-                ChangesMask |= (ulong)changed;
-
-            async ValueTask updateTrackerValues()
+            async ValueTask resolveTracker()
             {
                 using var scope = Core.ServiceProvider.CreateScope();
                 var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
                 var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
-                var trackerInfo = await trackerDb.GetTrackerInfo(UriUtils.GetDomainForTracker(In.TrackerSingle!));
+                var domain = UriUtils.GetDomainForTracker(In.TrackerSingle!);
+                var trackerInfo = await trackerDb.GetTrackerInfo(domain);
+
+                IImage? icon = null;
+                string displayName;
                 if (trackerInfo != null) {
-                    if (trackerInfo.ImageHash != null) {
-                        var image = await imageCache.GetCachedImage(trackerInfo.ImageHash);
-                        if (image != null)
-                            _trackerIcon = image;
-                    }
-                    _trackerDisplayName = trackerInfo.Name ?? UriUtils.GetDomainForTracker(In.TrackerSingle!);
+                    if (trackerInfo.ImageHash != null)
+                        icon = await imageCache.GetCachedImage(trackerInfo.ImageHash);
+                    displayName = trackerInfo.Name ?? domain;
                 } else
-                    _trackerDisplayName = UriUtils.GetDomainForTracker(In.TrackerSingle!);
+                    displayName = domain;
+
+                PendingTrackerEdit(icon, displayName);
             }
 
-            if (updateTracker && _trackerSingle != In.TrackerSingle) {
-                return updateTrackerValues();
-            }
+            if (updateTracker && _trackerSingle != In.TrackerSingle && In.TrackerSingle != null)
+                return resolveTracker();
 
             return ValueTask.CompletedTask;
+        }
+
+        public void PendingTrackerEdit(IImage? Icon, string? DisplayName)
+        {
+            ResolvedTracker = (Icon, DisplayName);
+        }
+
+        public void CommitUIChanges()
+        {
+            var trackerChanges = ResolvedTracker;
+            ResolvedTracker = null;
+            var changes = PendingChanges;
+            PendingChanges = null;
+
+            if (trackerChanges != null) {
+                if (trackerChanges.Value.Icon != null)
+                    TrackerIcon = trackerChanges.Value.Icon;
+                TrackerDisplayName = trackerChanges.Value.DisplayName;
+            }
+
+            if (changes == null)
+                return;
+
+            if (_name != changes.Name) {
+                Name = changes.Name;
+            }
+            if (_internalState != changes.State) {
+                State = EnumExt.ToString(changes.State);
+                _internalState = changes.State;
+            }
+            if (_size != changes.Size) {
+                Size = changes.Size;
+            }
+            if (_wantedSize != changes.WantedSize) {
+                WantedSize = changes.WantedSize;
+            }
+            if (PieceSize != changes.PieceSize) {
+                PieceSize = changes.PieceSize;
+            }
+            if (_wasted != changes.Wasted) {
+                Wasted = changes.Wasted;
+            }
+            if (_done != changes.Done) {
+                Done = changes.Done;
+            }
+            if (_downloaded != changes.Downloaded) {
+                Downloaded = changes.Downloaded;
+            }
+            if (_completedSize != changes.CompletedSize) {
+                CompletedSize = changes.CompletedSize;
+            }
+            if (_uploaded != changes.Uploaded) {
+                Uploaded = changes.Uploaded;
+            }
+            var ratio = (changes.Downloaded == 0 && changes.Uploaded == 0) ? 0f : (float)changes.Uploaded / changes.Downloaded;
+            if (_ratio != ratio) {
+                Ratio = ratio;
+            }
+            if (_dlSpeed != changes.DLSpeed) {
+                DLSpeed = changes.DLSpeed;
+            }
+            if (_upSpeed != changes.UPSpeed) {
+                UPSpeed = changes.UPSpeed;
+            }
+            if (_eta != changes.ETA) {
+                ETA = changes.ETA;
+            }
+            if (changes.Labels.Count != _labels.Length || !changes.Labels.SetEquals(_labels)) {
+                Labels = [.. changes.Labels];
+            }
+            var peers = new ConnectedTotalPair(changes.Peers.Connected, changes.Peers.Total);
+            if (_peers != peers) {
+                Peers = peers;
+            }
+            var seeders = new ConnectedTotalPair(changes.Seeders.Connected, changes.Seeders.Total);
+            if (_seeders != seeders) {
+                Seeders = seeders;
+            }
+            if (InternalPriority != changes.Priority) {
+                Priority = EnumExt.ToString(changes.Priority);
+                InternalPriority = changes.Priority;
+            }
+            if (_createdOnDate != changes.CreatedOnDate) {
+                CreatedOnDate = changes.CreatedOnDate;
+            }
+            if (_remainingSize != changes.RemainingSize) {
+                RemainingSize = changes.RemainingSize;
+            }
+            if (_finishedOnDate != changes.FinishedOnDate) {
+                FinishedOnDate = changes.FinishedOnDate;
+            }
+            if (_timeElapsed != changes.TimeElapsed) {
+                TimeElapsed = changes.TimeElapsed;
+            }
+            if (_addedOnDate != changes.AddedOnDate) {
+                AddedOnDate = changes.AddedOnDate;
+            }
+            if (_trackerSingle != changes.TrackerSingle) {
+                TrackerSingle = changes.TrackerSingle;
+            }
+            if (_statusMsg != changes.StatusMessage) {
+                StatusMsg = changes.StatusMessage;
+            }
+            if (Comment != changes.Comment) {
+                Comment = changes.Comment;
+            }
+            if (_remotePath != changes.RemotePath) {
+                RemotePath = changes.RemotePath;
+            }
+            if (_magnetDummy != changes.MagnetDummy) {
+                MagnetDummy = changes.MagnetDummy;
+            }
         }
 
         public Shared.Abstractions.Torrent ToPluginModel()
