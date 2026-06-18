@@ -46,7 +46,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                     if (changes == null)
                         return;
 
-                    await Res.WriteAsync(changes);
+                    if (changes.Incomplete.Count > 0 || changes.Complete.Count > 0 || changes.Removed.Count > 0 || changes.FullUpdate.Count > 0)
+                        await Res.WriteAsync(changes, CancellationToken);
                 }
             }
         }

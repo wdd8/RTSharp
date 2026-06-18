@@ -73,8 +73,6 @@ public class RTSharpPlugin : IPluginHost
         this.ModulePath = ModulePath;
     }
 
-    private static object DataProviderLock = new();
-
     public IDataProviderHost RegisterDataProvider(IDataProvider In)
     {
         var provider = new RTSharpDataProvider(this, In);
@@ -90,11 +88,9 @@ public class RTSharpPlugin : IPluginHost
         else if (AttachedServerId != provider.DataProviderInstanceConfig.ServerId)
             AttachedServerId = null;
 
-        lock (DataProviderLock) {
-            Plugins.DataProviders.Edit(x => {
-                x.Add(provider);
-            });
-        }
+        Dispatcher.UIThread.Invoke(() => Plugins.DataProviders.Edit(x => {
+            x.Add(provider);
+        }));
 
         return provider;
     }
@@ -106,11 +102,9 @@ public class RTSharpPlugin : IPluginHost
         if (dp == null)
             return;
 
-        lock (DataProviderLock) {
-            Plugins.DataProviders.Edit(x => {
-                x.Remove(dp);
-            });
-        }
+        Dispatcher.UIThread.Invoke(() => Plugins.DataProviders.Edit(x => {
+            x.Remove(dp);
+        }));
         dp.CurrentTorrentChangesTaskCts.Cancel();
     }
 

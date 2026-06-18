@@ -1,4 +1,5 @@
 using Avalonia.Media;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -64,10 +65,11 @@ namespace RTSharp.ViewModels
                                 ActiveTorrentCount = 0
                             };
 
-                            Items.Add(new DataProviderItemViewModel(model, SpeedChartEnabled));
+                            Items.Add(new DataProviderItemViewModel(model, SpeedChartEnabled, change.Item.Current.DataProviderInstanceConfig.ListUpdateInterval));
                         } else {
                             if (change.Reason == ListChangeReason.Remove) {
                                 Items.Remove(item);
+                                item.Dispose();
                                 continue;
                             }
 
@@ -82,6 +84,10 @@ namespace RTSharp.ViewModels
 
             TorrentPolling.Torrents.Changed += TorrentPolling_TorrentBatchChange;
             AddDisposable(Disposable.Create(() => TorrentPolling.Torrents.Changed -= TorrentPolling_TorrentBatchChange));
+            AddDisposable(Disposable.Create(() => {
+                foreach (var item in Items)
+                    item.Dispose();
+            }));
         }
 
         private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)
@@ -96,7 +102,7 @@ namespace RTSharp.ViewModels
         }
     }
 
-    public partial class DataProviderItemViewModel : ObservableObject
+    public partial class DataProviderItemViewModel : ObservableViewModel
     {
         private enum SPEED_CHART_MODE
         {
@@ -114,6 +120,8 @@ namespace RTSharp.ViewModels
         private uint ActiveTorrentCount;
 
         private SPEED_CHART_MODE? CurrentSpeedChartMode;
+
+        private readonly DispatcherTimer? IdleSpeedChartTimer;
 
         private readonly Axis SpeedChartYAxis;
 
@@ -139,7 +147,7 @@ namespace RTSharp.ViewModels
         [ObservableProperty]
         public partial bool SpeedChartTopLabelVisible { get; set; }
 
-        public DataProviderItemViewModel(Models.DataProvider Dp, bool SpeedChartEnabled)
+        public DataProviderItemViewModel(Models.DataProvider Dp, bool SpeedChartEnabled, TimeSpan PollInterval)
         {
             DataProvider = Dp;
             this.SpeedChartEnabled = SpeedChartEnabled;
@@ -200,6 +208,14 @@ namespace RTSharp.ViewModels
             };
 
             SpeedChartYAxes = [SpeedChartYAxis];
+
+            if (SpeedChartEnabled) {
+                IdleSpeedChartTimer = new DispatcherTimer { Interval = PollInterval };
+                IdleSpeedChartTimer.Tick += (_, _) => AddSpeedChartSample(0, 0);
+                IdleSpeedChartTimer.Start();
+
+                AddDisposable(Disposable.Create(() => IdleSpeedChartTimer.Stop()));
+            }
         }
 
         public void ApplyTorrentsChanges(TorrentStoreChangeSet e)
@@ -307,6 +323,11 @@ namespace RTSharp.ViewModels
             CurrentSpeedChartMode = chartMode;
             RemoveOldChartValues();
             UpdateYAxisScale();
+
+            if (IdleSpeedChartTimer != null) {
+                IdleSpeedChartTimer.Stop();
+                IdleSpeedChartTimer.Start();
+            }
         }
 
         private void FillSwitchPoint(SPEED_CHART_MODE Mode)
