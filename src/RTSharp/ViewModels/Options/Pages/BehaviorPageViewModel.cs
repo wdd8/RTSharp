@@ -2,14 +2,10 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-using Avalonia.Media.Imaging;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Microsoft.Extensions.DependencyInjection;
-
-using RTSharp.Shared.Controls;
 
 namespace RTSharp.ViewModels.Options.Pages;
 
@@ -49,8 +45,6 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
 
     [ObservableProperty]
     public partial bool UseFaviconGoogleAPI { get; set; }
-
-    public Bitmap FlatQuestionMarkIcon { get; } = BuiltInIcon.Get(BuiltInIcons.FLAT_QUESTION_MARK);
 
     public BehaviorPageViewModel()
     {

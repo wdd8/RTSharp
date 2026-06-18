@@ -1,9 +1,6 @@
-using Avalonia.Media.Imaging;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using RTSharp.Core.Services.Daemon;
-using RTSharp.Shared.Controls;
 
 using Serilog;
 
@@ -16,9 +13,6 @@ namespace RTSharp.ViewModels
 {
     public partial class ServersWindowViewModel : ObservableObject
     {
-        public Bitmap ServerIcon { get; } = BuiltInIcon.Get(BuiltInIcons.SERVER);
-        public Bitmap CertificateIcon { get; } = BuiltInIcon.Get(BuiltInIcons.CERTIFICATE);
-
         [ObservableProperty]
         public partial ObservableCollection<Models.Server> Servers { get; set; }
 

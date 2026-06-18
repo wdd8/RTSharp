@@ -41,7 +41,7 @@
 					<DataTemplate x:DataType="vm:FileInfo">
 						<StackPanel Orientation="Vertical">
 							<StackPanel Orientation="Horizontal">
-								<Image Source="{Binding StatusIcon}" Height="16" />
+								<views:BuiltInIconImage Value="{Binding StatusIcon}" Height="16" />
 								<TextBlock VerticalAlignment="Center" Text="{Binding File.FullPath}" />
 							</StackPanel>
 							<StackPanel Orientation="Horizontal">

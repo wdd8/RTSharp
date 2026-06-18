@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RTSharp.ViewModels"
         xmlns:models="clr-namespace:RTSharp.Models"
+        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
         xmlns:i="https://github.com/projektanker/icons.avalonia"
         mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="380"
         Width="700" Height="380"
@@ -58,7 +59,7 @@
 
             <StackPanel Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2"
                         Orientation="Horizontal" Margin="0,0,0,6">
-                <Image Source="{Binding ServerIcon}" Width="16" Height="16" Margin="0,0,6,0" />
+                <views:BuiltInIconImage Value="SERVER" Width="16" Height="16" Margin="0,0,6,0" />
                 <TextBlock FontWeight="SemiBold" VerticalAlignment="Center">Connection</TextBlock>
             </StackPanel>
 
@@ -75,7 +76,7 @@
 
             <StackPanel Grid.Column="0" Grid.Row="5" Grid.ColumnSpan="2"
                         Orientation="Horizontal" Margin="0,0,0,6">
-                <Image Source="{Binding CertificateIcon}" Width="16" Height="16" Margin="0,0,6,0" />
+                <views:BuiltInIconImage Value="CERTIFICATE" Width="16" Height="16" Margin="0,0,6,0" />
                 <TextBlock FontWeight="SemiBold" VerticalAlignment="Center">Certificate</TextBlock>
             </StackPanel>
 

@@ -502,7 +502,7 @@
                     <StackPanel Orientation="Vertical" Spacing="4" IsVisible="{Binding WebUISelected}">
                         <Border Background="#40FF8C00" BorderBrush="#FF8C00" BorderThickness="1" CornerRadius="4" Padding="10,8">
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <Image Grid.Column="0" Source="{Binding WarningIcon}" Width="24" Height="24" VerticalAlignment="Center" />
+                                <views:BuiltInIconImage Grid.Column="0" Value="SERIOUS_EXCLAMATION" Width="24" Height="24" VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="Warning: Changing settings that affect qBittorrent API access (address, port, credentials, HTTPS) may result in RTSharp losing connection to qBittorrent." VerticalAlignment="Center" />
                             </Grid>
                         </Border>

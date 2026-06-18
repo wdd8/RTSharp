@@ -40,7 +40,7 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
                         <TextBlock>AS cache</TextBlock>
-                        <Image Source="{Binding FlatQuestionMarkIcon}"
+                        <views:BuiltInIconImage Value="FLAT_QUESTION_MARK"
                                Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"
                                ToolTip.Tip="Caches autonomous system (ISP/network) information for IP addresses seen in the peers list." />
                     </StackPanel>
@@ -51,7 +51,7 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
                         <TextBlock>Torrent file cache</TextBlock>
-                        <Image Source="{Binding FlatQuestionMarkIcon}"
+                        <views:BuiltInIconImage Value="FLAT_QUESTION_MARK"
                                Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"
                                ToolTip.Tip="Caches the list of files contained in each torrent to avoid re-fetching from the daemon." />
                     </StackPanel>
@@ -62,7 +62,7 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
                         <TextBlock>Torrent properties cache</TextBlock>
-                        <Image Source="{Binding FlatQuestionMarkIcon}"
+                        <views:BuiltInIconImage Value="FLAT_QUESTION_MARK"
                                Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"
                                ToolTip.Tip="Caches basic torrent properties such as whether a torrent contains multiple files." />
                     </StackPanel>
@@ -73,7 +73,7 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
                         <TextBlock>Image cache</TextBlock>
-                        <Image Source="{Binding FlatQuestionMarkIcon}"
+                        <views:BuiltInIconImage Value="FLAT_QUESTION_MARK"
                                Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"
                                ToolTip.Tip="Caches scaled favicons and other images fetched from remote sources." />
                     </StackPanel>

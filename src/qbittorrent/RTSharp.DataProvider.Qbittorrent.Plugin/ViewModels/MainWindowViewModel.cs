@@ -1,12 +1,9 @@
 using System.Collections.ObjectModel;
 
 using Avalonia.Controls;
-using Avalonia.Media.Imaging;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using RTSharp.Shared.Controls;
 
 using Google.Protobuf.WellKnownTypes;
 
@@ -219,5 +216,4 @@ public partial class MainWindowViewModel : ObservableObject
     public static string[] TorrentContentLayoutOptions => SettingsMapper.TorrentContentLayoutOptions;
     public static string[] TorrentStopConditionOptions => SettingsMapper.TorrentStopConditionOptions;
 
-    public static Bitmap WarningIcon => BuiltInIcon.Get(BuiltInIcons.SERIOUS_EXCLAMATION);
 }

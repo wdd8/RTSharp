@@ -178,7 +178,9 @@ namespace RTSharp.ViewModels
         [RelayCommand]
         public void AboutClick()
         {
-            var aboutWindow = new AboutWindow();
+            var aboutWindow = new AboutWindow() {
+                ViewModel = new()
+            };
             aboutWindow.Show();
         }
 

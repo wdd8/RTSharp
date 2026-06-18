@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="600"
              xmlns:i="https://github.com/projektanker/icons.avalonia"
+             xmlns:sc="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
              xmlns:plugin="clr-namespace:RTSharp.Plugin"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:vm="clr-namespace:RTSharp.ViewModels"
@@ -32,7 +33,7 @@
                     <StackPanel Orientation="Vertical">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding DataProvider.DisplayName}" Padding="0 0 12 0" />
-                            <Image Width="16" Height="16" VerticalAlignment="Center" Source="{Binding DataProvider.StateIcon}" />
+                            <sc:BuiltInIconImage Width="16" Height="16" VerticalAlignment="Center" Value="{Binding DataProvider.StateIcon}" />
                             <TextBlock Padding="4 0 0 0" VerticalAlignment="Center" Text="{Binding DataProvider.Latency, Mode=OneWay}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">

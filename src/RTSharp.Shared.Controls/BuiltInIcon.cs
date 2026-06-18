@@ -18,6 +18,7 @@ public enum BuiltInIcons
     CERTIFICATE,
     LINK_OK,
     LINK_BROKEN,
+    PLANE,
 
     SERIOUS_EXCLAMATION,
     SERIOUS_INFO,
@@ -60,6 +61,7 @@ public static class BuiltInIcon
         { BuiltInIcons.CERTIFICATE, new Uri("avares://RTSharp/Assets/Icons/certificate.ico") },
         { BuiltInIcons.LINK_OK, new Uri("avares://RTSharp/Assets/Icons/link_ok.ico") },
         { BuiltInIcons.LINK_BROKEN, new Uri("avares://RTSharp/Assets/Icons/link_broken.ico") },
+        { BuiltInIcons.PLANE, new Uri("avares://RTSharp/Assets/Icons/plane.ico") },
 
         { BuiltInIcons.SERIOUS_EXCLAMATION, new Uri("avares://RTSharp/Assets/Icons/serious_exclamation.ico") },
         { BuiltInIcons.SERIOUS_INFO, new Uri("avares://RTSharp/Assets/Icons/serious_info.ico") },

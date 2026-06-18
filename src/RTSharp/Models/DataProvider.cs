@@ -1,5 +1,3 @@
-using Avalonia.Media.Imaging;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using RTSharp.Shared.Abstractions;
@@ -15,10 +13,10 @@ public partial class DataProvider : ObservableObject
     [NotifyPropertyChangedFor(nameof(StateIcon))]
     public partial DataProviderState State { get; set; }
 
-    public Bitmap StateIcon => State switch {
-        DataProviderState.INACTIVE => BuiltInIcon.Get(BuiltInIcons.LINK_BROKEN),
-        DataProviderState.ACTIVE => BuiltInIcon.Get(BuiltInIcons.LINK_OK),
-        _ => BuiltInIcon.Get(BuiltInIcons.SERIOUS_QUESTION)
+    public BuiltInIcons StateIcon => State switch {
+        DataProviderState.INACTIVE => BuiltInIcons.LINK_BROKEN,
+        DataProviderState.ACTIVE => BuiltInIcons.LINK_OK,
+        _ => BuiltInIcons.SERIOUS_QUESTION
     };
 
     [ObservableProperty]

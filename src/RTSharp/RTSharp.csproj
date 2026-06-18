@@ -299,10 +299,6 @@
     <PackageReference Include="Dock.Model.Avalonia" Version="12.0.0.2" />
     <PackageReference Include="DynamicData" Version="9.4.31" />
     <PackageReference Include="FluentMigrator" Version="8.0.1" />
-    <!-- Provider-specific runner only. The FluentMigrator.Runner meta-package depends on
-         every DB provider (Db2, Oracle, Postgres, SqlServer, …) and pulls their native
-         clients; we only call .AddSQLite(). This package transitively brings
-         FluentMigrator.Runner.Core (AddFluentMigratorCore/ConfigureRunner/IMigrationRunner). -->
     <PackageReference Include="FluentMigrator.Runner.SQLite" Version="8.0.1" />
     <PackageReference Include="Grpc.Net.ClientFactory" Version="2.80.0" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets" Version="2.3.11" />

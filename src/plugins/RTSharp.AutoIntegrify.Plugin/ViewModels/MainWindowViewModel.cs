@@ -1,4 +1,3 @@
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -50,7 +49,7 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
         public partial string? ResolvedPath { get; set; }
 
         [ObservableProperty]
-        public partial Bitmap? StatusIcon { get; set; }
+        public partial BuiltInIcons? StatusIcon { get; set; }
 
         public RESOLVE_STATE Resolved {
             get {
@@ -59,11 +58,11 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
             set {
                 field = value;
                 StatusIcon = field switch {
-                    RESOLVE_STATE.PENDING => BuiltInIcon.Get(BuiltInIcons.VISTA_WAIT),
-                    RESOLVE_STATE.FILE_TOO_SMALL => BuiltInIcon.Get(BuiltInIcons.VISTA_BLOCK),
-                    RESOLVE_STATE.UNRESOLVED => BuiltInIcon.Get(BuiltInIcons.SERIOUS_QUESTION),
-                    RESOLVE_STATE.RESOLVED => BuiltInIcon.Get(BuiltInIcons.VISTA_OK),
-                    RESOLVE_STATE.RESOLVED_HEURISTICS => BuiltInIcon.Get(BuiltInIcons.VISTA_OK_EXCLAMATION),
+                    RESOLVE_STATE.PENDING => BuiltInIcons.VISTA_WAIT,
+                    RESOLVE_STATE.FILE_TOO_SMALL => BuiltInIcons.VISTA_BLOCK,
+                    RESOLVE_STATE.UNRESOLVED => BuiltInIcons.SERIOUS_QUESTION,
+                    RESOLVE_STATE.RESOLVED => BuiltInIcons.VISTA_OK,
+                    RESOLVE_STATE.RESOLVED_HEURISTICS => BuiltInIcons.VISTA_OK_EXCLAMATION,
                     _ => null
                 };
             }
