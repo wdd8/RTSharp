@@ -32,29 +32,37 @@
 
         <StackPanel Margin="8" Spacing="12">
             <GroupBox Header="Polling intervals">
-                <Grid ColumnDefinitions="170,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
-                    <Grid.Styles>
-                        <Style Selector="TextBlock.unit">
-                            <Setter Property="Margin" Value="4 0 0 6" />
-                        </Style>
-                    </Grid.Styles>
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="170,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                        <Grid.Styles>
+                            <Style Selector="TextBlock.unit">
+                                <Setter Property="Margin" Value="4 0 0 6" />
+                            </Style>
+                        </Grid.Styles>
 
-                    <TextBlock Grid.Column="0" Grid.Row="0">Files polling interval:</TextBlock>
-                    <NumericUpDown Grid.Column="1" Grid.Row="0" Value="{Binding FilesPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
-                    <TextBlock Grid.Column="2" Grid.Row="0" Classes="unit">seconds</TextBlock>
+                        <TextBlock Grid.Column="0" Grid.Row="0">Files polling interval:</TextBlock>
+                        <NumericUpDown Grid.Column="1" Grid.Row="0" Value="{Binding FilesPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
+                        <TextBlock Grid.Column="2" Grid.Row="0" Classes="unit">seconds</TextBlock>
 
-                    <TextBlock Grid.Column="0" Grid.Row="1">Peers polling interval:</TextBlock>
-                    <NumericUpDown Grid.Column="1" Grid.Row="1" Value="{Binding PeersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
-                    <TextBlock Grid.Column="2" Grid.Row="1" Classes="unit">seconds</TextBlock>
+                        <TextBlock Grid.Column="0" Grid.Row="1">Peers polling interval:</TextBlock>
+                        <NumericUpDown Grid.Column="1" Grid.Row="1" Value="{Binding PeersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
+                        <TextBlock Grid.Column="2" Grid.Row="1" Classes="unit">seconds</TextBlock>
 
-                    <TextBlock Grid.Column="0" Grid.Row="2">Trackers polling interval:</TextBlock>
-                    <NumericUpDown Grid.Column="1" Grid.Row="2" Value="{Binding TrackersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
-                    <TextBlock Grid.Column="2" Grid.Row="2" Classes="unit">seconds</TextBlock>
+                        <TextBlock Grid.Column="0" Grid.Row="2">Trackers polling interval:</TextBlock>
+                        <NumericUpDown Grid.Column="1" Grid.Row="2" Value="{Binding TrackersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
+                        <TextBlock Grid.Column="2" Grid.Row="2" Classes="unit">seconds</TextBlock>
 
-                    <TextBlock Grid.Column="0" Grid.Row="3">Search-as-you-go delay:</TextBlock>
-                    <NumericUpDown Grid.Column="1" Grid.Row="3" Value="{Binding SearchAsYouGoDelaySeconds}" Minimum="0" FormatString="F1" />
-                    <TextBlock Grid.Column="2" Grid.Row="3" Classes="unit">seconds</TextBlock>
-                </Grid>
+                        <TextBlock Grid.Column="0" Grid.Row="3">Search-as-you-go delay:</TextBlock>
+                        <NumericUpDown Grid.Column="1" Grid.Row="3" Value="{Binding SearchAsYouGoDelaySeconds}" Minimum="0" FormatString="F1" />
+                        <TextBlock Grid.Column="2" Grid.Row="3" Classes="unit">seconds</TextBlock>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{Binding PollActiveTabOnly}">Poll selected torrent's active detail tab only</CheckBox>
+                        <views:BuiltInIconImage Value="FLAT_QUESTION_MARK" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
+                            ToolTip.Tip="When enabled, only the details tab currently in view (Files, Peers or Trackers) is polled for the selected torrent, instead of all of them at once." />
+                    </StackPanel>
+                </StackPanel>
             </GroupBox>
 
             <GroupBox Header="Favicons">

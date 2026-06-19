@@ -109,6 +109,9 @@ public partial class TorrentListingViewModel : ObservableViewModel
 
     public TorrentTrackersViewModel TrackersViewModel { get; }
 
+    [ObservableProperty]
+    public partial int SelectedTorrentDetailsTabIndex { get; set; }
+
     private static readonly DrawingImage DefaultImage;
 
     private bool StartTorrentAllowed => SelectedItems.Any() && SelectedItems[0].InternalState != TORRENT_STATE.SEEDING;
@@ -538,9 +541,18 @@ public partial class TorrentListingViewModel : ObservableViewModel
         TrackersViewModel.Torrent = newTorrent;
     }
 
+    private enum TORRENT_DETAILS_TAB
+    {
+        GENERAL = 0,
+        FILES = 1,
+        PEERS = 2,
+        TRACKERS = 3
+    }
+
     private Task? TorrentTabsTasks;
     private SemaphoreSlim TorrentTabsSwitch = new(1, 1);
     private CancellationTokenSource? SelectionChange { get; set; }
+    private TORRENT_DETAILS_TAB? TorrentDetailsTabTaskTarget;
 
     private async Task PollTorrentInfo(IReadOnlyList<Torrent> NewTorrents)
     {
@@ -574,15 +586,59 @@ public partial class TorrentListingViewModel : ObservableViewModel
                 Debug.Assert(TorrentTabsTasks == null);
 
                 Log.Logger.Information("Starting tasks for: " + newTorrent.Name);
-                TorrentTabsTasks = Task.WhenAll(
-                    FilesTasks(newTorrent, SelectionChange.Token),
-                    PeersTasks(newTorrent, SelectionChange.Token),
-                    TrackersTasks(newTorrent, SelectionChange.Token)
-                );
+                TorrentTabsTasks = StartTorrentTabTasks(newTorrent, SelectionChange.Token);
+            } else {
+                TorrentDetailsTabTaskTarget = null;
             }
         } finally {
             TorrentTabsSwitch.Release();
         }
+    }
+
+    private Task StartTorrentTabTasks(Torrent newTorrent, CancellationToken selectionChange)
+    {
+        bool pollActiveTabOnly;
+        using (var scope = Core.ServiceProvider.CreateScope())
+            pollActiveTabOnly = scope.ServiceProvider.GetRequiredService<Config>().Behavior.Value.PollActiveTabOnly;
+
+        if (!pollActiveTabOnly) {
+            TorrentDetailsTabTaskTarget = null;
+            return Task.WhenAll(
+                FilesTasks(newTorrent, selectionChange),
+                PeersTasks(newTorrent, selectionChange),
+                TrackersTasks(newTorrent, selectionChange)
+            );
+        }
+
+        var group = (TORRENT_DETAILS_TAB)SelectedTorrentDetailsTabIndex;
+        TorrentDetailsTabTaskTarget = group;
+
+        return group switch {
+            TORRENT_DETAILS_TAB.GENERAL => throw new InvalidOperationException(),
+            TORRENT_DETAILS_TAB.FILES => FilesTasks(newTorrent, selectionChange),
+            TORRENT_DETAILS_TAB.PEERS => PeersTasks(newTorrent, selectionChange),
+            TORRENT_DETAILS_TAB.TRACKERS => TrackersTasks(newTorrent, selectionChange),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+    }
+
+    partial void OnSelectedTorrentDetailsTabIndexChanged(int value)
+    {
+        bool pollActiveTabOnly;
+        using (var scope = Core.ServiceProvider.CreateScope())
+            pollActiveTabOnly = scope.ServiceProvider.GetRequiredService<Config>().Behavior.Value.PollActiveTabOnly;
+
+        if (!pollActiveTabOnly)
+            return;
+
+        if (TorrentDetailsTabTaskTarget == (TORRENT_DETAILS_TAB)value)
+            return;
+
+        var selection = SelectedItems.ToArray();
+        if (selection.Length != 1)
+            return;
+
+        _ = PollTorrentInfo(selection);
     }
 
     public override void OnContextPopulated()

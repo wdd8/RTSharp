@@ -329,7 +329,7 @@
 						   FontSize="13" />
 			</Border>
 			<GridSplitter Grid.Row="2" ResizeDirection="Rows" />
-			<TabControl Grid.Row="3">
+			<TabControl Grid.Row="3" SelectedIndex="{Binding SelectedTorrentDetailsTabIndex}">
 				<TabControl.Styles>
 					<Style Selector="TabItem">
 						<Setter Property="Margin" Value="0,-10,0,-10" />

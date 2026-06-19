@@ -40,6 +40,8 @@ public class Config
             public Dictionary<string, string> PeerOriginReplacements { get; set; } = new();
 
             public bool UseFaviconGoogleAPI { get; set; }
+
+            public bool PollActiveTabOnly { get; set; }
         }
 
         public class Caching
@@ -156,7 +158,8 @@ public class Config
     "PeerOriginReplacements": {
     },
     "SearchAsYouGoDelay": "00:00:01",
-    "UseFaviconGoogleAPI": false
+    "UseFaviconGoogleAPI": false,
+    "PollActiveTabOnly": false
   },
   "Caching": {
     "FilesCachingEnabled": true,

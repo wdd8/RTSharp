@@ -46,6 +46,9 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
     [ObservableProperty]
     public partial bool UseFaviconGoogleAPI { get; set; }
 
+    [ObservableProperty]
+    public partial bool PollActiveTabOnly { get; set; }
+
     public BehaviorPageViewModel()
     {
         if (!Avalonia.Controls.Design.IsDesignMode)
@@ -63,6 +66,7 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
         TrackersPollingIntervalSeconds = behavior.TrackersPollingInterval.TotalSeconds;
         SearchAsYouGoDelaySeconds = behavior.SearchAsYouGoDelay.TotalSeconds;
         UseFaviconGoogleAPI = behavior.UseFaviconGoogleAPI;
+        PollActiveTabOnly = behavior.PollActiveTabOnly;
 
         PeerOriginReplacements.Clear();
         foreach (var (pattern, replacement) in behavior.PeerOriginReplacements)
@@ -77,6 +81,7 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
         behavior.TrackersPollingInterval = TimeSpan.FromSeconds(TrackersPollingIntervalSeconds);
         behavior.SearchAsYouGoDelay = TimeSpan.FromSeconds(SearchAsYouGoDelaySeconds);
         behavior.UseFaviconGoogleAPI = UseFaviconGoogleAPI;
+        behavior.PollActiveTabOnly = PollActiveTabOnly;
 
         behavior.PeerOriginReplacements.Clear();
         foreach (var item in PeerOriginReplacements.Where(x => !String.IsNullOrEmpty(x.Pattern)))
