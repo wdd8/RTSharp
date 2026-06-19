@@ -59,11 +59,19 @@ public static class TorrentPolling
                 var changes = listingChanges.Changes;
                 var fullUpdate = listingChanges.FullUpdate.ToInfoHashDictionary(x => x.Hash);
                 var removed = listingChanges.Removed.ToHashSet(HashEqualityComparer.Instance);
-                var toRemove = new List<int>();
+                var dpId = dp.PluginInstance.InstanceId;
+
+                var vmTorrents = await Models.TorrentUpdateExt.NewOrUpdateFromPluginModelMulti(Torrents, dp, fullUpdate);
+
+                var changedTorrents = new List<Models.Torrent>();
+                foreach (var change in changes) {
+                    if (Torrents.TryGet(new GlobalTorrentKey(change.Hash, dpId), out var torrent)) {
+                        await torrent.PendingEdit(change);
+                        changedTorrents.Add(torrent);
+                    }
+                }
 
                 Torrents.Edit(dp, (torrents) => {
-                    var dpId = dp.PluginInstance.InstanceId;
-
                     {
                         // Since it is possible to remove torrent and add it right after in same change, we must handle removals first
                         if (removed.Count > 0) {
@@ -73,8 +81,6 @@ public static class TorrentPolling
 
                     {
                         // Full update
-                        var vmTorrents = Models.TorrentUpdateExt.NewOrUpdateFromPluginModelMulti(torrents, dp, fullUpdate).GetAwaiter().GetResult();
-
                         foreach (var torrent in vmTorrents) {
                             if (torrents.TryGet(new GlobalTorrentKey(torrent.Hash, dpId), out _)) {
                                 torrents.Refresh(torrent);
@@ -139,12 +145,8 @@ public static class TorrentPolling
 
                     {
                         // Changed torrents
-                        foreach (var change in changes) {
-                            if (torrents.TryGet(new GlobalTorrentKey(change.Hash, dpId), out var torrent)) {
-                                torrent.PendingEdit(change).GetAwaiter().GetResult(); // async??
-                                torrents.Refresh(torrent);
-                            }
-                        }
+                        foreach (var torrent in changedTorrents)
+                            torrents.Refresh(torrent);
                     }
                 });
             }
