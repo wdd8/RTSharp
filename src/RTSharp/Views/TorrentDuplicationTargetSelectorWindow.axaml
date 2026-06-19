@@ -28,15 +28,15 @@
             <TextBlock Grid.Column="0" FontWeight="Bold">Select destination for</TextBlock>
             <TextBlock Grid.Column="1" FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding SourceTorrent.Name}" />
         </Grid>
-        <views:GroupBox Label="Plugin">
+        <GroupBox Header="Plugin">
             <ComboBox ItemsSource="{Binding DataProviders}" SelectedItem="{Binding SelectedProvider}" DropDownClosed="EvDropDownClosed" HorizontalAlignment="Stretch" x:Name="dataProviderCmb" />
-        </views:GroupBox>
-        <views:GroupBox Label="Remote directory">
+        </GroupBox>
+        <GroupBox Header="Remote directory">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Margin="5,0,0,0" Command="{Binding BrowseRemoteDirectoryClickCommand}">Browse...</Button>
                 <TextBox Text="{Binding RemoteTargetPath}" IsEnabled="{Binding RemoteTargetPathEnabled}" />
             </DockPanel>
-        </views:GroupBox>
+        </GroupBox>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 16 0 0">
             <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding ConfirmClickCommand}">Confirm</Button>
             <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding CancelClickCommand}">Cancel</Button>

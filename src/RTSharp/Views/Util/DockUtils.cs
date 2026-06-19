@@ -1,6 +1,7 @@
 ﻿using Avalonia.Controls;
 
 using Dock.Model.Avalonia.Controls;
+using Dock.Model.Controls;
 using Dock.Model.Core;
 
 using System;
@@ -47,5 +48,15 @@ public class DockUtils
             OwnerMode = DockWindowOwnerMode.RootWindow
         });
         App.MainWindowViewModel.DockFactory.SetActiveDockable(tool);
+
+        IDockable? owner = tool.Owner;
+        while (owner is not null and not IRootDock)
+            owner = owner.Owner;
+
+        if ((owner as IRootDock)?.Window?.Host is Window hostWindow) {
+            hostWindow.Width = Double.NaN;
+            hostWindow.Height = Double.NaN;
+            hostWindow.SizeToContent = SizeToContent.WidthAndHeight;
+        }
     }
 }

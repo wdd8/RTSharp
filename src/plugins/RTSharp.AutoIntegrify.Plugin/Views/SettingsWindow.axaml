@@ -21,7 +21,7 @@
   </Window.Styles>
 
   <Grid RowDefinitions="Auto" ColumnDefinitions="*,Auto">
-	<views:GroupBox Label="Search paths" Grid.RowSpan="2" Grid.Column="0">
+	<GroupBox Header="Search paths" Grid.RowSpan="2" Grid.Column="0">
       <Grid RowDefinitions="Auto,Auto">
         <ListBox
 			Name="list"
@@ -50,10 +50,10 @@
 		  <Button Grid.Column="1" HorizontalAlignment="Left" Content="Add" Command="{Binding AddCommand}" />
 		</Grid>
       </Grid>
-    </views:GroupBox>
+    </GroupBox>
 
 	<StackPanel Grid.Column="1">
-	  <views:GroupBox VerticalAlignment="Top" Label="Other settings">
+	  <GroupBox VerticalAlignment="Top" Header="Other settings">
 		<StackPanel Orientation="Vertical">
 		  <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
 		    <TextBlock Text="Random pieces to check:" VerticalAlignment="Center"/>
@@ -63,7 +63,7 @@
 		    <TextBlock Text="Search recursion limit:" VerticalAlignment="Center"/>
             <NumericUpDown Width="100" Minimum="0" Increment="1" Value="{Binding SearchRecursionLimit}" />
 		  </StackPanel>
-		  <views:GroupBox Label="Links">
+		  <GroupBox Header="Links">
 			  <StackPanel Orientation="Vertical">
 			    <RadioButton GroupName="LinkGroup" Content="Reflink with hardlink fallback"
 					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:LinkOptions.ReflinkWithHardlinkFallback}}" />
@@ -72,9 +72,9 @@
 			    <RadioButton GroupName="LinkGroup" Content="Hardlink"
 					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:LinkOptions.Hardlink}}" />
               </StackPanel>
-		  </views:GroupBox>
+		  </GroupBox>
 		</StackPanel>
-	  </views:GroupBox>
+	  </GroupBox>
 
 	  <Button Content="Save" IsDefault="True" Command="{Binding SaveCommand}" />
 	</StackPanel>

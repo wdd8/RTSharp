@@ -1,4 +1,4 @@
-﻿<Window x:Class="RTSharp.DataProvider.Transmission.Plugin.Views.MainWindow"
+<Window x:Class="RTSharp.DataProvider.Transmission.Plugin.Views.MainWindow"
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -44,20 +44,21 @@
             <ScrollViewer Grid.Row="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
                 <Panel Margin="4,4,4,4">
                     <Grid ColumnDefinitions="*" RowDefinitions="Auto,Auto,Auto,Auto" IsVisible="{Binding DownloadSelected}" RowSpacing="8">
-                        <views:GroupBox Grid.Row="0" Label="Default download folder on remote host">
+                        <GroupBox Grid.Row="0" Header="Default download folder on remote host">
                             <TextBox Text="{Binding Settings.Download.DownloadDirectory}" />
-                        </views:GroupBox>
+                        </GroupBox>
 
                         <CheckBox Grid.Row="1" IsChecked="{Binding Settings.Download.RenamePartialFiles}">
                             Add .part extension to incomplete files
                         </CheckBox>
 
-                        <views:GroupBox Grid.Row="2" CheckBoxEnabled="True"
-                                        IsCheckBoxChecked="{Binding Settings.Download.IncompleteDirectoryEnabled}"
-                                        Label="Directory for incomplete files">
+                        <GroupBox Grid.Row="2">
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Download.IncompleteDirectoryEnabled}">Directory for incomplete files</CheckBox>
+                            </GroupBox.Header>
                             <TextBox Text="{Binding Settings.Download.IncompleteDirectory}"
                                      IsEnabled="{Binding Settings.Download.IncompleteDirectoryEnabled}" />
-                       </views:GroupBox>
+                       </GroupBox>
 
                         <Grid Grid.Row="3" ColumnDefinitions="2*,*,Auto" RowDefinitions="Auto,Auto,Auto">
                             <CheckBox Grid.Column="0" IsChecked="{Binding Settings.Download.SeedRatioLimited}" Content="Seed ratio:" />
@@ -105,7 +106,7 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="*" RowDefinitions="Auto,Auto" IsVisible="{Binding BandwidthSelected}" RowSpacing="8">
-                        <views:GroupBox Grid.Row="0" Grid.Column="0" Label="Global bandwidth settings">
+                        <GroupBox Grid.Row="0" Grid.Column="0" Header="Global bandwidth settings">
                             <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">Maximum download speed:</TextBlock>
                                 <CheckBox x:Name="GlobalDownEnabled" Grid.Row="0" Grid.Column="1" IsChecked="{Binding Settings.Bandwidth.SpeedLimitDownEnabled}" />
@@ -117,9 +118,12 @@
                                 <NumericUpDown Grid.Row="1" Grid.Column="2" Minimum="0" Increment="1" Value="{Binding Settings.Bandwidth.SpeedLimitUp, Mode=TwoWay}" IsEnabled="{Binding IsChecked, ElementName=GlobalUpEnabled}" />
                                 <TextBlock Grid.Row="1" Grid.Column="3" Padding="6,0,0,0" Text="KiB/s" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Grid.Row="1" Grid.Column="0" Label="Alternate bandwidth settings" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Bandwidth.AlternativeSpeedEnabled}">
+                        <GroupBox Grid.Row="1" Grid.Column="0">
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Bandwidth.AlternativeSpeedEnabled}">Alternate bandwidth settings</CheckBox>
+                            </GroupBox.Header>
                             <Grid RowDefinitions="Auto,Auto" IsEnabled="{Binding Settings.Bandwidth.AlternativeSpeedEnabled}">
                                 <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">Maximum download speed:</TextBlock>
@@ -158,7 +162,7 @@
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
                     </Grid>
 
                     <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" IsVisible="{Binding QueueSelected}" RowSpacing="8" ColumnSpacing="8">

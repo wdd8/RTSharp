@@ -4,7 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:statistics="using:RTSharp.ViewModels.Statistics"
         mc:Ignorable="d" d:DesignWidth="310" d:DesignHeight="260"
-		MinWidth="310" MinHeight="260"
+		Width="310" Height="260"
         xmlns:views="using:RTSharp.Shared.Controls.Views"
         xmlns:converters="using:RTSharp.ViewModels.Converters"
         x:Class="RTSharp.Views.Statistics.StatisticsView"
@@ -18,7 +18,7 @@
     </UserControl.Styles>
 
 	<StackPanel Orientation="Vertical">
-		<views:GroupBox Label="Listing" Margin="4,4,4,4">
+		<GroupBox Header="Listing" Margin="4,4,4,4">
 			<Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
 				<TextBlock Text="Torrents: " Grid.Column="0" Grid.Row="0" />
 				<TextBlock Text="{Binding TotalTorrents}" Grid.Column="1" Grid.Row="0" />
@@ -31,11 +31,11 @@
 				<TextBlock Text="Share ratio: " Grid.Column="0" Grid.Row="4" Padding="0,4,0,0" />
 				<TextBlock Text="{Binding ShareRatio}" Grid.Column="1" Grid.Row="4" Padding="0,4,0,0" />
 			</Grid>
-		</views:GroupBox>
+		</GroupBox>
 
 		<TextBlock Padding="8,8,8,8" Text="One or more daemons do not support all-time statstics" IsVisible="{Binding SomeDontSupport}" />
 
-		<views:GroupBox Label="Daemons" Margin="4,4,4,4">
+		<GroupBox Header="Daemons" Margin="4,4,4,4">
 			<Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
 				<TextBlock Text="All-time upload: " Grid.Column="0" Grid.Row="1" Padding="0,4,0,0" />
 				<TextBlock Text="{Binding AllTimeUpload, Converter={StaticResource SIDataSizeConverter}}" Grid.Column="1" Grid.Row="1" Padding="0,4,0,0" />
@@ -44,6 +44,6 @@
 				<TextBlock Text="All-time share ratio: " Grid.Column="0" Grid.Row="3" Padding="0,4,0,0" />
 				<TextBlock Text="{Binding AllTimeShareRatio}" Grid.Column="1" Grid.Row="3" Padding="0,4,0,0" />
 			</Grid>
-		</views:GroupBox>
+		</GroupBox>
 	</StackPanel>
 </UserControl>

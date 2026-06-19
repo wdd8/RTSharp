@@ -37,7 +37,7 @@
                         <TextBlock Grid.Column="1" Text="{Binding Done, StringFormat=\{0:0.00\} %}" Padding="8 0 0 0" VerticalAlignment="Center" />
                     </Grid>
 
-                    <views:GroupBox Label="Transfer">
+                    <GroupBox Header="Transfer">
                         <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*">
                             <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Time elapsed:" Text="{Binding TimeElapsed, Converter={StaticResource ETATimeSpanConverter}}" />
                             <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Downloaded:" Text="{Binding DownloadedDisplay}" />
@@ -52,8 +52,8 @@
                             <views:TextBlockWithLabel Grid.Row="0" Grid.Column="2" Label="Ratio:" Text="{Binding RatioDisplay}" />
                             <views:TextBlockWithLabel Grid.Row="1" Grid.Column="2" Label="Wasted:" Text="{Binding Wasted, Converter={StaticResource SIDataSizeConverter}}" />
                         </Grid>
-                    </views:GroupBox>
-                    <views:GroupBox Label="Torrent info">
+                    </GroupBox>
+                    <GroupBox Header="Torrent info">
                         <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
                             <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Remote path:" Text="{Binding RemotePath}" />
                             <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Created on:" Text="{Binding CreatedOnDateDisplay}" />
@@ -68,7 +68,7 @@
                             <views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Comment:" Text="{Binding Comment}" />
                             <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="Status:" Text="{Binding StatusMsg}" />
                         </Grid>
-                    </views:GroupBox>
+                    </GroupBox>
                 </StackPanel>
             </DataTemplate>
         </ContentControl.ContentTemplate>

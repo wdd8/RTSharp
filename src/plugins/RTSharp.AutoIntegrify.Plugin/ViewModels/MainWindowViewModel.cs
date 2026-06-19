@@ -22,7 +22,41 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using static RTSharp.AutoIntegrify.Plugin.ViewModels.MainWindowViewModel;
+
 namespace RTSharp.AutoIntegrify.Plugin.ViewModels;
+
+public partial class FileInfo : ObservableObject
+{
+    public required TorrentFile File { get; init; }
+
+    public required (ulong Start, ulong End, byte[] Hash)[] PieceHashes { get; init; }
+
+    public Range PieceRange { get; init; }
+
+    [ObservableProperty]
+    public partial string? ResolvedPath { get; set; }
+
+    [ObservableProperty]
+    public partial BuiltInIcons? StatusIcon { get; set; }
+
+    public RESOLVE_STATE Resolved {
+        get {
+            return field;
+        }
+        set {
+            field = value;
+            StatusIcon = field switch {
+                RESOLVE_STATE.PENDING => BuiltInIcons.VISTA_WAIT,
+                RESOLVE_STATE.FILE_TOO_SMALL => BuiltInIcons.VISTA_BLOCK,
+                RESOLVE_STATE.UNRESOLVED => BuiltInIcons.SERIOUS_QUESTION,
+                RESOLVE_STATE.RESOLVED => BuiltInIcons.VISTA_OK,
+                RESOLVE_STATE.RESOLVED_HEURISTICS => BuiltInIcons.VISTA_OK_EXCLAMATION,
+                _ => null
+            };
+        }
+    }
+}
 
 public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, Torrent Torrent) : ObservableViewModel
 {
@@ -36,38 +70,6 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
     }
 
     public record TorrentFile(string FullPath, long FileSize);
-
-    public partial class FileInfo : ObservableObject
-    {
-        public required TorrentFile File { get; init; }
-
-        public required (ulong Start, ulong End, byte[] Hash)[] PieceHashes { get; init; }
-
-        public Range PieceRange { get; init; }
-
-        [ObservableProperty]
-        public partial string? ResolvedPath { get; set; }
-
-        [ObservableProperty]
-        public partial BuiltInIcons? StatusIcon { get; set; }
-
-        public RESOLVE_STATE Resolved {
-            get {
-                return field;
-            }
-            set {
-                field = value;
-                StatusIcon = field switch {
-                    RESOLVE_STATE.PENDING => BuiltInIcons.VISTA_WAIT,
-                    RESOLVE_STATE.FILE_TOO_SMALL => BuiltInIcons.VISTA_BLOCK,
-                    RESOLVE_STATE.UNRESOLVED => BuiltInIcons.SERIOUS_QUESTION,
-                    RESOLVE_STATE.RESOLVED => BuiltInIcons.VISTA_OK,
-                    RESOLVE_STATE.RESOLVED_HEURISTICS => BuiltInIcons.VISTA_OK_EXCLAMATION,
-                    _ => null
-                };
-            }
-        }
-    }
 
     [ObservableProperty]
     public partial ObservableCollection<FileInfo> Files { get; set; } = new();

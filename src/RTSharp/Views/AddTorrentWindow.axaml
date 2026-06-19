@@ -9,14 +9,10 @@
         x:Class="RTSharp.Views.AddTorrentWindow"
 		x:DataType="vm:AddTorrentViewModel"
         Title="RT# - Add torrent"
-        MinWidth="453"
-        Width="453"
-        Height="390"
-        MinHeight="390"
-        MaxHeight="390"
+        SizeToContent="WidthAndHeight"
+        MinWidth="420"
         Name="window"
-        Icon="/Assets/rtsharp.ico"
-        SizeToContent="WidthAndHeight">
+        Icon="/Assets/rtsharp.ico">
     <Design.DataContext>
         <vm:AddTorrentViewModel />
     </Design.DataContext>
@@ -32,16 +28,19 @@
                 <TextBlock>Source</TextBlock>
             </TabItem.Header>
             <StackPanel Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE-24)}">
-                <views:GroupBox Label="Plugin">
+                <GroupBox Header="Plugin">
                     <ComboBox ItemsSource="{Binding DataProviders}" SelectedItem="{Binding SelectedProvider}" DropDownClosed="EvDropDownClosed" HorizontalAlignment="Stretch" x:Name="dataProviderCmb" />
-                </views:GroupBox>
-                <views:GroupBox Label="Remote directory">
+                </GroupBox>
+                <GroupBox Header="Remote directory">
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Margin="5,0,0,0" Command="{Binding BrowseRemoteDirectoryClickCommand}">Browse...</Button>
                         <TextBox Text="{Binding RemoteTargetPath}" />
                     </DockPanel>
-                </views:GroupBox>
-                <views:GroupBox Label="From file" RadioButtonGroup="main" IsRadioButtonChecked="{Binding FromFileSelected}">
+                </GroupBox>
+                <GroupBox>
+                    <GroupBox.Header>
+                        <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromFileSelected}">From file</RadioButton>
+                    </GroupBox.Header>
                     <DockPanel>
                         <Button IsEnabled="{Binding FromFileSelected}"
                                 Margin="5,0,0,0"
@@ -50,18 +49,24 @@
                         <TextBox IsEnabled="{Binding FromFileSelected}"
                                  Text="{Binding SelectedFileTextBox}" />
                     </DockPanel>
-                </views:GroupBox>
-                <views:GroupBox Label="From URI" RadioButtonGroup="main" IsRadioButtonChecked="{Binding FromUriSelected}">
+                </GroupBox>
+                <GroupBox>
+                    <GroupBox.Header>
+                        <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromUriSelected}">From URI</RadioButton>
+                    </GroupBox.Header>
                     <TextBox IsEnabled="{Binding FromUriSelected}"
                              ClipToBounds="True"
                              Text="{Binding Uri}" />
-                </views:GroupBox>
-                <views:GroupBox Label="From clipboard (URI's)" RadioButtonGroup="main" IsRadioButtonChecked="{Binding FromClipboardSelected}">
+                </GroupBox>
+                <GroupBox>
+                    <GroupBox.Header>
+                        <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromClipboardSelected}">From clipboard (URI's)</RadioButton>
+                    </GroupBox.Header>
                     <Button IsEnabled="{Binding FromClipboardSelected}"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center"
                             Command="{Binding PreviewClipboardClickCommand}">Preview</Button>
-                </views:GroupBox>
+                </GroupBox>
                 <Grid ColumnDefinitions="*,Auto" Margin="0,15,0,15">
                     <StackPanel Grid.Column="0">
                         <CheckBox IsChecked="{Binding StartTorrent}" IsEnabled="{Binding !ForceStartTorrentOnAdd}">Start torrent</CheckBox>

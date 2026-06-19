@@ -56,7 +56,7 @@
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
         <StackPanel Margin="8 8 8 8">
-            <views:GroupBox Label="Select file/folder">
+            <GroupBox Header="Select file/folder">
                 <StackPanel>
                     <TextBox Text="{Binding SourcePath}" />
                     <Grid ColumnDefinitions="*,Auto,Auto" Margin="0 8 0 0">
@@ -75,8 +75,8 @@
                         </Button>
                     </Grid>
                 </StackPanel>
-            </views:GroupBox>
-            <views:GroupBox Label="Settings">
+            </GroupBox>
+            <GroupBox Header="Settings">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock VerticalAlignment="Center" Margin="0 0 4 0">Piece size:</TextBlock>
@@ -109,15 +109,18 @@
                             <ComboBoxItem>Hybrid</ComboBoxItem>
                         </ComboBox>
                     </StackPanel>
-                    <!--<views:GroupBox CheckBoxEnabled="True" IsCheckBoxChecked="{Binding OptimiseAlignment}" Label="Optimise alignment" IsEnabled="False">
+                    <!--<GroupBox IsEnabled="False">
+                        <GroupBox.Header>
+                            <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding OptimiseAlignment}">Optimise alignment</CheckBox>
+                        </GroupBox.Header>
                         <StackPanel Orientation="Horizontal" Margin="4" IsEnabled="{Binding OptimiseAlignment}">
                             <TextBlock VerticalAlignment="Center">Align to piece boundary for files larger than:</TextBlock>
                             <NumericUpDown Margin="4 0 0 0" Value="0" Increment="1" />
                         </StackPanel>
-                    </views:GroupBox>-->
+                    </GroupBox>-->
                 </StackPanel>
-            </views:GroupBox>
-            <views:GroupBox Label="Fields">
+            </GroupBox>
+            <GroupBox Header="Fields">
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*">
                     <Grid.Styles>
                         <Style Selector="TextBlock">
@@ -139,7 +142,7 @@
                     <TextBlock Grid.Column="0" Grid.Row="3">Source:</TextBlock>
                     <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Source}" />
                 </Grid>
-            </views:GroupBox>
+            </GroupBox>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 8 0 0">
                 <Button Margin="0 0 4 0" Command="{Binding CreateTorrentClickCommand}">Create Torrent</Button>
                 <Button Command="{Binding CancelClickCommand}">Cancel</Button>

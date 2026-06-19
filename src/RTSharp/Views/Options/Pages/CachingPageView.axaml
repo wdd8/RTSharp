@@ -19,7 +19,7 @@
     </UserControl.Styles>
 
     <StackPanel Margin="8" Spacing="12">
-        <views:GroupBox Label="Files cache">
+        <GroupBox Header="Files cache">
             <StackPanel Spacing="8">
                 <CheckBox IsChecked="{Binding FilesCachingEnabled}">Enable files caching</CheckBox>
                 <Grid ColumnDefinitions="200,Auto" RowDefinitions="Auto,Auto">
@@ -33,9 +33,9 @@
                     <NumericUpDown Grid.Column="1" Grid.Row="1" Value="{Binding InMemoryImages}" Minimum="0" ToolTip.Tip="Set to 0 to disable in-memory image caching." />
                 </Grid>
             </StackPanel>
-        </views:GroupBox>
+        </GroupBox>
 
-        <views:GroupBox Label="Cached data">
+        <GroupBox Header="Cached data">
             <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
@@ -81,6 +81,6 @@
                     <Button Grid.Column="2" Margin="8 0 0 0" Command="{Binding ClearImageCacheCommand}">Clear</Button>
                 </Grid>
             </StackPanel>
-        </views:GroupBox>
+        </GroupBox>
     </StackPanel>
 </UserControl>

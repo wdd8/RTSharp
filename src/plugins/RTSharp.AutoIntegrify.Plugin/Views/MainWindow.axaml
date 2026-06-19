@@ -55,13 +55,13 @@
 			<GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns" />
 			<Grid Grid.Column="2" RowDefinitions="20,Auto,Auto, Auto" Margin="4,8,4,4">
 				<views:PieceProgressBar Grid.Row="0" Pieces="{Binding Pieces}" Height="20" Margin="-1,0,0,0" BorderThickness="1" BorderBrush="DarkGray" /> <!-- bug? -->
-				<views:GroupBox Label="File info" Grid.Row="1" Padding="0 8 0 0">
+				<GroupBox Header="File info" Grid.Row="1" Padding="0 8 0 0">
 					<StackPanel>
 						<views:TextBlockWithLabel Label="Path in torrent:" Text="{Binding SelectedFile.File.FullPath}" />
 						<views:TextBlockWithLabel Label="Resolved path:" Text="{Binding SelectedFile.ResolvedPath}" />
 						<views:TextBlockWithLabel Label="State:" Text="{Binding SelectedFile.Resolved}" />
 					</StackPanel>
-				</views:GroupBox>
+				</GroupBox>
 				<TextBlock Grid.Row="2" Text="{Binding StatusText}" HorizontalAlignment="Center" />
 				<Button Grid.Row="3" Content="{Binding ActionButtonText}" Command="{Binding ActionButtonCommand}" HorizontalAlignment="Center" />
 			</Grid>

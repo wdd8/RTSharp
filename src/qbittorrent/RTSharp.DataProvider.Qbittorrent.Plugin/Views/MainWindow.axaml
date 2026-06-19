@@ -50,7 +50,10 @@
 
                     <!-- Behaviour -->
                     <StackPanel Orientation="Vertical" Spacing="4" IsVisible="{Binding BehaviourSelected}">
-                        <views:GroupBox Label="Log Files" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Behaviour.LogEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Behaviour.LogEnabled}">Log Files</CheckBox>
+                            </GroupBox.Header>
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6" IsEnabled="{Binding Settings.Behaviour.LogEnabled}">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Save path:" />
                                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.Behaviour.LogPath}" />
@@ -67,12 +70,12 @@
                                     <ComboBox ItemsSource="{Binding LogAgeTypeOptions}" SelectedItem="{Binding Settings.Behaviour.LogAgeType}" />
                                 </StackPanel>
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
                     </StackPanel>
 
                     <!-- Downloads -->
                     <StackPanel Orientation="Vertical" Spacing="4" IsVisible="{Binding DownloadsSelected}">
-                        <views:GroupBox Label="When Adding a Torrent">
+                        <GroupBox Header="When Adding a Torrent">
                             <StackPanel Orientation="Vertical" Spacing="6">
                                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" ColumnSpacing="6">
                                     <TextBlock Grid.Column="0" Text="Torrent content layout:" />
@@ -87,20 +90,23 @@
                                     <ComboBox Grid.Column="1" HorizontalAlignment="Left" ItemsSource="{Binding TorrentStopConditionOptions}" SelectedItem="{Binding Settings.Downloads.TorrentStopCondition}" />
                                 </Grid>
 
-                                <views:GroupBox Label="When adding a duplicate torrent">
+                                <GroupBox Header="When adding a duplicate torrent">
                                     <CheckBox IsChecked="{Binding Settings.Downloads.MergeTrackers}" Content="Merge trackers to existing torrent" />
-                                </views:GroupBox>
+                                </GroupBox>
 
-                                <views:GroupBox Label="Delete .torrent files afterwards" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Downloads.AutoDeleteEnabled}">
+                                <GroupBox>
+                                    <GroupBox.Header>
+                                        <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Downloads.AutoDeleteEnabled}">Delete .torrent files afterwards</CheckBox>
+                                    </GroupBox.Header>
                                     <CheckBox IsChecked="{Binding Settings.Downloads.AutoDeleteAlsoWhenCancelled}" Content="Also when addition is cancelled" IsEnabled="{Binding Settings.Downloads.AutoDeleteEnabled}" />
-                                </views:GroupBox>
+                                </GroupBox>
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
                         <CheckBox IsChecked="{Binding Settings.Downloads.PreallocateAll}" Content="Pre-allocate disk space for all files" />
                         <CheckBox IsChecked="{Binding Settings.Downloads.AppendExtensionToIncompleteFiles}" Content="Append .!qB extension to incomplete files" />
                         <CheckBox IsChecked="{Binding Settings.Downloads.UseUnwantedFolder}" Content="Keep unselected files in &quot;.unwanted&quot; folder" />
 
-                        <views:GroupBox Label="Saving Management">
+                        <GroupBox Header="Saving Management">
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Default Torrent Management Mode:" />
                                 <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Left" ItemsSource="{Binding TMMDefaultModeOptions}" SelectedItem="{Binding Settings.Downloads.AutoTMMEnabledByDefault}" />
@@ -130,9 +136,9 @@
                                 <TextBlock Grid.Row="9" Grid.Column="0" Text="Copy .torrent files for finished downloads to:" />
                                 <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding Settings.Downloads.ExportDirectoryForFinished}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Automatically add torrents from:">
+                        <GroupBox Header="Automatically add torrents from:">
                             <StackPanel Orientation="Vertical" Spacing="4">
                                 <DataGrid ItemsSource="{Binding Settings.Downloads.ScanDirectories}"
                                           SelectedItem="{Binding SelectedScanDirectory}"
@@ -178,17 +184,23 @@
                                     <Button Content="Remove" Command="{Binding RemoveScanDirectoryCommand}" IsEnabled="{Binding SelectedScanDirectory, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 </StackPanel>
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Excluded file names" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Downloads.ExcludedFileNamesEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Downloads.ExcludedFileNamesEnabled}">Excluded file names</CheckBox>
+                            </GroupBox.Header>
                             <TextBox Text="{Binding Settings.Downloads.ExcludedFileNames}"
                                      IsEnabled="{Binding Settings.Downloads.ExcludedFileNamesEnabled}"
                                      AcceptsReturn="True"
                                      MinHeight="60"
                                      MaxHeight="120" />
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="E-mail Notification upon Download Completion" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Downloads.MailNotificationEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Downloads.MailNotificationEnabled}">E-mail Notification upon Download Completion</CheckBox>
+                            </GroupBox.Header>
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6" IsEnabled="{Binding Settings.Downloads.MailNotificationEnabled}">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="From:" />
                                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.Downloads.MailNotificationSender}" />
@@ -210,16 +222,22 @@
                                     <TextBox Grid.Row="1" Grid.Column="1" PasswordChar="•" Text="{Binding Settings.Downloads.MailNotificationPassword}" />
                                 </Grid>
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Run External Program">
+                        <GroupBox Header="Run External Program">
                             <StackPanel Orientation="Vertical" Spacing="8">
-                                <views:GroupBox Label="Run on torrent added" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Downloads.AutorunOnTorrentAddedEnabled}">
+                                <GroupBox>
+                                    <GroupBox.Header>
+                                        <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Downloads.AutorunOnTorrentAddedEnabled}">Run on torrent added</CheckBox>
+                                    </GroupBox.Header>
                                     <TextBox Text="{Binding Settings.Downloads.AutorunOnTorrentAddedProgram}" IsEnabled="{Binding Settings.Downloads.AutorunOnTorrentAddedEnabled}" />
-                                </views:GroupBox>
-                                <views:GroupBox Label="Run on torrent finished" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Downloads.AutorunEnabled}">
+                                </GroupBox>
+                                <GroupBox>
+                                    <GroupBox.Header>
+                                        <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Downloads.AutorunEnabled}">Run on torrent finished</CheckBox>
+                                    </GroupBox.Header>
                                     <TextBox Text="{Binding Settings.Downloads.AutorunProgram}" IsEnabled="{Binding Settings.Downloads.AutorunEnabled}" />
-                                </views:GroupBox>
+                                </GroupBox>
                                 <StackPanel Orientation="Vertical" Spacing="2">
                                     <TextBlock Text="Supported parameters (case sensitive):" FontWeight="SemiBold" />
                                     <TextBlock FontFamily="Courier New, Monospace" xml:space="preserve">  %N: Torrent name
@@ -238,7 +256,7 @@
   Tip: Encapsulate parameter with quotation marks to avoid text being cut off at whitespace (e.g., "%N")</TextBlock>
                                 </StackPanel>
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
                     </StackPanel>
 
                     <!-- Connection -->
@@ -249,16 +267,16 @@
                                       ItemsSource="{Binding BittorrentProtocolOptions}" SelectedItem="{Binding Settings.Connection.BittorrentProtocol}" />
                         </Grid>
 
-                        <views:GroupBox Label="Listening Port">
+                        <GroupBox Header="Listening Port">
                             <Grid ColumnDefinitions="Auto,Auto,Auto,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Port used for incoming connections:" VerticalAlignment="Center" />
                                 <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="65535" Increment="1" Value="{Binding Settings.Connection.ListenPort}" />
                                 <Button Grid.Row="0" Grid.Column="2" Content="Randomize port" Command="{Binding RandomizePortCommand}" />
                                 <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" IsChecked="{Binding Settings.Connection.UpnpEnabled}" Content="Use UPnP / NAT-PMP port forwarding from my router" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Connections Limits">
+                        <GroupBox Header="Connections Limits">
                             <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Global maximum number of connections:" VerticalAlignment="Center" />
                                 <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding Settings.Connection.MaxConnectionsEnabled}" />
@@ -284,9 +302,9 @@
                                               Value="{Binding Settings.Connection.MaxUploadsPerTorrent}"
                                               IsEnabled="{Binding Settings.Connection.MaxUploadsPerTorrentEnabled}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Proxy Server">
+                        <GroupBox Header="Proxy Server">
                             <StackPanel Orientation="Vertical" Spacing="6">
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Type:" />
@@ -300,7 +318,10 @@
                                     <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" IsChecked="{Binding Settings.Connection.ProxyHostnameLookup}" Content="Perform hostname lookup via proxy" />
                                 </Grid>
 
-                                <views:GroupBox Label="Authentication" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Connection.ProxyAuthenticationEnabled}">
+                                <GroupBox>
+                                    <GroupBox.Header>
+                                        <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Connection.ProxyAuthenticationEnabled}">Authentication</CheckBox>
+                                    </GroupBox.Header>
                                     <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Username:" />
                                         <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.Connection.ProxyUsername}" IsEnabled="{Binding Settings.Connection.ProxyAuthenticationEnabled}" />
@@ -308,36 +329,39 @@
                                         <TextBlock Grid.Row="1" Grid.Column="0" Text="Password:" />
                                         <TextBox Grid.Row="1" Grid.Column="1" PasswordChar="•" Text="{Binding Settings.Connection.ProxyPassword}" IsEnabled="{Binding Settings.Connection.ProxyAuthenticationEnabled}" />
                                     </Grid>
-                                </views:GroupBox>
+                                </GroupBox>
 
-                                <views:GroupBox Label="Use proxy for BitTorrent purposes" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Connection.ProxyBittorrent}">
+                                <GroupBox>
+                                    <GroupBox.Header>
+                                        <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Connection.ProxyBittorrent}">Use proxy for BitTorrent purposes</CheckBox>
+                                    </GroupBox.Header>
                                     <CheckBox IsChecked="{Binding Settings.Connection.ProxyPeerConnections}" Content="Use proxy for peer connections" IsEnabled="{Binding Settings.Connection.ProxyBittorrent}" />
-                                </views:GroupBox>
+                                </GroupBox>
 
                                 <StackPanel Orientation="Vertical" Spacing="4">
                                     <CheckBox IsChecked="{Binding Settings.Connection.ProxyRss}" Content="Use proxy for RSS purposes" />
                                     <CheckBox IsChecked="{Binding Settings.Connection.ProxyMisc}" Content="Use proxy for general purposes" />
                                 </StackPanel>
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="IP Filtering">
+                        <GroupBox Header="IP Filtering">
                             <StackPanel Orientation="Vertical" Spacing="6">
                                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                     <CheckBox Grid.Row="0" Grid.Column="0" IsChecked="{Binding Settings.Connection.IpFilterEnabled}" Content="Filter path (.dat, .p2p, .p2b):" />
                                     <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.Connection.IpFilterPath}" IsEnabled="{Binding Settings.Connection.IpFilterEnabled}" />
                                     <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" IsChecked="{Binding Settings.Connection.IpFilterTrackers}" Content="Apply to trackers" />
                                 </Grid>
-                                <views:GroupBox Label="Manually banned IP addresses...">
+                                <GroupBox Header="Manually banned IP addresses...">
                                     <TextBox Text="{Binding Settings.Connection.BannedIpAddresses}" AcceptsReturn="True" MinHeight="80" MaxHeight="120" />
-                                </views:GroupBox>
+                                </GroupBox>
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
                     </StackPanel>
 
                     <!-- Speed -->
                     <StackPanel Orientation="Vertical" Spacing="4" IsVisible="{Binding SpeedSelected}">
-                        <views:GroupBox Label="Global Rate Limits">
+                        <GroupBox Header="Global Rate Limits">
                             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Upload:" />
                                 <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.Speed.UploadLimit}" />
@@ -347,9 +371,9 @@
                                 <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.Speed.DownloadLimit}" />
                                 <TextBlock Grid.Row="1" Grid.Column="2" Text="KiB/s (0 = unlimited)" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Alternative Rate Limits">
+                        <GroupBox Header="Alternative Rate Limits">
                             <StackPanel Orientation="Vertical" Spacing="6">
                                 <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Upload:" />
@@ -361,7 +385,10 @@
                                     <TextBlock Grid.Row="1" Grid.Column="2" Text="KiB/s" />
                                 </Grid>
 
-                                <views:GroupBox Label="Schedule the use of alternative rate limits" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Speed.SchedulerEnabled}">
+                                <GroupBox>
+                                    <GroupBox.Header>
+                                        <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Speed.SchedulerEnabled}">Schedule the use of alternative rate limits</CheckBox>
+                                    </GroupBox.Header>
                                     <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="4" IsEnabled="{Binding Settings.Speed.SchedulerEnabled}">
                                         <TextBlock Grid.Row="0" Grid.Column="0" Text="From:" VerticalAlignment="Center" />
                                         <NumericUpDown Grid.Row="0" Grid.Column="1" MinWidth="60" Minimum="0" Maximum="23" Increment="1" ShowButtonSpinner="False" Value="{Binding Settings.Speed.ScheduleFromHour}" />
@@ -375,22 +402,22 @@
                                         <TextBlock Grid.Row="1" Grid.Column="0" Text="When:" VerticalAlignment="Center" />
                                         <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="8" HorizontalAlignment="Stretch" ItemsSource="{Binding SchedulerDaysOptions}" SelectedItem="{Binding Settings.Speed.SchedulerDays}" />
                                     </Grid>
-                                </views:GroupBox>
+                                </GroupBox>
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Rate Limits Settings">
+                        <GroupBox Header="Rate Limits Settings">
                             <StackPanel Orientation="Vertical" Spacing="4">
                                 <CheckBox IsChecked="{Binding Settings.Speed.LimitUTPRate}" Content="Apply rate limit to μTP protocol" />
                                 <CheckBox IsChecked="{Binding Settings.Speed.LimitTcpOverhead}" Content="Apply rate limit to transport overhead" />
                                 <CheckBox IsChecked="{Binding Settings.Speed.LimitLAN}" Content="Apply rate limit to peers on LAN" />
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
                     </StackPanel>
 
                     <!-- BitTorrent -->
                     <StackPanel Orientation="Vertical" Spacing="4" IsVisible="{Binding BitTorrentSelected}">
-                        <views:GroupBox Label="Privacy">
+                        <GroupBox Header="Privacy">
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="2">
                                 <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" IsChecked="{Binding Settings.BitTorrent.DHT}" Content="Enable DHT (decentralised network) to find more peers" />
                                 <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" IsChecked="{Binding Settings.BitTorrent.PeerExchange}" Content="Enable Peer Exchange (PeX) to find more peers" />
@@ -401,9 +428,12 @@
 
                                 <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" IsChecked="{Binding Settings.BitTorrent.AnonymousMode}" Content="Enable anonymous mode" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Torrent Queueing" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.BitTorrent.QueueingEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.BitTorrent.QueueingEnabled}">Torrent Queueing</CheckBox>
+                            </GroupBox.Header>
                             <StackPanel Orientation="Vertical" Spacing="6" IsEnabled="{Binding Settings.BitTorrent.QueueingEnabled}">
                                 <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Maximum active downloads:" />
@@ -416,7 +446,10 @@
                                     <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="-1" Increment="1" Value="{Binding Settings.BitTorrent.MaxActiveTorrents}" />
                                 </Grid>
 
-                                <views:GroupBox Label="Do not count slow torrents in these limits" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.BitTorrent.DoNotCountSlowTorrents}">
+                                <GroupBox>
+                                    <GroupBox.Header>
+                                        <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.BitTorrent.DoNotCountSlowTorrents}">Do not count slow torrents in these limits</CheckBox>
+                                    </GroupBox.Header>
                                     <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6" IsEnabled="{Binding Settings.BitTorrent.DoNotCountSlowTorrents}">
                                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Download rate threshold:" />
                                         <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.BitTorrent.SlowTorrentDownloadRateThreshold}" />
@@ -430,11 +463,11 @@
                                         <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.BitTorrent.SlowTorrentInactiveTime}" />
                                         <TextBlock Grid.Row="2" Grid.Column="2" Text="sec" />
                                     </Grid>
-                                </views:GroupBox>
+                                </GroupBox>
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Seeding Limits">
+                        <GroupBox Header="Seeding Limits">
                             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <CheckBox Grid.Row="0" Grid.Column="0" IsChecked="{Binding Settings.BitTorrent.MaxRatioEnabled}" Content="When ratio reaches:" />
                                 <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Increment="0.01" FormatString="0.00" Value="{Binding Settings.BitTorrent.MaxRatio}" IsEnabled="{Binding Settings.BitTorrent.MaxRatioEnabled}" />
@@ -450,13 +483,19 @@
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="then:" />
                                 <ComboBox Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding MaxRatioActionOptions}" SelectedItem="{Binding Settings.BitTorrent.MaxRatioAction}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Automatically append these trackers to new downloads" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.BitTorrent.AdditionalTrackersEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.BitTorrent.AdditionalTrackersEnabled}">Automatically append these trackers to new downloads</CheckBox>
+                            </GroupBox.Header>
                             <TextBox AcceptsReturn="True" MinHeight="80" MaxHeight="120" Text="{Binding Settings.BitTorrent.AdditionalTrackers}" IsEnabled="{Binding Settings.BitTorrent.AdditionalTrackersEnabled}" />
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Automatically append trackers from URL to new downloads:" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.BitTorrent.TrackerListEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.BitTorrent.TrackerListEnabled}">Automatically append trackers from URL to new downloads:</CheckBox>
+                            </GroupBox.Header>
                             <StackPanel Orientation="Vertical" Spacing="6" IsEnabled="{Binding Settings.BitTorrent.TrackerListEnabled}">
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
                                     <TextBlock Grid.Column="0" Text="URL:" VerticalAlignment="Center" />
@@ -465,12 +504,15 @@
                                 <TextBlock Text="Fetched trackers" FontWeight="SemiBold" />
                                 <TextBox AcceptsReturn="True" MinHeight="80" MaxHeight="120" IsReadOnly="True" Text="{Binding Settings.BitTorrent.TrackerListContent}" />
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
                     </StackPanel>
 
                     <!-- RSS -->
                     <StackPanel Orientation="Vertical" Spacing="4" IsVisible="{Binding RssSelected}">
-                        <views:GroupBox Label="RSS Reader" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Rss.RssProcessingEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Rss.RssProcessingEnabled}">RSS Reader</CheckBox>
+                            </GroupBox.Header>
                             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6" IsEnabled="{Binding Settings.Rss.RssProcessingEnabled}">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Feeds refresh interval:" />
                                 <NumericUpDown Grid.Row="0" Grid.Column="1" HorizontalAlignment="Left" Minimum="0" Increment="1" Value="{Binding Settings.Rss.RssRefreshInterval}" />
@@ -483,19 +525,22 @@
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Maximum number of articles per feed:" />
                                 <NumericUpDown Grid.Row="2" Grid.Column="1" HorizontalAlignment="Left" Minimum="0" Increment="1" Value="{Binding Settings.Rss.RssMaxArticlesPerFeed}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="RSS Torrent Auto Downloader" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.Rss.RssAutoDownloadingEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.Rss.RssAutoDownloadingEnabled}">RSS Torrent Auto Downloader</CheckBox>
+                            </GroupBox.Header>
                             <TextBlock Text="Auto-downloading rules are managed through the qBittorrent WebUI." TextWrapping="Wrap" />
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="RSS Smart Episode Filter">
+                        <GroupBox Header="RSS Smart Episode Filter">
                             <StackPanel Orientation="Vertical" Spacing="6">
                                 <CheckBox IsChecked="{Binding Settings.Rss.RssDownloadRepackProperEpisodes}" Content="Download REPACK/PROPER episodes" />
                                 <TextBlock Text="Filters (one regex per line):" />
                                 <TextBox AcceptsReturn="True" MaxHeight="160" Text="{Binding Settings.Rss.RssSmartEpisodeFilters}" />
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
                     </StackPanel>
 
                     <!-- WebUI -->
@@ -506,7 +551,7 @@
                                 <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="Warning: Changing settings that affect qBittorrent API access (address, port, credentials, HTTPS) may result in RTSharp losing connection to qBittorrent." VerticalAlignment="Center" />
                             </Grid>
                         </Border>
-                        <views:GroupBox Label="Web User Interface">
+                        <GroupBox Header="Web User Interface">
                             <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="IP address:" />
                                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.WebUI.WebUIAddress}" />
@@ -515,18 +560,21 @@
 
                                 <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" IsChecked="{Binding Settings.WebUI.WebUIUpnp}" Content="Use UPnP / NAT-PMP to forward the port from my router" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Use HTTPS instead of HTTP" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.WebUI.WebUIHttps}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.WebUI.WebUIHttps}">Use HTTPS instead of HTTP</CheckBox>
+                            </GroupBox.Header>
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="6" IsEnabled="{Binding Settings.WebUI.WebUIHttps}">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Certificate path:" />
                                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.WebUI.WebUISslCertificatePath}" />
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Key path:" />
                                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Settings.WebUI.WebUISslKeyPath}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Authentication">
+                        <GroupBox Header="Authentication">
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Username:" />
                                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.WebUI.WebUIUsername}" />
@@ -550,42 +598,57 @@
                                     <NumericUpDown Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.WebUI.WebUISessionTimeout}" />
                                 </Grid>
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Use alternative WebUI" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.WebUI.AlternativeWebUIEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.WebUI.AlternativeWebUIEnabled}">Use alternative WebUI</CheckBox>
+                            </GroupBox.Header>
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" IsEnabled="{Binding Settings.WebUI.AlternativeWebUIEnabled}">
                                 <TextBlock Grid.Column="0" Text="Files location:" VerticalAlignment="Center" />
                                 <TextBox Grid.Column="1" Text="{Binding Settings.WebUI.AlternativeWebUIPath}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Security">
+                        <GroupBox Header="Security">
                             <StackPanel Orientation="Vertical" Spacing="2">
                                 <CheckBox IsChecked="{Binding Settings.WebUI.WebUIClickjackingProtection}" Content="Enable clickjacking protection" />
                                 <CheckBox IsChecked="{Binding Settings.WebUI.WebUICsrfProtection}" Content="Enable Cross-Site Request Forgery (CSRF) protection" />
                                 <CheckBox IsChecked="{Binding Settings.WebUI.WebUISecureCookie}" Content="Enable cookie Secure flag (requires HTTPS or localhost)" />
-                                <views:GroupBox Label="Enable Host header validation" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.WebUI.WebUIHostHeaderValidation}">
+                                <GroupBox>
+                                    <GroupBox.Header>
+                                        <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.WebUI.WebUIHostHeaderValidation}">Enable Host header validation</CheckBox>
+                                    </GroupBox.Header>
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" IsEnabled="{Binding Settings.WebUI.WebUIHostHeaderValidation}">
                                         <TextBlock Grid.Column="0" Text="Server domains:" VerticalAlignment="Center" />
                                         <TextBox Grid.Column="1" Text="{Binding Settings.WebUI.WebUIDomain}" />
                                     </Grid>
-                                </views:GroupBox>
+                                </GroupBox>
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Custom HTTP headers" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.WebUI.WebUICustomHttpHeadersEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.WebUI.WebUICustomHttpHeadersEnabled}">Custom HTTP headers</CheckBox>
+                            </GroupBox.Header>
                             <TextBox AcceptsReturn="True" MinHeight="80" MaxHeight="120" Text="{Binding Settings.WebUI.WebUICustomHttpHeaders}" PlaceholderText="Header: value pairs, one per line" IsEnabled="{Binding Settings.WebUI.WebUICustomHttpHeadersEnabled}" />
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Enable reverse proxy support" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.WebUI.ReverseProxyEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.WebUI.ReverseProxyEnabled}">Enable reverse proxy support</CheckBox>
+                            </GroupBox.Header>
                             <StackPanel Orientation="Vertical" Spacing="6" IsEnabled="{Binding Settings.WebUI.ReverseProxyEnabled}">
                                 <TextBlock Text="Trusted proxies list:" />
                                 <TextBox Text="{Binding Settings.WebUI.ReverseProxiesList}" />
                                 <HyperlinkButton Content="Reverse proxy setup examples" NavigateUri="https://github.com/qbittorrent/qBittorrent/wiki/Reverse-proxy-setup-examples" />
                             </StackPanel>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="Dynamic DNS" CheckBoxEnabled="True" IsCheckBoxChecked="{Binding Settings.WebUI.DynamicDnsEnabled}">
+                        <GroupBox>
+                            <GroupBox.Header>
+                                <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding Settings.WebUI.DynamicDnsEnabled}">Dynamic DNS</CheckBox>
+                            </GroupBox.Header>
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6" IsEnabled="{Binding Settings.WebUI.DynamicDnsEnabled}">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Service:" />
                                 <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Left" MinWidth="160" ItemsSource="{Binding DynamicDnsServiceOptions}" SelectedItem="{Binding Settings.WebUI.DynamicDnsService}" />
@@ -599,12 +662,12 @@
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Password:" />
                                 <TextBox Grid.Row="3" Grid.Column="1" PasswordChar="•" Text="{Binding Settings.WebUI.DynamicDnsPassword}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
                     </StackPanel>
 
                     <!-- Advanced -->
                     <StackPanel Orientation="Vertical" Spacing="4" IsVisible="{Binding AdvancedSelected}">
-                        <views:GroupBox Label="qBittorrent">
+                        <GroupBox Header="qBittorrent">
                             <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Resume data storage type (requires restart):" />
                                 <ComboBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" ItemsSource="{Binding ResumeDataStorageTypeOptions}" SelectedItem="{Binding Settings.Advanced.ResumeDataStorageType}" />
@@ -667,9 +730,9 @@
                                 <TextBlock Grid.Row="18" Grid.Column="0" Text="Python executable path (may require restart):" />
                                 <TextBox Grid.Row="18" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Settings.Advanced.PythonExecutablePath}" PlaceholderText="Auto detect if empty" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="libtorrent threading &amp; I/O">
+                        <GroupBox Header="libtorrent threading &amp; I/O">
                             <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Bdecode depth limit:" />
                                 <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.Advanced.LibtorrentBdecodeDepthLimit}" />
@@ -708,9 +771,9 @@
                                 <TextBlock Grid.Row="10" Grid.Column="0" Text="Disk IO write mode:" />
                                 <ComboBox Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" ItemsSource="{Binding DiskIOWriteModeOptions}" SelectedItem="{Binding Settings.Advanced.LibtorrentDiskIOWriteMode}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="libtorrent buffers &amp; sockets">
+                        <GroupBox Header="libtorrent buffers &amp; sockets">
                             <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" IsChecked="{Binding Settings.Advanced.LibtorrentCoalesceReadsAndWrites}" Content="Coalesce reads and writes" />
                                 <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" IsChecked="{Binding Settings.Advanced.LibtorrentPieceExtentAffinity}" Content="Use piece extent affinity" />
@@ -756,9 +819,9 @@
                                 <TextBlock Grid.Row="12" Grid.Column="0" Text="Type of service (ToS) for connections to peers:" />
                                 <NumericUpDown Grid.Row="12" Grid.Column="1" Minimum="0" Maximum="255" Increment="1" Value="{Binding Settings.Advanced.LibtorrentPeerTos}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="libtorrent peers &amp; trackers">
+                        <GroupBox Header="libtorrent peers &amp; trackers">
                             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="μTP-TCP mixed mode algorithm:" />
                                 <ComboBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" ItemsSource="{Binding UtpTcpMixedModeOptions}" SelectedItem="{Binding Settings.Advanced.LibtorrentUtpTcpMixedModeAlgorithm}" />
@@ -809,9 +872,9 @@
                                 <TextBlock Grid.Row="18" Grid.Column="0" Text="DHT bootstrap nodes:" />
                                 <TextBox Grid.Row="18" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Settings.Advanced.LibtorrentDhtBootstrapNodes}" PlaceholderText="host:port,host:port,..." />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
 
-                        <views:GroupBox Label="libtorrent I2P">
+                        <GroupBox Header="libtorrent I2P">
                             <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="I2P inbound quantity:" />
                                 <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="1" Increment="1" Value="{Binding Settings.Advanced.LibtorrentI2pInboundQuantity}" />
@@ -825,7 +888,7 @@
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="I2P outbound length:" />
                                 <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.Advanced.LibtorrentI2pOutboundLength}" />
                             </Grid>
-                        </views:GroupBox>
+                        </GroupBox>
                     </StackPanel>
 
                 </Panel>

@@ -19,16 +19,16 @@
     </UserControl.Styles>
 
     <StackPanel Margin="8" Spacing="12">
-        <views:GroupBox Label="Data providers">
+        <GroupBox Header="Data providers">
             <CheckBox IsChecked="{Binding SpeedChartEnabled}">Show speed chart</CheckBox>
-        </views:GroupBox>
+        </GroupBox>
 
-        <views:GroupBox Label="Torrent listing">
+        <GroupBox Header="Torrent listing">
             <Grid ColumnDefinitions="150, Auto, Auto">
                 <TextBlock Grid.Column="0">Row height:</TextBlock>
                 <NumericUpDown Grid.Column="1" Value="{Binding RowHeight}" Minimum="8" Maximum="64" />
                 <TextBlock Grid.Column="2" Classes="unit">px</TextBlock>
             </Grid>
-        </views:GroupBox>
+        </GroupBox>
     </StackPanel>
 </UserControl>

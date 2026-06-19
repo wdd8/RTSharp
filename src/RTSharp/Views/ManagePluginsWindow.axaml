@@ -17,7 +17,7 @@
     </Window.Styles>
     
     <Grid ColumnDefinitions="8*,32,8*" Margin="8">
-        <views:GroupBox Grid.Column="0" Label="Active">
+        <GroupBox Grid.Column="0" Header="Active">
             <ListBox ItemsSource="{Binding ActivePlugins}" SelectedItem="{Binding SelectedActivePlugin}">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="plugin:RTSharpPlugin">
@@ -30,14 +30,14 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-        </views:GroupBox>
+        </GroupBox>
         <GridSplitter Grid.Column="1" />
         <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
             <Button Margin="0,0,0,8" Content="&lt;" Command="{Binding LoadClickCommand}" />
             <Button Content="&gt;" Command="{Binding UnloadClickCommand}" />
         </StackPanel>
-        <views:GroupBox Grid.Column="2" Label="Unloaded">
+        <GroupBox Grid.Column="2" Header="Unloaded">
             <ListBox ItemsSource="{Binding UnloadedPluginDirs}" SelectedItem="{Binding SelectedUnloadedDir}" />
-        </views:GroupBox>
+        </GroupBox>
     </Grid>
 </Window>
