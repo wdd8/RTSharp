@@ -29,7 +29,7 @@
             <TextBlock Grid.Column="1" FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding SourceTorrent.Name}" />
         </Grid>
         <GroupBox Header="Plugin">
-            <ComboBox ItemsSource="{Binding DataProviders}" SelectedItem="{Binding SelectedProvider}" DropDownClosed="EvDropDownClosed" HorizontalAlignment="Stretch" x:Name="dataProviderCmb" />
+            <ComboBox ItemsSource="{Binding DataProviders}" SelectedItem="{Binding SelectedProvider}" HorizontalAlignment="Stretch" x:Name="dataProviderCmb" />
         </GroupBox>
         <GroupBox Header="Remote directory">
             <DockPanel>

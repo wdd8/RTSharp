@@ -1,11 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 
-using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Controls.Views;
 using RTSharp.ViewModels;
@@ -65,16 +62,6 @@ namespace RTSharp.Views
             });
 
             return res;
-        }
-
-        public async void EvDropDownClosed(object sender, EventArgs e)
-        {
-            var selectedItem = (RTSharpDataProvider?)((ComboBox)sender).SelectedItem;
-
-            if (selectedItem == null)
-                return;
-
-            await this.ViewModel!.ProviderChanged(selectedItem);
         }
 
         private async Task PreviewClipboardAsync()

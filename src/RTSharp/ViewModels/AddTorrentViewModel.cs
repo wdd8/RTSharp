@@ -177,18 +177,20 @@ namespace RTSharp.ViewModels
             } catch { }
         }
 
-        [RelayCommand]
-        public async Task ProviderChanged(RTSharpDataProvider SelectedProvider)
+        partial void OnSelectedProviderChanged(RTSharpDataProvider? value)
+        {
+            if (value == null)
+                return;
+
+            _ = LoadDefaultRemoteTargetPath(value);
+        }
+
+        private async Task LoadDefaultRemoteTargetPath(RTSharpDataProvider provider)
         {
             try {
-                if (SelectedProvider == null)
-                    return;
-
-                var savePath = await SelectedProvider.Instance.Files.GetDefaultSavePath();
-                RemoteTargetPath = savePath;
+                RemoteTargetPath = await provider.Instance.Files.GetDefaultSavePath();
             } catch (Exception ex) {
                 Log.Logger.Error(ex, $"Failed to get default save path");
-                throw;
             }
         }
     }

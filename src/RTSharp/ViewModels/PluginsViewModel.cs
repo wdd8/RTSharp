@@ -18,28 +18,25 @@ namespace RTSharp.ViewModels
     {
         public ObservableCollection<RTSharpPlugin> Plugins => Plugin.Plugins.LoadedPlugins;
         
-        private RTSharpPlugin? _currentlySelectedPlugin;
-        public RTSharpPlugin? CurrentlySelectedPlugin {
-            get {
-                return _currentlySelectedPlugin;
-            }
-            set {
-                this.SetProperty(ref _currentlySelectedPlugin, value, nameof(CurrentlySelectedPlugin));
-                if (value == null) {
-                    PluginInfo = null;
-                    return;
-                }
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(PluginsSettingsClickCommand))]
+        public partial RTSharpPlugin? CurrentlySelectedPlugin { get; set; }
 
-                PluginInfo = new Models.PluginInfo() {
-                    InstanceGuid = value.InstanceId.ToString(),
-                    DisplayName = value.PluginInstanceConfig.Name,
-                    Description = value.Instance.Description,
-                    Author = value.Instance.Author,
-                    Version = value.Instance.Version.VersionDisplayString,
-                    PluginGuid = value.Instance.GUID.ToString()
-                };
-                PluginsSettingsClickCommand.NotifyCanExecuteChanged();
+        partial void OnCurrentlySelectedPluginChanged(RTSharpPlugin? value)
+        {
+            if (value == null) {
+                PluginInfo = null;
+                return;
             }
+
+            PluginInfo = new Models.PluginInfo() {
+                InstanceGuid = value.InstanceId.ToString(),
+                DisplayName = value.PluginInstanceConfig.Name,
+                Description = value.Instance.Description,
+                Author = value.Instance.Author,
+                Version = value.Instance.Version.VersionDisplayString,
+                PluginGuid = value.Instance.GUID.ToString()
+            };
         }
 
         [ObservableProperty]

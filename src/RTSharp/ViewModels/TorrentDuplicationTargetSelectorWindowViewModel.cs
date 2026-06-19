@@ -47,18 +47,22 @@ namespace RTSharp.ViewModels
             }
         }
 
-        [RelayCommand]
-        public async Task ProviderChanged(Plugin.RTSharpDataProvider SelectedProvider)
+        partial void OnSelectedProviderChanged(Plugin.RTSharpDataProvider? value)
+        {
+            _ = UpdateRemoteTargetForProvider(value);
+        }
+
+        private async Task UpdateRemoteTargetForProvider(Plugin.RTSharpDataProvider? provider)
         {
             try {
                 RemoteTargetPathEnabled = false;
-                if (SelectedProvider == null)
+                if (provider == null)
                     return;
 
                 RemoteTargetPathEnabled = true;
 
-                if (SourceTorrent.DataOwner.DataProviderInstanceConfig.ServerId != SelectedProvider.DataProviderInstanceConfig.ServerId) {
-                    var savePath = await SelectedProvider.Instance.Files.GetDefaultSavePath();
+                if (SourceTorrent.DataOwner.DataProviderInstanceConfig.ServerId != provider.DataProviderInstanceConfig.ServerId) {
+                    var savePath = await provider.Instance.Files.GetDefaultSavePath();
                     RemoteTargetPath = savePath;
                 } else {
                     RemoteTargetPath = SourceTorrent.RemotePath;
@@ -66,7 +70,6 @@ namespace RTSharp.ViewModels
                 }
             } catch (Exception ex) {
                 Log.Logger.Error(ex, $"Failed to get default save path");
-                throw;
             }
         }
 
