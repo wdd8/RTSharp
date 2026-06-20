@@ -98,7 +98,8 @@ public class App : Application
     {
         _ = Task.Run(async () => {
             try {
-                await Task.Run(PreInitServices);
+                await PreInitServices();
+                PreInitServiceTcs.SetResult();
             } catch (Exception ex) {
                 await Dispatcher.UIThread.InvokeAsync(async () => {
                     var msgbox = MessageBoxManager.GetMessageBoxStandard(
@@ -130,6 +131,8 @@ public class App : Application
 
     private static ConcurrentDictionary<string, Func<ValueTask>> FxOnExit = new();
 
+    private static TaskCompletionSource PreInitServiceTcs = new();
+
     public static void RegisterOnExit(string Key, Func<ValueTask> Fx)
     {
         FxOnExit[Key] = Fx;
@@ -143,7 +146,8 @@ public class App : Application
     {
         _ = Task.Run(async () => {
             try {
-                await Task.Run(PostInitServices);
+                await PreInitServiceTcs.Task;
+                await PostInitServices();
             } catch (Exception ex) {
                 await Dispatcher.UIThread.InvokeAsync(async () => {
                     var msgbox = MessageBoxManager.GetMessageBoxStandard(
@@ -176,6 +180,10 @@ public class App : Application
 
         var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>() ?? [];
 
+#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
+        await Plugin.Plugins.LoadPlugins((progress, text) => { });
+#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
+
         var host = Host.CreateDefaultBuilder()
             .ConfigureServices((_, services) => {
                 services.UseMicrosoftDependencyResolver();
@@ -192,8 +200,14 @@ public class App : Application
                 services.AddTransient<TrackerDb>();
                 services.AddSingleton<Shared.Abstractions.ISpeedMovingAverageService, Core.Services.SpeedMovingAverageService>();
                 services.AddSingleton<Core.Services.DomainParser>();
+                services.AddSingleton<Shared.Abstractions.Client.IWhoisProvider, Core.Services.Whois.RdapWhoisProvider>();
+                services.AddSingleton<Shared.Abstractions.Client.IWhoisProvider, Core.Services.Whois.CaidaTeamCymruWhoisProvider>();
                 services.AddSingleton<Core.Services.MediaPreviewService>();
                 services.AddHttpClient<Core.Services.Favicon>();
+
+#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
+                Plugin.Plugins.ConfigureServices(services);
+#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
             })
             .Build();
 
@@ -224,9 +238,6 @@ public class App : Application
             Task.Run(scope.ServiceProvider.GetRequiredService<ASCache>().Initialize),
             Task.Run(scope.ServiceProvider.GetRequiredService<ImageCache>().Initialize),
             Task.Run(scope.ServiceProvider.GetRequiredService<TrackerDb>().Initialize),
-#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
-            Task.Run(() => Plugin.Plugins.LoadPlugins((progress, text) => { })),
-#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
             Task.Run(scope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>().Initialize)
         );
 

@@ -10,7 +10,6 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 
 namespace RTSharp.Core;
@@ -42,6 +41,8 @@ public class Config
             public bool UseFaviconGoogleAPI { get; set; }
 
             public bool PollActiveTabOnly { get; set; }
+
+            public string PeerOriginLookupMethod { get; set; } = "RDAP";
         }
 
         public class Caching
@@ -159,7 +160,8 @@ public class Config
     },
     "SearchAsYouGoDelay": "00:00:01",
     "UseFaviconGoogleAPI": false,
-    "PollActiveTabOnly": false
+    "PollActiveTabOnly": false,
+    "PeerOriginLookupMethod": "RDAP"
   },
   "Caching": {
     "FilesCachingEnabled": true,

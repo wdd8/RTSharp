@@ -34,8 +34,6 @@ public class Plugin : BasePlugin
 
     IDisposable? RootMenuItem;
 
-    public override Task<dynamic> CustomAccess(dynamic In) => Task.FromResult<dynamic>(null);
-
     public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
     {
         Progress(("Initializing...", 0f));
@@ -55,8 +53,6 @@ public class Plugin : BasePlugin
 
         return Task.FromResult((IPlugin)this);
     }
-
-    public override Task ShowPluginSettings(object ParentWindow) => throw new NotImplementedException();
 
     public override Task Unload()
     {

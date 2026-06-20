@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using DynamicData;
 
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
@@ -351,6 +352,18 @@ namespace RTSharp.Plugin
             }
 
             Progress(100, $"Plugins loaded");
+        }
+
+        [RequiresUnreferencedCode("Plugins")]
+        public static void ConfigureServices(IServiceCollection Services)
+        {
+            foreach (var plugin in LoadedPlugins) {
+                try {
+                    plugin.PluginInit!.ConfigureServices(Services);
+                } catch (Exception ex) {
+                    Log.Logger.Error(ex, $"Plugin {plugin.PluginInstanceConfig.Name} failed to configure services");
+                }
+            }
         }
 
         [RequiresUnreferencedCode("Plugins")]

@@ -18,6 +18,7 @@ using Polly.Bulkhead;
 using RTSharp.Core.Services.Cache.ASCache;
 using Avalonia.Threading;
 using Avalonia.Media;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
@@ -67,6 +68,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     var config = innerScope.ServiceProvider.GetRequiredService<Config>();
                     var asCache = innerScope.ServiceProvider.GetRequiredService<ASCache>();
                     var imageCache = innerScope.ServiceProvider.GetRequiredService<ImageCache>();
+                    var whoisProviders = innerScope.ServiceProvider.GetRequiredService<IEnumerable<IWhoisProvider>>();
 
                     try {
                         var asInfo = await asCache.GetCachedAS(peer.IPPort.Address);
@@ -82,7 +84,9 @@ namespace RTSharp.ViewModels.TorrentListing
                             return;
                         }
 
-                        var whois = await Core.Services.Whois.GetWhoisInfo(peer.IPPort.Address, config.Behavior.Value.PeerOriginReplacements ?? new());
+                        var behavior = config.Behavior.Value;
+                        var whoisProvider = whoisProviders.FirstOrDefault(x => x.Id == behavior.PeerOriginLookupMethod) ?? whoisProviders.FirstOrDefault();
+                        WhoisInfo? whois = whoisProvider == null ? null : await whoisProvider.GetWhoisInfo(peer.IPPort.Address, behavior.PeerOriginReplacements ?? new());
 
                         if (whois == null) {
                             Dispatcher.UIThread.Post(() => {

@@ -4,9 +4,11 @@ using Nager.PublicSuffix.RuleProviders;
 using System.Threading.Tasks;
 using Nager.PublicSuffix;
 using System;
+using RTSharp.Shared.Abstractions;
 
 namespace RTSharp.Core.Services;
 
+[Singleton]
 public class DomainParser
 {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.

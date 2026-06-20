@@ -1,7 +1,14 @@
-﻿namespace RTSharp.Shared.Abstractions.Client;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace RTSharp.Shared.Abstractions.Client;
 
 public interface IPluginInit
 {
+    /// <summary>
+    /// Called before <see cref="Init"/>
+    /// </summary>
+    void ConfigureServices(IServiceCollection Services) { }
+
     /// <summary>
     /// Initialize plugin
     /// </summary>

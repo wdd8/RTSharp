@@ -57,7 +57,7 @@
                         <TextBlock Grid.Column="2" Grid.Row="3" Classes="unit">seconds</TextBlock>
                     </Grid>
 
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
                         <CheckBox IsChecked="{Binding PollActiveTabOnly}">Poll selected torrent's active detail tab only</CheckBox>
                         <views:BuiltInIconImage Value="FLAT_QUESTION_MARK" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
                             ToolTip.Tip="When enabled, only the details tab currently in view (Files, Peers or Trackers) is polled for the selected torrent, instead of all of them at once." />
@@ -71,6 +71,21 @@
                     <views:BuiltInIconImage Value="FLAT_QUESTION_MARK"
                            Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
                            ToolTip.Tip="Fetching favicons via Google is more stable, but sends the domain you're looking up to Google." />
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Peer origin lookup">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding WhoisProviders}"
+                              SelectedItem="{Binding SelectedWhoisProvider}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="pages:WhoisProviderItem">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <views:BuiltInIconImage Value="FLAT_QUESTION_MARK" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
+                           ToolTip.Tip="{Binding PeerOriginLookupMethodHelpText}" />
                 </StackPanel>
             </GroupBox>
 

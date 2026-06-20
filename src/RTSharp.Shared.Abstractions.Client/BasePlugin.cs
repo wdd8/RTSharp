@@ -1,7 +1,11 @@
-﻿namespace RTSharp.Shared.Abstractions.Client;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace RTSharp.Shared.Abstractions.Client;
 
 public abstract class BasePlugin : IPlugin, IPluginInit
 {
+    public virtual void ConfigureServices(IServiceCollection Services) { }
+
     public abstract IPluginHost Host { get; set; }
 
     /// <summary>
@@ -28,9 +32,9 @@ public abstract class BasePlugin : IPlugin, IPluginInit
 
     public abstract Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress);
 
-    public abstract Task ShowPluginSettings(object ParentWindow);
+    public virtual Task ShowPluginSettings(object ParentWindow) { throw new NotImplementedException(); }
 
-    public abstract Task<dynamic?> CustomAccess(dynamic? In);
+    public virtual Task<dynamic?> CustomAccess(dynamic? In) { return Task.FromResult<dynamic?>(null); }
 
     public abstract Task Unload();
 }

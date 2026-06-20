@@ -35,11 +35,6 @@ public class Plugin : BasePlugin
         HasSettingsWindow: true
     );
 
-    public override Task<dynamic?> CustomAccess(dynamic? In)
-    {
-        return null!;
-    }
-
     public required override IPluginHost Host { get; set; }
 
     public required IDataProviderHost DataProvider { get; set; }

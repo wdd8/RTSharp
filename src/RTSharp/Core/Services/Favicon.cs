@@ -1,13 +1,17 @@
-using System.Net.Http;
+using RTSharp.Shared.Abstractions;
+
+using Serilog;
+
 using System;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
-using System.IO;
 
 namespace RTSharp.Core.Services
 {
+    [Transient]
     public class Favicon
     {
         private readonly HttpClient HttpClient;

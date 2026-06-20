@@ -1,15 +1,3 @@
-using System;
-using System.Collections.Concurrent;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Avalonia.Threading;
 
 using Grpc.Core;
@@ -23,13 +11,28 @@ using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
 using RTSharp.Daemon.Protocols;
-using RTSharp.Models;
+using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Daemon;
 
 using Serilog;
 
+using System;
+using System.Collections.Concurrent;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Torrent = RTSharp.Models.Torrent;
+
 namespace RTSharp.Core.Services;
 
+[Singleton]
 public class MediaPreviewService
 {
     private record PreviewSession(IDaemonService DaemonService, string RemotePath, ulong FileSize, string ContentType);

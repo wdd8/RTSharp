@@ -30,8 +30,6 @@ public class Plugin : BasePlugin
 
     IDisposable? Hook;
 
-    public override Task<dynamic?> CustomAccess(dynamic? In) => Task.FromResult<dynamic?>(null);
-
     public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
@@ -52,8 +50,6 @@ public class Plugin : BasePlugin
 
         return Task.FromResult((IPlugin)this);
     }
-
-    public override Task ShowPluginSettings(object ParentWindow) => throw new NotImplementedException();
 
     public override Task Unload()
     {
