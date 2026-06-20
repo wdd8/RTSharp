@@ -105,6 +105,7 @@ public class TorrentMapper
             Stored.State &= ~Protocols.DataProvider.TorrentState.Active;
             Stored.DLSpeed = 0;
             Stored.UPSpeed = 0;
+            Stored.PeersConnected = 0;
         }
     }
 
@@ -154,6 +155,7 @@ public class TorrentMapper
             Stored.State &= ~Protocols.DataProvider.TorrentState.Active;
             Stored.DLSpeed = 0;
             Stored.UPSpeed = 0;
+            Stored.PeersConnected = 0;
         }
     }
 
