@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using DynamicData;
 
 using LiveChartsCore;
+using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
@@ -33,6 +34,8 @@ namespace RTSharp.ViewModels
     public class DataProvidersViewModel : ObservableViewModel
     {
         private readonly bool SpeedChartEnabled;
+
+        private readonly DispatcherTimer? SpeedChartTimer;
 
         public ObservableCollection<DataProviderItemViewModel> Items { get; } = new();
 
@@ -65,7 +68,7 @@ namespace RTSharp.ViewModels
                                 ActiveTorrentCount = 0
                             };
 
-                            Items.Add(new DataProviderItemViewModel(model, SpeedChartEnabled, change.Item.Current.DataProviderInstanceConfig.ListUpdateInterval));
+                            Items.Add(new DataProviderItemViewModel(model, SpeedChartEnabled));
                         } else {
                             if (change.Reason == ListChangeReason.Remove) {
                                 Items.Remove(item);
@@ -88,6 +91,20 @@ namespace RTSharp.ViewModels
                 foreach (var item in Items)
                     item.Dispose();
             }));
+
+            if (SpeedChartEnabled) {
+                SpeedChartTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+                SpeedChartTimer.Tick += (_, _) => {
+                    if (!Items.Any(i => i.DataProvider.State != Shared.Abstractions.DataProviderState.INACTIVE))
+                        return;
+
+                    var now = DateTime.Now;
+                    foreach (var item in Items)
+                        item.AdvanceXAxisWindow(now);
+                };
+                SpeedChartTimer.Start();
+                AddDisposable(Disposable.Create(() => SpeedChartTimer.Stop()));
+            }
         }
 
         private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)
@@ -110,7 +127,7 @@ namespace RTSharp.ViewModels
             UPLOAD
         }
 
-        private const int MAX_SPEED_CHART_SAMPLES = 120;
+        private static readonly TimeSpan SPEED_CHART_WINDOW = TimeSpan.FromMinutes(2);
 
         private readonly record struct TorrentStats(ulong DLSpeed, ulong UPSpeed, bool Active);
         private readonly Dictionary<Models.Torrent, TorrentStats> PreviousTorrentStats = new(ReferenceEqualityComparer.Instance);
@@ -121,7 +138,7 @@ namespace RTSharp.ViewModels
 
         private SPEED_CHART_MODE? CurrentSpeedChartMode;
 
-        private readonly DispatcherTimer? IdleSpeedChartTimer;
+        private readonly Axis SpeedChartXAxis;
 
         private readonly Axis SpeedChartYAxis;
 
@@ -129,9 +146,9 @@ namespace RTSharp.ViewModels
 
         public Models.DataProvider DataProvider { get; }
 
-        public ObservableCollection<double?> DLSpeedChartValues { get; } = new();
+        public ObservableCollection<DateTimePoint> DLSpeedChartValues { get; } = new();
 
-        public ObservableCollection<double?> UPSpeedChartValues { get; } = new();
+        public ObservableCollection<DateTimePoint> UPSpeedChartValues { get; } = new();
 
         public ISeries[] SpeedChartSeries { get; }
 
@@ -147,7 +164,7 @@ namespace RTSharp.ViewModels
         [ObservableProperty]
         public partial bool SpeedChartTopLabelVisible { get; set; }
 
-        public DataProviderItemViewModel(Models.DataProvider Dp, bool SpeedChartEnabled, TimeSpan PollInterval)
+        public DataProviderItemViewModel(Models.DataProvider Dp, bool SpeedChartEnabled)
         {
             DataProvider = Dp;
             this.SpeedChartEnabled = SpeedChartEnabled;
@@ -165,7 +182,7 @@ namespace RTSharp.ViewModels
             var axisPaint = new SolidColorPaint(SKColor.Parse("#00000000"));
 
             SpeedChartSeries = [
-                new LineSeries<double?> {
+                new LineSeries<DateTimePoint> {
                     Name = "DL",
                     Values = DLSpeedChartValues,
                     Fill = dlSpeedFill,
@@ -175,7 +192,7 @@ namespace RTSharp.ViewModels
                     AnimationsSpeed = TimeSpan.FromMilliseconds(120),
                     DataPadding = new LvcPoint(0, 0)
                 },
-                new LineSeries<double?> {
+                new LineSeries<DateTimePoint> {
                     Name = "UP",
                     Values = UPSpeedChartValues,
                     Fill = upSpeedFill,
@@ -187,13 +204,18 @@ namespace RTSharp.ViewModels
                 }
             ];
 
-            SpeedChartXAxes = [
-                new Axis {
-                    IsVisible = false,
-                    SeparatorsPaint = axisPaint,
-                    Padding = new LiveChartsCore.Drawing.Padding(0)
-                }
-            ];
+            var now = DateTime.Now;
+
+            SpeedChartXAxis = new Axis {
+                IsVisible = false,
+                UnitWidth = TimeSpan.FromSeconds(1).Ticks,
+                MinLimit = (now - SPEED_CHART_WINDOW).Ticks,
+                MaxLimit = now.Ticks,
+                SeparatorsPaint = axisPaint,
+                Padding = new LiveChartsCore.Drawing.Padding(0)
+            };
+
+            SpeedChartXAxes = [SpeedChartXAxis];
 
             SpeedChartYAxis = new Axis {
                 IsVisible = false,
@@ -208,14 +230,6 @@ namespace RTSharp.ViewModels
             };
 
             SpeedChartYAxes = [SpeedChartYAxis];
-
-            if (SpeedChartEnabled) {
-                IdleSpeedChartTimer = new DispatcherTimer { Interval = PollInterval };
-                IdleSpeedChartTimer.Tick += (_, _) => AddSpeedChartSample(0, 0);
-                IdleSpeedChartTimer.Start();
-
-                AddDisposable(Disposable.Create(() => IdleSpeedChartTimer.Stop()));
-            }
         }
 
         public void ApplyTorrentsChanges(TorrentStoreChangeSet e)
@@ -244,7 +258,7 @@ namespace RTSharp.ViewModels
 #endif
 
             if (SpeedChartEnabled) {
-                AddSpeedChartSample(DLSpeed, UPSpeed);
+                AddSpeedChartSample(DLSpeed, UPSpeed, DateTime.Now);
             }
         }
 
@@ -294,7 +308,7 @@ namespace RTSharp.ViewModels
             prev = new TorrentStats(In.DLSpeed, In.UPSpeed, active);
         }
 
-        public void AddSpeedChartSample(ulong DLSpeed, ulong UPSpeed)
+        public void AddSpeedChartSample(ulong DLSpeed, ulong UPSpeed, DateTime When)
         {
             SPEED_CHART_MODE chartMode = SPEED_CHART_MODE.UPLOAD;
 
@@ -313,21 +327,16 @@ namespace RTSharp.ViewModels
             }
 
             if (chartMode == SPEED_CHART_MODE.DOWNLOAD) {
-                DLSpeedChartValues.Add(value);
-                UPSpeedChartValues.Add(null);
+                DLSpeedChartValues.Add(new DateTimePoint(When, value));
+                UPSpeedChartValues.Add(new DateTimePoint(When, null));
             } else {
-                DLSpeedChartValues.Add(null);
-                UPSpeedChartValues.Add(value);
+                DLSpeedChartValues.Add(new DateTimePoint(When, null));
+                UPSpeedChartValues.Add(new DateTimePoint(When, value));
             }
 
             CurrentSpeedChartMode = chartMode;
-            RemoveOldChartValues();
+            RemoveOldChartValues(When);
             UpdateYAxisScale();
-
-            if (IdleSpeedChartTimer != null) {
-                IdleSpeedChartTimer.Stop();
-                IdleSpeedChartTimer.Start();
-            }
         }
 
         private void FillSwitchPoint(SPEED_CHART_MODE Mode)
@@ -338,15 +347,24 @@ namespace RTSharp.ViewModels
             }
 
             if (Mode == SPEED_CHART_MODE.DOWNLOAD) {
-                DLSpeedChartValues[lastIndex] = UPSpeedChartValues[lastIndex];
+                DLSpeedChartValues[lastIndex].Value = UPSpeedChartValues[lastIndex].Value;
             } else {
-                UPSpeedChartValues[lastIndex] = DLSpeedChartValues[lastIndex];
+                UPSpeedChartValues[lastIndex].Value = DLSpeedChartValues[lastIndex].Value;
             }
         }
 
-        private void RemoveOldChartValues()
+        public void AdvanceXAxisWindow(DateTime When)
         {
-            while (DLSpeedChartValues.Count > MAX_SPEED_CHART_SAMPLES) {
+            SpeedChartXAxis.MaxLimit = When.Ticks;
+            SpeedChartXAxis.MinLimit = (When - SPEED_CHART_WINDOW).Ticks;
+            RemoveOldChartValues(When);
+        }
+
+        private void RemoveOldChartValues(DateTime When)
+        {
+            var cutoff = (When - SPEED_CHART_WINDOW).Ticks;
+
+            while (DLSpeedChartValues.Count > 1 && DLSpeedChartValues[1].DateTime.Ticks < cutoff) {
                 DLSpeedChartValues.RemoveAt(0);
                 UPSpeedChartValues.RemoveAt(0);
             }
@@ -356,11 +374,11 @@ namespace RTSharp.ViewModels
         {
             double maxValue = 0;
             foreach (var v in DLSpeedChartValues)
-                if (v.HasValue && v.Value > maxValue)
-                    maxValue = v.Value;
+                if (v.Value > maxValue)
+                    maxValue = v.Value.Value;
             foreach (var v in UPSpeedChartValues)
-                if (v.HasValue && v.Value > maxValue)
-                    maxValue = v.Value;
+                if (v.Value > maxValue)
+                    maxValue = v.Value.Value;
 
             SpeedChartYAxisTopValue = GetAxisCeiling(maxValue);
             SpeedChartYAxis.MaxLimit = SpeedChartYAxisTopValue;
