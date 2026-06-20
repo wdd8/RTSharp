@@ -24,8 +24,6 @@ public abstract class BasePlugin : IPlugin, IPluginInit
 
     public abstract string Author { get; }
 
-    public abstract Version Version { get; }
-
     public abstract int CompatibleMajorVersion { get; }
 
     public abstract PluginCapabilities Capabilities { get; }

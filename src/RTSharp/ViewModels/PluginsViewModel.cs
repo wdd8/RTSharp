@@ -10,7 +10,6 @@ using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
 using RTSharp.Plugin;
-using RTSharp.Shared.Abstractions;
 
 namespace RTSharp.ViewModels
 {
@@ -34,7 +33,7 @@ namespace RTSharp.ViewModels
                 DisplayName = value.PluginInstanceConfig.Name,
                 Description = value.Instance.Description,
                 Author = value.Instance.Author,
-                Version = value.Instance.Version.VersionDisplayString,
+                Version = value.PluginVersion,
                 PluginGuid = value.Instance.GUID.ToString()
             };
         }

@@ -13,8 +13,6 @@ using RTSharp.DataProvider.Rtorrent.Plugin.Views;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 
-using Version = RTSharp.Shared.Abstractions.Version;
-
 namespace RTSharp.DataProvider.Rtorrent.Plugin;
 
 public class Plugin : BasePlugin
@@ -24,8 +22,6 @@ public class Plugin : BasePlugin
     public override string Description => "RTSharp data provider for rtorrent";
 
     public override string Author => "RTSharp";
-
-    public override Version Version => new("0.0.1", 0, 0, 1);
 
     public override int CompatibleMajorVersion => 0;
 

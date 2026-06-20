@@ -21,10 +21,5 @@ public interface IPluginInit
     /// </summary>
     public int CompatibleMajorVersion { get; }
 
-    /// <summary>
-    /// Version
-    /// </summary>
-    Version Version { get; }
-
     public PluginCapabilities Capabilities { get; }
 }

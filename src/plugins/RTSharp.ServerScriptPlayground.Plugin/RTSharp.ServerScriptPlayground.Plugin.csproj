@@ -3,6 +3,7 @@
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <EnableDynamicLoading>true</EnableDynamicLoading>
+        <RTSharpPluginVersion>$(RTSharpVersion)</RTSharpPluginVersion>
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
         <OutputPath>$(SolutionDir)src\RTSharp\bin\$(Configuration)\$(TargetFramework)\plugins\ServerScriptPlayground</OutputPath>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

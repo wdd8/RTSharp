@@ -46,6 +46,17 @@ public class RTSharpPlugin : IPluginHost
     /// <inheritdoc />
     public Shared.Abstractions.Version Version => Global.Consts.Version;
 
+    public string PluginVersion {
+        get {
+            var info = Assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (!String.IsNullOrEmpty(info)) {
+                var plus = info.IndexOf('+');
+                return plus >= 0 ? info[..plus] : info;
+            }
+            return Assembly?.GetName().Version?.ToString() ?? "?";
+        }
+    }
+
     /// <inheritdoc />
     public object MainWindow => App.MainWindow;
 

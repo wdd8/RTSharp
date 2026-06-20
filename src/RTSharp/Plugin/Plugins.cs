@@ -377,7 +377,7 @@ namespace RTSharp.Plugin
                 var init = plugin.PluginInit!;
 
                 Progress((int)((float)x / pending.Count * 100), $"Initializing plugin {pluginName}...");
-                Log.Logger.Debug($"Initializing plugin {pluginName} ({init.Version.VersionDisplayString})...");
+                Log.Logger.Debug($"Initializing plugin {pluginName} ({plugin.PluginVersion})...");
 
                 void evPluginProgress((string Status, float Percentage) e)
                 {

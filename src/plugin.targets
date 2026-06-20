@@ -1,4 +1,17 @@
 <Project>
+    <PropertyGroup Condition="'$(RTSharpPluginVersion)' != ''">
+        <Version>$(RTSharpPluginVersion)</Version>
+        <AssemblyVersion>$(RTSharpPluginVersion)</AssemblyVersion>
+        <FileVersion>$(RTSharpPluginVersion)</FileVersion>
+        <InformationalVersion>$(RTSharpPluginVersion)</InformationalVersion>
+    </PropertyGroup>
+
+    <Target Name="EnsureRTSharpPluginVersion" BeforeTargets="GetAssemblyVersion;CoreCompile">
+        <Error
+            Condition="'$(RTSharpPluginVersion)' == ''"
+            Text="Plugin '$(MSBuildProjectName)' must define &lt;RTSharpPluginVersion&gt; (e.g. &lt;RTSharpPluginVersion&gt;0.0.1&lt;/RTSharpPluginVersion&gt;)." />
+    </Target>
+
     <Target Name="PluginPostBuild" AfterTargets="PostBuildEvent">
         <PropertyGroup>
             <MainAppExeDir>$(OutputPath)../../</MainAppExeDir>

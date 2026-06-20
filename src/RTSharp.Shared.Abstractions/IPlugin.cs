@@ -17,10 +17,6 @@ public interface IPlugin
     /// Author
     /// </summary>
     string Author { get; }
-    /// <summary>
-    /// Version
-    /// </summary>
-    Version Version { get; }
 
     /// <summary>
     /// Major RT# version which this plugin is compatible with

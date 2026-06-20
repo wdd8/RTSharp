@@ -20,8 +20,6 @@ public class Plugin : BasePlugin
 
     public override string Author => "RTSharp";
 
-    public override Shared.Abstractions.Version Version => new Shared.Abstractions.Version("1.0.0", 1, 0, 0);
-
     public override int CompatibleMajorVersion => 0;
 
     public override Guid GUID { get; } = new Guid("18A2A5EC-C95E-42C9-B555-C87D9764383C");
