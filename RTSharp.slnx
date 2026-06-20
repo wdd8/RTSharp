@@ -1,15 +1,25 @@
 <Solution>
   <Folder Name="/plugins/">
-    <Project Path="src/plugins/RTSharp.ColoredRatio.Plugin/RTSharp.ColoredRatio.Plugin.csproj" />
-    <Project Path="src/plugins/RTSharp.AutoIntegrify.Plugin/RTSharp.AutoIntegrify.Plugin.csproj" />
-    <Project Path="src/plugins/RTSharp.MassTrackerRewrite.Plugin/RTSharp.MassTrackerRewrite.Plugin.csproj" />
+    <Project Path="src/plugins/RTSharp.ColoredRatio.Plugin/RTSharp.ColoredRatio.Plugin.csproj">
+      <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
+    </Project>
+    <Project Path="src/plugins/RTSharp.AutoIntegrify.Plugin/RTSharp.AutoIntegrify.Plugin.csproj">
+      <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
+    </Project>
+    <Project Path="src/plugins/RTSharp.MassTrackerRewrite.Plugin/RTSharp.MassTrackerRewrite.Plugin.csproj">
+      <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
+    </Project>
   </Folder>
   <Folder Name="/qbittorrent/">
-    <Project Path="src/qbittorrent/RTSharp.DataProvider.Qbittorrent.Plugin/RTSharp.DataProvider.Qbittorrent.Plugin.csproj" />
+    <Project Path="src/qbittorrent/RTSharp.DataProvider.Qbittorrent.Plugin/RTSharp.DataProvider.Qbittorrent.Plugin.csproj">
+      <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
+    </Project>
   <Project Path="src/RTSharp.Daemon/Services/qbittorrent/qbittorrent-net-client/src/QBittorrent.Client/QBittorrent.Client.csproj" />
   </Folder>
   <Folder Name="/rtorrent/">
-    <Project Path="src/rtorrent/RTSharp.DataProvider.Rtorrent.Plugin/RTSharp.DataProvider.Rtorrent.Plugin.csproj" />
+    <Project Path="src/rtorrent/RTSharp.DataProvider.Rtorrent.Plugin/RTSharp.DataProvider.Rtorrent.Plugin.csproj">
+      <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
+    </Project>
   </Folder>
   <Folder Name="/Solution Items/" />
   <Folder Name="/Solution Items/GitHub Actions/">
@@ -18,7 +28,9 @@
     <File Path=".editorconfig" />
   </Folder>
   <Folder Name="/transmission/">
-    <Project Path="src/transmission/RTSharp.DataProvider.Transmission.Plugin/RTSharp.DataProvider.Transmission.Plugin.csproj" />
+    <Project Path="src/transmission/RTSharp.DataProvider.Transmission.Plugin/RTSharp.DataProvider.Transmission.Plugin.csproj">
+      <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
+    </Project>
     <Project Path="src/RTSharp.Daemon/Services/transmission/Transmission.Net/Transmission.Net/Transmission.Net.csproj" />
   </Folder>
   <Project Path="src/MessageBox.Avalonia/MsBox.Avalonia.Markdown/MsBox.Avalonia.Markdown.csproj" />

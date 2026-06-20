@@ -32,7 +32,7 @@ public class Plugin : BasePlugin
     IDisposable? MenuItem;
 
     public required override IPluginHost Host { get; set; }
-
+    
     public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
