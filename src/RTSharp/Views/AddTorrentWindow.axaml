@@ -3,14 +3,16 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
-        xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
         xmlns:vm="clr-namespace:RTSharp.ViewModels"
         mc:Ignorable="d"
         x:Class="RTSharp.Views.AddTorrentWindow"
 		x:DataType="vm:AddTorrentViewModel"
         Title="RT# - Add torrent"
-        SizeToContent="WidthAndHeight"
+        Width="420"
         MinWidth="420"
+        Height="416"
+        MinHeight="416"
+        MaxHeight="416"
         Name="window"
         Icon="/Assets/rtsharp.ico">
     <Design.DataContext>
@@ -19,15 +21,12 @@
     <Window.Styles>
         <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
     </Window.Styles>
-    <Window.Resources>
-        <converters:MathConverter x:Key="MathConverter"/>
-    </Window.Resources>
     <TabControl>
         <TabItem>
             <TabItem.Header>
                 <TextBlock>Source</TextBlock>
             </TabItem.Header>
-            <StackPanel Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE-24)}">
+            <StackPanel>
                 <GroupBox Header="Plugin">
                     <ComboBox ItemsSource="{Binding DataProviders}" SelectedItem="{Binding SelectedProvider}" HorizontalAlignment="Stretch" x:Name="dataProviderCmb" />
                 </GroupBox>
@@ -46,17 +45,14 @@
                                 Margin="5,0,0,0"
                                 DockPanel.Dock="Right"
                                 Command="{Binding BrowseLocalFileClickCommand}">Browse...</Button>
-                        <TextBox IsEnabled="{Binding FromFileSelected}"
-                                 Text="{Binding SelectedFileTextBox}" />
+                        <TextBox IsEnabled="{Binding FromFileSelected}" Text="{Binding SelectedFileTextBox}" />
                     </DockPanel>
                 </GroupBox>
                 <GroupBox>
                     <GroupBox.Header>
                         <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromUriSelected}">From URI</RadioButton>
                     </GroupBox.Header>
-                    <TextBox IsEnabled="{Binding FromUriSelected}"
-                             ClipToBounds="True"
-                             Text="{Binding Uri}" />
+                    <TextBox IsEnabled="{Binding FromUriSelected}" ClipToBounds="True" Text="{Binding Uri}" />
                 </GroupBox>
                 <GroupBox>
                     <GroupBox.Header>
