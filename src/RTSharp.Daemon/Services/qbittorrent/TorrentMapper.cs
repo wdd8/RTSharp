@@ -99,6 +99,15 @@ public class TorrentMapper
         if (External.MagnetUri != null)
             Stored.MagnetDummy = External.MagnetUri != null;
 
+        if (Stored.Downloaded == Stored.WantedSize) {
+            /*
+             * for some reason qbit still reports some DL speed even though the torrent is
+             * already complete, but it doesn't make sense for us to report DL speed for
+             * complete torrents.
+             */
+            Stored.DLSpeed = 0;
+        }
+
         if (Stored.DLSpeed > 1024 || Stored.UPSpeed > 1024)
             Stored.State |= Protocols.DataProvider.TorrentState.Active;
         else {
@@ -148,6 +157,15 @@ public class TorrentMapper
             Stored.RemotePath = External.SavePath;
         if (External.MagnetUri != null)
             Stored.MagnetDummy = External.MagnetUri != null;
+
+        if (Stored.Downloaded == Stored.WantedSize) {
+            /*
+             * for some reason qbit still reports some DL speed even though the torrent is
+             * already complete, but it doesn't make sense for us to report DL speed for
+             * complete torrents.
+             */
+            Stored.DLSpeed = 0;
+        }
 
         if (Stored.DLSpeed > 1024 || Stored.UPSpeed > 1024)
             Stored.State |= Protocols.DataProvider.TorrentState.Active;
