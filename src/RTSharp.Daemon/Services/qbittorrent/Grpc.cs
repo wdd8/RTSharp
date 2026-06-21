@@ -971,5 +971,46 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
             return new();
         }
+
+        public async Task StreamLogs(StreamLogsRequest Req, IServerStreamWriter<LogEntry> Res, CancellationToken CancellationToken)
+        {
+            var client = await Client.Init();
+
+            int afterId = -1;
+            bool first = true;
+
+            while (!CancellationToken.IsCancellationRequested) {
+                var entries = (await client.GetLogAsync(TorrentLogSeverity.All, afterId, CancellationToken)).ToList();
+
+                if (entries.Count > 0) {
+                    IEnumerable<TorrentLogEntry> toSend = first && entries.Count > Req.History
+                        ? entries.Skip(entries.Count - Req.History)
+                        : entries;
+
+                    foreach (var entry in toSend) {
+                        await Res.WriteAsync(new LogEntry {
+                            Timestamp = Timestamp.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(entry.Timestamp).UtcDateTime),
+                            Severity = entry.Severity switch {
+                                TorrentLogSeverity.Critical => Protocols.DataProvider.LogSeverity.Critical,
+                                TorrentLogSeverity.Warning => Protocols.DataProvider.LogSeverity.Warning,
+                                TorrentLogSeverity.Info => Protocols.DataProvider.LogSeverity.Info,
+                                TorrentLogSeverity.Normal => Protocols.DataProvider.LogSeverity.Notice,
+                                _ => Protocols.DataProvider.LogSeverity.Unspecified
+                            },
+                            Message = entry.Message
+                        }, CancellationToken);
+                    }
+
+                    afterId = entries[^1].Id;
+                }
+
+                first = false;
+
+                if (!Req.Follow)
+                    break;
+
+                await Task.Delay(TimeSpan.FromSeconds(1), CancellationToken);
+            }
+        }
     }
 }

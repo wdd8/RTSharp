@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option csharp_namespace = "RTSharp.Daemon.Protocols.DataProvider";
+
+import "google/protobuf/timestamp.proto";
+
+service GRPCLogsService {
+    rpc StreamLogs (StreamLogsRequest) returns (stream LogEntry);
+}
+
+message StreamLogsRequest {
+    int32 History = 1;
+    bool Follow = 2;
+}
+
+message LogEntry {
+    google.protobuf.Timestamp Timestamp = 1;
+    LogSeverity Severity = 2;
+    string Message = 3;
+}
+
+enum LogSeverity {
+    LogSeverity_UNSPECIFIED = 0;
+    LogSeverity_DEBUG = 1;
+    LogSeverity_INFO = 2;
+    LogSeverity_NOTICE = 3;
+    LogSeverity_WARNING = 4;
+    LogSeverity_ERROR = 5;
+    LogSeverity_CRITICAL = 6;
+}

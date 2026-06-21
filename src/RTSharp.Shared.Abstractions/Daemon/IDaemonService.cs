@@ -118,6 +118,14 @@ public interface IDaemonService
 
     IDaemonStatsService GetStatsService(IDataProvider DataProvider);
 
+    /// <summary>
+    /// Streams the logs of data provider daemon
+    /// </summary>
+    /// <param name="DataProvider">Data provider whose daemon logs to stream.</param>
+    /// <param name="History">Number of recent lines to backfill</param>
+    /// <param name="CancellationToken"></param>
+    ChannelReader<DataProviderDaemonLogEntry> StreamLogs(IDataProvider DataProvider, int History, CancellationToken CancellationToken);
+
     string Id { get; }
 
     string Host { get; }

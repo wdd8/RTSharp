@@ -190,6 +190,7 @@ public static class Program
         app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.TorrentsService>();
         app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.TorrentService>();
         app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.StatsService>();
+        app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.LogsService>();
         app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.RtorrentSettingsService>();
         app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.QBittorrentSettingsService>();
         app.MapGrpcService<RTSharp.Daemon.GRPCServices.DataProvider.TransmissionSettingsService>();

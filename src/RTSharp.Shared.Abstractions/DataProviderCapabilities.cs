@@ -17,6 +17,7 @@
         bool RemoveTorrent,
         bool RemoveTorrentAndData,
         bool AddLabel,
-        bool SetLabels
+        bool SetLabels,
+        bool GetLogs
     );
 }

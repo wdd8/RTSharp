@@ -140,12 +140,14 @@ Example:
 rtorrent implementation uses `xmlrpc` interface. It does not support delta torrent listing changes, therefore requires significant bandwidth throughput to sustain fast updates for large lists of torrents.
 
 * `SCGIListen` is an IP end point pointing to SCGI socket configured by rtorrents `scgi_port` option
+* `LogFile` is an optional field for streaming logs to the client. If you have rtorrent logging enabled, set this field to value of `log.open_file` option.
 
 Example:
 
 ```
 {
-  "SCGIListen": "127.0.0.1:1234"
+  "SCGIListen": "127.0.0.1:1234",
+  "LogFile": "/var/log/rtorrent/rtorrent.log"
 }
 ```
 

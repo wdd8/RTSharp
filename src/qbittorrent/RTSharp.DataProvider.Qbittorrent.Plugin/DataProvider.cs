@@ -49,7 +49,8 @@ public class DataProvider : IDataProvider
         RemoveTorrent: true,
         RemoveTorrentAndData: true,
         AddLabel: true,
-        SetLabels: true
+        SetLabels: true,
+        GetLogs: true
     );
 
     public DataProvider(Plugin ThisPlugin)
@@ -231,4 +232,7 @@ public class DataProvider : IDataProvider
 
         return await client.GetPieces(In, cancellationToken);
     }
+
+    public ChannelReader<DataProviderDaemonLogEntry> StreamLogs(int History, CancellationToken CancellationToken) =>
+        PluginHost.AttachedDaemonService!.StreamLogs(this, History, CancellationToken);
 }

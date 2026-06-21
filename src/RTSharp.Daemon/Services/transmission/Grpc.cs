@@ -3,7 +3,10 @@ using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
 
+using Microsoft.Extensions.Options;
+
 using RTSharp.Daemon.Protocols.DataProvider;
+using RTSharp.Daemon.Services.FileTail;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
@@ -11,7 +14,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 
 using Transmission.Net.Api;
 using Transmission.Net.Api.Entity;
@@ -1033,6 +1035,17 @@ namespace RTSharp.Daemon.Services.transmission
                 Upload = (ulong)stats.CumulativeStats.UploadedBytes!,
                 ShareRatio = (float)stats.CumulativeStats.DownloadedBytes.Value / (float)stats.CumulativeStats.UploadedBytes.Value
             };
+        }
+
+        public Task StreamLogs(StreamLogsRequest Req, IServerStreamWriter<LogEntry> Res, CancellationToken CancellationToken)
+        {
+            var config = ServiceProvider.GetRequiredService<IOptionsFactory<ConfigModel>>().Create(InstanceKey);
+
+            if (String.IsNullOrWhiteSpace(config.LogFile)) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.FailedPrecondition, "No log file configured for this transmission data provider (set LogFile; run transmission-daemon with --logfile)."));
+            }
+
+            return FileTailReader.StreamPath(config.LogFile, Req, Res, CancellationToken);
         }
     }
 }

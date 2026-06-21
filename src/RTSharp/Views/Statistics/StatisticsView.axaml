@@ -5,8 +5,11 @@
         xmlns:statistics="using:RTSharp.ViewModels.Statistics"
         mc:Ignorable="d" d:DesignWidth="310" d:DesignHeight="260"
 		Width="310" Height="260"
+		util:ToolWindow.Title="Statistics"
+        util:ToolWindow.SizeToContent="WidthAndHeight"
         xmlns:views="using:RTSharp.Shared.Controls.Views"
         xmlns:converters="using:RTSharp.ViewModels.Converters"
+        xmlns:util="using:RTSharp.Views.Util"
         x:Class="RTSharp.Views.Statistics.StatisticsView"
 		x:DataType="statistics:StatisticsViewModel">
 
@@ -17,8 +20,8 @@
         <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
     </UserControl.Styles>
 
-	<StackPanel Orientation="Vertical">
-		<GroupBox Header="Listing" Margin="4,4,4,4">
+	<Grid RowDefinitions="Auto,Auto,*">
+		<GroupBox Grid.Row="0" Header="Listing" Margin="4,4,4,4">
 			<Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
 				<TextBlock Text="Torrents: " Grid.Column="0" Grid.Row="0" />
 				<TextBlock Text="{Binding TotalTorrents}" Grid.Column="1" Grid.Row="0" />
@@ -33,10 +36,10 @@
 			</Grid>
 		</GroupBox>
 
-		<TextBlock Padding="8,8,8,8" Text="One or more daemons do not support all-time statstics" IsVisible="{Binding SomeDontSupport}" />
+		<TextBlock Grid.Row="1" Padding="8,8,8,8" Text="One or more daemons do not support all-time statstics" IsVisible="{Binding SomeDontSupport}" />
 
-		<GroupBox Header="Daemons" Margin="4,4,4,4">
-			<Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+		<GroupBox Grid.Row="2" Header="Daemons" Margin="4,4,4,4">
+			<Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" VerticalAlignment="Top">
 				<TextBlock Text="All-time upload: " Grid.Column="0" Grid.Row="1" Padding="0,4,0,0" />
 				<TextBlock Text="{Binding AllTimeUpload, Converter={StaticResource SIDataSizeConverter}}" Grid.Column="1" Grid.Row="1" Padding="0,4,0,0" />
 				<TextBlock Text="All-time download: " Grid.Column="0" Grid.Row="2" Padding="0,4,0,0" />
@@ -45,5 +48,5 @@
 				<TextBlock Text="{Binding AllTimeShareRatio}" Grid.Column="1" Grid.Row="3" Padding="0,4,0,0" />
 			</Grid>
 		</GroupBox>
-	</StackPanel>
+	</Grid>
 </UserControl>

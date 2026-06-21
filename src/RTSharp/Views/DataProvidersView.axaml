@@ -30,6 +30,11 @@
         <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:DataProviderItemViewModel">
                 <Border BorderThickness="2">
+                    <Border.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Logs" Command="{Binding ShowLogsCommand}" IsVisible="{Binding CanShowLogs}" />
+                        </ContextMenu>
+                    </Border.ContextMenu>
                     <StackPanel Orientation="Vertical">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding DataProvider.DisplayName}" Padding="0 0 12 0" />

@@ -2,8 +2,11 @@ using Avalonia.Media;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using DynamicData;
+
+using RTSharp.Plugin;
 
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
@@ -50,7 +53,7 @@ namespace RTSharp.ViewModels
                 SpeedChartEnabled = config.Look.Value.DataProviders.SpeedChartEnabled;
             }
 
-            AddDisposable(Plugin.Plugins.DataProviders
+            AddDisposable(Plugins.DataProviders
                 .Connect()
                 .AutoRefreshOnObservable(x => x.State)
                 .AutoRefreshOnObservable(x => x.PluginInstance.AttachedDaemonService.Latency)
@@ -68,7 +71,7 @@ namespace RTSharp.ViewModels
                                 ActiveTorrentCount = 0
                             };
 
-                            Items.Add(new DataProviderItemViewModel(model, SpeedChartEnabled));
+                            Items.Add(new DataProviderItemViewModel(model, change.Item.Current, SpeedChartEnabled));
                         } else {
                             if (change.Reason == ListChangeReason.Remove) {
                                 Items.Remove(item);
@@ -146,6 +149,19 @@ namespace RTSharp.ViewModels
 
         public Models.DataProvider DataProvider { get; }
 
+        public RTSharpDataProvider DpInstance { get; }
+
+        public bool CanShowLogs => DpInstance.Instance.Capabilities.GetLogs;
+
+        [RelayCommand]
+        private void ShowLogs()
+        {
+            var view = new Views.DataProviderLogsView {
+                DataContext = new DataProviderLogsViewModel(DpInstance)
+            };
+            Views.Util.DockUtils.SpawnToolWindow(view);
+        }
+
         public ObservableCollection<DateTimePoint> DLSpeedChartValues { get; } = new();
 
         public ObservableCollection<DateTimePoint> UPSpeedChartValues { get; } = new();
@@ -164,9 +180,10 @@ namespace RTSharp.ViewModels
         [ObservableProperty]
         public partial bool SpeedChartTopLabelVisible { get; set; }
 
-        public DataProviderItemViewModel(Models.DataProvider Dp, bool SpeedChartEnabled)
+        public DataProviderItemViewModel(Models.DataProvider Dp, RTSharpDataProvider DpInstance, bool SpeedChartEnabled)
         {
             DataProvider = Dp;
+            this.DpInstance = DpInstance;
             this.SpeedChartEnabled = SpeedChartEnabled;
 
             var dlSpeedPaint = new SolidColorPaint(SKColor.Parse("#D64040")) {
@@ -212,7 +229,7 @@ namespace RTSharp.ViewModels
                 MinLimit = (now - SPEED_CHART_WINDOW).Ticks,
                 MaxLimit = now.Ticks,
                 SeparatorsPaint = axisPaint,
-                Padding = new LiveChartsCore.Drawing.Padding(0)
+                Padding = new Padding(0)
             };
 
             SpeedChartXAxes = [SpeedChartXAxis];
@@ -226,7 +243,7 @@ namespace RTSharp.ViewModels
                 ForceStepToMin = true,
                 ShowSeparatorLines = false,
                 SeparatorsPaint = axisPaint,
-                Padding = new LiveChartsCore.Drawing.Padding(0)
+                Padding = new Padding(0)
             };
 
             SpeedChartYAxes = [SpeedChartYAxis];

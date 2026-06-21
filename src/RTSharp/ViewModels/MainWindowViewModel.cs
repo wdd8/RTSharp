@@ -221,7 +221,7 @@ namespace RTSharp.ViewModels
             var view = new StatisticsView {
                 DataContext = new StatisticsViewModel()
             };
-            DockUtils.SpawnToolWindow(view, "Statistics");
+            DockUtils.SpawnToolWindow(view);
         }
     }
 }

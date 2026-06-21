@@ -51,6 +51,13 @@ public interface IDataProvider : IDataProviderBase<DataProviderCapabilities>
 
     public Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In);
 
+    /// <summary>
+    /// Streams the logs of data provider daemon
+    /// </summary>
+    /// <param name="History">Number of recent lines to backfill</param>
+    /// <param name="CancellationToken"></param>
+    public ChannelReader<DataProviderDaemonLogEntry> StreamLogs(int History, CancellationToken CancellationToken);
+
     public IDataProviderFiles Files { get; }
 
     public IDataProviderTracker Tracker { get; }

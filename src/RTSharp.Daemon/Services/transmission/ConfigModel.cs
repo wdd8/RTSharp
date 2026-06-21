@@ -9,4 +9,6 @@ public record ConfigModel
     public required string Password { get; init; }
 
     public required string? ConfigDir { get; set; }
+
+    public string? LogFile { get; init; }
 }

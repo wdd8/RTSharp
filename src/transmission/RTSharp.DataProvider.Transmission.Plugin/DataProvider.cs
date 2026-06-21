@@ -8,6 +8,7 @@ using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Abstractions.DataProvider;
+using System.Threading.Channels;
 
 namespace RTSharp.DataProvider.Transmission.Plugin;
 
@@ -45,7 +46,8 @@ public class DataProvider : IDataProvider
         RemoveTorrent: true,
         RemoveTorrentAndData: true,
         AddLabel: true,
-        SetLabels: true
+        SetLabels: true,
+        GetLogs: true
     );
 
     public DataProvider(Plugin ThisPlugin)
@@ -314,4 +316,7 @@ public class DataProvider : IDataProvider
 
         return await client.GetPieces(In, cancellationToken);
     }
+
+    public ChannelReader<DataProviderDaemonLogEntry> StreamLogs(int History, CancellationToken CancellationToken) =>
+        Host.AttachedDaemonService.StreamLogs(this, History, CancellationToken);
 }

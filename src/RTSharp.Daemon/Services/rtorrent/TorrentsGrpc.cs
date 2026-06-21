@@ -1,4 +1,7 @@
 ﻿using Grpc.Core;
+
+using Microsoft.Extensions.Options;
+
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Daemon.Services.rtorrent.TorrentPoll;
 
@@ -6,19 +9,25 @@ namespace RTSharp.Daemon.Services.rtorrent
 {
     public partial class Grpc
     {
-        private TorrentPolling TorrentPolling;
-        private SCGICommunication Scgi;
-        private TorrentOpService TorrentOpService;
-        private ILogger Logger;
-        private SessionsService Sessions;
-        
-        public Grpc([ServiceKey] string InstanceKey, IServiceProvider ServiceProvider, SessionsService Sessions, ILogger<Grpc> Logger)
+        private readonly TorrentPolling TorrentPolling;
+        private readonly SCGICommunication Scgi;
+        private readonly TorrentOpService TorrentOpService;
+        private readonly ILogger Logger;
+        private readonly SessionsService Sessions;
+        private readonly IServiceProvider ServiceProvider;
+        private readonly IOptionsFactory<ConfigModel> Opts;
+        private readonly string InstanceKey;
+
+        public Grpc(IOptionsFactory<ConfigModel> Opts, [ServiceKey] string InstanceKey, IServiceProvider ServiceProvider, SessionsService Sessions, ILogger<Grpc> Logger)
         {
             TorrentPolling = ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey);
             Scgi = ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
             TorrentOpService = ServiceProvider.GetRequiredKeyedService<TorrentOpService>(InstanceKey);
             this.Sessions = Sessions;
             this.Logger = Logger;
+            this.ServiceProvider = ServiceProvider;
+            this.Opts = Opts;
+            this.InstanceKey = InstanceKey;
         }
     
         public async Task<TorrentsListResponse> GetTorrentList()

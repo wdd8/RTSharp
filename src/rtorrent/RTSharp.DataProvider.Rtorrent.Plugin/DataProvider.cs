@@ -18,6 +18,7 @@ using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Utils;
 using File = RTSharp.Shared.Abstractions.File;
+using System.Threading.Channels;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin;
 
@@ -55,7 +56,8 @@ public class DataProvider : IDataProvider
         RemoveTorrent: true,
         RemoveTorrentAndData: true,
         AddLabel: true,
-        SetLabels: true
+        SetLabels: true,
+        GetLogs: true
     );
 
     public DataProvider(Plugin ThisPlugin)
@@ -381,6 +383,9 @@ public class DataProvider : IDataProvider
 
         return await client.GetAllTorrents(cancellationToken);
     }
+
+    public ChannelReader<DataProviderDaemonLogEntry> StreamLogs(int History, CancellationToken CancellationToken) =>
+        PluginHost.AttachedDaemonService!.StreamLogs(this, History, CancellationToken);
 
     public BasePlugin Plugin => ThisPlugin;
 }

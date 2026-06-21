@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:RTSharp.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="400"
+             Width="700" Height="400"
+		     util:ToolWindow.Title="{Binding DisplayName}"
+             xmlns:util="using:RTSharp.Views.Util"
+             x:Class="RTSharp.Views.DataProviderLogsView"
+             x:DataType="vm:DataProviderLogsViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="ScrollBar">
+            <Setter Property="AllowAutoHide" Value="True" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="4" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Clear" Command="{Binding ClearCommand}" />
+                <TextBlock VerticalAlignment="Center" Text="{Binding DisplayName, StringFormat='Daemon: {0}'}" />
+            </StackPanel>
+        </Border>
+
+        <DataGrid Name="MainGrid"
+                  ItemsSource="{Binding LogEntries}"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="False"
+                  IsReadOnly="True"
+                  VerticalAlignment="Stretch"
+                  GridLinesVisibility="Horizontal">
+            <DataGrid.Styles>
+                <Style Selector="DataGridRow">
+                    <Setter Property="Height" Value="NaN" />
+                </Style>
+            </DataGrid.Styles>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Date/Time" IsReadOnly="True" Binding="{Binding Timestamp, Mode=OneWay, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
+                <DataGridTextColumn Header="Severity" IsReadOnly="True" Binding="{Binding Severity, Mode=OneWay}" />
+                <DataGridTextColumn Header="Message" IsReadOnly="True" Width="*" Binding="{Binding Message, Mode=OneWay}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

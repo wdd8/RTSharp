@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using RTSharp.Daemon.Protocols;
+using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Daemon;
@@ -56,6 +57,7 @@ public class DaemonService : IDaemonService
 
     GRPCServerService.GRPCServerServiceClient ServerClient;
     GRPCFilesService.GRPCFilesServiceClient FilesClient;
+    GRPCLogsService.GRPCLogsServiceClient LogsClient;
     IHostApplicationLifetime Lifetime;
 
     private Dictionary<string, Config.Models.Server> Servers;
@@ -78,6 +80,7 @@ public class DaemonService : IDaemonService
 
         ServerClient = clientFactory.CreateClient<GRPCServerService.GRPCServerServiceClient>(nameof(GRPCServerService.GRPCServerServiceClient) + "_" + ServerId);
         FilesClient = clientFactory.CreateClient<GRPCFilesService.GRPCFilesServiceClient>(nameof(GRPCFilesService.GRPCFilesServiceClient) + "_" + ServerId);
+        LogsClient = clientFactory.CreateClient<GRPCLogsService.GRPCLogsServiceClient>(nameof(GRPCLogsService.GRPCLogsServiceClient) + "_" + ServerId);
         Servers = config.Servers.Value;
 
         var cfg = Servers.First(x => x.Key == ServerId).Value;
@@ -440,5 +443,47 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
     public IDaemonStatsService GetStatsService(IDataProvider DataProvider)
     {
         return new DaemonStatsService(Plugins.DataProviders.Items.First(x => x.Instance == DataProvider));
+    }
+
+    public ChannelReader<DataProviderDaemonLogEntry> StreamLogs(IDataProvider DataProvider, int History, CancellationToken CancellationToken)
+    {
+        var dp = Plugins.DataProviders.Items.First(x => x.Instance == DataProvider);
+
+        var channel = Channel.CreateUnbounded<DataProviderDaemonLogEntry>(new UnboundedChannelOptions {
+            SingleReader = false,
+            SingleWriter = true
+        });
+
+        _ = Task.Run(async () => {
+            try {
+                var stream = LogsClient.StreamLogs(new StreamLogsRequest {
+                    History = History,
+                    Follow = true
+                }, headers: dp.GetBuiltInDataProviderGrpcHeaders(), cancellationToken: CancellationToken);
+
+                await foreach (var entry in stream.ResponseStream.ReadAllAsync(CancellationToken)) {
+                    await channel.Writer.WriteAsync(new DataProviderDaemonLogEntry(
+                        entry.Timestamp.ToDateTime().ToLocalTime(),
+                        entry.Severity switch {
+                            RTSharp.Daemon.Protocols.DataProvider.LogSeverity.Debug => Shared.Abstractions.LogSeverity.Debug,
+                            RTSharp.Daemon.Protocols.DataProvider.LogSeverity.Info => Shared.Abstractions.LogSeverity.Info,
+                            RTSharp.Daemon.Protocols.DataProvider.LogSeverity.Notice => Shared.Abstractions.LogSeverity.Notice,
+                            RTSharp.Daemon.Protocols.DataProvider.LogSeverity.Warning => Shared.Abstractions.LogSeverity.Warning,
+                            RTSharp.Daemon.Protocols.DataProvider.LogSeverity.Error => Shared.Abstractions.LogSeverity.Error,
+                            RTSharp.Daemon.Protocols.DataProvider.LogSeverity.Critical => Shared.Abstractions.LogSeverity.Critical,
+                            _ => Shared.Abstractions.LogSeverity.Unspecified
+                        },
+                        entry.Message
+                    ), CancellationToken);
+                }
+            } catch (Exception ex) {
+                channel.Writer.TryComplete(ex);
+                return;
+            } finally {
+                channel.Writer.TryComplete();
+            }
+        }, CancellationToken);
+
+        return channel.Reader;
     }
 }

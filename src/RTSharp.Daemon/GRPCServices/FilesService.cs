@@ -10,6 +10,7 @@ using Mono.Unix;
 using Mono.Unix.Native;
 
 using RTSharp.Daemon.Protocols;
+using RTSharp.Daemon.Utils;
 
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -43,38 +44,6 @@ namespace RTSharp.Daemon.GRPCServices
             );
         }
 
-        private async ValueTask<string> ExpandTilde(string In)
-        {
-            if (In.StartsWith("~+/"))
-                return Environment.CurrentDirectory + "/" + In[3..];
-            if (In.StartsWith("~/"))
-                return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/" + In[2..];
-            if (In.StartsWith("~")) {
-                var slashIdx = In.IndexOf('/');
-                if (slashIdx == -1)
-                    return In;
-
-                var uname = In[1..slashIdx];
-
-                var passwd = await File.ReadAllLinesAsync("/etc/passwd");
-
-                foreach (var line in passwd) {
-                    var split = line.Split(':');
-                    if (split.Length < 6)
-                        continue;
-
-                    if (split[0] == uname) {
-                        var homeDir = split[5];
-                        return homeDir + In[slashIdx..];
-                    }
-                }
-
-                return In[slashIdx..];
-            }
-
-            return In;
-        }
-
         public override Task<CheckExistsReply> CheckExists(CheckExistsInput Req, ServerCallContext Ctx)
         {
             var existence = new Dictionary<string, bool>();
@@ -90,7 +59,7 @@ namespace RTSharp.Daemon.GRPCServices
         public override async Task<Empty> CreateDirectory(StringValue Req, ServerCallContext Ctx)
         {
             Logger.LogDebug($"CreateDirectory: {Req.Value}");
-            var expanded = await ExpandTilde(Req.Value);
+            var expanded = await PathUtils.ExpandTilde(Req.Value);
             Logger.LogDebug($"CreateDirectory expanded: {expanded}");
 
             try {
@@ -105,7 +74,7 @@ namespace RTSharp.Daemon.GRPCServices
         public override async Task<FileSystemItem> GetDirectoryInfo(StringValue Req, ServerCallContext Ctx)
         {
             Logger.LogDebug($"GetDirectoryInfo: {Req.Value}");
-            var expanded = await ExpandTilde(Req.Value);
+            var expanded = await PathUtils.ExpandTilde(Req.Value);
             Logger.LogDebug($"GetDirectoryInfo expanded: {expanded}");
 
             if (!UnixFileSystemInfo.TryGetFileSystemEntry(expanded, out var info))
@@ -168,7 +137,7 @@ namespace RTSharp.Daemon.GRPCServices
         public override async Task<Empty> RemoveEmptyDirectory(StringValue Req, ServerCallContext Ctx)
         {
             Logger.LogDebug($"RemoveEmptyDirectory: {Req.Value}");
-            var expanded = await ExpandTilde(Req.Value);
+            var expanded = await PathUtils.ExpandTilde(Req.Value);
             Logger.LogDebug($"RemoveEmptyDirectory expanded: {expanded}");
 
             try {
