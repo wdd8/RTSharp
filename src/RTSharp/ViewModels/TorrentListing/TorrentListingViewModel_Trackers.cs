@@ -190,16 +190,20 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     var delayTask = Task.Delay(config.Behavior.Value.TrackersPollingInterval, SelectionChange);
 
-                    IList<Tracker> trackers;
+                    IList<Tracker>? trackers = null;
                     try {
-                        trackers = (await current.DataOwner.Instance.GetTrackers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).First().Value;
+                        trackers = (await current.DataOwner.Instance.GetTrackers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).FirstOrDefault().Value;
                     } catch (Exception ex) {
                         Log.Logger.Error(ex, "Trackers pool error");
                         return;
                     }
 
+                    if (trackers == null)
+                        goto end;
+
                     TrackersChanges!.Writer.TryWrite((current, trackers));
 
+end:
                     try {
                         await delayTask;
                     } catch { }

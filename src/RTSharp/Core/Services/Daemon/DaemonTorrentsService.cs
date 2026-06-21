@@ -495,5 +495,14 @@ namespace RTSharp.Core.Services.Daemon
                 Port = (uint)Peer.Port
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
         }
+
+        public async Task BanPeer(byte[] Hash, System.Net.IPEndPoint Peer, CancellationToken cancellationToken)
+        {
+            await TorrentClient.BanPeerAsync(new SinglePeerArgs {
+                InfoHash = Hash.ToByteString(),
+                IPAddress = Peer.Address.GetAddressBytes().ToByteString(),
+                Port = (uint)Peer.Port
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        }
     }
 }

@@ -15,10 +15,7 @@ public class DataProviderPeer : IDataProviderPeer
 
     public DataProviderPeerCapabilities Capabilities { get; } = new(
         AddPeer: false,
-        BanPeer: false,
-        KickPeer: false,
-        SnubPeer: false,
-        UnsnubPeer: false
+        BanPeer: false
     );
 
     public DataProviderPeer(Plugin ThisPlugin)
@@ -28,5 +25,8 @@ public class DataProviderPeer : IDataProviderPeer
     }
 
     public Task AddPeer(Torrent Torrent, IPEndPoint Peer, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task BanPeer(Torrent Torrent, IPEndPoint Peer, CancellationToken cancellationToken = default)
         => throw new NotSupportedException();
 }

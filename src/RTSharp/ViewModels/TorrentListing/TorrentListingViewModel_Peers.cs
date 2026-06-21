@@ -215,13 +215,16 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     var delayTask = Task.Delay(config.Behavior.Value.PeersPollingInterval, SelectionChange);
                     
-                    IList<Peer> peers = null!;
+                    IList<Peer>? peers = null;
                     try {
-                        peers = (await current!.DataOwner.Instance.GetPeers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).First().Value;
+                        peers = (await current!.DataOwner.Instance.GetPeers(new List<Torrent> { current.ToPluginModel() }, SelectionChange)).FirstOrDefault().Value;
                     } catch (Exception ex) {
                         Log.Logger.Error(ex, "Peer poll failed");
                         return;
                     }
+
+                    if (peers == null)
+                        goto end;
 
                     ListingChanges<Peer, Models.Peer, IPEndPoint> changes;
 
@@ -264,6 +267,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     PeersChanges!.Writer.TryWrite((current, changes));
 
+end:;
                     try {
                         await delayTask;
                     } catch { }

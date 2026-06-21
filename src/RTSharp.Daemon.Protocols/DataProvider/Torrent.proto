@@ -29,6 +29,7 @@ service GRPCTorrentService {
     rpc AddTracker (SingleTrackerArgs) returns (google.protobuf.Empty);
     rpc RemoveTracker (SingleTrackerArgs) returns (google.protobuf.Empty);
     rpc AddPeer (SinglePeerArgs) returns (google.protobuf.Empty);
+    rpc BanPeer (SinglePeerArgs) returns (google.protobuf.Empty);
 }
 
 message SingleTrackerArgs {

@@ -972,6 +972,17 @@ namespace RTSharp.Daemon.Services.qbittorrent
             return new();
         }
 
+        public async Task<Empty> BanPeer(ByteString InfoHash, ByteString IPAddress, uint Port, CancellationToken cancellationToken)
+        {
+            var client = await Client.Init();
+
+            var ip = new System.Net.IPAddress(IPAddress.Span).ToString();
+
+            await client.BanPeersAsync([$"{ip}:{Port}"], cancellationToken);
+
+            return new();
+        }
+
         public async Task StreamLogs(StreamLogsRequest Req, IServerStreamWriter<LogEntry> Res, CancellationToken CancellationToken)
         {
             var client = await Client.Init();

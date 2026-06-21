@@ -17,10 +17,7 @@ public class DataProviderPeer : IDataProviderPeer
 
     public DataProviderPeerCapabilities Capabilities { get; } = new(
         AddPeer: true,
-        BanPeer: false,
-        KickPeer: false,
-        SnubPeer: false,
-        UnsnubPeer: false
+        BanPeer: true
     );
 
     public DataProviderPeer(Plugin ThisPlugin)
@@ -34,5 +31,12 @@ public class DataProviderPeer : IDataProviderPeer
         var client = PluginHost.AttachedDaemonService!.GetTorrentsService(ThisPlugin.DataProvider.Instance);
 
         await client.AddPeer(Torrent.Hash, Peer, cancellationToken);
+    }
+
+    public async Task BanPeer(Torrent Torrent, IPEndPoint Peer, CancellationToken cancellationToken = default)
+    {
+        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+
+        await client.BanPeer(Torrent.Hash, Peer, cancellationToken);
     }
 }

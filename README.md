@@ -29,7 +29,7 @@ See [setting up data providers](setup-dataproviders.md)
  - Standalone built-in torrent creation
  - Peer AS listing
  - Custom names for trackers
- - Virtualized main torrent list with search
+ - Virtualized main torrent list with filtering & search
  - Plugins for custom torrent daemon support & extensibility
 
 ### Supported daemons
@@ -53,20 +53,14 @@ See [setting up data providers](setup-dataproviders.md)
 |Add label|🟢Supported|🟢Supported|🟢Supported|
 |Set labels|🟢Supported|🟢Supported|🟢Supported|
 |Add peer|🟢Supported|🟢Supported|🔴Unsupported by daemon|
-|Ban peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
-|Kick peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
-|Snub peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
-|Unsnub peer|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Ban peer|🟢Supported|🟢Supported|🔴Unsupported by daemon|
 |Get .torrent|🟢Supported|🟢Supported|🟡With daemon access to config dir|
 |Prefill default save path|🟢Supported|🟢Supported|🟢Supported|
 |Pieces progress bar|🟢Supported|🟢Supported|🟢Supported|
 |Extended statistics|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Partial downloads|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Add new tracker|🔴Not implemented|🟢Supported|🟢Supported|
-|Enable tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
-|Disable tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Remove tracker|🔴Not implemented|🟢Supported|🟢Supported|
-|Reannounce tracker|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Replace tracker|🟡Hacky workaround*|🟢Supported|🟢Supported|
 |Global download statistics|🟡Workaround*|🟢Supported|🟢Supported|
 |Global upload statistics|🟡Workaround*|🟢Supported|🟢Supported|
@@ -75,7 +69,7 @@ See [setting up data providers](setup-dataproviders.md)
 |File renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Torrent renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Remote daemon settings|🟢Supported|🟢Supported|🟢Supported|
-|Daemon log inspection|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Daemon log inspection|🟡Supported*|🟢Supported|🟡Supported*|
 
 _* - not directly supported by torrent daemon_
 

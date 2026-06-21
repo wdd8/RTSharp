@@ -1266,5 +1266,28 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             return new();
         }
+
+        public async Task<Empty> BanPeer(ByteString InfoHash, ByteString IPAddress, uint Port, CancellationToken cancellationToken)
+        {
+            var sHash = Convert.ToHexString(InfoHash.Span);
+
+            var peers = await GetTorrentsPeers(new Torrents { Hashes = { InfoHash } });
+
+            var peer = peers.Reply.FirstOrDefault(x => x.InfoHash.Span.SequenceEqual(InfoHash.Span))?.Peers.FirstOrDefault(p => p.Port == Port && p.IPAddress.Span.SequenceEqual(IPAddress.Span));
+
+            if (peer == null)
+                return new();
+
+            var target = $"{sHash}:p{peer.PeerID.ToStringUtf8()}";
+
+            var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
+            xml.Append("<value><struct><member><name>methodName</name><value><string>p.banned.set</string></value></member><member><name>params</name><value><array><data><value><string>" + target + "</string></value><value><i4>1</i4></value></data></array></value></member></struct></value>");
+            xml.Append("<value><struct><member><name>methodName</name><value><string>p.disconnect</string></value></member><member><name>params</name><value><array><data><value><string>" + target + "</string></value></data></array></value></member></struct></value>");
+            xml.Append("</data></array></value></param></params></methodCall>");
+
+            await Scgi.Get(xml.ToString(), cancellationToken);
+
+            return new();
+        }
     }
 }

@@ -39,10 +39,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
         static readonly FrozenDictionary<string, Func<DataProviderPeerCapabilities, bool>> StrToCap = new Dictionary<string, Func<DataProviderPeerCapabilities, bool>>() {
             { "Add peers", x => x.AddPeer },
-            { "Ban peer", x => x.BanPeer},
-            { "Kick peer", x => x.KickPeer },
-            { "Snub peer", x => x.SnubPeer },
-            { "Unsnub peer", x => x.UnsnubPeer }
+            { "Ban peer", x => x.BanPeer}
         }.ToFrozenDictionary();
 
         bool CanExecuteAction(string Action)
@@ -77,28 +74,24 @@ namespace RTSharp.ViewModels.TorrentListing
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteBanPeer))]
         public async Task BanPeer(IList Input)
         {
+            if (Torrent == null)
+                return;
 
-        }
+            var selected = new List<Peer>();
+            foreach (var item in Input) {
+                if (item is Peer peer)
+                    selected.Add(peer);
+            }
 
-        public bool CanExecuteKickPeer() => CanExecuteAction("Kick peer");
-        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteKickPeer))]
-        public async Task KickPeer(IList Input)
-        {
+            var torrent = Torrent.ToPluginModel();
 
-        }
-
-        public bool CanExecuteSnubPeer() => CanExecuteAction("Snub peer");
-        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteSnubPeer))]
-        public async Task SnubPeer(IList Input)
-        {
-
-        }
-
-        public bool CanExecuteUnsnubPeer() => CanExecuteAction("Unsnub peer");
-        [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteUnsnubPeer))]
-        public async Task UnsnubPeer(IList Input)
-        {
-
+            foreach (var peer in selected) {
+                try {
+                    await Torrent.DataOwner.Instance.Peer.BanPeer(torrent, peer.IPPort);
+                } catch (Exception ex) {
+                    Log.Logger.Error(ex, "Banning peer {Peer} failed", peer.IPPortDisplay);
+                }
+            }
         }
 
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Peer))]

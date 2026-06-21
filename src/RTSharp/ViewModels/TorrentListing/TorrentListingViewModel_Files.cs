@@ -121,7 +121,10 @@ namespace RTSharp.ViewModels.TorrentListing
                     }
                     (bool MultiFile, IList<File> Files) files;
                     try {
-                        files = (await current!.DataOwner.Instance.GetFiles(new List<Torrent> { current.ToPluginModel() }, selectionChange)).First().Value;
+                        files = (await current!.DataOwner.Instance.GetFiles(new List<Torrent> { current.ToPluginModel() }, selectionChange)).FirstOrDefault().Value;
+
+                        if (files == default)
+                            goto end;
 
                         FilesViewModel.MultiFile = files.MultiFile;
                         FilesChanges.Writer.TryWrite((current, Models.File.FromPluginModel(current.Name, files.MultiFile, files.Files)));
@@ -137,6 +140,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         );
                     }
 
+end:
                     try {
                         await delayTask;
                     } catch { }
@@ -176,7 +180,10 @@ namespace RTSharp.ViewModels.TorrentListing
                         PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to Done% change instead?
                     } else {
                         try {
-                            pieces = (await current!.DataOwner.Instance.GetPieces(new List<Torrent> { current.ToPluginModel() }, selectionChange)).First().Value;
+                            pieces = (await current!.DataOwner.Instance.GetPieces(new List<Torrent> { current.ToPluginModel() }, selectionChange)).FirstOrDefault().Value;
+
+                            if (pieces == null)
+                                goto end;
 
                             PiecesChanges.Writer.TryWrite((current, pieces));
                         } catch {
@@ -184,6 +191,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
                     }
 
+end:
                     try {
                         await delayTask;
                     } catch { }
