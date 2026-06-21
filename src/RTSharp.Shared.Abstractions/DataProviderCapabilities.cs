@@ -18,6 +18,7 @@
         bool RemoveTorrentAndData,
         bool AddLabel,
         bool SetLabels,
-        bool GetLogs
+        bool GetLogs,
+        bool SetSequentialDownload
     );
 }

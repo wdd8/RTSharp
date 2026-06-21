@@ -98,6 +98,8 @@ public class TorrentMapper
             Stored.RemotePath = External.SavePath;
         if (External.MagnetUri != null)
             Stored.MagnetDummy = External.MagnetUri != null;
+        if (External.SequentialDownload != null)
+            Stored.SequentialDownload = External.SequentialDownload.Value;
 
         if (Stored.Downloaded == Stored.WantedSize) {
             /*
@@ -157,6 +159,7 @@ public class TorrentMapper
             Stored.RemotePath = External.SavePath;
         if (External.MagnetUri != null)
             Stored.MagnetDummy = External.MagnetUri != null;
+        Stored.SequentialDownload = External.SequentialDownload;
 
         if (Stored.Downloaded == Stored.WantedSize) {
             /*

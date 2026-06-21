@@ -311,5 +311,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
     public void EvLabelsMenuOpening(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel!.RefreshLabelCheckedState();
 
+    public void EvGridContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e) => ViewModel!.RefreshSequentialDownloadMenuHeader();
+
     public void EvGridKeyUp(object? sender, Avalonia.Input.KeyEventArgs e) => ViewModel!.EvGridKeyUp(e);
 }

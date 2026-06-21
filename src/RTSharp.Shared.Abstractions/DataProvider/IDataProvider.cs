@@ -52,6 +52,11 @@ public interface IDataProvider : IDataProviderBase<DataProviderCapabilities>
     public Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In);
 
     /// <summary>
+    /// Enables or disables sequential piece downloading
+    /// </summary>
+    public Task SetSequentialDownload(IList<byte[]> In, bool Enabled);
+
+    /// <summary>
     /// Streams the logs of data provider daemon
     /// </summary>
     /// <param name="History">Number of recent lines to backfill</param>

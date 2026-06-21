@@ -108,7 +108,8 @@ public static class Mapper
                 StatusMessage = StringCache.Intern(In.StatusMessage),
                 Comment = StringCache.Intern(In.Comment),
                 RemotePath = StringCache.Intern(In.RemotePath),
-                MagnetDummy = In.MagnetDummy
+                MagnetDummy = In.MagnetDummy,
+                IsSequentialDownload = In.SequentialDownload
             };
         } catch {
             throw;
@@ -139,6 +140,7 @@ public static class Mapper
             Existing.StatusMessage = StringCache.Intern(In.StatusMessage);
             Existing.RemotePath = StringCache.Intern(In.RemotePath);
             Existing.MagnetDummy = In.MagnetDummy;
+            Existing.IsSequentialDownload = In.SequentialDownload;
         } catch {
             throw; // probe point
         }
@@ -196,7 +198,8 @@ public static class Mapper
             StatusMessage = StringCache.Intern(In.StatusMessage),
             Comment = StringCache.Intern(Torrent.Comment ?? "")!,
             RemotePath = StringCache.Intern(In.RemotePath),
-            MagnetDummy = In.MagnetDummy
+            MagnetDummy = In.MagnetDummy,
+            IsSequentialDownload = In.SequentialDownload
         };
     }
 
@@ -232,6 +235,7 @@ public static class Mapper
             Torrent.StatusMsg = StringCache.Intern(In.StatusMessage);
             Torrent.RemotePath = StringCache.Intern(In.RemotePath);
             Torrent.MagnetDummy = In.MagnetDummy;
+            Torrent.IsSequentialDownload = In.SequentialDownload;
         });
     }
 
@@ -266,7 +270,8 @@ public static class Mapper
             StatusMessage = StringCache.Intern(In.StatusMessage),
             Comment = StringCache.Intern(Torrent.Comment ?? ""),
             RemotePath = StringCache.Intern(In.RemotePath),
-            MagnetDummy = Torrent.MagnetDummy
+            MagnetDummy = Torrent.MagnetDummy,
+            IsSequentialDownload = Torrent.IsSequentialDownload
         };
     }
 

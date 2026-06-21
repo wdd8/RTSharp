@@ -199,7 +199,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             var dp = RegisteredDataProviders.GetDataProvider(Ctx);
             return dp.Type switch {
                 DataProviderType.rtorrent => throw new NotImplementedException(),
-                DataProviderType.qbittorrent => throw new NotImplementedException(),
+                DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().QueueTorrentUpdate(Req),
                 DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().QueueTorrentUpdate(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
@@ -256,6 +256,17 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
                 DataProviderType.rtorrent => await dp.Resolve<Services.rtorrent.Grpc>().BanPeer(Req.InfoHash, Req.IPAddress, Req.Port, Ctx.CancellationToken),
                 DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().BanPeer(Req.InfoHash, Req.IPAddress, Req.Port, Ctx.CancellationToken),
                 DataProviderType.transmission => throw new RpcException(new Grpc.Core.Status(StatusCode.Unimplemented, "")),
+                _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
+            };
+        }
+
+        public override async Task<Empty> SetSequentialDownload(SetSequentialDownloadArgs Req, ServerCallContext Ctx)
+        {
+            var dp = RegisteredDataProviders.GetDataProvider(Ctx);
+            return dp.Type switch {
+                DataProviderType.rtorrent => throw new RpcException(new Grpc.Core.Status(StatusCode.Unimplemented, "")),
+                DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().SetSequentialDownload(Req.InfoHashes, Req.Enabled, Ctx.CancellationToken),
+                DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().SetSequentialDownload(Req.InfoHashes, Req.Enabled, Ctx.CancellationToken),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };
         }

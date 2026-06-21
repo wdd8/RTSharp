@@ -50,7 +50,8 @@ public class DataProvider : IDataProvider
         RemoveTorrentAndData: true,
         AddLabel: true,
         SetLabels: true,
-        GetLogs: true
+        GetLogs: true,
+        SetSequentialDownload: true
     );
 
     public DataProvider(Plugin ThisPlugin)
@@ -225,6 +226,13 @@ public class DataProvider : IDataProvider
     }
 
     public Task<TorrentStatuses> StopTorrents(IList<byte[]> In) => throw new NotSupportedException();
+
+    public async Task SetSequentialDownload(IList<byte[]> In, bool Enabled)
+    {
+        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+
+        await client.SetSequentialDownload(In, Enabled, default);
+    }
 
     public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
     {

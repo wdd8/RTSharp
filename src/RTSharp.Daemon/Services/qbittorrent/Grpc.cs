@@ -578,11 +578,12 @@ namespace RTSharp.Daemon.Services.qbittorrent
                             continue;
                         } else {
                             internalTorrent = torrent;
-
+                            
                             var prevState = internalTorrent.State;
+                            var prevSequential = internalTorrent.SequentialDownload;
                             TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
 
-                            if (internalTorrent.State != prevState) {
+                            if (internalTorrent.State != prevState || internalTorrent.SequentialDownload != prevSequential) {
                                 LatestTorrentsLock.EnterWriteLock();
                                 {
                                     LatestTorrents[hash] = internalTorrent;
@@ -619,7 +620,8 @@ namespace RTSharp.Daemon.Services.qbittorrent
                                 Wasted = internalTorrent.Wasted,
                                 PrimaryTracker = internalTorrent.PrimaryTracker,
                                 StatusMessage = internalTorrent.StatusMessage,
-                                MagnetDummy = internalTorrent.MagnetDummy
+                                MagnetDummy = internalTorrent.MagnetDummy,
+                                SequentialDownload = internalTorrent.SequentialDownload
                             });
                         } else {
                             if (internalTorrent.State.HasFlag(Protocols.DataProvider.TorrentState.Active)) {
@@ -979,6 +981,18 @@ namespace RTSharp.Daemon.Services.qbittorrent
             var ip = new System.Net.IPAddress(IPAddress.Span).ToString();
 
             await client.BanPeersAsync([$"{ip}:{Port}"], cancellationToken);
+
+            return new();
+        }
+
+        public async Task<Empty> SetSequentialDownload(IEnumerable<ByteString> InfoHashes, bool Enabled, CancellationToken cancellationToken)
+        {
+            var client = await Client.Init();
+
+            var torrents = await client.GetTorrentListAsync(new TorrentListQuery { Hashes = InfoHashes.Select(x => Convert.ToHexString(x.Span)) }, cancellationToken);
+            var toToggle = torrents.Where(x => x.SequentialDownload != Enabled).Select(x => x.Hash).ToArray();
+
+            await client.ToggleSequentialDownloadAsync(toToggle, cancellationToken);
 
             return new();
         }

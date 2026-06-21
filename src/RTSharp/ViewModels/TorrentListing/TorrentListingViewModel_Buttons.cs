@@ -67,6 +67,7 @@ public partial class TorrentListingViewModel
         { "Remove torrent & data", x => x.Capabilities.RemoveTorrentAndData },
         { "Get .torrent", x => x.Capabilities.GetDotTorrent },
         { "Add label", x => x.Capabilities.AddLabel },
+        { "Download sequentially", x => x.Capabilities.SetSequentialDownload },
         { "Duplicate torrent to", x => x.Capabilities.AddTorrent && x.Capabilities.ForceRecheckTorrent && x.Capabilities.StartTorrent }
     }.ToFrozenDictionary();
 
@@ -128,6 +129,44 @@ public partial class TorrentListingViewModel
     public bool CanExecuteReannounceToAllTrackers() => CanExecuteAction("Reannounce to all trackers");
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteReannounceToAllTrackers))]
     public async Task ReannounceToAllTrackers(IReadOnlyList<Torrent> In) => await ActionForMulti(In, "Reannounce to all trackers", (dp, torrents) => dp.Instance.ReannounceToAllTrackers(torrents.Select(x => x.Hash).ToList()));
+
+    public bool CanExecuteSetSequentialDownload() => CanExecuteAction("Download sequentially");
+    [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteSetSequentialDownload))]
+    public async Task SetSequentialDownload(IReadOnlyList<Torrent> In)
+    {
+        if (In.Count == 0)
+            return;
+
+        var enable = In.Any(x => !x.IsSequentialDownload);
+
+        try {
+            var actions = In.GroupBy(x => x.DataOwner).Select(x => (
+                Core.ActionQueue.GetActionQueueEntry(x.Key.PluginInstance),
+                ActionQueueAction.New("Set sequential download", async (action) => {
+                    var torrents = x.ToArray();
+                    var prevStates = new bool[torrents.Length];
+                    for (var i = 0;i < torrents.Length;i++) {
+                        // set in hopes that update will set it to what this is anyway, but this is faster
+                        prevStates[i] = torrents[i].IsSequentialDownload;
+                        torrents[i].IsSequentialDownload = enable;
+                    }
+
+                    try {
+                        await x.Key.Instance.SetSequentialDownload([.. x.Select(t => t.Hash)], enable);
+                    } catch (Exception ex) {
+                        Log.Logger.Error(ex, "Failed to set sequential download value");
+
+                        for (var i = 0;i < torrents.Length;i++) {
+                            torrents[i].IsSequentialDownload = prevStates[i];
+                        }
+                    }
+                })
+            ));
+            await Task.WhenAll(
+                actions.Select(kv => kv.Item1!.Queue.RunAction(kv.Item2))
+            );
+        } catch { }
+    }
 
     record MoveData(byte[] Hash, string BasePath, string ContainerFolder, IEnumerable<string> Files);
 

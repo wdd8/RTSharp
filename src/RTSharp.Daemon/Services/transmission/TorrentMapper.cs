@@ -102,6 +102,8 @@ public class TorrentMapper
         if (External.DownloadDir != null)
             Stored.RemotePath = External.DownloadDir;
         Stored.MagnetDummy = External.MagnetLink != null;
+        if (External.SequentialDownload != null)
+            Stored.SequentialDownload = External.SequentialDownload.Value;
     }
 
     public static Shared.Abstractions.File MapFromExternal(global::Transmission.Net.Core.Entity.Torrent.ITorrentFile In, int PieceSize)

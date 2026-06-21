@@ -69,6 +69,10 @@
 				Header="Move download directory..."
 				Command="{Binding MoveDownloadDirectoryCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
+			<MenuItem
+				Header="{Binding SequentialDownloadMenuHeader}"
+				Command="{Binding SetSequentialDownloadCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
 			<Separator />
 			<MenuItem
 				Header="Remove torrent"
@@ -290,7 +294,7 @@
 			  </DataGrid.ColumnHeaderContextMenu>
 			  <DataGrid.Resources>
 				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentDoneTemplate">
-				  <dataGridEx:TorrentProgressCell Value="{Binding Done, Mode=OneWay}" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+				  <dataGridEx:TorrentProgressCell Value="{Binding Done, Mode=OneWay}" ShowSequentialMarker="{Binding ShowSequentialDownloadMarker, Mode=OneWay}" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
 				    FontSize="{DynamicResource ControlContentThemeFontSize}"
 				    FillBrush="{DynamicResource SystemControlHighlightAccentBrush}"
 				    TrackBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
@@ -306,7 +310,7 @@
 				</DataTemplate>
 			  </DataGrid.Resources>
 			  <DataGrid.ContextMenu>
-				<ContextMenu x:Name="gridCtxMenu" DataContext="{Binding}" ItemsSource="{StaticResource GridContextMenuItems}" />
+				<ContextMenu x:Name="gridCtxMenu" DataContext="{Binding}" ItemsSource="{StaticResource GridContextMenuItems}" Opening="EvGridContextMenuOpening" />
 			  </DataGrid.ContextMenu>
 			  <DataGrid.Styles>
 				<Style Selector="DataGridRow">

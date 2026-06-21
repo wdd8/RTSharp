@@ -110,7 +110,10 @@ namespace RTSharp.Models
         public TORRENT_STATE InternalState
         {
             get => _internalState;
-            set => SetProperty(ref _internalState, value);
+            set {
+                if (SetProperty(ref _internalState, value))
+                    OnPropertyChanged(nameof(ShowSequentialDownloadMarker));
+            }
         }
 
         /// <summary>
@@ -573,6 +576,18 @@ namespace RTSharp.Models
             set => SetProperty(ref _magnetDummy, value);
         }
 
+        private bool _isSequentialDownload;
+        public bool IsSequentialDownload
+        {
+            get => _isSequentialDownload;
+            set {
+                if (SetProperty(ref _isSequentialDownload, value))
+                    OnPropertyChanged(nameof(ShowSequentialDownloadMarker));
+            }
+        }
+
+        public bool ShowSequentialDownloadMarker => _isSequentialDownload && !_internalState.HasFlag(TORRENT_STATE.SEEDING);
+
         private Shared.Abstractions.Torrent? PendingChanges;
         private (IImage? Icon, string? DisplayName)? ResolvedTracker;
 
@@ -661,6 +676,7 @@ namespace RTSharp.Models
             if (_internalState != changes.State) {
                 State = EnumExt.ToString(changes.State);
                 _internalState = changes.State;
+                OnPropertyChanged(nameof(ShowSequentialDownloadMarker));
             }
             if (_size != changes.Size) {
                 Size = changes.Size;
@@ -744,6 +760,9 @@ namespace RTSharp.Models
             if (_magnetDummy != changes.MagnetDummy) {
                 MagnetDummy = changes.MagnetDummy;
             }
+            if (_isSequentialDownload != changes.IsSequentialDownload) {
+                IsSequentialDownload = changes.IsSequentialDownload;
+            }
         }
 
         public Shared.Abstractions.Torrent ToPluginModel()
@@ -778,6 +797,7 @@ namespace RTSharp.Models
                 RemotePath = _remotePath,
                 MagnetDummy = _magnetDummy,
                 IsPrivate = null,
+                IsSequentialDownload = _isSequentialDownload,
             };
         }
     }

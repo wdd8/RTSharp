@@ -57,7 +57,8 @@ public class DataProvider : IDataProvider
         RemoveTorrentAndData: true,
         AddLabel: true,
         SetLabels: true,
-        GetLogs: true
+        GetLogs: true,
+        SetSequentialDownload: false
     );
 
     public DataProvider(Plugin ThisPlugin)
@@ -386,6 +387,8 @@ public class DataProvider : IDataProvider
 
     public ChannelReader<DataProviderDaemonLogEntry> StreamLogs(int History, CancellationToken CancellationToken) =>
         PluginHost.AttachedDaemonService!.StreamLogs(this, History, CancellationToken);
+
+    public Task SetSequentialDownload(IList<byte[]> In, bool Enabled) => throw new NotSupportedException();
 
     public BasePlugin Plugin => ThisPlugin;
 }

@@ -188,9 +188,10 @@ namespace RTSharp.Daemon.Services.transmission
                         internalTorrent = torrent;
 
                         var prevState = internalTorrent.State;
+                        var prevSequential = internalTorrent.SequentialDownload;
                         TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
 
-                        if (internalTorrent.State != prevState) {
+                        if (internalTorrent.State != prevState || internalTorrent.SequentialDownload != prevSequential) {
                             LatestTorrents[hash] = internalTorrent;
                             HashToId[hash] = changedTorrent.Id!.Value;
                             IdToHash[changedTorrent.Id!.Value] = hash;
@@ -225,7 +226,8 @@ namespace RTSharp.Daemon.Services.transmission
                             Wasted = internalTorrent.Wasted,
                             PrimaryTracker = internalTorrent.PrimaryTracker,
                             StatusMessage = internalTorrent.StatusMessage,
-                            MagnetDummy = internalTorrent.MagnetDummy
+                            MagnetDummy = internalTorrent.MagnetDummy,
+                            SequentialDownload = internalTorrent.SequentialDownload
                         });
                     } else {
                         delta.Complete.Add(new CompleteDeltaTorrentResponse {
@@ -1019,6 +1021,20 @@ namespace RTSharp.Daemon.Services.transmission
             await client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
                 IDs = TranslateObj([InfoHash.ToByteArray()]),
                 TrackerList = string.Join("\r\n", newTrackerList)
+            });
+
+            return new();
+        }
+
+        public async Task<Empty> SetSequentialDownload(IEnumerable<ByteString> InfoHashes, bool Enabled, CancellationToken cancellationToken)
+        {
+            var client = await Client.Init();
+
+            var ids = TranslateObj(InfoHashes.Select(x => x.ToByteArray()).ToList());
+
+            await client.TorrentSetAsync(new Transmission.Net.Arguments.TorrentSettings {
+                IDs = ids,
+                SequentialDownload = Enabled
             });
 
             return new();

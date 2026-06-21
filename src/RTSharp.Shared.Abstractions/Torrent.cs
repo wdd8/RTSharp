@@ -161,6 +161,11 @@ public class Torrent
     /// </summary>
     public required bool MagnetDummy { get; set; }
 
+    /// <summary>
+    /// Is torrent downloading its pieces sequentially?
+    /// </summary>
+    public required bool IsSequentialDownload { get; set; }
+
     public Torrent(byte[] Hash)
     {
         this.Hash = Hash;

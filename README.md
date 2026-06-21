@@ -65,7 +65,7 @@ See [setting up data providers](setup-dataproviders.md)
 |Global download statistics|🟡Workaround*|🟢Supported|🟢Supported|
 |Global upload statistics|🟡Workaround*|🟢Supported|🟢Supported|
 |Global ratio statistics|🟡Workaround*|🟢Supported|🟢Supported|
-|Sequential downloads|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Sequential downloads|🔴Unsupported by daemon|🟢Supported|🟢Supported|
 |File renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Torrent renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Remote daemon settings|🟢Supported|🟢Supported|🟢Supported|

@@ -30,6 +30,12 @@ service GRPCTorrentService {
     rpc RemoveTracker (SingleTrackerArgs) returns (google.protobuf.Empty);
     rpc AddPeer (SinglePeerArgs) returns (google.protobuf.Empty);
     rpc BanPeer (SinglePeerArgs) returns (google.protobuf.Empty);
+    rpc SetSequentialDownload (SetSequentialDownloadArgs) returns (google.protobuf.Empty);
+}
+
+message SetSequentialDownloadArgs {
+    repeated bytes InfoHashes = 1;
+    bool Enabled = 2;
 }
 
 message SingleTrackerArgs {

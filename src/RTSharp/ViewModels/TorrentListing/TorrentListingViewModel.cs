@@ -508,6 +508,16 @@ public partial class TorrentListingViewModel : ObservableViewModel
         LabelsWithAdd.Add(AddLabelMenuItem);
     }
 
+    [ObservableProperty]
+    public partial string SequentialDownloadMenuHeader { get; set; } = "Download sequentially";
+
+    public void RefreshSequentialDownloadMenuHeader()
+    {
+        SequentialDownloadMenuHeader = SelectedItems.Count > 0 && SelectedItems.All(x => x.IsSequentialDownload)
+            ? "Do not download sequentially"
+            : "Download sequentially";
+    }
+
     public void RefreshLabelCheckedState()
     {
         var current = SelectedItems.ToArray();

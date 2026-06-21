@@ -52,19 +52,6 @@
                           Command="{Binding BanPeerCommand}"
                           CommandParameter="{Binding #grid.SelectedItems}"
                     />
-                <MenuItem Header="Kick peer"
-                          Command="{Binding KickPeerCommand}"
-                          CommandParameter="{Binding #grid.SelectedItems}"
-                    />
-                <Separator />
-                <MenuItem Header="Snub peer"
-                          Command="{Binding SnubPeerCommand}"
-                          CommandParameter="{Binding #grid.SelectedItems}"
-                    />
-                <MenuItem Header="Unsnub peer"
-                          Command="{Binding UnsnubPeerCommand}"
-                          CommandParameter="{Binding #grid.SelectedItems}"
-                    />
             </ContextMenu>
         </DataGrid.ContextMenu>
         <DataGrid.Columns>

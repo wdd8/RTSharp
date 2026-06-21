@@ -504,5 +504,13 @@ namespace RTSharp.Core.Services.Daemon
                 Port = (uint)Peer.Port
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
         }
+
+        public async Task SetSequentialDownload(IList<byte[]> Hashes, bool Enabled, CancellationToken cancellationToken)
+        {
+            await TorrentClient.SetSequentialDownloadAsync(new SetSequentialDownloadArgs {
+                InfoHashes = { Hashes.Select(x => x.ToByteString()) },
+                Enabled = Enabled
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders(), cancellationToken: cancellationToken);
+        }
     }
 }

@@ -56,4 +56,6 @@ public interface IDaemonTorrentsService
     Task AddPeer(byte[] Hash, System.Net.IPEndPoint Peer, CancellationToken cancellationToken);
 
     Task BanPeer(byte[] Hash, System.Net.IPEndPoint Peer, CancellationToken cancellationToken);
+
+    Task SetSequentialDownload(IList<byte[]> Hashes, bool Enabled, CancellationToken cancellationToken);
 }

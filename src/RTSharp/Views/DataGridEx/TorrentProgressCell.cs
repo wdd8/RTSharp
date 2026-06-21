@@ -26,6 +26,12 @@ public class TorrentProgressCell : Control
             o => o.Value,
             (o, v) => o.Value = v);
 
+    public static readonly DirectProperty<TorrentProgressCell, bool> ShowSequentialMarkerProperty =
+        AvaloniaProperty.RegisterDirect<TorrentProgressCell, bool>(
+            nameof(ShowSequentialMarker),
+            o => o.ShowSequentialMarker,
+            (o, v) => o.ShowSequentialMarker = v);
+
     public static readonly StyledProperty<IBrush?> TrackBrushProperty =
         AvaloniaProperty.Register<TorrentProgressCell, IBrush?>(nameof(TrackBrush));
 
@@ -61,6 +67,11 @@ public class TorrentProgressCell : Control
             FormattedText = null;
             InvalidateVisual();
         }
+    }
+
+    public bool ShowSequentialMarker {
+        get => GetValue(ShowSequentialMarkerProperty);
+        set => SetValue(ShowSequentialMarkerProperty, value);
     }
 
     public IBrush? TrackBrush {
@@ -107,6 +118,7 @@ public class TorrentProgressCell : Control
     {
         AffectsRender<TorrentProgressCell>(
             ValueProperty,
+            ShowSequentialMarkerProperty,
             TrackBrushProperty,
             FillBrushProperty,
             ForegroundProperty,
@@ -144,6 +156,25 @@ public class TorrentProgressCell : Control
             Math.Max(0, (bounds.Width - textSize.Width) / 2),
             Math.Max(0, (bounds.Height - textSize.Height) / 2));
         context.DrawText(text, point);
+
+        if (ShowSequentialMarker && bounds.Width >= 8) {
+            DrawSequentialMarker(context, bounds);
+        }
+    }
+
+    private void DrawSequentialMarker(DrawingContext context, Rect bounds)
+    {
+        var pen = new Pen(Foreground ?? DefaultTextBrush, 1);
+
+        var origin = bounds.Width / 2;
+        const double centerY = 2.5;
+        const double halfLen = 3.5;
+        const double arrowArm = 2.0;
+        var tip = new Point(origin + halfLen, centerY);
+
+        context.DrawLine(pen, new Point(origin - halfLen, centerY), tip);
+        context.DrawLine(pen, new Point(tip.X - arrowArm, centerY - arrowArm), tip);
+        context.DrawLine(pen, new Point(tip.X - arrowArm, centerY + arrowArm), tip);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
