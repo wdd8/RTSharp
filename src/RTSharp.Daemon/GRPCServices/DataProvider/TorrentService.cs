@@ -199,7 +199,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             var dp = RegisteredDataProviders.GetDataProvider(Ctx);
             return dp.Type switch {
                 DataProviderType.rtorrent => throw new NotImplementedException(),
-                DataProviderType.qbittorrent => await dp.Resolve<Services.qbittorrent.Grpc>().QueueTorrentUpdate(Req),
+                DataProviderType.qbittorrent => throw new NotImplementedException(),
                 DataProviderType.transmission => await dp.Resolve<Services.transmission.Grpc>().QueueTorrentUpdate(Req),
                 _ => throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown data provider"))
             };

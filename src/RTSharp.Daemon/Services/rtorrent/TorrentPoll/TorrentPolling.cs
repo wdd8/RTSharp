@@ -18,8 +18,6 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         private ILogger<TorrentPolling> Logger { get; }
         private ILogger<PollingSubscription> PollingSubscriptionLogger { get; }
 
-        //public TorrentsListResponse LastFetch { get; private set; }
-
         public TorrentPolling(IServiceScopeFactory ScopeFactory, [ServiceKey] string InstanceKey, ILogger<TorrentPolling> Logger, ILogger<PollingSubscription> PollingSubscriptionLogger)
         {
             this.InstanceKey = InstanceKey;
@@ -29,8 +27,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             this.PollingSubscriptionLogger = PollingSubscriptionLogger;
         }
 
-        internal List<PollingSubscription> Subscribers = new List<PollingSubscription>();
-        internal object SubscribersLock = new object();
+        internal List<PollingSubscription> Subscribers = [];
+        internal Lock SubscribersLock = new();
         internal AsyncManualResetEvent ForceLoop;
 
         public PollingSubscription Subscribe(TimeSpan Interval)
@@ -185,13 +183,10 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     tracker.ScrapeInterval = Duration.FromTimeSpan(TimeSpan.FromSeconds(UInt32.Parse(parts[7])));
                     tracker.StatusMessage = ((TorrentTrackerStatusMessage)Byte.Parse(parts[8])).ToString();
                     
-                    if (Byte.Parse(parts[8]) > 4)
-                        Logger.LogInformation("StatusMessage " + parts[8]);
-
                     curTrackers.Add(tracker);
                 }
 
-                var primaryTracker = curTrackers.OrderByDescending(x => x.Peers).ThenByDescending(x => x.Status == TorrentTrackerStatus.Active).FirstOrDefault();
+                var primaryTracker = PollingSubscription.GetPrimaryTracker(curTrackers);
 
                 if (torrentComment.StartsWith("VRS24mrker"))
                     torrentComment = torrentComment[10..];
@@ -251,7 +246,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 PollingSubscription[] subs;
 
                 lock (SubscribersLock) {
-                    subs = Subscribers.ToArray();
+                    subs = [.. Subscribers];
                 }
 
                 if (subs.Length > 0) {

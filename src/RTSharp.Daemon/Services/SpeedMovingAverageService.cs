@@ -41,23 +41,20 @@ namespace RTSharp.Daemon.Services
             }
         }
 
-        public static double CalculateSpeed(IList<(DateTime TimeUtc, long TotalBytes)> Items, double Alpha = 0.8)
+        public static double CalculateSpeed(ReadOnlySpan<(DateTime TimeUtc, long TotalBytes)> Items, double Alpha = 0.8)
         {
-            var count = Items.Count;
-            if (count < 2) {
+            if (Items.Length < 2) {
                 return 0;
             }
 
-            var deltas = new List<double>(count - 1);
-            for (var x = 0;x < Items.Count - 1;x++) {
-                var next = Items[x + 1];
-                var item = Items[x];
-                var time = next.TimeUtc - item.TimeUtc;
-
-                deltas.Add((next.TotalBytes - item.TotalBytes) / time.TotalSeconds);
+            double? ema = null;
+            for (var x = 0;x < Items.Length - 1;x++) {
+                var seconds = (Items[x + 1].TimeUtc - Items[x].TimeUtc).TotalSeconds;
+                var delta = (Items[x + 1].TotalBytes - Items[x].TotalBytes) / seconds;
+                ema = ema == null ? delta : Alpha * delta + (1 - Alpha) * ema;
             }
 
-            return CalculateAvg(deltas, Alpha);
+            return ema ?? 0;
         }
 
         public double CalculateSpeed()

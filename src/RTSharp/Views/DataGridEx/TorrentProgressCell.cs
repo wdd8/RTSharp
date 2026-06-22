@@ -70,8 +70,8 @@ public class TorrentProgressCell : Control
     }
 
     public bool ShowSequentialMarker {
-        get => GetValue(ShowSequentialMarkerProperty);
-        set => SetValue(ShowSequentialMarkerProperty, value);
+        get;
+        set => SetAndRaise(ShowSequentialMarkerProperty, ref field, value);
     }
 
     public IBrush? TrackBrush {
