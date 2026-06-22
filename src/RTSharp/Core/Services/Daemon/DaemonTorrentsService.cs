@@ -64,12 +64,16 @@ namespace RTSharp.Core.Services.Daemon
                     _ = await updates.ResponseHeadersAsync;
                     DataProvider.State.Change(DataProviderState.ACTIVE);
 
-                    await foreach (var update in updates.ResponseStream.ReadAllAsync(CancellationToken)) {
-                        var fullUpdate = new List<Shared.Abstractions.Torrent>();
-                        var changes = new List<Shared.Abstractions.Torrent>();
-                        var removed = update.Removed.Select(x => x.ToByteArray()).ToList();
+                    var existingLookup = Existing.GetAlternateLookup<ReadOnlySpan<byte>>();
 
-                        foreach (var hash in removed) {
+                    await foreach (var update in updates.ResponseStream.ReadAllAsync(CancellationToken)) {
+                        var fullUpdate = new List<Shared.Abstractions.Torrent>(update.FullUpdate.Count);
+                        var changes = new List<Shared.Abstractions.Torrent>(update.Incomplete.Count + update.Complete.Count);
+                        var removed = new List<byte[]>(update.Removed.Count);
+
+                        for (var i = 0; i < update.Removed.Count; i++) {
+                            var hash = update.Removed[i].ToByteArray();
+                            removed.Add(hash);
                             Existing.Remove(hash);
                         }
 
@@ -79,38 +83,33 @@ namespace RTSharp.Core.Services.Daemon
                             Existing[mapped.Hash] = mapped;
                         }
 
-                        var incomplete = update.Incomplete.Select(x => {
-                            var hash = x.Hash.ToByteArray();
-
-                            if (!Existing.TryGetValue(hash, out var cachedTorrent)) {
-                                return null; // TODO: what to do?
+                        foreach (var x in update.Incomplete) {
+                            if (!existingLookup.TryGetValue(x.Hash.Span, out var cachedTorrent)) {
+                                continue; // TODO: what to do?
                             }
 
                             try {
                                 Mapper.ApplyFromProto(cachedTorrent, x, DataProvider.Instance);
-                                return cachedTorrent;
                             } catch {
                                 // probe point
                                 throw;
                             }
-                        });
-                        changes.AddRange(incomplete.Where(x => x != null)!);
+                            changes.Add(cachedTorrent);
+                        }
 
-                        var complete = update.Complete.Select(x => {
-                            var hash = x.Hash.ToByteArray();
-                            if (!Existing.TryGetValue(hash, out var cachedTorrent)) {
-                                return null; // TODO: what to do?
+                        foreach (var x in update.Complete) {
+                            if (!existingLookup.TryGetValue(x.Hash.Span, out var cachedTorrent)) {
+                                continue; // TODO: what to do?
                             }
 
                             try {
                                 Mapper.ApplyFromProto(cachedTorrent, x, DataProvider.Instance);
-                                return cachedTorrent;
                             } catch {
                                 // Probe point
                                 throw;
                             }
-                        });
-                        changes.AddRange(complete.Where(x => x != null)!);
+                            changes.Add(cachedTorrent);
+                        }
 
                         if (changes.Count != 0 || fullUpdate.Count != 0 || update.Removed.Count != 0)
                             await channel.Writer.WriteAsync(new ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>(fullUpdate, changes, removed), CancellationToken);
@@ -246,7 +245,7 @@ namespace RTSharp.Core.Services.Daemon
             var ret = new InfoHashDictionary<(bool MultiFile, IList<File> Files)>();
             
             foreach (var torrent in resp.Reply) {
-                var files = new List<File>();
+                var files = new List<File>(torrent.Files.Count);
                 files.AddRange(torrent.Files.Select(x => new File
                 {
                     Path = x.Path,

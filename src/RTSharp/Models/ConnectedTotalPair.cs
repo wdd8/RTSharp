@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Globalization;
 
 namespace RTSharp.Models
 {
@@ -17,6 +18,10 @@ namespace RTSharp.Models
 
         public override string ToString()
         {
+            Span<char> buf = stackalloc char[32];
+            if (buf.TryWrite(CultureInfo.InvariantCulture, $"{Connected} ({Total})", out int written))
+                return new string(buf[..written]);
+
             return $"{Connected} ({Total})";
         }
 

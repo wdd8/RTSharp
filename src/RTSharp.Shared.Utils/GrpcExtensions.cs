@@ -1,10 +1,14 @@
-﻿using System.Runtime.InteropServices;
-
-namespace RTSharp.Shared.Utils;
+﻿namespace RTSharp.Shared.Utils;
 
 public static class GrpcExtensions
 {
-    public static Google.Protobuf.ByteString ToByteString(this Guid In) => Google.Protobuf.ByteString.CopyFrom(In.ToByteArray());
+    public static Google.Protobuf.ByteString ToByteString(this Guid In)
+    {
+        Span<byte> bytes = stackalloc byte[16];
+        In.TryWriteBytes(bytes);
+        return Google.Protobuf.ByteString.CopyFrom(bytes);
+    }
+
     public static Google.Protobuf.ByteString ToByteString(this byte[] In) => Google.Protobuf.ByteString.CopyFrom(In);
     public static Google.Protobuf.ByteString ToByteString(this Span<byte> In) => Google.Protobuf.ByteString.CopyFrom(In);
 

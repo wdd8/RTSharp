@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -25,9 +26,10 @@ namespace RTSharp.Models
     {
         public static async ValueTask<List<Torrent>> NewOrUpdateFromPluginModelMulti(Core.TorrentPolling.TorrentStore Domain, RTSharpDataProvider DataProvider, InfoHashDictionary<Shared.Abstractions.Torrent> Plugin)
         {
-            var ret = new List<Torrent>();
             if (Plugin.Count == 0)
                 return [];
+
+            var ret = new List<Torrent>(Plugin.Count);
 
             var dpId = DataProvider.PluginInstance.InstanceId;
 
@@ -81,7 +83,7 @@ namespace RTSharp.Models
         }
     }
 
-    public partial class Torrent : ObservableObject
+    public sealed partial class Torrent : ObservableObject
     {
         /// <summary>
         /// Torrent info hash
@@ -265,7 +267,10 @@ namespace RTSharp.Models
             set {
                 if (_ratio == value) return;
                 _ratio = value;
-                RatioDisplay = value.ToString("N3");
+                Span<char> buf = stackalloc char[32];
+                RatioDisplay = value.TryFormat(buf, out int written, "N3", CultureInfo.CurrentCulture)
+                    ? new string(buf[..written])
+                    : value.ToString("N3");
             }
         }
 

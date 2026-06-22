@@ -11,7 +11,11 @@ namespace RTSharp.Shared.Utils
 
         public bool Equals(byte[]? obj1, byte[]? obj2)
         {
-            return StructuralComparisons.StructuralEqualityComparer.Equals(obj1, obj2);
+            if (ReferenceEquals(obj1, obj2))
+                return true;
+            if (obj1 is null || obj2 is null)
+                return false;
+            return obj1.AsSpan().SequenceEqual(obj2);
         }
 
         public bool Equals(ReadOnlySpan<byte> alternate, byte[] other) => alternate.SequenceEqual(other);
@@ -52,12 +56,12 @@ namespace RTSharp.Shared.Utils
 
         public bool Equals((byte[], Guid) obj1, (byte[], Guid) obj2)
         {
-            return StructuralComparisons.StructuralEqualityComparer.Equals(obj1, obj2);
+            return obj1.Item1.AsSpan().SequenceEqual(obj2.Item1) && obj1.Item2.Equals(obj2.Item2);
         }
 
         public int GetHashCode((byte[], Guid) obj)
         {
-            return StructuralComparisons.StructuralEqualityComparer.GetHashCode(obj);
+            return HashCode.Combine(obj.Item1, obj.Item2);
         }
     }
 }

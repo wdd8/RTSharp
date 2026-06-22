@@ -1,4 +1,5 @@
-﻿using System.Text;
+using System.Buffers.Text;
+using System.Text;
 
 namespace RTSharp.Daemon.Services.rtorrent
 {
@@ -9,36 +10,38 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public static Memory<byte> BuildPayload(string XmlBody)
         {
-            var cursor = 0;
-            Memory<byte> all = new byte[2 /* for first length */ + FirstPart.Length + 8 /* max 99999 KiB xml */ + SecondPart.Length + XmlBody.Length];
-            Span<byte> firstPartLen = Encoding.ASCII.GetBytes((FirstPart.Length - 1 /* remove : */ + XmlBody.Length.ToString().Length + SecondPart.Length - 1 /* also don't count the random comma because why not */).ToString());
-
-            firstPartLen.CopyTo(all.Span[0..firstPartLen.Length]);
-            cursor += firstPartLen.Length;
+            var bodyLen = XmlBody.Length;
 
             // XXX - first part length
+            var xmlLenDigits = bodyLen == 0 ? 1 : (int)Math.Floor(Math.Log10(bodyLen)) + 1;
 
-            FirstPart.Span.CopyTo(all.Span[cursor..(cursor + FirstPart.Length)]);
-            cursor += FirstPart.Length;
+            var firstPartLen = FirstPart.Length - 1 + xmlLenDigits + SecondPart.Length - 1;
+            var firstPartLenDigitLen = firstPartLen == 0 ? 1 : (int)Math.Floor(Math.Log10(firstPartLen)) + 1;
+
+            var total = firstPartLenDigitLen + FirstPart.Length + xmlLenDigits + SecondPart.Length + bodyLen;
+            Memory<byte> all = new byte[total];
+            var dst = all.Span;
+
+            var cursor = 0;
+
+            // XXX
+            Utf8Formatter.TryFormat(firstPartLen, dst[cursor..], out var written);
+            cursor += written;
 
             // XXX:CONTENT_LENGTH\0
-
-            Span<byte> xmlLen = Encoding.ASCII.GetBytes(XmlBody.Length.ToString());
-
-            xmlLen.CopyTo(all.Span[cursor..(cursor + xmlLen.Length)]);
-            cursor += xmlLen.Length;
+            FirstPart.Span.CopyTo(dst[cursor..]);
+            cursor += FirstPart.Length;
 
             // XXX:CONTENT_LENGTH\0XXXXX
-
-            SecondPart.Span.CopyTo(all.Span[cursor..(cursor + SecondPart.Length)]);
-            cursor += SecondPart.Length;
+            Utf8Formatter.TryFormat(bodyLen, dst[cursor..], out written);
+            cursor += written;
 
             // XXX:CONTENT_LENGTH\0XXXXX\0SCGI\01\0,
-
-            Encoding.ASCII.GetBytes(XmlBody).CopyTo(all.Span[cursor..(cursor + XmlBody.Length)]);
-            cursor += XmlBody.Length;
+            SecondPart.Span.CopyTo(dst[cursor..]);
+            cursor += SecondPart.Length;
 
             // XXX:CONTENT_LENGTH\0XXXXX\0SCGI\01\0,content
+            cursor += Encoding.ASCII.GetBytes(XmlBody, dst[cursor..]);
 
             return all[0..cursor];
         }

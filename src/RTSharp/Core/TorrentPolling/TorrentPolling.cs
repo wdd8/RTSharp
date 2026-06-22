@@ -58,12 +58,18 @@ public static class TorrentPolling
             {
                 var changes = listingChanges.Changes;
                 var fullUpdate = listingChanges.FullUpdate.ToInfoHashDictionary(x => x.Hash);
-                var removed = listingChanges.Removed.ToHashSet(HashEqualityComparer.Instance);
                 var dpId = dp.PluginInstance.InstanceId;
+
+                List<GlobalTorrentKey>? removedKeys = null;
+                if (listingChanges.Removed.Count > 0) {
+                    removedKeys = new List<GlobalTorrentKey>(listingChanges.Removed.Count);
+                    foreach (var hash in listingChanges.Removed)
+                        removedKeys.Add(new GlobalTorrentKey(hash, dpId));
+                }
 
                 var vmTorrents = await Models.TorrentUpdateExt.NewOrUpdateFromPluginModelMulti(Torrents, dp, fullUpdate);
 
-                var changedTorrents = new List<Models.Torrent>();
+                var changedTorrents = new List<Models.Torrent>(changes.Count);
                 foreach (var change in changes) {
                     if (Torrents.TryGet(new GlobalTorrentKey(change.Hash, dpId), out var torrent)) {
                         await torrent.PendingEdit(change);
@@ -74,8 +80,8 @@ public static class TorrentPolling
                 Torrents.Edit(dp, (torrents) => {
                     {
                         // Since it is possible to remove torrent and add it right after in same change, we must handle removals first
-                        if (removed.Count > 0) {
-                            torrents.RemoveKeys(removed.Select(x => new GlobalTorrentKey(x, dpId)));
+                        if (removedKeys != null) {
+                            torrents.RemoveKeys(removedKeys);
                         }
                     }
 
@@ -163,7 +169,7 @@ public static class TorrentPolling
 
             await foreach (var listingChanges in channel.ReadAllAsync())
             {
-                if (listingChanges.Changes.Any() || listingChanges.FullUpdate.Any() || listingChanges.Removed.Any())
+                if (listingChanges.Changes.Count > 0 || listingChanges.FullUpdate.Count > 0 || listingChanges.Removed.Count > 0)
                     await ListingChanges.Writer.WriteAsync((DataProvider, listingChanges));
             }
         } catch (Exception ex) {

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers.Text;
+using System.Diagnostics;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -136,7 +137,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string GetUntilNextTag(ref ReadOnlyMemory<byte> In)
+        public static ReadOnlyMemory<byte> GetBytesUntilNextTag(ref ReadOnlyMemory<byte> In)
         {
             var end = In.Span.IndexOf(ENDING_TAG);
             Debug.Assert(end != -1);
@@ -149,8 +150,12 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             In = In[(end + 1)..];
 
-            return Encoding.UTF8.GetString(ret.Span);
+            return ret;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string GetUntilNextTag(ref ReadOnlyMemory<byte> In)
+            => Encoding.UTF8.GetString(GetBytesUntilNextTag(ref In).Span);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SeekNextTag(ref ReadOnlyMemory<byte> In)
@@ -194,37 +199,38 @@ namespace RTSharp.Daemon.Services.rtorrent
                     break;
                 case Type strType when strType == typeof(int):
                     SeekFixed(ref In, I4_TOKEN);
-                    var i32 = Int32.Parse(GetUntilNextTag(ref In));
+                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out int i32, out _);
                     ret = Unsafe.As<int, T>(ref i32);
                     break;
                 case Type strType when strType == typeof(uint):
                     SeekFixed(ref In, I4_TOKEN);
-                    var u32 = UInt32.Parse(GetUntilNextTag(ref In));
+                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out uint u32, out _);
                     ret = Unsafe.As<uint, T>(ref u32);
                     break;
                 case Type strType when strType == typeof(short):
                     SeekFixed(ref In, 4);
-                    var i16 = Int16.Parse(GetUntilNextTag(ref In));
+                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out short i16, out _);
                     ret = Unsafe.As<short, T>(ref i16);
                     break;
                 case Type strType when strType == typeof(ushort):
                     SeekFixed(ref In, 4);
-                    var u16 = UInt16.Parse(GetUntilNextTag(ref In));
+                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out ushort u16, out _);
                     ret = Unsafe.As<ushort, T>(ref u16);
                     break;
                 case Type strType when strType == typeof(long):
                     SeekFixed(ref In, I8_TOKEN);
-                    var i64 = Int64.Parse(GetUntilNextTag(ref In));
+                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out long i64, out _);
                     ret = Unsafe.As<long, T>(ref i64);
                     break;
                 case Type strType when strType == typeof(ulong):
                     SeekFixed(ref In, I8_TOKEN);
-                    var u64 = UInt64.Parse(GetUntilNextTag(ref In));
+                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out ulong u64, out _);
                     ret = Unsafe.As<ulong, T>(ref u64);
                     break;
                 case Type strType when strType == typeof(bool):
                     SeekFixed(ref In, 4); // Works for i4 too
-                    var @bool = Int64.Parse(GetUntilNextTag(ref In)) == 1;
+                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out long boolVal, out _);
+                    var @bool = boolVal == 1;
                     ret = Unsafe.As<bool, T>(ref @bool);
                     break;
                 default:
@@ -367,19 +373,25 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret.Replace("%7e", "~", StringComparison.OrdinalIgnoreCase).Replace("*", "%2A").Replace("(", "%28").Replace(")", "%29");
         }
 
+        private static readonly System.Buffers.SearchValues<char> XmlSpecialChars =
+            System.Buffers.SearchValues.Create("&\"'<>");
+
         public static string Encode(string In)
         {
-            var sb = new StringBuilder();
+            if (In.AsSpan().IndexOfAny(XmlSpecialChars) < 0)
+                return In;
 
-            foreach (var rune in In.EnumerateRunes()) {
-                sb.Append(rune.Value switch {
-                    '&' => "&amp;",
-                    '"' => "&quot;",
-                    '\'' => "&apos;",
-                    '<' => "&lt;",
-                    '>' => "&gt;",
-                    _ => rune.ToString()
-                });
+            var sb = new StringBuilder(In.Length + 16);
+
+            foreach (var chr in In) {
+                switch (chr) {
+                    case '&': sb.Append("&amp;"); break;
+                    case '"': sb.Append("&quot;"); break;
+                    case '\'': sb.Append("&apos;"); break;
+                    case '<': sb.Append("&lt;"); break;
+                    case '>': sb.Append("&gt;"); break;
+                    default: sb.Append(chr); break;
+                }
             }
 
             return sb.ToString();
@@ -387,6 +399,9 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public static string Decode(string In)
         {
+            if (In.IndexOf('&') < 0)
+                return In;
+
             static string? check(ReadOnlySpan<char> span)
             {
                 var x = 0;

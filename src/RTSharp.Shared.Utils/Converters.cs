@@ -8,62 +8,55 @@ namespace RTSharp.Shared.Utils
         public const string ZeroBytes = "0 B";
         public const string ZeroBytesPerSec = "0 B/s";
 
-        public static string GetSIDataSize(ulong In)
-        {
-            if (In == 0)
-                return ZeroBytes;
-            if (In < 1024)
-                return In + " B";
-            if (In < 1024 * 1024)
-                return Math.Round((float)In / 1024, 3) + " KiB";
-            if (In < 1024 * 1024 * 1024)
-                return Math.Round((float)In / 1024 / 1024, 3) + " MiB";
-            if (In < (ulong)1024 * 1024 * 1024 * 1024)
-                return Math.Round((float)In / 1024 / 1024 / 1024, 3) + " GiB";
-            if (In < (ulong)1024 * 1024 * 1024 * 1024 * 1024)
-                return Math.Round((float)In / 1024 / 1024 / 1024 / 1024, 3) + " TiB";
-            if (In < (ulong)1024 * 1024 * 1024 * 1024 * 1024 * 1024)
-                return Math.Round((float)In / 1024 / 1024 / 1024 / 1024 / 1024, 3) + " PiB";
-            return Math.Round((float)In / 1024 / 1024 / 1024 / 1024 / 1024 / 1024, 3) + " EiB";
-        }
+        public static string GetSIDataSize(ulong In) => FormatSI(In, ZeroBytes, [ " B", " KiB", " MiB", " GiB", " TiB", " PiB", " EiB" ]);
 
-        public static string GetSIDataSpeed(ulong In)
+        public static string GetSIDataSpeed(ulong In) => FormatSI(In, ZeroBytesPerSec, [ " B/s", " KiB/s", " MiB/s", " GiB/s", " TiB/s", " PiB/s", " EiB/s" ]);
+
+        private static string FormatSI(ulong In, string zero, ReadOnlySpan<string> suffixes)
         {
             if (In == 0)
-                return ZeroBytesPerSec;
-            if (In < 1024)
-                return In + " B/s";
-            if (In < 1024 * 1024)
-                return Math.Round((float)In / 1024, 3) + " KiB/s";
-            if (In < 1024 * 1024 * 1024)
-                return Math.Round((float)In / 1024 / 1024, 3) + " MiB/s";
-            if (In < (ulong)1024 * 1024 * 1024 * 1024)
-                return Math.Round((float)In / 1024 / 1024 / 1024, 3) + " GiB/s";
-            if (In < (ulong)1024 * 1024 * 1024 * 1024 * 1024)
-                return Math.Round((float)In / 1024 / 1024 / 1024 / 1024, 3) + " TiB/s";
-            return Math.Round((float)In / 1024 / 1024 / 1024 / 1024 / 1024, 3) + " PiB/s";
+                return zero;
+
+            if (In < 1024) {
+                Span<char> buf = stackalloc char[16];
+                In.TryFormat(buf, out int w, provider: CultureInfo.CurrentCulture);
+                return string.Concat(buf[..w], suffixes[0]);
+            }
+
+            float value = In;
+            int unitIdx = 0;
+            while (value >= 1024f && unitIdx < suffixes.Length - 1) {
+                value /= 1024f;
+                unitIdx++;
+            }
+
+            double rounded = Math.Round((double)value, 3);
+            string suffix = suffixes[unitIdx];
+
+            Span<char> numBuf = stackalloc char[16];
+            rounded.TryFormat(numBuf, out int written, provider: CultureInfo.CurrentCulture);
+            return string.Concat(numBuf[..written], suffix);
         }
 
         public static bool TryParseSISpeed(string In, bool TreatAs1024, out ulong Ret)
         {
             Ret = 0;
 
+            var src = In.AsSpan();
             int units = 0;
-            while (Char.IsDigit(In[units]) || In[units] == '.')
+            while (Char.IsDigit(src[units]) || src[units] == '.')
                 units++;
 
-            if (!Double.TryParse(In[..units], CultureInfo.InvariantCulture, out var num))
+            if (!Double.TryParse(src[..units], CultureInfo.InvariantCulture, out var num))
                 return false;
 
-            var unit = In[units..].TrimStart();
-            if (!unit.EndsWith("/s"))
+            var unit = src[units..].TrimStart();
+            if (!unit.EndsWith("/s", StringComparison.Ordinal))
                 return false;
 
             unit = unit[..^2];
 
             var mult = TreatAs1024 ? 1024 : 1000;
-
-            bool good = true;
 
             Ret = (ulong)(unit switch {
                 "B" => num,
@@ -85,19 +78,20 @@ namespace RTSharp.Shared.Utils
             if (Ret == 0 && num != 0)
                 return false;
 
-            return good;
+            return true;
         }
 
         public static ulong ParseSISpeed(string In, bool TreatAs1024)
         {
+            var src = In.AsSpan();
             int units = 0;
-            while (Char.IsDigit(In[units]) || In[units] == '.')
+            while (Char.IsDigit(src[units]) || src[units] == '.')
                 units++;
 
-            var num = Double.Parse(In[..units], CultureInfo.InvariantCulture);
+            var num = Double.Parse(src[..units], CultureInfo.InvariantCulture);
 
-            var unit = In[units..].TrimStart();
-            if (!unit.EndsWith("/s"))
+            var unit = src[units..].TrimStart();
+            if (!unit.EndsWith("/s", StringComparison.Ordinal))
                 throw new NotImplementedException("non-second time not supported");
 
             unit = unit[..^2];
@@ -223,16 +217,16 @@ namespace RTSharp.Shared.Utils
         {
             Ret = default;
 
-            var parts = In.Split(':');
-
-            if (parts.Length != 3)
+            var src = In.AsSpan();
+            Span<Range> parts = stackalloc Range[4]; // 4 in case of excessive splits
+            if (src.Split(parts, ':') != 3)
                 return false;
 
-            if (!Int32.TryParse(parts[0], out var hours))
+            if (!Int32.TryParse(src[parts[0]], out var hours))
                 return false;
-            if (!Int32.TryParse(parts[1], out var minutes))
+            if (!Int32.TryParse(src[parts[1]], out var minutes))
                 return false;
-            if (!Int32.TryParse(parts[2], out var seconds))
+            if (!Int32.TryParse(src[parts[2]], out var seconds))
                 return false;
 
             Ret = new TimeSpan(days: hours / 24, hours % 24, minutes, seconds);

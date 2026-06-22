@@ -9,7 +9,6 @@ using RTSharp.Shared.Utils;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 
 namespace RTSharp.Core.Services.Daemon;
@@ -95,7 +94,7 @@ public static class Mapper
                 DLSpeed = In.DLSpeed,
                 UPSpeed = In.UPSpeed,
                 ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
-                Labels = [.. In.Labels.Select(x => StringCache.Intern(x)!)],
+                Labels = InternLabels(In.Labels),
                 Peers = (In.PeersConnected, In.PeersTotal),
                 Seeders = (In.SeedersConnected, In.SeedersTotal),
                 Priority = MapFromProto(In.Priority),
@@ -129,7 +128,7 @@ public static class Mapper
             Existing.DLSpeed = In.DLSpeed;
             Existing.UPSpeed = In.UPSpeed;
             Existing.ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan();
-            Existing.Labels = [.. In.Labels.Select(x => StringCache.Intern(x)!)];
+            Existing.Labels = InternLabels(In.Labels);
             Existing.Peers = (In.PeersConnected, In.PeersTotal);
             Existing.Seeders = (In.SeedersConnected, In.SeedersTotal);
             Existing.Priority = MapFromProto(In.Priority);
@@ -153,7 +152,7 @@ public static class Mapper
             Existing.WantedSize = In.WantedSize;
             Existing.Uploaded = In.Uploaded;
             Existing.UPSpeed = In.UPSpeed;
-            Existing.Labels = [.. In.Labels.Select(x => StringCache.Intern(x)!)];
+            Existing.Labels = InternLabels(In.Labels);
             Existing.Peers = (In.PeersConnected, In.PeersTotal);
             Existing.Seeders = (Existing.Seeders.Connected, In.SeedersTotal);
             Existing.Priority = MapFromProto(In.Priority);
@@ -185,7 +184,7 @@ public static class Mapper
             DLSpeed = In.DLSpeed,
             UPSpeed = In.UPSpeed,
             ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
-            Labels = In.Labels.Select(x => StringCache.Intern(x)!).ToHashSet(),
+            Labels = InternLabels(In.Labels),
             Peers = (In.PeersConnected, In.PeersTotal),
             Seeders = (In.SeedersConnected, In.SeedersTotal),
             Priority = MapFromProto(In.Priority),
@@ -257,7 +256,7 @@ public static class Mapper
             DLSpeed = Torrent.DLSpeed,
             UPSpeed = In.UPSpeed,
             ETA = Torrent.ETA,
-            Labels = [.. In.Labels.Select(x => StringCache.Intern(x))],
+            Labels = InternLabels(In.Labels),
             Peers = (In.PeersConnected, In.PeersTotal),
             Seeders = (Torrent.Seeders.Connected, In.SeedersTotal),
             Priority = MapFromProto(In.Priority),
@@ -303,11 +302,37 @@ public static class Mapper
         });
     }
 
-    private static void ApplyLabels(IEnumerable<string> inLabels, Models.Torrent torrent)
+    private static HashSet<string> InternLabels(Google.Protobuf.Collections.RepeatedField<string> In)
     {
-        var newLabels = inLabels.Select(StringCache.Intern).ToArray();
-        if (torrent.Labels == null || torrent.Labels.Length != newLabels.Length || !newLabels.SequenceEqual(torrent.Labels, ReferenceEqualityComparer.Instance))
-            torrent.SetLabels(newLabels!);
+        var ret = new HashSet<string>(In.Count);
+        for (var i = 0; i < In.Count; i++)
+            ret.Add(StringCache.Intern(In[i])!);
+
+        return ret;
+    }
+
+    private static void ApplyLabels(Google.Protobuf.Collections.RepeatedField<string> In, Models.Torrent Torrent)
+    {
+        var existing = Torrent.Labels;
+
+        // fast path for unchanged delta
+        if (existing != null && existing.Length == In.Count) {
+            var unchanged = true;
+            for (var i = 0; i < In.Count; i++) {
+                if (!ReferenceEquals(existing[i], StringCache.Intern(In[i]))) {
+                    unchanged = false;
+                    break;
+                }
+            }
+
+            if (unchanged)
+                return;
+        }
+
+        var newLabels = new string[In.Count];
+        for (var i = 0; i < In.Count; i++)
+            newLabels[i] = StringCache.Intern(In[i])!;
+        Torrent.SetLabels(newLabels);
     }
 
     public static Shared.Abstractions.File.DOWNLOAD_STRATEGY MapFromProto(RTSharp.Daemon.Protocols.DataProvider.TorrentsFilesReply.Types.FileDownloadStrategy In)

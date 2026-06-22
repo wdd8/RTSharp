@@ -74,6 +74,9 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         [GeneratedRegex(@"(?<!\\),")]
         private static partial Regex NonEscapedCommaRegex();
 
+        [GeneratedRegex("magnet:\\?xt=urn:[a-z0-9]+:[a-z0-9]{32,40}&dn=.+&tr=.+")]
+        private static partial Regex MagnetDummyRegex();
+
         enum TorrentTrackerStatusMessage {
             NA = 0,
             Completed = 1,
@@ -143,12 +146,14 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 var priority = (TorrentPriority)priorityRaw;
 
                 var curTrackers = new List<TorrentTracker>();
+                uint seedersTotal = 0, peersTotal = 0;
 
                 TorrentState torrentState;
 
                 if (isMultiFile) {
                     // If multifile remove d.name from path. Base path shouldn't point to any inner files of torrent
-                    directory = String.Join(System.IO.Path.DirectorySeparatorChar, directory.Split(System.IO.Path.DirectorySeparatorChar)[..^1]);
+                    var lastSep = directory.LastIndexOf(System.IO.Path.DirectorySeparatorChar);
+                    directory = lastSep <= 0 ? "" : directory[..lastSep];
                 }
 
                 if (!isOpenRaw)
@@ -182,7 +187,9 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     tracker.LastUpdated = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)UInt64.Parse(parts[6])));
                     tracker.ScrapeInterval = Duration.FromTimeSpan(TimeSpan.FromSeconds(UInt32.Parse(parts[7])));
                     tracker.StatusMessage = ((TorrentTrackerStatusMessage)Byte.Parse(parts[8])).ToString();
-                    
+
+                    seedersTotal += tracker.Seeders;
+                    peersTotal += tracker.Peers;
                     curTrackers.Add(tracker);
                 }
 
@@ -218,9 +225,9 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     StatusMessage = statusMessage,
                     SeedersConnected = (uint)seedersConnected,
                     PeersConnected = (uint)peersConnected,
-                    SeedersTotal = (uint)curTrackers.Sum(x => x.Seeders),
-                    PeersTotal = (uint)curTrackers.Sum(x => x.Peers),
-                    MagnetDummy = Regex.IsMatch(decodedName, "magnet:\\?xt=urn:[a-z0-9]+:[a-z0-9]{32,40}&dn=.+&tr=.+")
+                    SeedersTotal = seedersTotal,
+                    PeersTotal = peersTotal,
+                    MagnetDummy = MagnetDummyRegex().IsMatch(decodedName)
                 };
 
                 torrent.Labels.Add(NonEscapedCommaRegex().Split(label).Where(x => !String.IsNullOrEmpty(x)).Select(XMLUtils.Decode));

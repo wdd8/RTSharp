@@ -1,56 +1,46 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace RTSharp.Shared.Utils;
 
-namespace RTSharp.Shared.Utils
+public class Node(string Path)
 {
-    public class Node
+
+    public string Path { get; } = Path;
+    public List<Node> Children { get; } = [];
+
+    private string? _name;
+    public string Name => _name ??= Path[(Path.AsSpan().LastIndexOf('/') + 1)..];
+
+    public Node AddChild(Node Child)
     {
-        public string Path { get; }
-        public List<Node> Children { get; }
+        Children.Add(Child);
+        return Child;
+    }
+}
 
-        public Node(String Path)
-        {
-            this.Path = Path;
-            Children = new();
+public static class TreeBuilder
+{
+    public static Node Build(IEnumerable<string> paths)
+    {
+        var root = new Node("./");
+        foreach (var path in paths) {
+            AddNode(root, path.Split('/'), 0, "");
         }
-
-        public String Name => Path.Split('/').Last();
-        public Node AddChild(Node Child)
-        {
-            Children.Add(Child);
-            return Child;
-        }
+        return root;
     }
 
-    public static class TreeBuilder
+    private static void AddNode(Node node, string[] path, int index, string nodePath)
     {
-        public static Node Build(IEnumerable<string> paths)
-        {
-            Node root = new Node("./");
-            foreach (var path in paths) {
-                AddNode(root, path.Split('/').ToArray(), "");
-            }
-            return root;
-        }
+        if (index >= path.Length)
+            return;
 
-        private static void AddNode(Node node, string[] path, string nodePath)
-        {
-            if (!path.Any())
+        var segment = path[index];
+        nodePath = nodePath.Length == 0 ? segment : string.Concat(nodePath, "/", segment);
+
+        foreach (var actual in node.Children) {
+            if (actual.Name == segment) {
+                AddNode(actual, path, index + 1, nodePath);
                 return;
-
-            nodePath = nodePath == "" ? path[0] : $"{nodePath}/{path[0]}";
-
-            foreach (Node actual in node.Children) {
-                if (actual.Name == path[0]) {
-                    AddNode(actual, path[1..], nodePath);
-                    return;
-                }
             }
-            AddNode(node.AddChild(new Node(nodePath)), path[1..], nodePath);
         }
+        AddNode(node.AddChild(new Node(nodePath)), path, index + 1, nodePath);
     }
 }

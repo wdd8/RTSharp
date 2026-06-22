@@ -76,9 +76,9 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             var start = new byte[56];
 
-            var recv = await stm.ReadAsync(start, CancellationToken);
+            await stm.ReadExactlyAsync(start, CancellationToken);
+            int recv;
 
-            Debug.Assert(recv == 56);
             Debug.Assert(Encoding.ASCII.GetString(start) == "Status: 200 OK\r\nContent-Type: text/xml\r\nContent-Length: ");
 
             var lenBuffer = new char[8]; // 99 MiB max
@@ -109,14 +109,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 throw new Exception("Content length reading did not complete");
 
             var len = Int32.Parse(lenBuffer);
-            var cursor = 0;
             Memory<byte> buffer = new byte[len];
-            while (cursor < len) {
-                recv = stm.Read(buffer[cursor..].Span);
-                if (recv == 0)
-                    break;
-                cursor += recv;
-            }
+            await stm.ReadExactlyAsync(buffer, CancellationToken);
 
             disconnect();
 

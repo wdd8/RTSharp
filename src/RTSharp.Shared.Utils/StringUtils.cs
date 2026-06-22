@@ -1,28 +1,11 @@
 ﻿using System.Security.Cryptography;
-using System.Text;
 
 namespace RTSharp.Shared.Utils
 {
     public static class StringUtils
     {
-        internal static readonly char[] chars =
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_".ToCharArray();
+        private const string CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_";
 
-        public static string GetRandomString(int size)
-        {
-            byte[] data = new byte[4 * size];
-            using (var crypto = RandomNumberGenerator.Create()) {
-                crypto.GetBytes(data);
-            }
-            StringBuilder result = new StringBuilder(size);
-            for (int i = 0;i < size;i++) {
-                var rnd = BitConverter.ToUInt32(data, i * 4);
-                var idx = rnd % chars.Length;
-
-                result.Append(chars[idx]);
-            }
-
-            return result.ToString();
-        }
+        public static string GetRandomString(int size) => RandomNumberGenerator.GetString(CHARS, size);
     }
 }
