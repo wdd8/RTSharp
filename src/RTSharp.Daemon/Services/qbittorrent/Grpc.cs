@@ -375,9 +375,9 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 Reply = {
                     files.Select(x => new TorrentsFilesReply.Types.TorrentsFiles {
                         InfoHash = x.Hash.ToByteString(),
-                        MultiFile = x.Files.Result[0].Name.Contains('/'),
+                        MultiFile = x.Files.Result == null ? false : x.Files.Result[0].Name.Contains('/'),
                         Files = {
-                            x.Files.Result.Select(i => {
+                            x.Files.Result == null ? [] : x.Files.Result.Select(i => {
                                 var torrentName = torrents[x.Hash].Name;
 
                                 i.Name = i.Name.StartsWith(torrentName + '/') ? i.Name[(torrentName.Length + 1)..] : i.Name;
@@ -418,6 +418,13 @@ namespace RTSharp.Daemon.Services.qbittorrent
             return new TorrentsPeersReply {
                 Reply = {
                     tasks.Select(x => {
+                        if (x.Peers.Result == null) {
+                            return new TorrentsPeersReply.Types.TorrentsPeers {
+                                InfoHash = x.Hash,
+                                Peers = {}
+                            };
+                        }
+
                         Debug.Assert(x.Peers.Result.FullUpdate);
 
                         Protocols.DataProvider.Torrent? torrent;
@@ -831,6 +838,13 @@ namespace RTSharp.Daemon.Services.qbittorrent
                     await Task.WhenAll(tasks.Select(async x => {
                         var pieces = await x.Pieces;
 
+                        if (pieces == null) {
+                            return new TorrentsPiecesReply.Types.TorrentsPieces {
+                                InfoHash = x.Torrent,
+                                Bitfield = ByteString.CopyFrom(0)
+                            };
+                        }
+
                         Span<byte> bitfield = new byte[(int)Math.Ceiling(pieces.Count / 8d)];
 
                         byte current = 0;
@@ -864,6 +878,13 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
             var groups = Req.Hashes.Chunk(50).Select(x => x.Select(async x => {
                 var trackers = await client.GetTorrentTrackersAsync(Convert.ToHexString(x.Span), CancellationToken);
+
+                if (trackers == null) {
+                    return new TorrentsTrackersReply.Types.TorrentsTrackers {
+                        InfoHash = x,
+                        Trackers = { }
+                    };
+                }
 
                 return new TorrentsTrackersReply.Types.TorrentsTrackers {
                     InfoHash = x,

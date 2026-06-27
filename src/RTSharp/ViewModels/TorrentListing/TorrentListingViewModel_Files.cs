@@ -126,8 +126,10 @@ namespace RTSharp.ViewModels.TorrentListing
                         if (files == default)
                             goto end;
 
-                        FilesViewModel.MultiFile = files.MultiFile;
-                        FilesChanges.Writer.TryWrite((current, Models.File.FromPluginModel(current.Name, files.MultiFile, files.Files)));
+                        if (files.Files.Any()) {
+                            FilesViewModel.MultiFile = files.MultiFile;
+                            FilesChanges.Writer.TryWrite((current, Models.File.FromPluginModel(current.Name, files.MultiFile, files.Files)));
+                        }
                     } catch {
                         return;
                     }
