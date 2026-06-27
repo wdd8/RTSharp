@@ -30,7 +30,7 @@ namespace RTSharp.Views
             {
                 ViewModel = new DirectorySelectorWindowViewModel(ViewModel!.SelectedProvider!)
                 {
-                    WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider!.Config.Plugin.Name})"
+                    WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider!.Host.Config.Plugin.Name})"
                 }
             };
 

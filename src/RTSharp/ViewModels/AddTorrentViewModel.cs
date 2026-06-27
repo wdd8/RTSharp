@@ -1,30 +1,30 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reactive;
-using System.Reactive.Linq;
-using System.Threading.Tasks;
-using System.Windows.Input;
 using Avalonia.Data;
-using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using RTSharp.Plugin;
+using RTSharp.Shared.Abstractions.DataProvider;
+
 using Serilog;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reactive.Linq;
+using System.Threading.Tasks;
 
 namespace RTSharp.ViewModels
 {
     public partial class AddTorrentViewModel : ObservableObject
     {
-        public List<RTSharpDataProvider> DataProviders => [.. Plugin.Plugins.DataProviders.Items.Where(x => x.Instance.Capabilities.AddTorrent)];
+        public List<IDataProvider> DataProviders => [.. Plugins.DataProviders.Items.Select(x => x.Instance).Where(x => x.Capabilities.AddTorrent)];
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(ForceStartTorrentOnAdd))]
         [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
-        public partial RTSharpDataProvider? SelectedProvider { get; set; }
+        public partial IDataProvider? SelectedProvider { get; set; }
 
         [ObservableProperty]
         public partial bool FromFileSelected { get; set; }
@@ -76,7 +76,7 @@ namespace RTSharp.ViewModels
         public partial object DataProviderOptions { get; set; }
 
         [ObservableProperty]
-        public partial List<RTSharpDataProvider> DuplicationTargets { get; set; }
+        public partial List<IDataProvider> DuplicationTargets { get; set; }
 
         private bool _startTorrent;
         public bool StartTorrent {
@@ -84,8 +84,8 @@ namespace RTSharp.ViewModels
                 if (SelectedProvider == null)
                     return false;
 
-                if (SelectedProvider.Instance.Capabilities.ForceStartTorrentOnAdd != null)
-                    return SelectedProvider.Instance.Capabilities.ForceStartTorrentOnAdd.Value;
+                if (SelectedProvider.Capabilities.ForceStartTorrentOnAdd != null)
+                    return SelectedProvider.Capabilities.ForceStartTorrentOnAdd.Value;
 
                 return _startTorrent;
             }
@@ -94,7 +94,7 @@ namespace RTSharp.ViewModels
             }
         }
 
-        public bool ForceStartTorrentOnAdd => SelectedProvider?.Instance.Capabilities.ForceStartTorrentOnAdd != null;
+        public bool ForceStartTorrentOnAdd => SelectedProvider?.Capabilities.ForceStartTorrentOnAdd != null;
 
         public Action CancelWindow { get; set; } = null!; // view set
 
@@ -177,7 +177,7 @@ namespace RTSharp.ViewModels
             } catch { }
         }
 
-        partial void OnSelectedProviderChanged(RTSharpDataProvider? value)
+        partial void OnSelectedProviderChanged(IDataProvider? value)
         {
             if (value == null)
                 return;
@@ -185,10 +185,10 @@ namespace RTSharp.ViewModels
             _ = LoadDefaultRemoteTargetPath(value);
         }
 
-        private async Task LoadDefaultRemoteTargetPath(RTSharpDataProvider provider)
+        private async Task LoadDefaultRemoteTargetPath(IDataProvider provider)
         {
             try {
-                RemoteTargetPath = await provider.Instance.Files.GetDefaultSavePath();
+                RemoteTargetPath = await provider.Files.GetDefaultSavePath();
             } catch (Exception ex) {
                 Log.Logger.Error(ex, $"Failed to get default save path");
             }

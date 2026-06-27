@@ -27,8 +27,8 @@
                 <TextBlock>Source</TextBlock>
             </TabItem.Header>
             <StackPanel>
-                <GroupBox Header="Plugin">
-                    <ComboBox ItemsSource="{Binding DataProviders}" SelectedItem="{Binding SelectedProvider}" HorizontalAlignment="Stretch" x:Name="dataProviderCmb" />
+                <GroupBox Header="Data provider">
+                    <views:DataProviderSelection DataProviders="{Binding DataProviders}" SelectedProvider="{Binding SelectedProvider}" />
                 </GroupBox>
                 <GroupBox Header="Remote directory">
                     <DockPanel>

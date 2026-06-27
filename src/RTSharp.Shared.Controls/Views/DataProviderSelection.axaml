@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ab="clr-namespace:RTSharp.Shared.Abstractions.DataProvider;assembly=RTSharp.Shared.Abstractions"
+             xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters"
+             mc:Ignorable="d"
+             x:Class="RTSharp.Shared.Controls.Views.DataProviderSelection"
+             x:Name="dataProviderSelection">
+    <UserControl.Resources>
+        <converters:ColorStringToBrushConverter x:Key="ColorStringToBrushConverter" />
+    </UserControl.Resources>
+    <ComboBox DataContext="{Binding ElementName=dataProviderSelection}"
+              ItemsSource="{Binding DataProviders}"
+              SelectedItem="{Binding SelectedProvider}"
+              HorizontalAlignment="Stretch">
+        <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="ab:IDataProvider">
+                <DockPanel>
+                    <Rectangle DockPanel.Dock="Left" Width="2" Fill="{Binding Host.Config.Plugin.Color, Converter={StaticResource ColorStringToBrushConverter}}" />
+                    <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Text="{Binding}" />
+                </DockPanel>
+            </DataTemplate>
+        </ComboBox.ItemTemplate>
+    </ComboBox>
+</UserControl>

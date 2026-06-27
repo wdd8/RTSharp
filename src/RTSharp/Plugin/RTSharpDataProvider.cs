@@ -68,7 +68,7 @@ public abstract class RTSharpDataProvider : IDataProviderHost
 
     public static bool operator !=(RTSharpDataProvider? dp1, RTSharpDataProvider? dp2) => !(dp1 == dp2);
 
-    public override string ToString() => $"{Host.Config.Plugin.Name} ({Host.InstanceId})";
+    public override string ToString() => $"{Host.Config.Plugin.Name} ({Config.Plugin.ServerId})";
 
     private readonly HashSet<Guid> SupportedBuiltInDataProviders = new() {
         new Guid("90F180F2-F1D3-4CAA-859F-06D80B5DCF5C"),

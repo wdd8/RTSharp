@@ -29,6 +29,7 @@ using System.Threading.Tasks;
 
 using Torrent = RTSharp.Models.Torrent;
 using System.Collections.Generic;
+using RTSharp.Shared.Abstractions.DataProvider;
 
 namespace RTSharp.Views.TorrentListing;
 
@@ -268,69 +269,69 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         }
     }
 
-    private async Task<bool> ShowRecheckTorrentsConfirmationDialog((Window BaseWindow, ulong Size, int Count) Input)
+    private async Task<bool> ShowRecheckTorrentsConfirmationDialog(Window BaseWindow, ulong Size, int Count)
     {
         var window = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams() {
             ButtonDefinitions = ButtonEnum.YesNo,
             ContentTitle = "RT#",
-            ContentMessage = $"Are you sure you want to recheck {Input.Count} torrent{(Input.Count == 1 ? "" : "s")} ({Shared.Utils.Converters.GetSIDataSize(Input.Size)})?",
+            ContentMessage = $"Are you sure you want to recheck {Count} torrent{(Count == 1 ? "" : "s")} ({Shared.Utils.Converters.GetSIDataSize(Size)})?",
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Icon = Icon.Question
         });
 
-        return (await window.ShowWindowDialogAsync(Input.BaseWindow)) == ButtonResult.Yes;
+        return (await window.ShowWindowDialogAsync(BaseWindow)) == ButtonResult.Yes;
     }
 
-    private async Task<bool> ShowMoveDownloadDirectoryConfirmationDialog((Window Owner, string[] CurrentFiles, string[] FutureFiles, string MoveWarning) Input)
+    private async Task<bool> ShowMoveDownloadDirectoryConfirmationDialog(Window Owner, string[] CurrentFiles, string[] FutureFiles, string MoveWarning)
     {
         var window = new MoveDownloadDirectoryConfirmationDialog() {
             ViewModel = new MoveDownloadDirectoryConfirmationDialogViewModel(
-                String.Join(Environment.NewLine, Input.CurrentFiles),
-                String.Join(Environment.NewLine, Input.FutureFiles),
-                Input.MoveWarning
+                String.Join(Environment.NewLine, CurrentFiles),
+                String.Join(Environment.NewLine, FutureFiles),
+                MoveWarning
             )
         };
 
-        var result = await window.ShowDialog<bool>(Input.Owner);
+        var result = await window.ShowDialog<bool>(Owner);
 
         return result;
     }
 
-    private async Task<string?> ShowSelectDirectoryDialog((Window Owner, string Title) Input)
+    private async Task<string?> ShowSelectDirectoryDialog(Window Owner, string Title)
     {
-        var dir = await Input.Owner.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions() {
-            Title = "RT# - " + Input.Title,
+        var dir = await Owner.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions() {
+            Title = "RT# - " + Title,
             AllowMultiple = false
         });
 
         return dir?.FirstOrDefault()?.Path?.LocalPath;
     }
 
-    private async Task<bool> ShowDeleteTorrentsConfirmationDialog((Window BaseWindow, ulong Size, int Count, bool AndData) Input)
+    private async Task<bool> ShowDeleteTorrentsConfirmationDialog(Window BaseWindow, ulong Size, int Count, bool AndData)
     {
         var window = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams() {
             ButtonDefinitions = ButtonEnum.YesNo,
             ContentTitle = "RT#",
-            ContentMessage = $"Are you sure you want to delete {Input.Count} torrent{(Input.Count == 1 ? "" : "s")}{(Input.AndData ? $" and their data ({Shared.Utils.Converters.GetSIDataSize(Input.Size)})" : "")}?",
+            ContentMessage = $"Are you sure you want to delete {Count} torrent{(Count == 1 ? "" : "s")}{(AndData ? $" and their data ({Shared.Utils.Converters.GetSIDataSize(Size)})" : "")}?",
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Icon = Icon.Question
         });
 
-        return (await window.ShowWindowDialogAsync(Input.BaseWindow)) == ButtonResult.Yes;
+        return (await window.ShowWindowDialogAsync(BaseWindow)) == ButtonResult.Yes;
     }
 
-    private async Task<string?> ShowSelectRemoteDirectoryDialog((Window Owner, string Title, Plugin.RTSharpDataProvider DataProvider, string? StartingDir) Input)
+    private async Task<string?> ShowSelectRemoteDirectoryDialog(Window Owner, string Title, IDataProvider DataProvider, string? StartingDir)
     {
         var dialog = new DirectorySelectorWindow() {
-            ViewModel = new DirectorySelectorWindowViewModel(Input.DataProvider) {
-                WindowTitle = Input.Title
+            ViewModel = new DirectorySelectorWindowViewModel(DataProvider) {
+                WindowTitle = Title
             }
         };
 
-        await dialog.ViewModel.SetCurrentFolder(Input.StartingDir ?? "/");
-        var result = await dialog.ShowDialog<string?>(Input.Owner);
+        await dialog.ViewModel.SetCurrentFolder(StartingDir ?? "/");
+        var result = await dialog.ShowDialog<string?>(Owner);
         return result;
     }
 

@@ -12,6 +12,7 @@ using MsBox.Avalonia.Enums;
 
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Utils;
 
 using Serilog;
@@ -530,6 +531,11 @@ public static class Plugins
     public static async Task UnloadAll()
     {
         await Task.WhenAll(LoadedPlugins.Select(x => x.Unload()));
+    }
+
+    public static RTSharpPlugin? GetPluginOrDefault(IDataProvider Dp)
+    {
+        return LoadedPlugins.FirstOrDefault(x => x.Config.Plugin.InstanceId == Dp.Host.Config.Plugin.InstanceId);
     }
 
     public class InvalidPluginConfigurationException(string message) : Exception(message)

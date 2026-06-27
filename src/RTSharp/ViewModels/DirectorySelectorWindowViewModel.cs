@@ -15,6 +15,9 @@ using DynamicData.Binding;
 using RTSharp.Core.Services.Daemon;
 using RTSharp.Models;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Abstractions.Daemon;
+using RTSharp.Shared.Abstractions.DataProvider;
+
 using Serilog;
 
 namespace RTSharp.ViewModels;
@@ -29,7 +32,7 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
 
     public FileSystemItem? Current { get; set; }
 
-    public Plugin.RTSharpDataProvider DataProvider { get; init; }
+    public IDataProvider DataProvider { get; init; }
 
     public SourceList<FileSystemItem> _itemsSource { get; set; } = new();
 
@@ -45,14 +48,14 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
     [ObservableProperty]
     public partial bool RemoveDirectoryAllowed { get; set; }
 
-    private DaemonService Server;
+    private readonly IDaemonService Server;
 
-    public DirectorySelectorWindowViewModel(Plugin.RTSharpDataProvider DataProvider)
+    public DirectorySelectorWindowViewModel(IDataProvider DataProvider)
     {
         this.DataProvider = DataProvider;
         AddDisposable(_itemsSource.Connect().Sort(SortExpressionComparer<FileSystemItem>.Ascending(x => x.Path)).Bind(out _items).Subscribe());
 
-        Server = Core.Servers.All[DataProvider.Config.Plugin.ServerId];
+        Server = DataProvider.Host.AttachedDaemonService;
     }
 
     [RelayCommand]

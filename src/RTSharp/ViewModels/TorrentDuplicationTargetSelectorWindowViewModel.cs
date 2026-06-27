@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using RTSharp.Models;
 using RTSharp.Plugin;
+using RTSharp.Shared.Abstractions.DataProvider;
 
 using Serilog;
 
@@ -15,12 +16,12 @@ namespace RTSharp.ViewModels
 {
     public partial class TorrentDuplicationTargetSelectorWindowViewModel : ObservableObject
     {
-        public List<Plugin.RTSharpDataProvider> DataProviders => [.. Plugin.Plugins.DataProviders.Items];
+        public List<IDataProvider> DataProviders => [.. Plugins.DataProviders.Items.Select(x => x.Instance)];
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
         [NotifyCanExecuteChangedFor(nameof(ConfirmClickCommand))]
-        public partial Plugin.RTSharpDataProvider? SelectedProvider { get; set; }
+        public partial IDataProvider? SelectedProvider { get; set; }
 
         [ObservableProperty]
         public partial string? RemoteTargetPath { get; set; }
@@ -47,12 +48,12 @@ namespace RTSharp.ViewModels
             }
         }
 
-        partial void OnSelectedProviderChanged(Plugin.RTSharpDataProvider? value)
+        partial void OnSelectedProviderChanged(IDataProvider? value)
         {
             _ = UpdateRemoteTargetForProvider(value);
         }
 
-        private async Task UpdateRemoteTargetForProvider(Plugin.RTSharpDataProvider? provider)
+        private async Task UpdateRemoteTargetForProvider(IDataProvider? provider)
         {
             try {
                 RemoteTargetPathEnabled = false;
@@ -61,8 +62,8 @@ namespace RTSharp.ViewModels
 
                 RemoteTargetPathEnabled = true;
 
-                if (SourceTorrent.DataOwner.Config.Plugin.ServerId != provider.Config.Plugin.ServerId) {
-                    var savePath = await provider.Instance.Files.GetDefaultSavePath();
+                if (SourceTorrent.DataOwner.Config.Plugin.ServerId != provider.Host.Config.Plugin.ServerId) {
+                    var savePath = await provider.Files.GetDefaultSavePath();
                     RemoteTargetPath = savePath;
                 } else {
                     RemoteTargetPath = SourceTorrent.RemotePath;
@@ -89,7 +90,7 @@ namespace RTSharp.ViewModels
             if (SelectedProvider == null)
                 return false;
 
-            if (SourceTorrent.DataOwner.Host.InstanceId == SelectedProvider.Host.InstanceId)
+            if (SourceTorrent.DataOwner.Host.InstanceId == SelectedProvider.Host.Config.Plugin.InstanceId)
                 return false;
 
             return true;

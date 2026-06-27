@@ -24,15 +24,15 @@ namespace RTSharp.ViewModels.TorrentListing;
 
 public partial class TorrentListingViewModel
 {
-    public Func<(Window Owner, ulong Size, int Count), Task<bool>> RecheckTorrentsConfirmationDialog { get; set; } = null!; // view set
+    public Func<Window, ulong, int, Task<bool>> RecheckTorrentsConfirmationDialog { get; set; } = null!; // view set
 
-    public Func<(Window Owner, string[] CurrentFiles, string[] FutureFiles, string MoveWarning), Task<bool>> MoveDownloadDirectoryConfirmationDialog { get; set; } = null!; // view set
+    public Func<Window, string[], string[], string, Task<bool>> MoveDownloadDirectoryConfirmationDialog { get; set; } = null!; // view set
 
-    public Func<(Window Owner, string Title), Task<string?>> SelectDirectoryDialog { get; set; } = null!; // view set
+    public Func<Window, string, Task<string?>> SelectDirectoryDialog { get; set; } = null!; // view set
 
-    public Func<(Window Owner, string Title, Plugin.RTSharpDataProvider DataProvider, string? StartingDir), Task<string?>> SelectRemoteDirectoryDialog { get; set; } = null!; // view set
+    public Func<Window, string, IDataProvider, string?, Task<string?>> SelectRemoteDirectoryDialog { get; set; } = null!; // view set
 
-    public Func<(Window Owner, ulong Size, int Count, bool AndData), Task<bool>> DeleteTorrentsConfirmationDialog { get; set; } = null!; // view set
+    public Func<Window, ulong, int, bool, Task<bool>> DeleteTorrentsConfirmationDialog { get; set; } = null!; // view set
 
     public Action ShowAddLabelDialog { get; set; } = null!; // view set
 
@@ -112,7 +112,7 @@ public partial class TorrentListingViewModel
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteForceRecheckTorrents))]
     public async Task ForceRecheckTorrents(IReadOnlyList<Torrent> In)
     {
-        var result = await RecheckTorrentsConfirmationDialog((App.MainWindow, (ulong)In.Sum(x => (decimal)x.WantedSize), In.Count));
+        var result = await RecheckTorrentsConfirmationDialog(App.MainWindow, (ulong)In.Sum(x => (decimal)x.WantedSize), In.Count);
 
         if (result)
             await ActionForMulti(In, "Force recheck", async (dp, torrents) => {
@@ -208,7 +208,7 @@ public partial class TorrentListingViewModel
             var commonPrefix = getCommonPrefix(data.Select(x => x.BasePath));
             var dataProvider = allTorrents[torrentFiles.First().Key].DataOwner;
             var dataProviderName = dataProvider.Config.Plugin.Name;
-            var targetDir = await SelectRemoteDirectoryDialog((App.MainWindow, $"RT# - Target directory ({dataProviderName})", dataProvider, String.IsNullOrEmpty(commonPrefix) ? "/" : commonPrefix));
+            var targetDir = await SelectRemoteDirectoryDialog(App.MainWindow, $"RT# - Target directory ({dataProviderName})", dataProvider.Instance, String.IsNullOrEmpty(commonPrefix) ? "/" : commonPrefix);
             if (targetDir == null)
                 continue;
 
@@ -217,12 +217,12 @@ public partial class TorrentListingViewModel
                 return basePath + (data.ContainerFolder != "" ? "/" + data.ContainerFolder : "") + "/" + filePath;
             }
 
-            var moveConfirmation = await MoveDownloadDirectoryConfirmationDialog((
+            var moveConfirmation = await MoveDownloadDirectoryConfirmationDialog(
                 App.MainWindow,
                 data.SelectMany(x => x.Files.Select(f => targetPath(x.BasePath, x, f))).ToArray(),
                 data.SelectMany(x => x.Files.Select(f => targetPath(targetDir, x, f))).ToArray(),
                 $"{count} files ({Shared.Utils.Converters.GetSIDataSize(totalSize)})"
-            ));
+            );
 
             if (!moveConfirmation)
                 continue;
@@ -278,7 +278,7 @@ public partial class TorrentListingViewModel
     public async Task RemoveTorrents(IReadOnlyList<Torrent> In) 
     {
         
-        var result = await DeleteTorrentsConfirmationDialog((App.MainWindow, 0UL, In.Count, false));
+        var result = await DeleteTorrentsConfirmationDialog(App.MainWindow, 0UL, In.Count, false);
 
         if (result)
             await ActionForMulti(In, "Remove torrents", (dp, torrents) => dp.Instance.RemoveTorrents(torrents.Select(x => x.Hash).ToList()));
@@ -341,7 +341,7 @@ public partial class TorrentListingViewModel
         if (multiReference)
             return;
 
-        var result = await DeleteTorrentsConfirmationDialog((App.MainWindow, (ulong)In.DistinctBy(x => x.DataOwner.Config.Plugin.ServerId + "_" + Convert.ToHexString(x.Hash)).Sum(x => (decimal)x.WantedSize), In.Count, true));
+        var result = await DeleteTorrentsConfirmationDialog(App.MainWindow, (ulong)In.DistinctBy(x => x.DataOwner.Config.Plugin.ServerId + "_" + Convert.ToHexString(x.Hash)).Sum(x => (decimal)x.WantedSize), In.Count, true);
 
         if (result)
             await ActionForMulti(In, "Remove torrents and data", (dp, torrents) => dp.Instance.RemoveTorrentsAndData([.. torrents.Select(x => x.ToPluginModel())]));
@@ -351,7 +351,7 @@ public partial class TorrentListingViewModel
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteGetDotTorrents))]
     public async Task GetDotTorrents(IReadOnlyList<Torrent> In)
     {
-        var result = await SelectDirectoryDialog((App.MainWindow, "Select destination folder"));
+        var result = await SelectDirectoryDialog(App.MainWindow, "Select destination folder");
 
         if (String.IsNullOrEmpty(result))
             return;
@@ -417,7 +417,7 @@ public partial class TorrentListingViewModel
     [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanExecuteDuplicateTorrentTo))]
     private async Task DuplicateTorrentTo(IReadOnlyList<Torrent> In)
     {
-        var dests = new InfoHashDictionary<(RTSharpDataProvider Provider, string Directory)>();
+        var dests = new InfoHashDictionary<(IDataProvider Provider, string Directory)>();
 
         foreach (var torrent in In) {
             var wnd = new TorrentDuplicationTargetSelectorWindow {
@@ -459,7 +459,7 @@ public partial class TorrentListingViewModel
             var addTorrents = getDotTorrentFiles.CreateChild<TorrentStatuses>("Add torrents", RUN_MODE.DEPENDS_ON_PARENT, (parent, action) => {
                 var dotTorrents = parent.GetResult()!.SelectMany(x => x).ToInfoHashDictionary(x => x.Key, x => x.Value);
 
-                return targetDataProvider.Instance.AddTorrents([.. dotTorrents.Select(x => (
+                return targetDataProvider.AddTorrents([.. dotTorrents.Select(x => (
                     Data: x.Value,
                     Filename: (string?)In.First(i => i.Hash.SequenceEqual(x.Key)).Name,
                     Options: new AddTorrentsOptions(null, dests[x.Key].Directory)
@@ -485,14 +485,14 @@ public partial class TorrentListingViewModel
                     }
                     var sourceTorrent = In.First(x => x.Hash.SequenceEqual(hash));
 
-                    if (sourceTorrent.DataOwner.Config.Plugin.ServerId != targetDataProvider.Config.Plugin.ServerId) {
+                    if (sourceTorrent.DataOwner.Config.Plugin.ServerId != targetDataProvider.Host.Config.Plugin.ServerId) {
                         await getTorrentFileList.RunningTask!;
                         var fileList = getTorrentFileList.GetResult()!.SelectMany(x => x).ToInfoHashDictionary(x => x.Key, x => x.Value);
                         var files = fileList[sourceTorrent.Hash];
                         var dest = dests[sourceTorrent.Hash].Directory;
 
                         var sourceServer = Core.Servers.All[sourceTorrent.DataOwner.Config.Plugin.ServerId];
-                        var targetServer = Core.Servers.All[targetDataProvider.Config.Plugin.ServerId];
+                        var targetServer = Core.Servers.All[targetDataProvider.Host.Config.Plugin.ServerId];
 
                         try {
                             await targetServer.RequestReceiveFiles(
@@ -521,7 +521,7 @@ public partial class TorrentListingViewModel
             transferFiles.CreateChild<Guid>("Force recheck", RUN_MODE.DEPENDS_ON_PARENT, (parent, action) => {
                 var res = parent.GetResult()!;
 
-                return targetDataProvider.Instance.ForceRecheck(res.Where(x => x.Value).Select(x => x.Key).ToArray());
+                return targetDataProvider.ForceRecheck(res.Where(x => x.Value).Select(x => x.Key).ToArray());
             });
 
             return data.ActionQueue!.Queue.RunAction(getDotTorrentFiles);

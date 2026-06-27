@@ -1,107 +1,111 @@
+using RTSharp.Plugin;
+using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Abstractions.Daemon;
+using RTSharp.Shared.Abstractions.DataProvider;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using RTSharp.Plugin;
-using RTSharp.Shared.Abstractions;
-using RTSharp.Shared.Abstractions.Daemon;
+
 using File = System.IO.File;
 
-namespace RTSharp.Core
+namespace RTSharp.Core;
+
+public class TorrentAdd
 {
-    public class TorrentAdd
+    public enum START_MODE
     {
-        public enum START_MODE
-        {
-            DO_NOTHING,
-            START,
-            RECHECK_AND_START
+        DO_NOTHING,
+        START,
+        RECHECK_AND_START
+    }
+
+    public record struct TorrentAddInput(
+        IList<(string Source, AddTorrentsOptions Options)> Sources,
+        IEnumerable<IDataProvider> DuplicationTargets,
+        START_MODE StartMode);
+
+    public static async Task AddTorrents(IDataProvider Primary, TorrentAddInput Input)
+    {
+        var plugin = Plugins.GetPluginOrDefault(Primary) ?? throw new NullReferenceException("No plugin corresponding to data provider found");
+
+        var tasks = new List<Task<(string? Filename, byte[] Content)>>();
+
+        foreach (var (source, _) in Input.Sources) {
+            Func<Task<(string? Filename, byte[] Content)>> fx;
+
+            if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && !uri.IsFile) {
+                fx = async () => {
+                    var req = await Core.Http.Client.GetAsync(uri);
+                    var content = await req.Content.ReadAsByteArrayAsync();
+                    return (req.Content.Headers.ContentDisposition?.FileNameStar ?? Regex.Replace(req.Content.Headers.ContentDisposition?.FileName ?? "", "^\\\"(.*)\\\"$", "$1"), content);
+                };
+            } else
+                fx = async () => (Path.GetFileName(source), await File.ReadAllBytesAsync(source));
+
+            tasks.Add(fx());
         }
 
-        public record struct TorrentAddInput(
-            IList<(string Source, Shared.Abstractions.AddTorrentsOptions Options)> Sources,
-            IEnumerable<RTSharpDataProvider> DuplicationTargets,
-            START_MODE StartMode);
+        var files = (await Task.WhenAll(tasks)).Select((data, x) => (data.Content, data.Filename, Input.Sources[x].Options)).ToList();
 
-        public static async Task AddTorrents(RTSharpDataProvider Primary, TorrentAddInput Input)
-        {
-            var tasks = new List<Task<(string? Filename, byte[] Content)>>();
+        var action = ActionQueueAction.New<TorrentStatuses>("Add torrents", (action) => {
+            return Primary.AddTorrents(files);
+        });
+        if (Primary.Capabilities.ForceStartTorrentOnAdd == null) {
+            switch (Input.StartMode) {
+                case START_MODE.DO_NOTHING:
+                    break;
+                case START_MODE.START:
+                    action.CreateChild<TorrentStatuses>("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, (parent, action) => {
+                        var res = parent.GetResult()!;
+                        foreach (var (hash, exceptions) in res) {
+                            if (exceptions.All(x => x == null))
+                                plugin.Logger.Information($"Torrent {Convert.ToHexString(hash)} added");
+                            else
+                                plugin.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
+                        }
 
-            foreach (var (source, _) in Input.Sources) {
-                Func<Task<(string? Filename, byte[] Content)>> fx;
+                        return Primary.StartTorrents([.. res.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash)]);
+                    }).CreateChild("Start torrent completion", RUN_MODE.DEPENDS_ON_PARENT, (startTorrentAction, action) => {
+                        foreach (var (hash, exceptions) in startTorrentAction.GetResult()!) {
+                            if (exceptions.All(x => x == null))
+                                plugin.Logger.Information($"Torrent {Convert.ToHexString(hash)} started");
+                            else
+                                plugin.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
+                        }
 
-                if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && !uri.IsFile) {
-                    fx = async () => {
-                        var req = await Core.Http.Client.GetAsync(uri);
-                        var content = await req.Content.ReadAsByteArrayAsync();
-                        return (req.Content.Headers.ContentDisposition?.FileNameStar ?? Regex.Replace(req.Content.Headers.ContentDisposition?.FileName ?? "", "^\\\"(.*)\\\"$", "$1"), content);
-                    };
-                } else
-                    fx = async () => (Path.GetFileName(source), await File.ReadAllBytesAsync(source));
+                        return default;
+                    });
+                    break;
+                case START_MODE.RECHECK_AND_START:
+                    action.CreateChild<TorrentStatuses>("Recheck", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
+                        var torrentHashes = parent.GetResult()!.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash).ToArray();
 
-                tasks.Add(fx());
+                        var guid = await Primary.ForceRecheck(torrentHashes);
+                        
+                        await Primary.Host.AttachedDaemonService.GetScriptProgress(guid, null);
+                        
+                        // TODO: report proper status
+                        return new TorrentStatuses(torrentHashes.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())));
+                    }).CreateChild<TorrentStatuses>("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, (recheckAction, action) => {
+                        var recheckResults = recheckAction.GetResult()!.Where(x => x.Exceptions.All(i => i != null));
+
+                        return Primary.StartTorrents(recheckResults.Select(x => x.Hash).ToArray());
+                    });
+                    break;
             }
+        }
 
-            var files = (await Task.WhenAll(tasks)).Select((data, x) => (data.Content, data.Filename, Input.Sources[x].Options)).ToList();
+        var queue = Core.ActionQueue.GetActionQueueEntry(Primary.Host);
+        if (queue != null) {
+            var response = await queue.Queue.RunAction(action);
 
-            var action = ActionQueueAction.New<TorrentStatuses>("Add torrents", (action) => {
-                return Primary.Instance.AddTorrents(files);
-            });
-            if (Primary.Instance.Capabilities.ForceStartTorrentOnAdd == null) {
-                switch (Input.StartMode) {
-                    case START_MODE.DO_NOTHING:
-                        break;
-                    case START_MODE.START:
-                        action.CreateChild<TorrentStatuses>("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, (parent, action) => {
-                            var res = parent.GetResult()!;
-                            foreach (var (hash, exceptions) in res) {
-                                if (exceptions.All(x => x == null))
-                                    Primary.Host.Logger.Information($"Torrent {Convert.ToHexString(hash)} added");
-                                else
-                                    Primary.Host.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
-                            }
-
-                            return Primary.Instance.StartTorrents([.. res.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash)]);
-                        }).CreateChild("Start torrent completion", RUN_MODE.DEPENDS_ON_PARENT, (startTorrentAction, action) => {
-                            foreach (var (hash, exceptions) in startTorrentAction.GetResult()!) {
-                                if (exceptions.All(x => x == null))
-                                    Primary.Host.Logger.Information($"Torrent {Convert.ToHexString(hash)} started");
-                                else
-                                    Primary.Host.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
-                            }
-
-                            return default;
-                        });
-                        break;
-                    case START_MODE.RECHECK_AND_START:
-                        action.CreateChild<TorrentStatuses>("Recheck", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
-                            var torrentHashes = parent.GetResult()!.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash).ToArray();
-
-                            var guid = await Primary.Instance.ForceRecheck(torrentHashes);
-                            
-                            await Primary.AttachedDaemonService.GetScriptProgress(guid, null);
-                            
-                            // TODO: report proper status
-                            return new TorrentStatuses(torrentHashes.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())));
-                        }).CreateChild<TorrentStatuses>("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, (recheckAction, action) => {
-                            var recheckResults = recheckAction.GetResult()!.Where(x => x.Exceptions.All(i => i != null));
-
-                            return Primary.Instance.StartTorrents(recheckResults.Select(x => x.Hash).ToArray());
-                        });
-                        break;
-                }
-            }
-
-            var queue = Core.ActionQueue.GetActionQueueEntry(Primary.Host);
-            if (queue != null) {
-                var response = await queue.Queue.RunAction(action);
-
-                foreach (var torrent in response!) {
-                    if (torrent.Exceptions.Any(x => x != null))
-                        Primary.Host.Logger.Error($"{Convert.ToHexString(torrent.Hash)}: {String.Join("; ", torrent.Exceptions.Select(x => x.Message))}");
-                }
+            foreach (var torrent in response!) {
+                if (torrent.Exceptions.Any(x => x != null))
+                    plugin.Logger.Error($"{Convert.ToHexString(torrent.Hash)}: {String.Join("; ", torrent.Exceptions.Select(x => x.Message))}");
             }
         }
     }
