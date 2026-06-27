@@ -180,7 +180,7 @@ public class Config
       "SpeedChartEnabled": true
     },
     "TorrentListing": {
-      "RowHeight": 32
+      "RowHeight": 21
     }
   },
   "Servers": {
