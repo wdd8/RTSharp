@@ -306,7 +306,7 @@
 				  </StackPanel>
 				</DataTemplate>
 				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentHashTemplate">
-				  <dataGridEx:InfoHashGlyph Bytes="{Binding Hash, Mode=OneWay}" Width="16" Height="16" />
+				  <dataGridEx:InfoHashGlyph Bytes="{Binding Hash, Mode=OneWay}" Width="16" Height="16" HorizontalAlignment="Center" />
 				</DataTemplate>
 			  </DataGrid.Resources>
 			  <DataGrid.ContextMenu>

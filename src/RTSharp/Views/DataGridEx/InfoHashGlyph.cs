@@ -70,7 +70,7 @@ public sealed partial class InfoHashGlyph : Control
             ResetPending = false;
         }
 
-        context.DrawImage(Bitmap, new Rect(0, 0, width, height), Bounds);
+        context.DrawImage(Bitmap, new Rect(0, 0, width, height), new Rect(0, 0, width, height));
     }
 
     private unsafe void FillBitmap(WriteableBitmap bitmap)
