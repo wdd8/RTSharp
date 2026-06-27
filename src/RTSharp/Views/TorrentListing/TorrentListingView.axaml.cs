@@ -1,5 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -75,6 +77,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             }
         };
         grid.CopyingRowClipboardContent += (_, e) => ViewModel!.EvCopyingRowClipboardContent(e);
+        grid.PointerPressed += EvGridPointerPressedClearSelection;
 
         RowHeight = config.Look.Value.TorrentListing?.RowHeight ?? 20;
         grid.RowHeight = RowHeight;
@@ -314,4 +317,17 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     public void EvGridContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e) => ViewModel!.RefreshSequentialDownloadMenuHeader();
 
     public void EvGridKeyUp(object? sender, Avalonia.Input.KeyEventArgs e) => ViewModel!.EvGridKeyUp(e);
+
+    private void EvGridPointerPressedClearSelection(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed)
+            return;
+        if (e.Source is not Visual source)
+            return;
+        if (source is DataGridRow || source.FindAncestorOfType<DataGridRow>() != null)
+            return;
+        if (source is DataGridColumnHeader || source.FindAncestorOfType<DataGridColumnHeader>() != null)
+            return;
+        grid.SelectedItems.Clear();
+    }
 }

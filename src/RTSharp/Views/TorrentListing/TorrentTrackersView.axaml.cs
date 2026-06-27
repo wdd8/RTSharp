@@ -1,8 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels.TorrentListing;
@@ -18,6 +21,21 @@ public partial class TorrentTrackersView : VmUserControl<TorrentTrackersViewMode
         BindViewModelActions(vm => {
             vm!.BrowseForIconDialog = ShowBrowserForIconDialog;
         });
+
+        grid.PointerPressed += EvGridPointerPressedClearSelection;
+    }
+
+    private void EvGridPointerPressedClearSelection(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed)
+            return;
+        if (e.Source is not Visual source)
+            return;
+        if (source is DataGridRow || source.FindAncestorOfType<DataGridRow>() != null)
+            return;
+        if (source is DataGridColumnHeader || source.FindAncestorOfType<DataGridColumnHeader>() != null)
+            return;
+        grid.SelectedItems.Clear();
     }
 
     private async Task<string?> ShowBrowserForIconDialog(Window Input)

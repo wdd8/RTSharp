@@ -1,3 +1,8 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.VisualTree;
+
 using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Core.Services;
@@ -17,6 +22,21 @@ public partial class TorrentFilesView : VmUserControl<TorrentFilesViewModel>
         BindViewModelActions(vm => {
             vm!.ShowTextPreviewWindow = ShowTextPreviewWindow;
         });
+
+        MainGrid.PointerPressed += EvGridPointerPressedClearSelection;
+    }
+
+    private void EvGridPointerPressedClearSelection(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed)
+            return;
+        if (e.Source is not Visual source)
+            return;
+        if (source is DataGridRow || source.FindAncestorOfType<DataGridRow>() != null)
+            return;
+        if (source is DataGridColumnHeader || source.FindAncestorOfType<DataGridColumnHeader>() != null)
+            return;
+        MainGrid.SelectedItems.Clear();
     }
 
     public void ShowTextPreviewWindow(string Input)

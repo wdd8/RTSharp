@@ -19,7 +19,7 @@
         <converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter" />
     </Control.Resources>
     
-    <ListBox ItemsSource="{Binding Items}">
+    <ListBox Name="list" ItemsSource="{Binding Items}">
         <ListBox.Styles>
             <Style Selector="ListBoxItem">
                 <Setter Property="BorderThickness" Value="0,2,0,0" />
