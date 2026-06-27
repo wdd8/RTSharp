@@ -47,7 +47,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "Interval cannot be lower than 10ms"));
 
             using (var sub = TorrentPolling.Subscribe(interval)) {
-                Logger.LogInformation("Waiting for updates with interval {interval}...", interval);
+                Logger.LogDebug("Waiting for updates with interval {interval}...", interval);
 
                 while (!CancellationToken.IsCancellationRequested) {
                     var changes = await sub.GetChanges(false, CancellationToken);

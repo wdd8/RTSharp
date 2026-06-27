@@ -157,13 +157,13 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 }
 
                 if (!isOpenRaw)
-                    torrentState = totalSize == downloaded ? TorrentState.Complete : TorrentState.Stopped;
+                    torrentState = totalSize == downloaded ? TorrentState.Complete : TorrentState.Stopped; // TODO: partial downloads
                 else {
                     if (isHashCheckingRaw)
                         torrentState = TorrentState.Hashing;
                     else {
                         if (isActiveRaw)
-                            torrentState = totalSize == downloaded ? TorrentState.Seeding : TorrentState.Downloading;
+                            torrentState = totalSize == downloaded ? TorrentState.Seeding : TorrentState.Downloading; // TODO: partial downloads
                         else
                             torrentState = TorrentState.Paused;
                     }

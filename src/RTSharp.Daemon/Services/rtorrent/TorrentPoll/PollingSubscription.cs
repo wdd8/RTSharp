@@ -149,7 +149,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 if (torrent.UPSpeed == 0 && previous.UPSpeed != 0) // Force send & reset
                     torrent.UPSpeed = UInt64.MaxValue;
 
-                if (torrent.Downloaded == torrent.Size)
+                if (torrent.Downloaded == torrent.WantedSize)
                     torrent.ETA = Duration.FromTimeSpan(TimeSpan.Zero);
                 else {
                     torrent.DLSpeed = (ulong)ComputeSpeed(history, hash, Uploaded: false);
