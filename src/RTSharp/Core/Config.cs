@@ -64,6 +64,10 @@ public class Config
 
             public int? LastPosY { get; set; }
 
+            public int? LastWidth { get; set; }
+
+            public int? LastHeight { get; set; }
+
             public bool Maximized { get; set; }
 
             public bool TrayIconVisible { get; set; }
@@ -175,6 +179,8 @@ public class Config
     "DockState": null,
     "LastPosX": null,
     "LastPosY": null,
+    "LastWidth": null,
+    "LastHeight": null,
     "Maximized": false
   },
   "Look": {

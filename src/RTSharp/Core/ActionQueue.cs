@@ -6,6 +6,7 @@ using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions.Client;
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
 
@@ -66,7 +67,7 @@ public static class ActionQueue
         }
     }
 
-    public static ActionQueueEntry? GetActionQueueEntry(object Related)
+    public static ActionQueueEntry? GetActionQueueEntry(object? Related)
     {
         lock (ActionQueueLock) {
             return ActionQueues.Items.FirstOrDefault(x => x.Related == Related);

@@ -99,7 +99,7 @@ public class TorrentAdd
             }
         }
 
-        var queue = Core.ActionQueue.GetActionQueueEntry(Primary.Host);
+        var queue = ActionQueue.GetActionQueueEntry(Plugins.GetPluginOrDefault(Primary));
         if (queue != null) {
             var response = await queue.Queue.RunAction(action);
 

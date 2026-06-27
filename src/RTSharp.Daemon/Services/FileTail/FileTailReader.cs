@@ -4,6 +4,7 @@ using Grpc.Core;
 
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Daemon.Utils;
+using RTSharp.Shared.Utils;
 
 using System.Buffers;
 using System.IO.Pipelines;

@@ -4,8 +4,6 @@ using Avalonia.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using Nito.AsyncEx;
-
 using RTSharp.Core;
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels;
@@ -20,6 +18,9 @@ namespace RTSharp.Views;
 
 public partial class MainWindow : VmWindow<MainWindowViewModel>
 {
+    private Avalonia.PixelPoint RestorePosition;
+    private Avalonia.Size? RestoreSize;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -37,11 +38,18 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
 
         var x = config.UIState.Value.LastPosX;
         var y = config.UIState.Value.LastPosY;
+        var w = config.UIState.Value.LastWidth;
+        var h = config.UIState.Value.LastHeight;
+
         if (x != null && y != null) {
             this.Position = new Avalonia.PixelPoint(x.Value, y.Value);
-            if (config.UIState.Value.Maximized)
-                this.WindowState = WindowState.Maximized;
         }
+        if (w != null && h != null) {
+            this.Width = w.Value;
+            this.Height = h.Value;
+        }
+        if (config.UIState.Value.Maximized)
+            this.WindowState = WindowState.Maximized;
 
         bool restored = false;
         if (!String.IsNullOrEmpty(config.UIState.Value.DockState)) {
@@ -53,6 +61,15 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         }
         if (!restored)
             ViewModel!.DockFactory.InitLayout(ViewModel!.RootDock);
+
+        this.Closing += (_, _) => {
+            RestorePosition = this.Position;
+
+            if (this.WindowState == WindowState.Normal)
+                RestoreSize = this.ClientSize;
+            else
+                RestoreSize = null;
+        };
 
         this.AddHandler(DragDrop.DropEvent, EvDragDrop);
 
@@ -68,27 +85,33 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         this.ViewModel!.MenuItems.Add(pluginsMenu);
         this.ViewModel!.MenuItems.Add(serversMenu);
 
-        App.RegisterOnExit($"{nameof(MainWindow)}_{nameof(SaveState)}", () => SaveState());
+        App.RegisterOnExit($"{nameof(MainWindow)}_{nameof(SaveState)}", SaveState);
     }
 
     public async ValueTask SaveState()
     {
         string? serialized = null;
-        AsyncManualResetEvent ev = new();
+        Avalonia.PixelPoint pos = default;
+        Avalonia.Size? size = default;
+        bool maximized = false;
 
         Dispatcher.UIThread.Invoke(() => {
             serialized = Core.DockStateSerializer.Serialize(ViewModel!.RootDock);
-            ev.Set();
+            pos = RestorePosition;
+            size = RestoreSize;
+            maximized = this.WindowState == WindowState.Maximized;
         });
 
         using var scope = Core.ServiceProvider.CreateScope();
         var config = scope.ServiceProvider.GetRequiredService<Config>();
 
-        config.UIState.Value.LastPosX = this.Position.X;
-        config.UIState.Value.LastPosY = this.Position.Y;
-        config.UIState.Value.Maximized = this.WindowState == WindowState.Maximized;
-
-        await ev.WaitAsync();
+        config.UIState.Value.LastPosX = pos.X;
+        config.UIState.Value.LastPosY = pos.Y;
+        if (size != null) {
+            config.UIState.Value.LastWidth = (int)size.Value.Width;
+            config.UIState.Value.LastHeight = (int)size.Value.Height;
+        }
+        config.UIState.Value.Maximized = maximized;
         config.UIState.Value.DockState = serialized;
 
         await config.Rewrite();

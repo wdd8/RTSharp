@@ -18,7 +18,9 @@
             <DataTemplate x:DataType="ab:IDataProvider">
                 <DockPanel>
                     <Rectangle DockPanel.Dock="Left" Width="2" Fill="{Binding Host.Config.Plugin.Color, Converter={StaticResource ColorStringToBrushConverter}}" />
-                    <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Text="{Binding}" />
+                    <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">
+                        <Run Text="{Binding Host.Config.Plugin.Name}" /><Run Text=" (" /><Run Text="{Binding Host.Config.Plugin.ServerId}" /><Run Text=")" />
+                    </TextBlock>
                 </DockPanel>
             </DataTemplate>
         </ComboBox.ItemTemplate>
