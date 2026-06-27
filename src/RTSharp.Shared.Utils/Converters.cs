@@ -138,7 +138,7 @@ namespace RTSharp.Shared.Utils
             var minutes = In.Minutes;
             var seconds = In.Seconds;
             var ms = In.Milliseconds;
-            var showMs = ms != 0 || (days == 0 && hours == 0 && minutes == 0 && seconds == 0);
+            var showMs = ms != 0 && (days == 0 && hours == 0 && minutes == 0 && seconds == 0);
 
             int shownCount = 0;
             int len = 0;
