@@ -121,6 +121,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
     public Geometry? Icon => null;
 
     public Func<string?> CaptureGridState = null!; // view set
+    public Func<double[]?> CaptureGridRowHeights = null!; // view set
     public Action<object> ScrollToItem = null!; // view set
 
     static TorrentListingViewModel()

@@ -67,6 +67,8 @@ public class Config
             public bool Maximized { get; set; }
 
             public bool TrayIconVisible { get; set; }
+
+            public double[]? TorrentListingGridRowHeights { get; set; }
         }
 
         public class Server

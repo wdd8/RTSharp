@@ -198,7 +198,7 @@
 			</StackPanel>
 		</dialogHost:DialogHost.DialogContent>
 
-		<Grid RowDefinitions="Auto,*,4,*">
+		<Grid Name="ContentGrid" RowDefinitions="Auto,*,4,*">
 			<StackPanel Orientation="Horizontal">
 				<Button
 					i:Attached.Icon="fa7-solid fa7-play"

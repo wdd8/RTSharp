@@ -54,6 +54,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             vm!.ShowAddLabelDialog = ShowAddLabelDialog;
             vm!.CloseAddLabelDialog = CloseAddLabelDialog;
             vm!.CaptureGridState = CaptureGridState;
+            vm!.CaptureGridRowHeights = CaptureGridRowHeights;
             vm!.ScrollToItem = grid_ScrollToItem;
 
             grid.SortingAdapterFactory = vm!.SortingAdapterFactory;
@@ -81,12 +82,29 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
         RowHeight = config.Look.Value.TorrentListing?.RowHeight ?? 20;
         grid.RowHeight = RowHeight;
+        var savedHeights = config.UIState.Value.TorrentListingGridRowHeights;
+
+        if (savedHeights != null && savedHeights.Length == ContentGrid.RowDefinitions.Count) {
+            for (var i = 0; i < ContentGrid.RowDefinitions.Count; i++) {
+                if (ContentGrid.RowDefinitions[i].Height.IsStar && savedHeights[i] > 0)
+                    ContentGrid.RowDefinitions[i].Height = new GridLength(savedHeights[i], GridUnitType.Star);
+            }
+        }
     }
 
     private void grid_ScrollToItem(object item)
     {
         grid.SelectedItem = item;
         grid.ScrollIntoView(item, null);
+    }
+
+    private double[] CaptureGridRowHeights()
+    {
+        double[] result = null;
+        Dispatcher.UIThread.Invoke(() => {
+            result = ContentGrid.RowDefinitions.Select(r => r.ActualHeight).ToArray();
+        });
+        return result;
     }
 
     private string? CaptureGridState()
@@ -185,12 +203,16 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        var state = CaptureGridState();
-        if (state != null) {
-            using var scope = Core.ServiceProvider.CreateScope();
-            var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
-            config.UIState.Value.TorrentGridState = state;
-        }
+        var gridState = CaptureGridState();
+        var heights = ContentGrid.RowDefinitions.Select(r => r.ActualHeight).ToArray();
+
+        using var scope = Core.ServiceProvider.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
+
+        if (gridState != null)
+            config.UIState.Value.TorrentGridState = gridState;
+
+        config.UIState.Value.TorrentListingGridRowHeights = heights;
     }
 
     public override void EndInit() => base.EndInit();
