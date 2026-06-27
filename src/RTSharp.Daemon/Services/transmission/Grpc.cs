@@ -181,7 +181,6 @@ namespace RTSharp.Daemon.Services.transmission
                     Protocols.DataProvider.Torrent internalTorrent;
 
                     if (!LatestTorrents.TryGetValue(hash, out var torrent)) {
-                        Logger.LogInformation($"New torrent {Convert.ToHexString(hash)} detected: {changedTorrent.Name}");
                         fullUpdate(hash, changedTorrent);
                         continue;
                     } else {

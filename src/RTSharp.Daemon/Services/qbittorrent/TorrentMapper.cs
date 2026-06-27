@@ -67,6 +67,8 @@ public class TorrentMapper
             Stored.DLSpeed = (ulong)External.DownloadSpeed.Value;
         if (External.UploadSpeed != null)
             Stored.UPSpeed = (ulong)External.UploadSpeed.Value;
+        if (External.EstimatedTime != null)
+            Stored.ETA = External.EstimatedTime.Value > TimeSpan.Zero && External.EstimatedTime.Value != TimeSpan.FromDays(100) && External.EstimatedTime.Value != TimeSpan.MaxValue ? Duration.FromTimeSpan(External.EstimatedTime.Value) : null;
         if (External.Tags != null) {
             Stored.Labels.Clear();
             Stored.Labels.AddRange(External.Tags);
@@ -101,7 +103,7 @@ public class TorrentMapper
         if (External.SequentialDownload != null)
             Stored.SequentialDownload = External.SequentialDownload.Value;
 
-        if (Stored.Downloaded == Stored.WantedSize) {
+        if (Stored.CompletedSize == Stored.WantedSize) {
             /*
              * for some reason qbit still reports some DL speed even though the torrent is
              * already complete, but it doesn't make sense for us to report DL speed for
@@ -134,6 +136,8 @@ public class TorrentMapper
             Stored.Uploaded = (ulong)External.Uploaded.Value;
         Stored.DLSpeed = (ulong)External.DownloadSpeed;
         Stored.UPSpeed = (ulong)External.UploadSpeed;
+        if (External.EstimatedTime != null)
+            Stored.ETA = External.EstimatedTime.Value > TimeSpan.Zero && External.EstimatedTime.Value != TimeSpan.FromDays(100) && External.EstimatedTime.Value != TimeSpan.MaxValue ? Duration.FromTimeSpan(External.EstimatedTime.Value) : null;
         if (External.Tags != null) {
             Stored.Labels.Clear();
             Stored.Labels.AddRange(External.Tags);
@@ -161,7 +165,7 @@ public class TorrentMapper
             Stored.MagnetDummy = External.MagnetUri != null;
         Stored.SequentialDownload = External.SequentialDownload;
 
-        if (Stored.Downloaded == Stored.WantedSize) {
+        if (Stored.CompletedSize == Stored.WantedSize) {
             /*
              * for some reason qbit still reports some DL speed even though the torrent is
              * already complete, but it doesn't make sense for us to report DL speed for

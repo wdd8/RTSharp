@@ -573,7 +573,6 @@ namespace RTSharp.Daemon.Services.qbittorrent
                         Protocols.DataProvider.Torrent internalTorrent;
 
                         if (!LatestTorrents.TryGetValue(hash, out var torrent)) {
-                            Logger.LogInformation($"New torrent {Convert.ToHexString(hash)} detected: {changedTorrent.Name}");
                             fullUpdate(strHash, changedTorrent);
                             continue;
                         } else {
