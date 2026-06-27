@@ -3,6 +3,8 @@
 
 RTSharp is a cross-platform bittorrent daemon GUI written in C# using AvaloniaUI framework. RTSharp supports multiple types of daemons with some additional features when it is not supported by the daemon itself.
 
+![Screenshot](docs/screenshot.png)
+
 ### Requirements
 
 Client application requirements are the same as for [AvaloniaUI](https://docs.avaloniaui.net/docs/faq#what-platforms-are-supported), however mobile, embedded systems and wasm are not supported.
@@ -15,7 +17,7 @@ Daemon must be run in a linux environment.
 
 ### Getting started
 
-See [setting up data providers](setup-dataproviders.md)
+See [setting up data providers](docs/setup-dataproviders.md)
 
 ### Features
 
