@@ -49,6 +49,9 @@ namespace RTSharp.Daemon.Services.rtorrent
             using (var sub = TorrentPolling.Subscribe(interval)) {
                 Logger.LogDebug("Waiting for updates with interval {interval}...", interval);
 
+                // Respond so that client sees we're alive
+                await Res.WriteAsync(new(), CancellationToken);
+
                 while (!CancellationToken.IsCancellationRequested) {
                     var changes = await sub.GetChanges(false, CancellationToken);
 
