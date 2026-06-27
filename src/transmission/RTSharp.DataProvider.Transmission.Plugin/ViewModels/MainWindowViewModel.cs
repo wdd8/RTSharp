@@ -37,6 +37,7 @@ public partial class MainWindowViewModel : ObservableObject
             SavingSettings = false;
         });
         await ((IActionQueueRenderer)ThisPlugin.ActionQueue).RunAction(action);
+        await ThisPlugin.Host.SavePluginConfig(cfg => cfg.ListUpdateInterval = TimeSpan.FromSeconds(ListUpdateIntervalSeconds));
     }
 
     async partial void OnSavingSettingsChanged(bool value)
@@ -68,18 +69,24 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(NetworkSelected))]
     [NotifyPropertyChangedFor(nameof(BandwidthSelected))]
     [NotifyPropertyChangedFor(nameof(QueueSelected))]
+    [NotifyPropertyChangedFor(nameof(RTSharpSelected))]
     public Category currentlySelectedCategory;
 
     public bool DownloadSelected => CurrentlySelectedCategory?.Name == "Download";
     public bool NetworkSelected => CurrentlySelectedCategory?.Name == "Network (WAN)";
     public bool BandwidthSelected => CurrentlySelectedCategory?.Name == "Bandwidth";
     public bool QueueSelected => CurrentlySelectedCategory?.Name == "Queue";
+    public bool RTSharpSelected => CurrentlySelectedCategory?.Name == "RT#";
+
+    [ObservableProperty]
+    public partial double ListUpdateIntervalSeconds { get; set; } = 1;
 
     public Category[] Categories { get; set; } = new Category[] {
         new Category("Download", "fa7-solid fa7-download"),
         new Category("Network (WAN)", "fa7-solid fa7-network-wired"),
         new Category("Bandwidth", "fa7-solid fa7-signal"),
-        new Category("Queue", "fa7-solid fa7-lines-leaning")
+        new Category("Queue", "fa7-solid fa7-lines-leaning"),
+        new Category("RT#", "fa7-solid fa7-stopwatch")
     };
 
     [ObservableProperty]

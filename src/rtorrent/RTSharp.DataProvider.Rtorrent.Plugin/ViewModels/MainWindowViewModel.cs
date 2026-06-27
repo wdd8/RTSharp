@@ -34,6 +34,7 @@ public partial class MainWindowViewModel : ObservableObject
             SavingSettings = false;
         });
         await ((IActionQueueRenderer)ThisPlugin.ActionQueue).RunAction(action);
+        await PluginHost.SavePluginConfig(cfg => cfg.ListUpdateInterval = TimeSpan.FromSeconds(ListUpdateIntervalSeconds));
     }
 
     async partial void OnSavingSettingsChanged(bool value)
@@ -66,17 +67,23 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(PeersSelected))]
     [NotifyPropertyChangedFor(nameof(ConnectionSelected))]
     [NotifyPropertyChangedFor(nameof(AdvancedSelected))]
+    [NotifyPropertyChangedFor(nameof(RTSharpSelected))]
     public partial Category CurrentlySelectedCategory { get; set; }
 
     public bool GeneralSelected => CurrentlySelectedCategory?.Name == "General";
     public bool PeersSelected => CurrentlySelectedCategory?.Name == "Peers";
     public bool ConnectionSelected => CurrentlySelectedCategory?.Name == "Connection";
     public bool AdvancedSelected => CurrentlySelectedCategory?.Name == "Advanced";
+    public bool RTSharpSelected => CurrentlySelectedCategory?.Name == "RT#";
+
+    [ObservableProperty]
+    public partial double ListUpdateIntervalSeconds { get; set; } = 1;
 
     public Category[] Categories { get; set; } = new Category[] {
         new Category("General", "fa7-solid fa7-wrench"),
         new Category("Peers", "fa7-solid fa7-download"),
         new Category("Connection", "fa7-solid fa7-signal"),
-        new Category("Advanced", "fa7-solid fa7-tools")
+        new Category("Advanced", "fa7-solid fa7-tools"),
+        new Category("RT#", "fa7-solid fa7-stopwatch")
     };
 }

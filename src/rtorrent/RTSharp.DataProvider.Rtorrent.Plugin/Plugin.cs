@@ -80,7 +80,8 @@ public class Plugin : BasePlugin<RtorrentDataProviderInstanceConfig>
                 PluginHost = Host,
                 ThisPlugin = this,
                 Title = Host.Config.Plugin.Name + " rtorrent settings",
-                Settings = SettingsMapper.MapFromProto(settings)
+                Settings = SettingsMapper.MapFromProto(settings),
+                ListUpdateIntervalSeconds = Host.Config.ListUpdateInterval.TotalSeconds
             }
         };
         ((MainWindowViewModel)settingsWindow.DataContext!).ThisWindow = settingsWindow;

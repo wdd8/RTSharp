@@ -183,6 +183,15 @@
                                         IsEnabled="{Binding IsChecked, ElementName=ConsiderStalledCheckBox}" />
                         <TextBlock Grid.Row="2" Grid.Column="2" Text="minutes" Margin="6,0,0,0" HorizontalAlignment="Right" />
                     </Grid>
+                    <StackPanel Orientation="Vertical" Spacing="4" IsVisible="{Binding RTSharpSelected}">
+                        <GroupBox Header="Polling">
+                            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto" ColumnSpacing="6">
+                                <TextBlock Grid.Column="0" Grid.Row="0" Text="List update interval:" />
+                                <NumericUpDown Grid.Column="1" Grid.Row="0" Value="{Binding ListUpdateIntervalSeconds}" Minimum="0.1" Increment="0.1" FormatString="0.##" />
+                                <TextBlock Grid.Column="2" Grid.Row="0" Text="seconds" />
+                            </Grid>
+                        </GroupBox>
+                    </StackPanel>
                 </Panel>
             </ScrollViewer>
 

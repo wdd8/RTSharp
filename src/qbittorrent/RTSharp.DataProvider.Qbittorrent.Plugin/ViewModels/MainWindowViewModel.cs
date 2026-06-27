@@ -48,6 +48,7 @@ public partial class MainWindowViewModel : ObservableObject
             SavingSettings = false;
         });
         await ((IActionQueueRenderer)ThisPlugin.ActionQueue).RunAction(action);
+        await ThisPlugin.Host.SavePluginConfig(cfg => cfg.ListUpdateInterval = TimeSpan.FromSeconds(ListUpdateIntervalSeconds));
     }
 
     async partial void OnSavingSettingsChanged(bool value)
@@ -171,6 +172,7 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(RssSelected))]
     [NotifyPropertyChangedFor(nameof(WebUISelected))]
     [NotifyPropertyChangedFor(nameof(AdvancedSelected))]
+    [NotifyPropertyChangedFor(nameof(RTSharpSelected))]
     public partial Category CurrentlySelectedCategory { get; set; }
 
     public bool BehaviourSelected => CurrentlySelectedCategory?.Name == "Behaviour";
@@ -181,6 +183,10 @@ public partial class MainWindowViewModel : ObservableObject
     public bool RssSelected => CurrentlySelectedCategory?.Name == "RSS";
     public bool WebUISelected => CurrentlySelectedCategory?.Name == "WebUI";
     public bool AdvancedSelected => CurrentlySelectedCategory?.Name == "Advanced";
+    public bool RTSharpSelected => CurrentlySelectedCategory?.Name == "RT#";
+
+    [ObservableProperty]
+    public partial double ListUpdateIntervalSeconds { get; set; } = 1;
 
     public static Category[] Categories { get; set; } = [
         new Category("Behaviour", "fa7-solid fa7-sliders"),
@@ -190,7 +196,8 @@ public partial class MainWindowViewModel : ObservableObject
         new Category("BitTorrent", "fa7-solid fa7-share-nodes"),
         new Category("RSS", "fa7-solid fa7-rss"),
         new Category("WebUI", "fa7-solid fa7-globe"),
-        new Category("Advanced", "fa7-solid fa7-screwdriver-wrench")
+        new Category("Advanced", "fa7-solid fa7-screwdriver-wrench"),
+        new Category("RT#", "fa7-solid fa7-stopwatch")
     ];
 
     public static string[] LogAgeTypeOptions => SettingsMapper.LogAgeTypeOptions;

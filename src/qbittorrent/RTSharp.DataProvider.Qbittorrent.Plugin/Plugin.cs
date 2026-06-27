@@ -82,7 +82,8 @@ public class Plugin : BasePlugin<QbittorrentDataProviderInstanceConfig>
             ViewModel = new MainWindowViewModel() {
                 ThisPlugin = this,
                 Title = Host.Config.Plugin.Name + " qbittorrent settings",
-                Settings = SettingsMapper.MapFromProto(settings)
+                Settings = SettingsMapper.MapFromProto(settings),
+                ListUpdateIntervalSeconds = Host.Config.ListUpdateInterval.TotalSeconds
             }
         };
         var vm = (MainWindowViewModel)settingsWindow.DataContext!;

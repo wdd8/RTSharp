@@ -70,7 +70,8 @@ public class Plugin : BasePlugin<TransmissionDataProviderInstanceConfig>
             ViewModel = new MainWindowViewModel() {
                 ThisPlugin = this,
                 Title = Host.Config.Plugin.Name + " transmission settings",
-                Settings = SettingsMapper.MapFromProto(settings)
+                Settings = SettingsMapper.MapFromProto(settings),
+                ListUpdateIntervalSeconds = Host.Config.ListUpdateInterval.TotalSeconds
             }
         };
         ((MainWindowViewModel)settingsWindow.DataContext!).ThisWindow = settingsWindow;
