@@ -37,7 +37,7 @@
             <ListBox Grid.Row="0" ItemsSource="{Binding Plugins}" SelectedItem="{Binding CurrentlySelectedPlugin}">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="plugin:RTSharpPlugin">
-                        <TextBlock Text="{Binding PluginInstanceConfig.Name}"/>
+                        <TextBlock Text="{Binding Config.Plugin.Name}"/>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>

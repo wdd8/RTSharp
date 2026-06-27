@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 using RTSharp.Daemon.Services;
 using RTSharp.Daemon.Utils;
-using RTSharp.Shared.Abstractions;
 
 using System.Net;
 using System.Runtime.InteropServices;
@@ -94,38 +93,31 @@ public static class Program
 
         builder.Services.AddSingleton<RTSharp.Daemon.GRPCServices.DataProvider.RegisteredDataProviders>();
 
-        var setgid = builder.Configuration.GetSection("setgid").Get<string?>();
-
-        if (setgid != null) {
-            if (Mono.Unix.Native.Syscall.setgid(UInt32.Parse(setgid)) != 0) {
-                throw new Exception($"failed to setgid {UInt32.Parse(setgid)}. {Mono.Unix.Native.Stdlib.GetLastError()}");
-            } else {
-                Console.WriteLine("setgid: " + UInt32.Parse(setgid));
-            }
-        }
-
-        var setuid = builder.Configuration.GetSection("setuid").Get<string?>();
-
-        if (setuid != null) {
-            if (Mono.Unix.Native.Syscall.setuid(UInt32.Parse(setuid)) != 0) {
-                throw new Exception($"failed to setuid {UInt32.Parse(setuid)}. {Mono.Unix.Native.Stdlib.GetLastError()}");
-            } else {
-                Console.WriteLine("setuid: " + UInt32.Parse(setuid));
-            }
-        }
-
         string[] allowedClients;
 
-        void loadConfig()
+        bool loadConfig()
         {
             allowedClients = builder.Configuration.GetSection("AllowedClients").Get<string[]>() ?? [];
 
             var certs = builder.Configuration.GetCertificates();
+
+            if (certs.Public == null || certs.Private == null) {
+                Console.WriteLine("No server certificate configured.");
+                return false;
+            }
+
+            var prev = ServerCertificate;
             ServerCertificate = new ReloadableServerCertificate(certs);
-            ServerCertificate.Reload();
+            if (!ServerCertificate.Load()) {
+                ServerCertificate = prev;
+                return false;
+            }
+            return true;
         }
 
-        loadConfig();
+        if (!loadConfig()) {
+            Environment.Exit(1);
+        }
 
         builder.WebHost.ConfigureKestrel(kestrelServerOptions => {
             foreach (var address in builder.Configuration.GetListenAddresses()) {
@@ -180,7 +172,10 @@ public static class Program
 
         PosixSignalRegistration.Create(PosixSignal.SIGHUP, context => {
             context.Cancel = true;
-            loadConfig();
+            if (!loadConfig()) {
+                Console.WriteLine("Failed to reload server configuration");
+                return;
+            }
 
             Console.WriteLine("Server configuration reloaded");
         });

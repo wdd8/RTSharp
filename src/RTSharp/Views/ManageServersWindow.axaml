@@ -1,0 +1,133 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:RTSharp.ViewModels"
+        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+        xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+        xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+        xmlns:models="using:RTSharp.Models"
+        mc:Ignorable="d" d:DesignWidth="760" d:DesignHeight="480"
+        x:Name="window"
+        Width="760" Height="480"
+        x:Class="RTSharp.Views.ManageServersWindow"
+        x:DataType="vm:ManageServersWindowViewModel"
+        Icon="/Assets/rtsharp.ico"
+        Title="RT# - Servers">
+
+    <Window.Resources>
+        <converters:MathConverter x:Key="MathConverter"/>
+    </Window.Resources>
+
+    <Window.Styles>
+        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+        <Style Selector="TextBlock.label">
+            <Setter Property="Padding" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.value">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Separator">
+            <Setter Property="Margin" Value="0,6,0,6" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="4,3,4,4" />
+        </Style>
+    </Window.Styles>
+
+    <dialogHost:DialogHost IsOpen="{Binding IsDialogOpen, Mode=TwoWay}" CloseOnClickAway="True">
+        <dialogHost:DialogHost.DialogContent>
+            <StackPanel Spacing="6" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.65)}">
+                <TextBlock Text="{Binding DialogTitle}" FontWeight="SemiBold" Margin="0,0,0,4" />
+
+                <TextBlock Text="Server ID" Opacity="0.6" FontSize="11" />
+                <TextBox Text="{Binding DialogServer.ServerId}" />
+
+                <TextBlock Text="Host" Opacity="0.6" FontSize="11" Margin="0,4,0,0" />
+                <TextBox Text="{Binding DialogServer.Host}" />
+
+                <TextBlock Text="Port" Opacity="0.6" FontSize="11" Margin="0,4,0,0" />
+                <NumericUpDown Value="{Binding DialogServer.Port}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" />
+
+                <TextBlock Text="Trusted certificate thumbprint (SHA-256)" Opacity="0.6" FontSize="11" Margin="0,4,0,0" />
+                <TextBox Text="{Binding DialogServer.CertThumbprint}" />
+
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,12,0,0">
+                    <Button Grid.Column="0" Content="Test" Command="{Binding TestDialogConnectionCommand}" />
+                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto" Margin="8,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Grid.Column="0" Text="{Binding DialogServer.ConnectionStatus}" IsVisible="{Binding DialogServer.ConnectionStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding DialogServer.Latency}" IsVisible="{Binding DialogServer.Latency, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Opacity="0.6" VerticalAlignment="Center" Margin="8,0,0,0" />
+                    </Grid>
+                    <Button Grid.Column="2" Content="{Binding DialogConfirmText}" Command="{Binding ConfirmDialogCommand}" IsEnabled="{Binding DialogServer.IsServerValid}" Margin="0,0,8,0" />
+                    <Button Grid.Column="3" Content="Cancel" Command="{Binding CancelDialogCommand}" />
+                </Grid>
+            </StackPanel>
+        </dialogHost:DialogHost.DialogContent>
+
+        <Grid ColumnDefinitions="2*,6,3*" Margin="4,4,4,4">
+            <Grid Grid.Column="0" RowDefinitions="*,Auto">
+                <ListBox Grid.Row="0" ItemsSource="{Binding ConfiguredServers}" SelectedItem="{Binding SelectedServer}" DoubleTapped="EvDoubleTapped">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:Server">
+                            <StackPanel>
+                                <TextBlock Text="{Binding ServerId}" FontWeight="SemiBold" />
+                                <TextBlock FontSize="11" Opacity="0.6">
+                                    <Run Text="{Binding Host}" /><Run Text=":" /><Run Text="{Binding Port}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4" Margin="0,6,0,0">
+                    <Button Content="Add" Command="{Binding BeginAddCommand}" />
+                    <Button Content="Edit" Command="{Binding BeginEditCommand}" />
+                    <Button Content="Delete" Command="{Binding DeleteCommand}" />
+                </StackPanel>
+            </Grid>
+
+            <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
+
+            <Grid Grid.Column="2" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="8,0,0,0" IsVisible="{Binding SelectedServer, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <StackPanel Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
+                    <views:BuiltInIconImage Value="SERVER" Width="16" Height="16" Margin="0,0,6,0" />
+                    <TextBlock FontWeight="SemiBold" VerticalAlignment="Center">Connection</TextBlock>
+                </StackPanel>
+
+                <TextBlock Grid.Column="0" Grid.Row="1" Classes="label">Endpoint:</TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="1" Classes="value">
+                    <Run Text="{Binding SelectedServer.Host}" />
+                    <Run Text=":" />
+                    <Run Text="{Binding SelectedServer.Port}" />
+                </TextBlock>
+
+                <TextBlock Grid.Column="0" Grid.Row="2" Classes="label">Status:</TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="2" Classes="value" Text="{Binding SelectedServer.ConnectionStatus}" />
+
+                <TextBlock Grid.Column="0" Grid.Row="3" Classes="label" IsVisible="{Binding SelectedServer.Latency, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">Latency:</TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="3" Classes="value" Text="{Binding SelectedServer.Latency}" IsVisible="{Binding SelectedServer.Latency, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                <Button Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" Content="Test Connection" Command="{Binding TestConnectionCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+
+                <Separator Grid.Column="0" Grid.Row="5" Grid.ColumnSpan="2" />
+
+                <StackPanel Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6" IsVisible="{Binding SelectedServer.CertThumbprint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <views:BuiltInIconImage Value="CERTIFICATE" Width="16" Height="16" Margin="0,0,6,0" />
+                    <TextBlock FontWeight="SemiBold" VerticalAlignment="Center">Certificate</TextBlock>
+                </StackPanel>
+
+                <TextBlock Grid.Column="0" Grid.Row="7" Classes="label" IsVisible="{Binding SelectedServer.CertThumbprint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">Thumbprint:</TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="7" Classes="value" Text="{Binding SelectedServer.CertThumbprint}" TextWrapping="Wrap" IsVisible="{Binding SelectedServer.CertThumbprint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                <TextBlock Grid.Column="0" Grid.Row="8" Classes="label" IsVisible="{Binding SelectedServer.CertNotBefore, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">Not before:</TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="8" Classes="value" Text="{Binding SelectedServer.CertNotBefore}" IsVisible="{Binding SelectedServer.CertNotBefore, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                <TextBlock Grid.Column="0" Grid.Row="9" Classes="label" IsVisible="{Binding SelectedServer.CertNotAfter, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">Not after:</TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="9" Classes="value" Text="{Binding SelectedServer.CertNotAfter}" IsVisible="{Binding SelectedServer.CertNotAfter, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                <TextBlock Grid.Column="0" Grid.Row="10" Classes="label" IsVisible="{Binding SelectedServer.CertAlgorithm, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">TLS algorithm:</TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="10" Classes="value" Text="{Binding SelectedServer.CertAlgorithm}" IsVisible="{Binding SelectedServer.CertAlgorithm, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </Grid>
+        </Grid>
+    </dialogHost:DialogHost>
+</Window>

@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace RTSharp.AutoIntegrify.Plugin;
 
-public class Plugin : BasePlugin
+public class Plugin : BasePlugin<AutoIntegrifyPluginConfig>
 {
     public override string Name => "Auto integrify";
 
@@ -31,15 +31,15 @@ public class Plugin : BasePlugin
 
     IDisposable? MenuItem;
 
-    public required override IPluginHost Host { get; set; }
-    
-    public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
+    public required IPluginHost<AutoIntegrifyPluginConfig> Host { get; set; }
+
+    public override Task<IPlugin> Init(IPluginHost<AutoIntegrifyPluginConfig> Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
         Progress(("Initializing...", 0f));
 
         Dispatcher.UIThread.Invoke(() => {
-            MenuItem = Host.RegisterTorrentContextMenuItem(list => {
+            MenuItem = this.Host.RegisterTorrentContextMenuItem(list => {
                 var newMenuItem = new MenuItem {
                     Header = "Align file integrity & recheck",
                     Command = new AsyncRelayCommand<IReadOnlyList<Torrent>>(selected => {

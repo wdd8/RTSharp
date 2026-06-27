@@ -56,16 +56,16 @@ namespace RTSharp.ViewModels
             AddDisposable(Plugins.DataProviders
                 .Connect()
                 .AutoRefreshOnObservable(x => x.State)
-                .AutoRefreshOnObservable(x => x.PluginInstance.AttachedDaemonService.Latency)
-                .Subscribe(x => {
+                .AutoRefreshOnObservable(x => x.AttachedDaemonService.Latency)
+                .Subscribe((Action<IChangeSet<RTSharpDataProvider>>)(x => {
                     foreach (var change in x) {
-                        var item = Items.FirstOrDefault(i => i.DataProvider.InstanceId == change.Item.Current.PluginInstance.InstanceId);
+                        var item = Items.FirstOrDefault(i => i.DataProvider.InstanceId == change.Item.Current.InstanceId);
                         if (item == default) {
                             var model = new Models.DataProvider {
-                                DisplayName = change.Item.Current.PluginInstance.PluginInstanceConfig.Name,
-                                InstanceId = change.Item.Current.PluginInstance.InstanceId,
+                                DisplayName = change.Item.Current.Config.Plugin.Name,
+                                InstanceId = change.Item.Current.InstanceId,
                                 State = change.Item.Current.State.Value,
-                                Latency = Shared.Utils.Converters.ToAgoString(change.Item.Current.PluginInstance.AttachedDaemonService.Latency.Value),
+                                Latency = Shared.Utils.Converters.ToAgoString(change.Item.Current.AttachedDaemonService.Latency.Value),
                                 TotalDLSpeed = 0,
                                 TotalUPSpeed = 0,
                                 ActiveTorrentCount = 0
@@ -81,12 +81,12 @@ namespace RTSharp.ViewModels
 
                             item.DataProvider.State = change.Item.Current.State.Value;
                             if (item.DataProvider.State != Shared.Abstractions.DataProviderState.INACTIVE)
-                                item.DataProvider.Latency = Shared.Utils.Converters.ToAgoString(change.Item.Current.PluginInstance.AttachedDaemonService.Latency.Value);
+                                item.DataProvider.Latency = Shared.Utils.Converters.ToAgoString(change.Item.Current.AttachedDaemonService.Latency.Value);
                             else
                                 item.DataProvider.Latency = "?";
                         }
                     }
-                }));
+                })));
 
             TorrentPolling.Torrents.Changed += TorrentPolling_TorrentBatchChange;
             AddDisposable(Disposable.Create(() => TorrentPolling.Torrents.Changed -= TorrentPolling_TorrentBatchChange));
@@ -112,7 +112,7 @@ namespace RTSharp.ViewModels
 
         private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)
         {
-            var vm = Items.FirstOrDefault(x => x.DataProvider.InstanceId == e.DataProvider.PluginInstance.InstanceId);
+            var vm = Items.FirstOrDefault(x => x.DataProvider.InstanceId == e.DataProvider.Host.InstanceId);
 
             Debug.Assert(vm != null);
             if (vm == null)
@@ -151,6 +151,8 @@ namespace RTSharp.ViewModels
 
         public RTSharpDataProvider DpInstance { get; }
 
+        public IBrush PluginColor { get; }
+
         public bool CanShowLogs => DpInstance.Instance.Capabilities.GetLogs;
 
         [RelayCommand]
@@ -185,6 +187,7 @@ namespace RTSharp.ViewModels
             DataProvider = Dp;
             this.DpInstance = DpInstance;
             this.SpeedChartEnabled = SpeedChartEnabled;
+            PluginColor = new SolidColorBrush(Color.Parse(DpInstance.Config.Plugin.Color ?? "#000000"));
 
             var dlSpeedPaint = new SolidColorPaint(SKColor.Parse("#D64040")) {
                 StrokeThickness = 2
@@ -287,7 +290,7 @@ namespace RTSharp.ViewModels
             var expectedActiveCount = 0U;
 
             foreach (var t in TorrentPolling.Torrents.GetSnapshot()) {
-                if (t.DataOwner.PluginInstance.InstanceId != DataProvider.InstanceId)
+                if (t.DataOwner.Host.InstanceId != DataProvider.InstanceId)
                     continue;
 
                 expectedDLSpeed += t.DLSpeed;

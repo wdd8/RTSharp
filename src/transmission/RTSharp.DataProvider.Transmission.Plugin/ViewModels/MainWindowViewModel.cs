@@ -28,9 +28,9 @@ public partial class MainWindowViewModel : ObservableObject
     public async Task SaveSettingsClick()
     {
         SavingSettings = true;
-        var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
 
-        Func<ActionQueueAction, Task<Empty>> setSettingsTask = async (task) => await client.SetSessionSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        Func<ActionQueueAction, Task<Empty>> setSettingsTask = async (task) => await client.SetSessionSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.Host.GetBuiltInDataProviderGrpcHeaders());
 
         var action = ActionQueueAction.New<Empty>("Set settings", setSettingsTask);
         _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
@@ -55,7 +55,6 @@ public partial class MainWindowViewModel : ObservableObject
     public bool saveSettingsEnabled = true;
 
     public required Plugin ThisPlugin { private get; init; }
-    public required IPluginHost PluginHost { get; init; }
 
     public Window ThisWindow { get; set; } = null!; // set right after ctor
 

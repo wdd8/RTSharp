@@ -69,7 +69,7 @@ public class MediaPreviewService
 
         var ep = (IPEndPoint)listener.EndPoint;
         var token = Guid.NewGuid().ToString("N");
-        _sessions[token] = new PreviewSession(Torrent.DataOwner.PluginInstance.AttachedDaemonService, remotePath, fileSize, GetContentType(remotePath));
+        _sessions[token] = new PreviewSession(Torrent.DataOwner.AttachedDaemonService, remotePath, fileSize, GetContentType(remotePath));
 
         var url = $"http://{ep.Address}:{ep.Port}/{token}";
         Log.Logger.Information("MediaPreviewService: preview {Url}", url);

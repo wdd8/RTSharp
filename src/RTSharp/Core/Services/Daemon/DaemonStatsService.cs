@@ -1,9 +1,4 @@
-﻿using Grpc.Net.ClientFactory;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
-using RTSharp.Daemon.Protocols.DataProvider;
+﻿using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Plugin;
 
 using System.Threading;
@@ -15,22 +10,16 @@ namespace RTSharp.Core.Services.Daemon
     internal class DaemonStatsService : IDaemonStatsService
     {
         GRPCStatsService.GRPCStatsServiceClient StatsClient;
-        ILogger<DaemonService> Logger;
 
         private readonly string ServerId;
         private readonly RTSharpDataProvider DataProvider;
 
         public DaemonStatsService(RTSharpDataProvider DataProvider)
         {
-            this.ServerId = DataProvider.DataProviderInstanceConfig.ServerId;
+            this.ServerId = DataProvider.Config.Plugin.ServerId;
             this.DataProvider = DataProvider;
 
-            using var scope = Core.ServiceProvider.CreateScope();
-            var clientFactory = scope.ServiceProvider.GetRequiredService<GrpcClientFactory>();
-
-            StatsClient = clientFactory.CreateClient<GRPCStatsService.GRPCStatsServiceClient>(nameof(GRPCStatsService.GRPCStatsServiceClient) + "_" + ServerId);
-
-            Logger = scope.ServiceProvider.GetRequiredService<ILogger<DaemonService>>();
+            StatsClient = Servers.All[ServerId].GetGrpcService<GRPCStatsService.GRPCStatsServiceClient>();
         }
 
         public async Task<Shared.Abstractions.AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken)

@@ -1,10 +1,8 @@
-using ExCSS;
-
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
-using Grpc.Net.ClientFactory;
+using Grpc.Net.Client;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -43,68 +41,82 @@ record RequestReceivePaths(string StorePath, string RemoteSourcePath, ulong Tota
 [JsonSerializable(typeof(List<RequestReceivePaths>))]
 internal partial class RequestReceivePathsContext : JsonSerializerContext { }
 
+[Singleton]
 public class DaemonService : IDaemonService
 {
-    /// See <see cref="ConfigureServices.AddDaemonServices"/>
+    /// See <see cref="ConfigureServices.CreateChannel(string, Config.Models.Server, Func{System.Security.Cryptography.X509Certificates.X509Certificate2, bool}?)" />
     /// 
-    /// Populated from the TLS validation callback in ConfigureServices. A cleaner
-    /// solution would be to establish a connection, then extract the peer certificate
-    /// from that channel — but gRPC doesn't expose any accessors for that
+    /// Populated from the TLS validation callback in ConfigureServices.CreateChannel. A
+    /// cleaner solution would be to establish a connection, then extract the peer
+    /// certificate from that channel — but gRPC doesn't expose any accessors for that
     public static ConcurrentDictionary<string, System.Security.Cryptography.X509Certificates.X509Certificate2> RemoteCerts { get; } = new();
 
-    /// See <see cref="ConfigureServices.AddDaemonServices"/>
     public static ConcurrentDictionary<string, string> RemoteCipherSuites { get; } = new();
 
-    GRPCServerService.GRPCServerServiceClient ServerClient;
-    GRPCFilesService.GRPCFilesServiceClient FilesClient;
-    GRPCLogsService.GRPCLogsServiceClient LogsClient;
-    IHostApplicationLifetime Lifetime;
+    readonly GRPCServerService.GRPCServerServiceClient ServerClient;
+    readonly GRPCFilesService.GRPCFilesServiceClient FilesClient;
+    readonly GRPCLogsService.GRPCLogsServiceClient LogsClient;
+    readonly IHostApplicationLifetime Lifetime;
+    readonly GrpcChannel Channel;
+    readonly CancellationTokenSource Cts;
 
-    private Dictionary<string, Config.Models.Server> Servers;
     public string Id { get; }
 
     public string Host { get; }
 
     public ushort Port { get; }
 
+    public CancellationToken CancellationToken => Cts.Token;
+
     public Notifyable<TimeSpan> Latency { get; private set; } = new();
 
-    public DaemonService(string ServerId, IHostApplicationLifetime Lifetime)
+    public DaemonService(string ServerId, Config.Models.Server Server, GrpcChannel Channel, IHostApplicationLifetime Lifetime)
     {
         this.Id = ServerId;
         this.Lifetime = Lifetime;
+        this.Channel = Channel;
+        this.Cts = new CancellationTokenSource();
 
-        using var scope = Core.ServiceProvider.CreateScope();
-        var clientFactory = scope.ServiceProvider.GetRequiredService<GrpcClientFactory>();
-        var config = scope.ServiceProvider.GetRequiredService<Config>();
+        ServerClient = new GRPCServerService.GRPCServerServiceClient(Channel);
+        FilesClient = new GRPCFilesService.GRPCFilesServiceClient(Channel);
+        LogsClient = new GRPCLogsService.GRPCLogsServiceClient(Channel);
 
-        ServerClient = clientFactory.CreateClient<GRPCServerService.GRPCServerServiceClient>(nameof(GRPCServerService.GRPCServerServiceClient) + "_" + ServerId);
-        FilesClient = clientFactory.CreateClient<GRPCFilesService.GRPCFilesServiceClient>(nameof(GRPCFilesService.GRPCFilesServiceClient) + "_" + ServerId);
-        LogsClient = clientFactory.CreateClient<GRPCLogsService.GRPCLogsServiceClient>(nameof(GRPCLogsService.GRPCLogsServiceClient) + "_" + ServerId);
-        Servers = config.Servers.Value;
-
-        var cfg = Servers.First(x => x.Key == ServerId).Value;
-        Host = cfg.Host;
-        Port = cfg.DaemonPort;
+        Host = Server.Host;
+        Port = Server.DaemonPort;
 
         _ = Task.Run(PingLoop);
     }
 
+    public void Shutdown()
+    {
+        Cts.Cancel();
+        Channel.Dispose();
+    }
+
     public async Task PingLoop()
     {
-        while (!Lifetime.ApplicationStopping.IsCancellationRequested) {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(Cts.Token, Lifetime.ApplicationStopping);
+        while (!linked.Token.IsCancellationRequested) {
             var sw = Stopwatch.StartNew();
             try {
-                await Ping(Lifetime.ApplicationStopping);
+                await Ping(linked.Token);
                 sw.Stop();
                 Latency.Change(sw.Elapsed);
+            } catch (OperationCanceledException) when (linked.Token.IsCancellationRequested) {
+                break;
             } catch {
                 sw.Stop();
                 Log.Logger.Error($"Ping failed for {Host}:{Port}");
             }
 
-            if (sw.Elapsed < TimeSpan.FromSeconds(1))
-                await Task.Delay(TimeSpan.FromSeconds(1) - sw.Elapsed);
+            var remaining = TimeSpan.FromSeconds(1) - sw.Elapsed;
+            if (remaining > TimeSpan.Zero) {
+                try {
+                    await Task.Delay(remaining, linked.Token);
+                } catch (OperationCanceledException) when (linked.Token.IsCancellationRequested) {
+                    break;
+                }
+            }
         }
     }
 
@@ -115,7 +127,9 @@ public class DaemonService : IDaemonService
 
     public async Task RequestReceiveFiles(IEnumerable<(string RemoteSource, string StoreTo, ulong TotalSize)> Paths, string SenderServerId, Action<(string File, float Progress)> Progress)
     {
-        var senderServer = Servers[SenderServerId].GetUri();
+        using var scope = ServiceProvider.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<Config>();
+        var senderServer = config.Servers.Value[SenderServerId].GetUri();
 
         var script = await ServerClient.StartScriptAsync(new StartScriptInput {
             Script =
@@ -345,7 +359,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
 
     public ChannelReader<Shared.Abstractions.ScriptSessionUpdate> StreamScriptsStatus(CancellationToken CancellationToken, bool IncludeFullUpdate = true, bool StreamUpdates = true)
     {
-        var channel = Channel.CreateUnbounded<Shared.Abstractions.ScriptSessionUpdate>(new UnboundedChannelOptions {
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<Shared.Abstractions.ScriptSessionUpdate>(new UnboundedChannelOptions {
             SingleReader = false,
             SingleWriter = true
         });
@@ -430,10 +444,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
     public T GetGrpcService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>()
         where T : ClientBase<T>
     {
-        using var scope = Core.ServiceProvider.CreateScope();
-        var clientFactory = scope.ServiceProvider.GetRequiredService<GrpcClientFactory>();
-
-        return clientFactory.CreateClient<T>(typeof(T).Name + "_" + Id);
+        return (T)Activator.CreateInstance(typeof(T), Channel)!;
     }
 
     public IDaemonTorrentsService GetTorrentsService(IDataProvider DataProvider) {
@@ -449,7 +460,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
     {
         var dp = Plugins.DataProviders.Items.First(x => x.Instance == DataProvider);
 
-        var channel = Channel.CreateUnbounded<DataProviderDaemonLogEntry>(new UnboundedChannelOptions {
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<DataProviderDaemonLogEntry>(new UnboundedChannelOptions {
             SingleReader = false,
             SingleWriter = true
         });

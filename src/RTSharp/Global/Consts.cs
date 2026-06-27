@@ -1,4 +1,5 @@
-﻿using RTSharp.Shared.Abstractions;
+﻿using System.Reflection;
+using RTSharp.Shared.Abstractions;
 
 namespace RTSharp.Global
 {
@@ -6,9 +7,10 @@ namespace RTSharp.Global
     {
         static Consts()
         {
-
+            var v = Assembly.GetExecutingAssembly().GetName().Version!;
+            Version = new Version($"{v.Major}.{v.Minor}.{v.Build}", (uint)v.Major, (uint)v.Minor, (uint)v.Build);
         }
 
-        public static Version Version { get; } = new Version("0.0.1", 0, 0, 1);
+        public static Version Version { get; }
     }
 }

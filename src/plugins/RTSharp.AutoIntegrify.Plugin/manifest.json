@@ -1,3 +1,4 @@
 {
-    "Module": "RTSharp.AutoIntegrify.Plugin.dll"
+    "Module": "RTSharp.AutoIntegrify.Plugin.dll",
+    "Description": "Automatically integrifies torrents"
 }

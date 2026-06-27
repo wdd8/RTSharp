@@ -163,8 +163,8 @@ public partial class TorrentListingViewModel : ObservableViewModel
         [
             (connectionColumn = builder.Text(
                 header: "Connection",
-                property: Utils.CreateProperty<string>("Connection", x => ((Torrent)x).DataOwner.PluginInstance.PluginInstanceConfig.Name, null),
-                getter: x => x.DataOwner.PluginInstance.PluginInstanceConfig.Name,
+                property: Utils.CreateProperty<string>("Connection", x => ((Torrent)x).DataOwner.Config.Plugin.Name, null),
+                getter: x => x.DataOwner.Config.Plugin.Name,
                 setter: null,
                 configure: c =>
                 {

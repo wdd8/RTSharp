@@ -15,8 +15,9 @@ namespace RTSharp.DataProvider.Transmission.Plugin;
 public class DataProvider : IDataProvider
 {
     private Plugin ThisPlugin { get; }
-    public BasePlugin Plugin => ThisPlugin;
-    public IDataProviderHost Host => ThisPlugin.DataProvider;
+    private IDataProviderHost<TransmissionDataProviderInstanceConfig> Host => ThisPlugin.Host;
+    IDataProviderHost IDataProvider.Host => Host;
+
     public Guid GUID => ThisPlugin.GUID;
 
     public IDataProviderFiles Files { get; }
@@ -114,10 +115,12 @@ public class DataProvider : IDataProvider
     {
         var client = Host.AttachedDaemonService.GetTorrentsService(this);
 
+        var interval = Host.Config.ListUpdateInterval;
+
         var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
         combined.Token.Register(combined.Dispose);
 
-        return client.GetTorrentChanges(combined.Token);
+        return client.GetTorrentChanges(interval, combined.Token);
     }
 
     public async Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default)

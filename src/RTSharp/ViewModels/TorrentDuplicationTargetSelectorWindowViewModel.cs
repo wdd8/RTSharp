@@ -61,7 +61,7 @@ namespace RTSharp.ViewModels
 
                 RemoteTargetPathEnabled = true;
 
-                if (SourceTorrent.DataOwner.DataProviderInstanceConfig.ServerId != provider.DataProviderInstanceConfig.ServerId) {
+                if (SourceTorrent.DataOwner.Config.Plugin.ServerId != provider.Config.Plugin.ServerId) {
                     var savePath = await provider.Instance.Files.GetDefaultSavePath();
                     RemoteTargetPath = savePath;
                 } else {
@@ -89,7 +89,7 @@ namespace RTSharp.ViewModels
             if (SelectedProvider == null)
                 return false;
 
-            if (SourceTorrent.DataOwner.PluginInstance.InstanceId == SelectedProvider.PluginInstance.InstanceId)
+            if (SourceTorrent.DataOwner.Host.InstanceId == SelectedProvider.Host.InstanceId)
                 return false;
 
             return true;

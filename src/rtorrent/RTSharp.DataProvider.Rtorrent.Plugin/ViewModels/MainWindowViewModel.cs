@@ -27,7 +27,7 @@ public partial class MainWindowViewModel : ObservableObject
         SavingSettings = true;
         var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
-        Func<ActionQueueAction, Task<CommandReply>> setSettingsTask = async (task) => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        Func<ActionQueueAction, Task<CommandReply>> setSettingsTask = async (task) => await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.Host.GetBuiltInDataProviderGrpcHeaders());
 
         var action = ActionQueueAction.New("Set settings", setSettingsTask);
         _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
@@ -52,7 +52,7 @@ public partial class MainWindowViewModel : ObservableObject
     public partial bool SaveSettingsEnabled { get; set; } = true;
 
     public required Plugin ThisPlugin { private get; init; }
-    public required IPluginHost PluginHost { get; init; }
+    public required IDataProviderHost<RtorrentDataProviderInstanceConfig> PluginHost { get; init; }
 
     public Window ThisWindow { get; set; } = null!; // init set
 

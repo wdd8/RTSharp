@@ -2,10 +2,10 @@
 
 public static class ConfigExtensions
 {
-    public static (string Public, string Private) GetCertificates(this IConfigurationRoot In)
+    public static (string? Public, string? Private) GetCertificates(this IConfigurationRoot In)
     {
         var section = In.GetSection("Certificate");
-        return (section.GetValue<string>("PublicPem")!, section.GetValue<string>("PrivatePem")!);
+        return (section.GetValue<string?>("PublicPem"), section.GetValue<string?>("PrivatePem"));
     }
 
     public static string[] GetListenAddresses(this IConfigurationRoot In)

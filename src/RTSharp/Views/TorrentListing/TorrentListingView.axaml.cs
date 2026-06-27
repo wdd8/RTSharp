@@ -207,7 +207,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     public void EvLoadingRow(object sender, DataGridRowEventArgs e)
     {
         var torrent = (Torrent)e.Row.DataContext!;
-        var colorStr = torrent!.DataOwner.PluginInstance.PluginInstanceConfig.Color;
+        var colorStr = torrent!.DataOwner.Config.Plugin.Color;
         if (colorStr != null) {
             if (!RowBrushCache.TryGetValue(colorStr, out var brushes)) {
                 if (Color.TryParse(colorStr, out var color)) {

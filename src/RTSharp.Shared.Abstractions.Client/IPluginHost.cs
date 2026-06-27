@@ -1,8 +1,5 @@
-﻿#nullable enable
+﻿using Avalonia.Controls;
 
-using Avalonia.Controls;
-
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Shared.Abstractions.Daemon;
@@ -14,6 +11,9 @@ using System.Text.Json.Nodes;
 
 namespace RTSharp.Shared.Abstractions.Client;
 
+/// <summary>
+/// Handle to the host application through a plugin
+/// </summary>
 public interface IPluginHost
 {
     /// <summary>
@@ -22,25 +22,20 @@ public interface IPluginHost
     string PluginConfigPath { get; }
 
     /// <summary>
-    /// Plugin instance configuration. This property is read only. To make modifications, see <see cref="SavePluginConfig(Action{JsonNode})"/>
+    /// Plugin instance configuration
     /// </summary>
-    IConfigurationRoot PluginConfig { get; }
-
-    /// <summary>
-    /// Required RT# plugin instance config part from <see cref="PluginConfig" />
-    /// </summary>
-    PluginInstanceConfig PluginInstanceConfig { get; }
+    IPluginConfigContainer<PluginInstanceConfig> Config { get; }
 
     /// <summary>
     /// RT# (Core) version
     /// </summary>
-    Version Version { get; }
+    Version HostVersion { get; }
 
     /// <summary>
-    /// Avalonia.Controls.Window object of RT# main window
+    /// RT# main window
     /// </summary>
     /// <remarks>Can be used to make direct modifications to core but will break on any core version update</remarks>
-    object MainWindow { get; }
+    Window MainWindow { get; }
 
     /// <summary>
     /// Full module path as resolved from config + manifest
@@ -59,30 +54,13 @@ public interface IPluginHost
     /// <param name="Message">Message text</param>
     /// <param name="Icon">Message icon</param>
     void ShowTrayMessage(string Title, string Message);
-    
-    /// <summary>
-    /// Registers a data provider
-    /// </summary>
-    /// <param name="In">Data provider</param>
-    /// <returns>Handle</returns>
-    IDataProviderHost RegisterDataProvider(IDataProvider In);
-
-    /// <summary>
-    /// Unregisters a data provider
-    /// </summary>
-    /// <param name="In">Handle</param>
-    void UnregisterDataProvider(object In);
 
     /// <summary>
     /// Registers the action queue
     /// </summary>
     /// <param name="In">The action queue</param>
-    void RegisterActionQueue(IActionQueueRenderer In);
-
-    /// <summary>
-    /// Unregisters the action queue
-    /// </summary>
-    void UnregisterActionQueue();
+    /// <returns>Unregister</returns>
+    IDisposable RegisterActionQueue(IActionQueueRenderer In);
 
     /// <summary>
     /// Registers a root menu item
@@ -136,6 +114,8 @@ public interface IPluginHost
 
     IReadOnlyCollection<Torrent> Torrents { get; }
 
+    IReadOnlyCollection<IPluginHost> Plugins { get; }
+
     /// <summary>
     /// Plugin logger
     /// </summary>
@@ -148,17 +128,52 @@ public interface IPluginHost
 
     IDaemonService? GetDaemonService(string serverId);
 
-    IDaemonService? AttachedDaemonService { get; }
-
     IServiceScope CreateScope();
 
     IReadOnlyList<IDaemonService> GetDaemonServices();
 
     /// <summary>
-    /// Override current plugin configuration to disk. See <see cref="PluginConfig" />
+    /// Registers a torrent data provider.
+    /// For a plugin built on <see cref="BasePlugin{TConfig}"/>,
+    /// <typeparam name="TConfigDp" /> is the same as <c>TConfig</c>
     /// </summary>
-    /// <param name="Modifications"><see cref="JsonNode" /> of the configuration that may be modified by the caller.</param>
-    /// <remarks><see cref="PluginConfig" /> is read only. Changes in <see cref="PluginConfig" /> do not persist.</remarks>
+    /// <typeparam name="TConfigDp">Provider-specific config type</typeparam>
+    /// <param name="In">Data provider implementation</param>
+    /// <returns>Handle to host application functions supporting data providers</returns>
+    IDataProviderHost<TConfigDp> RegisterDataProvider<TConfigDp>(IDataProvider In) where TConfigDp : IPluginConfigContainer<DataProviderInstanceConfig>;
+
+    /// <summary>
+    /// Override current plugin configuration to disk
+    /// </summary>
+    /// <param name="Modifications"><see cref="JsonNode" /> of the configuration that may be modified by the caller</param>
     /// <returns></returns>
     Task SavePluginConfig(Action<JsonNode> Modifications);
+
+    /// <summary>
+    /// Override current plugin configuration to disk
+    /// </summary>
+    /// <param name="Modifications">Callback to modify the configuration</param>
+    /// <returns></returns>
+    Task SavePluginConfig<T>(Action<T> Modifications);
+}
+
+
+/// <summary>
+/// <see cref="IPluginHost" /> with some more config on top
+/// </summary>
+public interface IPluginHost<TConfig> : IPluginHost
+    where TConfig : IPluginConfigContainer<PluginInstanceConfig>
+{
+    /// <summary>
+    /// Plugin instance configuration: the bound <c>Plugin</c> section (<c>Config.Plugin</c>) plus any
+    /// plugin-specific settings
+    /// </summary>
+    new TConfig Config { get; }
+
+    /// <summary>
+    /// Override current plugin configuration to disk
+    /// </summary>
+    /// <param name="Modifications">Callback to modify the configuration</param>
+    /// <returns></returns>
+    Task SavePluginConfig(Action<TConfig> Modifications);
 }

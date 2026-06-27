@@ -15,7 +15,6 @@ using MsBox.Avalonia;
 
 using Optris.Icons.Avalonia;
 using Optris.Icons.Avalonia.FontAwesome7;
-//using ProDiagnostics.Transport;
 
 using RTSharp.Core;
 using RTSharp.Core.Services.Cache.ASCache;
@@ -58,8 +57,6 @@ public class App : Application
     [STAThread]
     static void Main(string[] args)
     {
-        //AppContext.SetSwitch("ProDataGrid.Diagnostics.IsEnabled", true);
-
         var log = new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .WriteTo.Debug()
@@ -118,7 +115,7 @@ public class App : Application
         AvaloniaXamlLoader.Load(this);
 
 #if DEBUG
-        //this.AttachDevTools();
+        this.AttachDeveloperTools();
 #endif
 
         /*var diagnosticsExporter = new DiagnosticsUdpExporter(new DiagnosticsUdpOptions {
@@ -178,8 +175,6 @@ public class App : Application
 
         await ConfigureServices.GenerateCertificatesIfNeeded();
 
-        var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>() ?? [];
-
 #pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
         await Plugin.Plugins.LoadPlugins((progress, text) => { });
 #pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
@@ -190,8 +185,6 @@ public class App : Application
 
                 services.AddSingleton<IConfiguration>(config);
                 Core.Config.AddConfig(config, services);
-
-                services.AddDaemonServices(servers);
 
                 services.AddTransient<Core.Services.Cache.TorrentFileCache.TorrentFileCache>();
                 services.AddTransient<Core.Services.Cache.TorrentPropertiesCache.TorrentPropertiesCache>();
@@ -222,15 +215,8 @@ public class App : Application
 
         var servers = config.GetSection("Servers").Get<Dictionary<string, Config.Models.Server>>() ?? [];
 
-        foreach (var server in servers) {
-            var instance = ActivatorUtilities.CreateInstance<DaemonService>(Core.ServiceProvider._provider, server.Key);
-            Core.Servers.Value.Add(server.Key, instance);
-            Dispatcher.UIThread.Invoke(() => {
-                var renderer = new ServersActionQueueRenderer(server.Key, instance);
-                ActionQueue.RegisterActionQueue(instance, renderer);
-                _ = renderer.TrackServerActions();
-            });
-        }
+        foreach (var server in servers)
+            Core.Servers.Add(server.Key, server.Value);
 
         var tasks = Task.WhenAll(
             Task.Run(scope.ServiceProvider.GetRequiredService<TorrentFileCache>().Initialize),

@@ -58,7 +58,7 @@ public static class TorrentPolling
             {
                 var changes = listingChanges.Changes;
                 var fullUpdate = listingChanges.FullUpdate.ToInfoHashDictionary(x => x.Hash);
-                var dpId = dp.PluginInstance.InstanceId;
+                var dpId = dp.Host.InstanceId;
 
                 List<GlobalTorrentKey>? removedKeys = null;
                 if (listingChanges.Removed.Count > 0) {
@@ -173,7 +173,7 @@ public static class TorrentPolling
                     await ListingChanges.Writer.WriteAsync((DataProvider, listingChanges));
             }
         } catch (Exception ex) {
-            Log.Logger.Error(ex, $"{DataProvider.PluginInstance.PluginInstanceConfig.Name} GetTorrentChanges threw an error");
+            Log.Logger.Error(ex, $"{DataProvider.Config.Plugin.Name} GetTorrentChanges threw an error");
 
             await Task.Delay(TimeSpan.FromSeconds(5));
 

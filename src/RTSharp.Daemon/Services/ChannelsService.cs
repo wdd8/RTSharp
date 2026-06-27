@@ -15,12 +15,12 @@ public class ChannelsService(IConfiguration Config, ILogger<ChannelsService> Log
 
         var allowedClients = Config.GetSection("AllowedClients").Get<string[]>() ?? [];
 
-        Logger.LogDebug($"Creating channel with certificate {Program.ServerCertificate.Current.GetCertHashString(HashAlgorithmName.SHA256)}");
+        Logger.LogDebug($"Creating channel with certificate {Program.ServerCertificate.Current!.GetCertHashString(HashAlgorithmName.SHA256)}");
 
         return ChannelsCache[Url] = GrpcChannel.ForAddress(Url, new GrpcChannelOptions() {
             HttpHandler = new SocketsHttpHandler() {
                 SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
-                    ClientCertificates = [Program.ServerCertificate.Current],
+                    ClientCertificates = [Program.ServerCertificate.Current!],
                     RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => {
                         if (certificate == null)
                             return false;

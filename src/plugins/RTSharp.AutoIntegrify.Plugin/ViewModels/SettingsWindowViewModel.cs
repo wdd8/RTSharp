@@ -1,16 +1,10 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Microsoft.Extensions.Configuration;
-
 using RTSharp.Shared.Abstractions.Client;
 
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace RTSharp.AutoIntegrify.Plugin.ViewModels;
 
@@ -21,7 +15,7 @@ public enum LinkOptions
     Hardlink
 }
 
-public partial class SettingsWindowViewModel(IPluginHost PluginHost) : ObservableViewModel
+public partial class SettingsWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> PluginHost) : ObservableViewModel
 {
     [ObservableProperty]
     public partial ObservableCollection<string> Items { get; set; }
@@ -54,24 +48,20 @@ public partial class SettingsWindowViewModel(IPluginHost PluginHost) : Observabl
     [RelayCommand]
     public async Task Save()
     {
-        await PluginHost.SavePluginConfig(json => {
-#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
-            json["SearchPaths"] = JsonSerializer.SerializeToNode(Items.ToList());
-            json["RandomPiecesToCheck"] = JsonSerializer.SerializeToNode(RandomPiecesToCheck);
-            json["SearchRecursionLimit"] = JsonSerializer.SerializeToNode(SearchRecursionLimit);
-            json["LinkOptions"] = JsonSerializer.SerializeToNode(LinkOptions);
-#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
+        await PluginHost.SavePluginConfig(settings => {
+            settings.SearchPaths = [.. Items];
+            settings.RandomPiecesToCheck = RandomPiecesToCheck;
+            settings.SearchRecursionLimit = SearchRecursionLimit;
+            settings.LinkOptions = LinkOptions;
         });
     }
 
     public override void OnContextPopulated()
     {
-        var paths = PluginHost.PluginConfig.GetSection("SearchPaths").Get<List<string>>();
-        paths ??= [];
-        Items = new(paths);
+        Items = new(PluginHost.Config.SearchPaths);
 
-        RandomPiecesToCheck = PluginHost.PluginConfig.GetValue("RandomPiecesToCheck", 5);
-        SearchRecursionLimit = PluginHost.PluginConfig.GetValue("SearchRecursionLimit", 3);
-        LinkOptions = PluginHost.PluginConfig.GetValue("LinkOptions", LinkOptions.ReflinkWithHardlinkFallback);
+        RandomPiecesToCheck = PluginHost.Config.RandomPiecesToCheck;
+        SearchRecursionLimit = PluginHost.Config.SearchRecursionLimit;
+        LinkOptions = PluginHost.Config.LinkOptions;
     }
 }

@@ -31,7 +31,7 @@ namespace RTSharp.Models
 
             var ret = new List<Torrent>(Plugin.Count);
 
-            var dpId = DataProvider.PluginInstance.InstanceId;
+            var dpId = DataProvider.Host.InstanceId;
 
             var trackers = new HashSet<string>();
             foreach (var (hash, plugin) in Plugin) {

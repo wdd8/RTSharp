@@ -1,3 +1,5 @@
-﻿{
-    "Module": "RTSharp.DataProvider.Rtorrent.Plugin.dll"
+{
+    "Module": "RTSharp.DataProvider.Rtorrent.Plugin.dll",
+    "Type": "DATA_PROVIDER",
+    "Description": "RTSharp data provider for rtorrent"
 }

@@ -30,7 +30,7 @@ namespace RTSharp.ViewModels
 
             PluginInfo = new Models.PluginInfo() {
                 InstanceGuid = value.InstanceId.ToString(),
-                DisplayName = value.PluginInstanceConfig.Name,
+                DisplayName = value.Config.Plugin.Name,
                 Description = value.Instance.Description,
                 Author = value.Instance.Author,
                 Version = value.PluginVersion,

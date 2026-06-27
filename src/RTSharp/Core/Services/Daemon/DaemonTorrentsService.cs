@@ -1,10 +1,6 @@
 using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
-using Grpc.Net.ClientFactory;
-
-using Microsoft.Extensions.DependencyInjection;
-
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
@@ -33,23 +29,18 @@ namespace RTSharp.Core.Services.Daemon
 
         public DaemonTorrentsService(RTSharpDataProvider DataProvider)
         {
-            this.ServerId = DataProvider.DataProviderInstanceConfig.ServerId;
+            this.ServerId = DataProvider.Config.Plugin.ServerId;
             this.DataProvider = DataProvider;
 
-            using var scope = Core.ServiceProvider.CreateScope();
-            var clientFactory = scope.ServiceProvider.GetRequiredService<GrpcClientFactory>();
-
-            TorrentClient = clientFactory.CreateClient<GRPCTorrentService.GRPCTorrentServiceClient>(nameof(GRPCTorrentService.GRPCTorrentServiceClient) + "_" + ServerId);
-            TorrentsClient = clientFactory.CreateClient<GRPCTorrentsService.GRPCTorrentsServiceClient>(nameof(GRPCTorrentsService.GRPCTorrentsServiceClient) + "_" + ServerId);
+            var daemonService = Core.Servers.All[ServerId];
+            TorrentClient = daemonService.GetGrpcService<GRPCTorrentService.GRPCTorrentServiceClient>();
+            TorrentsClient = daemonService.GetGrpcService<GRPCTorrentsService.GRPCTorrentsServiceClient>();
         }
 
-        public Channel<ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>> GetTorrentChanges(CancellationToken CancellationToken)
+        public Channel<ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>> GetTorrentChanges(TimeSpan Interval, CancellationToken CancellationToken)
         {
-            using var scope = Core.ServiceProvider.CreateScope();
-            var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
-
             var updates = TorrentsClient.GetTorrentListUpdates(new GetTorrentListUpdatesRequest {
-                Interval = Duration.FromTimeSpan(DataProvider.DataProviderInstanceConfig.ListUpdateInterval)
+                Interval = Duration.FromTimeSpan(Interval)
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
 
             var channel = Channel.CreateUnbounded<ListingChanges<Shared.Abstractions.Torrent, Shared.Abstractions.Torrent, byte[]>>(new UnboundedChannelOptions() {
@@ -59,7 +50,7 @@ namespace RTSharp.Core.Services.Daemon
 
             _ = Task.Run(async () => {
                 try {
-                    var ownerId = DataProvider.PluginInstance.InstanceId;
+                    var ownerId = DataProvider.Host.InstanceId;
 
                     _ = await updates.ResponseHeadersAsync;
                     DataProvider.State.Change(DataProviderState.ACTIVE);

@@ -38,10 +38,10 @@ public partial class MainWindowViewModel : ObservableObject
     public async Task SaveSettingsClick()
     {
         SavingSettings = true;
-        var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>();
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetGrpcService<GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>();
 
         Func<ActionQueueAction, Task<Empty>> setSettingsTask = async (task) =>
-            await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
+            await client.SetSettingsAsync(SettingsMapper.MapToProto(Settings), headers: ThisPlugin.Host.GetBuiltInDataProviderGrpcHeaders());
 
         var action = ActionQueueAction.New<Empty>("Set preferences", setSettingsTask);
         _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
@@ -93,7 +93,7 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedNetworkInterfaceChanged(NetworkInterfaceItem? value)
     {
         Settings.Advanced.CurrentNetworkInterface = value?.Id ?? "";
-        if (_networkDataInitialized && PluginHost != null)
+        if (_networkDataInitialized && ThisPlugin?.Host != null)
             _ = LoadInterfaceAddressesAsync();
     }
 
@@ -131,11 +131,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     private async Task LoadInterfaceAddressesAsync()
     {
-        var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>();
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetGrpcService<GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>();
         try {
             var result = await client.GetNetworkInterfaceAddressesAsync(
                 new QBittorrentNetworkInterfaceAddressRequest { InterfaceId = Settings.Advanced.CurrentNetworkInterface ?? "" },
-                headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
+                headers: ThisPlugin.Host.GetBuiltInDataProviderGrpcHeaders());
 
             InterfaceAddresses.Clear();
             InterfaceAddresses.Add(AnyAddressDisplay);
@@ -154,7 +154,6 @@ public partial class MainWindowViewModel : ObservableObject
     public partial bool SaveSettingsEnabled { get; set; } = true;
 
     public required Plugin ThisPlugin { private get; init; }
-    public required IPluginHost PluginHost { get; init; }
 
     public Window ThisWindow { get; set; } = null!; // init set
 

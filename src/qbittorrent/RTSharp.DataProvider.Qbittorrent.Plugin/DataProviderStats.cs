@@ -1,13 +1,13 @@
 ﻿using RTSharp.Shared.Abstractions;
-using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Abstractions.DataProvider;
 
 namespace RTSharp.DataProvider.Qbittorrent.Plugin;
 
 public class DataProviderStats : IDataProviderStats
 {
     private Plugin ThisPlugin { get; }
-    public IPluginHost PluginHost { get; }
+    public IDataProviderHost<QbittorrentDataProviderInstanceConfig> Host => ThisPlugin.Host;
 
     public DataProviderStatsCapabilities Capabilities { get; } = new(
         GetStateHistory: false,
@@ -17,12 +17,11 @@ public class DataProviderStats : IDataProviderStats
     public DataProviderStats(Plugin ThisPlugin)
     {
         this.ThisPlugin = ThisPlugin;
-        this.PluginHost = ThisPlugin.Host;
     }
 
     public Task<AllTimeDataStats> GetAllTimeDataStats(CancellationToken cancellationToken)
     {
-        var client = PluginHost.AttachedDaemonService!.GetStatsService(ThisPlugin.DataProvider.Instance);
+        var client = Host.AttachedDaemonService!.GetStatsService(Host.Instance);
         
         return client.GetAllTimeDataStats(cancellationToken);
     }

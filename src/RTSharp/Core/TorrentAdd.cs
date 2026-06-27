@@ -58,18 +58,18 @@ namespace RTSharp.Core
                             var res = parent.GetResult()!;
                             foreach (var (hash, exceptions) in res) {
                                 if (exceptions.All(x => x == null))
-                                    Primary.PluginInstance.Logger.Information($"Torrent {Convert.ToHexString(hash)} added");
+                                    Primary.Host.Logger.Information($"Torrent {Convert.ToHexString(hash)} added");
                                 else
-                                    Primary.PluginInstance.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
+                                    Primary.Host.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
                             }
 
                             return Primary.Instance.StartTorrents([.. res.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash)]);
                         }).CreateChild("Start torrent completion", RUN_MODE.DEPENDS_ON_PARENT, (startTorrentAction, action) => {
                             foreach (var (hash, exceptions) in startTorrentAction.GetResult()!) {
                                 if (exceptions.All(x => x == null))
-                                    Primary.PluginInstance.Logger.Information($"Torrent {Convert.ToHexString(hash)} started");
+                                    Primary.Host.Logger.Information($"Torrent {Convert.ToHexString(hash)} started");
                                 else
-                                    Primary.PluginInstance.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
+                                    Primary.Host.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
                             }
 
                             return default;
@@ -81,7 +81,7 @@ namespace RTSharp.Core
 
                             var guid = await Primary.Instance.ForceRecheck(torrentHashes);
                             
-                            await Primary.PluginInstance.AttachedDaemonService.GetScriptProgress(guid, null);
+                            await Primary.AttachedDaemonService.GetScriptProgress(guid, null);
                             
                             // TODO: report proper status
                             return new TorrentStatuses(torrentHashes.Select(x => (x, (IList<Exception>)Array.Empty<Exception>())));
@@ -94,13 +94,13 @@ namespace RTSharp.Core
                 }
             }
 
-            var queue = Core.ActionQueue.GetActionQueueEntry(Primary.PluginInstance);
+            var queue = Core.ActionQueue.GetActionQueueEntry(Primary.Host);
             if (queue != null) {
                 var response = await queue.Queue.RunAction(action);
 
                 foreach (var torrent in response!) {
                     if (torrent.Exceptions.Any(x => x != null))
-                        Primary.PluginInstance.Logger.Error($"{Convert.ToHexString(torrent.Hash)}: {String.Join("; ", torrent.Exceptions.Select(x => x.Message))}");
+                        Primary.Host.Logger.Error($"{Convert.ToHexString(torrent.Hash)}: {String.Join("; ", torrent.Exceptions.Select(x => x.Message))}");
                 }
             }
         }

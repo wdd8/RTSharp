@@ -9,7 +9,6 @@ namespace RTSharp.DataProvider.Transmission.Plugin;
 public class DataProviderTracker : IDataProviderTracker
 {
     private Plugin ThisPlugin { get; }
-    public IPluginHost PluginHost { get; }
 
     public DataProviderTrackerCapabilities Capabilities { get; } = new(
         AddNewTracker: true,
@@ -23,7 +22,6 @@ public class DataProviderTracker : IDataProviderTracker
     public DataProviderTracker(Plugin ThisPlugin)
     {
         this.ThisPlugin = ThisPlugin;
-        this.PluginHost = ThisPlugin.Host;
     }
 
     public async Task<IList<(Uri Uri, IList<Exception> Exceptions)>> Reannounce(byte[] TorrentHash, IList<Uri> TargetUris)
@@ -33,21 +31,21 @@ public class DataProviderTracker : IDataProviderTracker
 
     public async Task ReplaceTracker(Torrent Torrent, string Existing, string New, CancellationToken cancellationToken = default)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetTorrentsService(ThisPlugin.Host.Instance);
 
         await client.ReplaceTracker(Torrent.Hash, Existing, New, cancellationToken);
     }
 
     public async Task AddNewTracker(Torrent Torrent, string New, CancellationToken cancellationToken = default)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetTorrentsService(ThisPlugin.Host.Instance);
 
         await client.AddNewTracker(Torrent.Hash, New, cancellationToken);
     }
 
     public async Task RemoveTracker(Torrent Torrent, string Existing, CancellationToken cancellationToken = default)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetTorrentsService(ThisPlugin.Host.Instance);
 
         await client.RemoveTracker(Torrent.Hash, Existing, cancellationToken);
     }

@@ -257,7 +257,7 @@ public sealed class TorrentStore
             Visible.RemoveAt(index);
     }
 
-    internal static GlobalTorrentKey GetKey(Models.Torrent torrent) => new(torrent.Hash, torrent.DataOwner.PluginInstance.InstanceId);
+    internal static GlobalTorrentKey GetKey(Models.Torrent torrent) => new(torrent.Hash, torrent.DataOwner.Host.InstanceId);
 
     internal sealed class GlobalTorrentKeyComparer : IEqualityComparer<GlobalTorrentKey>
     {

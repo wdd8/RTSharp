@@ -1,3 +1,4 @@
-﻿{
-    "Module": "RTSharp.ColoredRatio.Plugin.dll"
+{
+    "Module": "RTSharp.ColoredRatio.Plugin.dll",
+    "Description": "Colors torrent ratio cells based on their value"
 }

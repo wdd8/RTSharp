@@ -10,7 +10,6 @@ namespace RTSharp.DataProvider.Transmission.Plugin;
 public class DataProviderFiles : IDataProviderFiles
 {
     private Plugin ThisPlugin { get; }
-    public IPluginHost PluginHost { get; }
 
     public DataProviderFilesCapabilities Capabilities { get; } = new(
         GetDefaultSavePath: true
@@ -19,13 +18,12 @@ public class DataProviderFiles : IDataProviderFiles
     public DataProviderFiles(Plugin ThisPlugin)
     {
         this.ThisPlugin = ThisPlugin;
-        this.PluginHost = ThisPlugin.Host;
     }
 
     public async Task<string> GetDefaultSavePath()
     {
-        var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
 
-        return (await client.GetSessionInformationAsync(new Empty(), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders())).DownloadDirectory;
+        return (await client.GetSessionInformationAsync(new Empty(), headers: ThisPlugin.Host.GetBuiltInDataProviderGrpcHeaders())).DownloadDirectory;
     }
 }

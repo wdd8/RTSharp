@@ -10,7 +10,7 @@ using Torrent = RTSharp.Models.Torrent;
 
 namespace RTSharp.ColoredRatio.Plugin;
 
-public class Plugin : BasePlugin
+public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 {
     public override string Name => "Colored ratio";
 
@@ -26,16 +26,16 @@ public class Plugin : BasePlugin
         HasSettingsWindow: false
     );
 
-    public override IPluginHost Host { get; set; }
+    public IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host { get; set; }
 
     IDisposable Hook;
 
-    public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
+    public override Task<IPlugin> Init(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
         Progress(("Initializing...", 0f));
 
-        Hook = Host.HookTorrentListingEvLoadingCell((dataContext, columnKey, cell) => {
+        Hook = this.Host.HookTorrentListingEvLoadingCell((dataContext, columnKey, cell) => {
             if (columnKey != nameof(Torrent.Ratio)) {
                 return;
             }

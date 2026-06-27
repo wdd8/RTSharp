@@ -6,13 +6,15 @@
 public interface IPlugin
 {
     /// <summary>
-    /// Plugin name
+    /// Plugin name. This is a name for a plugin, but not plugin instance
     /// </summary>
     string Name { get; }
+
     /// <summary>
     /// Additional description
     /// </summary>
     string Description { get; }
+
     /// <summary>
     /// Author
     /// </summary>
@@ -49,9 +51,7 @@ public interface IPlugin
     Guid GUID { get; }
 
     /// <summary>
-    /// Required non-custom plugin config part
+    /// Plugin capabilities
     /// </summary>
-    public PluginInstanceConfig PluginInstanceConfig { get; }
-
     public PluginCapabilities Capabilities { get; }
 }

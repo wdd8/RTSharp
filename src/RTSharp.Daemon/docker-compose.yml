@@ -1,0 +1,14 @@
+# Example docker-compose for RTSharp.Daemon
+services:
+  rtsharp-daemon:
+    image: ghcr.io/wdd8/rtsharp/daemon:latest
+    # This should be the same as your torrent daemons
+    user: "1000:1000"
+    ports:
+      - "1234:1234" # Should correspond to config listen port
+    volumes:
+      # appsettings.json + mTLS certificates (public.pem / private.pem)
+      - ./config:/etc/rtsharp
+      # Torrent data, mounted at the same paths the torrent daemon uses.
+      - ./data:/data
+    restart: unless-stopped

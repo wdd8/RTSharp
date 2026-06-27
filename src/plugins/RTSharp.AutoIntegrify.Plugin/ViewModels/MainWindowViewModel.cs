@@ -58,7 +58,7 @@ public partial class FileInfo : ObservableObject
     }
 }
 
-public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, Torrent Torrent) : ObservableViewModel
+public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> Host, MainWindow Window, Torrent Torrent) : ObservableViewModel
 {
     public enum RESOLVE_STATE
     {
@@ -110,10 +110,10 @@ public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window, To
 
     public override void OnContextPopulated()
     {
-        AdditionalPaths = Host.PluginConfig.GetSection("SearchPaths").Get<List<string>>() ?? [];
-        RandomPiecesToCheck = Host.PluginConfig.GetSection("RandomPiecesToCheck").Get<int?>() ?? 5;
-        SearchRecursionLimit = Host.PluginConfig.GetSection("SearchRecursionLimit").Get<int?>() ?? 3;
-        var linkOptions = Host.PluginConfig.GetSection("LinkOptions").Get<LinkOptions>();
+        AdditionalPaths = Host.Config.SearchPaths;
+        RandomPiecesToCheck = Host.Config.RandomPiecesToCheck;
+        SearchRecursionLimit = Host.Config.SearchRecursionLimit;
+        var linkOptions = Host.Config.LinkOptions;
         if (linkOptions == LinkOptions.ReflinkWithHardlinkFallback) {
             Reflink = true;
             Hardlink = true;

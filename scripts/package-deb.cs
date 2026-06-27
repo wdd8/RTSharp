@@ -116,6 +116,8 @@ After=network.target
 
 [Service]
 Type=simple
+User=__RTSHARP_USER__
+Group=__RTSHARP_USER__
 ExecStart=/usr/lib/rtsharp-daemon/RTSharp.Daemon
 Restart=on-failure
 RestartSec=5
@@ -134,7 +136,38 @@ WantedBy=multi-user.target
 """);
 
     var postinst = Path.Combine(pkgDir, "DEBIAN", "postinst");
-    File.WriteAllText(postinst, "#!/bin/bash\nset -e\nsystemctl daemon-reload || true\n");
+    File.WriteAllText(postinst,
+"""
+#!/bin/bash
+set -e
+
+SERVICE_FILE=/lib/systemd/system/rtsharp-daemon.service
+
+echo ""
+echo "RTSharp Daemon needs a user account to run as."
+
+USERS=$(awk -F: '$3 >= 1000 && $3 < 65534 { print $1 }' /etc/passwd | sort | tr '\n' ' ')
+if [ -n "$USERS" ]; then
+    echo "Available users: $USERS"
+fi
+
+while true; do
+    read -rp "Run rtsharp-daemon as user: " RUN_USER
+    if [ -z "$RUN_USER" ]; then
+        echo "User cannot be empty." >&2
+        continue
+    fi
+    if ! id -u "$RUN_USER" > /dev/null 2>&1; then
+        echo "User '$RUN_USER' does not exist." >&2
+        continue
+    fi
+    break
+done
+
+sed -i "s/__RTSHARP_USER__/$RUN_USER/g" "$SERVICE_FILE"
+
+systemctl daemon-reload || true
+""");
     File.SetUnixFileMode(postinst, execMode);
 
     var prerm = Path.Combine(pkgDir, "DEBIAN", "prerm");

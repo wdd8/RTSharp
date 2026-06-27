@@ -7,6 +7,7 @@ using RTSharp.Shared.Abstractions.Client;
 
 using System;
 using System.Linq;
+using System.Reactive.Disposables;
 
 namespace RTSharp.Core;
 
@@ -15,7 +16,7 @@ public static class ActionQueue
     public static SourceList<ActionQueueEntry> ActionQueues { get; } = new();
 
     private static object ActionQueueLock = new object();
-    public static void RegisterActionQueue(RTSharpPlugin Plugin, IActionQueueRenderer In)
+    public static IDisposable RegisterActionQueue(RTSharpPlugin Plugin, IActionQueueRenderer In)
     {
         lock (ActionQueueLock) {
             var found = GetActionQueueEntry(Plugin);
@@ -25,6 +26,8 @@ public static class ActionQueue
 
             ActionQueues.Add(new ActionQueueEntry(Plugin, In));
         }
+
+        return Disposable.Create(() => UnregisterActionQueue(Plugin));
     }
 
     public static void RegisterActionQueue(DaemonService Server, IActionQueueRenderer In)
@@ -51,7 +54,7 @@ public static class ActionQueue
         }
     }
 
-    public static void UnregisterActionQueue(RTSharpPlugin Plugin)
+    private static void UnregisterActionQueue(RTSharpPlugin Plugin)
     {
         lock (ActionQueueLock) {
             var found = GetActionQueueEntry(Plugin);

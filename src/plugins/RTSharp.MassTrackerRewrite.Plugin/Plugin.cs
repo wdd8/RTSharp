@@ -8,7 +8,7 @@ using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.MassTrackerRewrite.Plugin;
 
-public class Plugin : BasePlugin
+public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 {
     public override string Name => "Mass tracker rewrite";
 
@@ -24,21 +24,21 @@ public class Plugin : BasePlugin
         HasSettingsWindow: false
     );
 
-    public required override IPluginHost Host { get; set; }
+    public required IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host { get; set; }
 
     IDisposable? Hook;
 
-    public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
+    public override Task<IPlugin> Init(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
         Progress(("Initializing...", 0f));
 
         Dispatcher.UIThread.Invoke(() => {
-            Hook = Host.RegisterToolsMenuItem(new MenuItem() {
+            Hook = this.Host.RegisterToolsMenuItem(new MenuItem() {
                 Header = "Mass tracker rewrite",
                 Command = new RelayCommand(() => {
                     var wnd = new MainWindow();
-                    wnd.ViewModel = new ViewModels.MainWindowViewModel(Host, wnd);
+                    wnd.ViewModel = new ViewModels.MainWindowViewModel(this.Host, wnd);
                     wnd.Show();
                 })
             });

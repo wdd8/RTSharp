@@ -13,7 +13,7 @@ using System.Collections.ObjectModel;
 
 namespace RTSharp.MassTrackerRewrite.Plugin.ViewModels;
 
-public partial class MainWindowViewModel(IPluginHost Host, MainWindow Window) : ObservableViewModel
+public partial class MainWindowViewModel(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, MainWindow Window) : ObservableViewModel
 {
     public record TrackerInfo(string Uri, int Count)
     {

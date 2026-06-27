@@ -1,3 +1,4 @@
-﻿{
-    "Module": "RTSharp.ServerScriptPlayground.Plugin.dll"
+{
+    "Module": "RTSharp.ServerScriptPlayground.Plugin.dll",
+    "Description": "Interactive playground for running server-side scripts"
 }

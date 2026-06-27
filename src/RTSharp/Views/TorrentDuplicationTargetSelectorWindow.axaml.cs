@@ -29,7 +29,7 @@ public partial class TorrentDuplicationTargetSelectorWindow : VmWindow<TorrentDu
 
         var dialog = new DirectorySelectorWindow() {
             ViewModel = new DirectorySelectorWindowViewModel(ViewModel!.SelectedProvider!) {
-                WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider.PluginInstance.PluginInstanceConfig.Name})"
+                WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider.Config.Plugin.Name})"
             }
         };
 

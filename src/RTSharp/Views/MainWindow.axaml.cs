@@ -14,7 +14,6 @@ using Serilog;
 
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RTSharp.Views;
@@ -32,7 +31,6 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         InitializeComponent();
         ShowInTaskbar = true;
         ViewModel!.ShowPluginsDialog = ShowPluginsDialogAsync;
-        ViewModel!.ShowServersDialog = ShowServersDialogAsync;
 
         using var scope = Core.ServiceProvider.CreateScope();
         var config = scope.ServiceProvider.GetRequiredService<Config>();
@@ -103,14 +101,6 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
             ThisWindow = dialog
         };
         dialog.ViewModel = vm;
-
-        await dialog.ShowDialog(this);
-    }
-
-    private async Task ShowServersDialogAsync(ServersWindowViewModel Input)
-    {
-        var dialog = new ServersWindow();
-        dialog.ViewModel = Input;
 
         await dialog.ShowDialog(this);
     }

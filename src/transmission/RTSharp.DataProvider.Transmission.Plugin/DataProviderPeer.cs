@@ -11,7 +11,6 @@ namespace RTSharp.DataProvider.Transmission.Plugin;
 public class DataProviderPeer : IDataProviderPeer
 {
     private Plugin ThisPlugin { get; }
-    public IPluginHost PluginHost { get; }
 
     public DataProviderPeerCapabilities Capabilities { get; } = new(
         AddPeer: false,
@@ -21,7 +20,6 @@ public class DataProviderPeer : IDataProviderPeer
     public DataProviderPeer(Plugin ThisPlugin)
     {
         this.ThisPlugin = ThisPlugin;
-        this.PluginHost = ThisPlugin.Host;
     }
 
     public Task AddPeer(Torrent Torrent, IPEndPoint Peer, CancellationToken cancellationToken = default)

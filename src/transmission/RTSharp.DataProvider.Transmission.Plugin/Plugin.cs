@@ -8,10 +8,11 @@ using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Transmission.Plugin.Mappers;
 using RTSharp.Shared.Abstractions.Client;
 using Avalonia.Threading;
+using System.Reactive.Disposables;
 
 namespace RTSharp.DataProvider.Transmission.Plugin;
 
-public class Plugin : BasePlugin
+public class Plugin : BasePlugin<TransmissionDataProviderInstanceConfig>
 {
     public override string Name => "RTSharp data provider for Transmission";
 
@@ -27,34 +28,33 @@ public class Plugin : BasePlugin
         HasSettingsWindow: true
     );
 
-    public required override IPluginHost Host { get; set; }
-
-    public required IDataProviderHost DataProvider { get; set; }
+    public required IDataProviderHost<TransmissionDataProviderInstanceConfig> Host { get; set; }
 
     internal DefaultActionQueueRenderer ActionQueue { get; set; } = null!; // on init
 
     private CancellationTokenSource DataProviderActive { get; set; } = null!; // on init
 
-    public override async Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
-    {
-        this.Host = Host;
+    private CompositeDisposable Disposables { get; set; } = new();
 
-        Progress(("Registering queue...", 0f));
+    public override async Task<IPlugin> Init(IPluginHost<TransmissionDataProviderInstanceConfig> Host, Action<(string Status, float Percentage)> Progress)
+    {
+        Progress(("Registering data provider...", 0f));
+
+        DataProviderActive = new();
+        var dp = new DataProvider(this) {
+            Active = DataProviderActive.Token
+        };
+        this.Host = Host.RegisterDataProvider<TransmissionDataProviderInstanceConfig>(dp);
+        Disposables.Add(this.Host);
+
+        Progress(("Registering queue...", 50f));
 
         await Dispatcher.UIThread.InvokeAsync(() => {
             ActionQueue = new DefaultActionQueueRenderer(
-                Host.PluginInstanceConfig.Name,
+                this.Host.Config.Plugin.Name,
                 new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Transmission.Plugin/Assets/transmission.png"))));
         });
-        Host.RegisterActionQueue(ActionQueue);
-
-        Progress(("Registering data provider...", 50f));
-
-        DataProvider dp;
-        DataProviderActive = new();
-        DataProvider = Host.RegisterDataProvider(dp = new DataProvider(this) {
-            Active = DataProviderActive.Token
-        });
+        Disposables.Add(this.Host.RegisterActionQueue(ActionQueue));
 
         Progress(("Loaded", 100f));
         return this;
@@ -64,13 +64,12 @@ public class Plugin : BasePlugin
     {
         var client = Host.AttachedDaemonService!.GetGrpcService<GRPCTransmissionSettingsService.GRPCTransmissionSettingsServiceClient>();
 
-        var settings = await client.GetSessionInformationAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        var settings = await client.GetSessionInformationAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: Host.GetBuiltInDataProviderGrpcHeaders());
 
         var settingsWindow = new MainWindow {
             ViewModel = new MainWindowViewModel() {
-                PluginHost = Host,
                 ThisPlugin = this,
-                Title = Host.PluginInstanceConfig.Name + " transmission settings",
+                Title = Host.Config.Plugin.Name + " transmission settings",
                 Settings = SettingsMapper.MapFromProto(settings)
             }
         };
@@ -81,8 +80,8 @@ public class Plugin : BasePlugin
     public override Task Unload()
     {
         DataProviderActive.Cancel();
-        Host?.UnregisterDataProvider(DataProvider);
-        Host?.UnregisterActionQueue();
+        Disposables.Dispose();
+
         return Task.CompletedTask;
     }
 }

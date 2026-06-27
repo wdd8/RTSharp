@@ -8,11 +8,12 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using RTSharp.ServerScriptPlayground.Plugin.Views;
+using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.ServerScriptPlayground.Plugin.ViewModels;
 
-public partial class PlaygroundWindowViewModel(IPluginHost Host, PlaygroundWindow Window) : ObservableObject
+public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, PlaygroundWindow Window) : ObservableObject
 {
     [ObservableProperty]
     public string runButtonText = "Run";
@@ -28,7 +29,7 @@ public partial class PlaygroundWindowViewModel(IPluginHost Host, PlaygroundWindo
 
     public Guid? CurrentScriptId { get; set; }
 
-    public IPluginHost Host { get; } = Host;
+    public IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host { get; } = Host;
 
     [RelayCommand]
     public async Task RunButton()

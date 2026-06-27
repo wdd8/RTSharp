@@ -1,13 +1,15 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace RTSharp.Models;
 
 public partial class Server : ObservableObject
 {
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsServerValid))]
     public partial string ServerId { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsServerValid))]
     public partial string Host { get; set; }
 
     [ObservableProperty]
@@ -22,6 +24,7 @@ public partial class Server : ObservableObject
     public partial string? Latency { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsServerValid))]
     public partial string? CertThumbprint { get; set; }
 
     [ObservableProperty]
@@ -32,4 +35,9 @@ public partial class Server : ObservableObject
 
     [ObservableProperty]
     public partial string? CertAlgorithm { get; set; }
+
+    public bool IsServerValid =>
+        !string.IsNullOrWhiteSpace(ServerId)
+        && !string.IsNullOrWhiteSpace(Host)
+        && !string.IsNullOrWhiteSpace(CertThumbprint);
 }

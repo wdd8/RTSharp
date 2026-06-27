@@ -1,3 +1,4 @@
-﻿{
-    "Module": "RTSharp.MassTrackerRewrite.Plugin.dll"
+{
+    "Module": "RTSharp.MassTrackerRewrite.Plugin.dll",
+    "Description": "Mass rewrites trackers across torrents"
 }

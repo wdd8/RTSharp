@@ -9,7 +9,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
     public class DataProviderPeer : IDataProviderPeer
     {
         private Plugin ThisPlugin { get; }
-        public IPluginHost PluginHost { get; }
+        public IDataProviderHost<QbittorrentDataProviderInstanceConfig> Host => ThisPlugin.Host;
 
         public DataProviderPeerCapabilities Capabilities { get; } = new(
             AddPeer: true,
@@ -19,19 +19,18 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin
         public DataProviderPeer(Plugin ThisPlugin)
         {
             this.ThisPlugin = ThisPlugin;
-            this.PluginHost = ThisPlugin.Host;
         }
 
         public async Task AddPeer(Torrent Torrent, IPEndPoint Peer, CancellationToken cancellationToken = default)
         {
-            var client = PluginHost.AttachedDaemonService!.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+            var client = Host.AttachedDaemonService!.GetTorrentsService(Host.Instance);
 
             await client.AddPeer(Torrent.Hash, Peer, cancellationToken);
         }
 
         public async Task BanPeer(Torrent Torrent, IPEndPoint Peer, CancellationToken cancellationToken = default)
         {
-            var client = PluginHost.AttachedDaemonService!.GetTorrentsService(ThisPlugin.DataProvider.Instance);
+            var client = Host.AttachedDaemonService!.GetTorrentsService(Host.Instance);
 
             await client.BanPeer(Torrent.Hash, Peer, cancellationToken);
         }

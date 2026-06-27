@@ -303,7 +303,7 @@ public partial class TorrentListingViewModel
 
     public void StateFilterFlyoutOpening() => RepopulateOptions(StateFilter, Shared.Abstractions.EnumExt.GetAllTorrentStateOptions(), x => x);
     public void LabelsFilterFlyoutOpening() => RepopulateOptions(LabelsFilter, TorrentPolling.AllLabelReferences.Keys, x => x);
-    public void ConnectionFilterFlyoutOpening() => RepopulateOptions(ConnectionFilter, TorrentPolling.Torrents.GetSnapshot(), x => x.DataOwner.PluginInstance.PluginInstanceConfig.Name);
+    public void ConnectionFilterFlyoutOpening() => RepopulateOptions(ConnectionFilter, TorrentPolling.Torrents.GetSnapshot(), x => x.DataOwner.Config.Plugin.Name);
     public void TrackerFilterFlyoutOpening() => RepopulateOptions(TrackerFilter, TorrentPolling.Torrents.GetSnapshot(), x => new TrackerFilterContext { Name = x.TrackerDisplayName!, Icon = x.TrackerIcon });
     public static void RepopulateOptions<TInput, TProp>(SetFilterContext<TProp> FilterContext, IEnumerable<TInput> Input, Func<TInput, TProp> FxProperty)
         where TProp : IComparable

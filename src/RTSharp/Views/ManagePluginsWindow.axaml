@@ -2,42 +2,91 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
 		xmlns:vm="using:RTSharp.ViewModels"
 		xmlns:plugin="clr-namespace:RTSharp.Plugin"
-        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
-        Width="400"
-        Height="300"
+		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+		xmlns:sc="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+		xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="440"
+		x:Name="window"
+        Width="640"
+        Height="440"
         x:Class="RTSharp.ManagePluginsWindow"
 		x:DataType="vm:ManagePluginsWindowViewModel"
         Title="RT# - Manage Plugins">
+    <Window.Resources>
+        <converters:MathConverter x:Key="MathConverter"/>
+    </Window.Resources>
 
     <Window.Styles>
         <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
     </Window.Styles>
-    
-    <Grid ColumnDefinitions="8*,32,8*" Margin="8">
-        <GroupBox Grid.Column="0" Header="Active">
-            <ListBox ItemsSource="{Binding ActivePlugins}" SelectedItem="{Binding SelectedActivePlugin}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="plugin:RTSharpPlugin">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding PluginInstanceConfig.Name}" />
-                            <TextBlock>  (</TextBlock>
-                            <TextBlock Text="{Binding InstanceId}" />
-                            <TextBlock>)</TextBlock>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </GroupBox>
-        <GridSplitter Grid.Column="1" />
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
-            <Button Margin="0,0,0,8" Content="&lt;" Command="{Binding LoadClickCommand}" />
-            <Button Content="&gt;" Command="{Binding UnloadClickCommand}" />
-        </StackPanel>
-        <GroupBox Grid.Column="2" Header="Unloaded">
-            <ListBox ItemsSource="{Binding UnloadedPluginDirs}" SelectedItem="{Binding SelectedUnloadedDir}" />
-        </GroupBox>
-    </Grid>
+
+    <dialogHost:DialogHost IsOpen="{Binding IsDialogOpen, Mode=TwoWay}" CloseOnClickAway="True">
+        <dialogHost:DialogHost.DialogContent>
+            <StackPanel Spacing="6" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.75)}">
+                <TextBlock Text="{Binding DialogTitle}" FontWeight="SemiBold" Margin="0,0,0,4" />
+
+                <TextBlock Text="Instance name" Opacity="0.6" FontSize="11" />
+                <TextBox Text="{Binding DialogInstanceName}" />
+
+                <StackPanel Spacing="6" IsVisible="{Binding DialogIsDataProvider}">
+                    <TextBlock Text="Server" Opacity="0.6" FontSize="11" Margin="0,4,0,0" />
+                    <ComboBox HorizontalAlignment="Stretch"
+                                ItemsSource="{Binding AvailableServers}"
+                                SelectedItem="{Binding DialogServerId}" />
+                    <TextBlock Text="Data provider name (on daemon)" Opacity="0.6" FontSize="11" Margin="0,4,0,0" />
+                    <TextBox Text="{Binding DialogDataProviderName}" />
+                    <TextBlock Text="Color" Opacity="0.6" FontSize="11" Margin="0,4,0,0" />
+                    <ColorPicker Color="{Binding DialogColor, Mode=TwoWay}" IsAlphaEnabled="False" HorizontalAlignment="Left" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+                    <Button Content="{Binding DialogConfirmText}" Command="{Binding ConfirmDialogCommand}" />
+                    <Button Content="Cancel" Command="{Binding CancelDialogCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </dialogHost:DialogHost.DialogContent>
+
+        <Grid ColumnDefinitions="*,Auto,*">
+            <GroupBox Grid.Column="0" Header="Available plugins">
+                <ListBox ItemsSource="{Binding AvailablePlugins}" SelectedItem="{Binding SelectedAvailable}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="plugin:PluginManifest">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <sc:BuiltInIconImage Value="LINK_OK" Width="14" Height="14" VerticalAlignment="Center" IsVisible="{Binding IsDataProvider}" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.6" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </GroupBox>
+
+            <StackPanel Grid.Column="1" Margin="6,0" Spacing="4" VerticalAlignment="Center">
+                <Button Content="&gt;" Command="{Binding BeginConfigureNewCommand}" HorizontalContentAlignment="Center" Width="28" />
+                <Button Content="&lt;" Command="{Binding DeleteConfiguredCommand}" HorizontalContentAlignment="Center" Width="28" />
+            </StackPanel>
+
+            <GroupBox Grid.Column="2" Header="Configured plugins">
+                <ListBox ItemsSource="{Binding ConfiguredPlugins}" SelectedItem="{Binding SelectedConfigured}"
+                         DoubleTapped="EvDoubleTapped">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="plugin:ConfiguredPlugin">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="{Binding InstanceName}" FontWeight="SemiBold" />
+                                    <sc:BuiltInIconImage Value="LINK_OK" Width="14" Height="14" VerticalAlignment="Center" IsVisible="{Binding Manifest.IsDataProvider}" />
+                                </StackPanel>
+                                <TextBlock FontSize="11" Opacity="0.6" Text="{Binding Manifest.Name}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </GroupBox>
+        </Grid>
+    </dialogHost:DialogHost>
 </Window>

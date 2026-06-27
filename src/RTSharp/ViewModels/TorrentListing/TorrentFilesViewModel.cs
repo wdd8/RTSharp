@@ -197,7 +197,7 @@ public partial class TorrentFilesViewModel : ObservableObject
         if (files.Count() == 0 || Torrent == null)
             return;
 
-        var server = Torrent.DataOwner.PluginInstance.AttachedDaemonService;
+        var server = Torrent.DataOwner.AttachedDaemonService;
 
         IList<string> reply;
         try {

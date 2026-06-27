@@ -25,7 +25,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using System.Windows.Input;
 
 namespace RTSharp.ViewModels
 {
@@ -38,8 +37,6 @@ namespace RTSharp.ViewModels
         public ObservableCollection<Plugin.RTSharpPlugin> Plugins => Plugin.Plugins.LoadedPlugins;
 
         public Func<Task> ShowPluginsDialog { get; set; } = null!; // view set
-
-        public Func<ServersWindowViewModel, Task> ShowServersDialog { get; set; } = null!; // view set
 
         [ObservableProperty]
         public partial string StringFilter { get; set; } = "";
@@ -202,8 +199,10 @@ namespace RTSharp.ViewModels
         [RelayCommand]
         public void ServersClick()
         {
-            var vm = new ServersWindowViewModel();
-            ShowServersDialog(vm);
+            var wnd = new ManageServersWindow {
+                ViewModel = new()
+            };
+            wnd.Show();
         }
 
         [RelayCommand]

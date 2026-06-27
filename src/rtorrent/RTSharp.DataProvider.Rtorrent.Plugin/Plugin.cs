@@ -1,10 +1,9 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+
+using Nito.Disposables;
 
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
@@ -13,9 +12,14 @@ using RTSharp.DataProvider.Rtorrent.Plugin.Views;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 
+using System;
+using System.Reactive.Disposables;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace RTSharp.DataProvider.Rtorrent.Plugin;
 
-public class Plugin : BasePlugin
+public class Plugin : BasePlugin<RtorrentDataProviderInstanceConfig>
 {
     public override string Name => "RTSharp data provider for rtorrent";
 
@@ -31,27 +35,17 @@ public class Plugin : BasePlugin
         HasSettingsWindow: true
     );
 
-    public required override IPluginHost Host { get; set; }
-
-    public required IDataProviderHost DataProvider { get; set; }
+    public required IDataProviderHost<RtorrentDataProviderInstanceConfig> Host { get; set; }
 
     internal DefaultActionQueueRenderer ActionQueue { get; set; } = null!; // init set
 
     private CancellationTokenSource DataProviderActive { get; set; } = null!; // init set
 
-    public override async Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
+    private CompositeDisposable Disposables { get; } = new();
+
+    public override async Task<IPlugin> Init(IPluginHost<RtorrentDataProviderInstanceConfig> Host, Action<(string Status, float Percentage)> Progress)
     {
-        this.Host = Host;
-        Progress(("Registering queue...", 0f));
-
-        await Dispatcher.UIThread.InvokeAsync(() => {
-            ActionQueue = new DefaultActionQueueRenderer(
-                Host.PluginInstanceConfig.Name,
-                new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Rtorrent.Plugin/Assets/rtorrent.png"))));
-        });
-        Host.RegisterActionQueue(ActionQueue);
-
-        Progress(("Registering data provider...", 50f));
+        Progress(("Registering data provider...", 0f));
 
         DataProviderActive = new();
         var dp = new DataProvider(this)
@@ -59,7 +53,17 @@ public class Plugin : BasePlugin
             Active = DataProviderActive.Token
         };
 
-        DataProvider = Host.RegisterDataProvider(dp);
+        this.Host = Host.RegisterDataProvider<RtorrentDataProviderInstanceConfig>(dp);
+        Disposables.Add(this.Host);
+
+        Progress(("Registering queue...", 50f));
+
+        await Dispatcher.UIThread.InvokeAsync(() => {
+            ActionQueue = new DefaultActionQueueRenderer(
+                this.Host.Config.Plugin.Name,
+                new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Rtorrent.Plugin/Assets/rtorrent.png"))));
+        });
+        Disposables.Add(this.Host.RegisterActionQueue(ActionQueue));
 
         Progress(("Loaded", 100f));
         return this;
@@ -69,13 +73,13 @@ public class Plugin : BasePlugin
     {
         var client = Host.AttachedDaemonService!.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
-        var settings = await client.GetSettingsAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        var settings = await client.GetSettingsAsync(new Google.Protobuf.WellKnownTypes.Empty(), headers: Host.GetBuiltInDataProviderGrpcHeaders());
 
         var settingsWindow = new MainWindow {
             ViewModel = new MainWindowViewModel() {
                 PluginHost = Host,
                 ThisPlugin = this,
-                Title = Host.PluginInstanceConfig.Name + " rtorrent settings",
+                Title = Host.Config.Plugin.Name + " rtorrent settings",
                 Settings = SettingsMapper.MapFromProto(settings)
             }
         };
@@ -86,8 +90,9 @@ public class Plugin : BasePlugin
     public override Task Unload()
     {
         DataProviderActive?.Cancel();
-        Host?.UnregisterDataProvider(DataProvider);
-        Host?.UnregisterActionQueue();
+
+        Disposables.Dispose();
+
         return Task.CompletedTask;
     }
 }

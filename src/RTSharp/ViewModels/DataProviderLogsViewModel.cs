@@ -27,7 +27,7 @@ public partial class DataProviderLogsViewModel : ObservableViewModel
 
     public DataProviderLogsViewModel(RTSharpDataProvider DataProvider)
     {
-        DisplayName = DataProvider.PluginInstance.PluginInstanceConfig.Name;
+        DisplayName = DataProvider.Config.Plugin.Name;
 
         AddDisposable(Disposable.Create(Cts.Cancel));
 

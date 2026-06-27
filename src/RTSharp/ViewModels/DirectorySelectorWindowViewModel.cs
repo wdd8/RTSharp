@@ -14,7 +14,6 @@ using DynamicData.Binding;
 
 using RTSharp.Core.Services.Daemon;
 using RTSharp.Models;
-using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions.Client;
 using Serilog;
 
@@ -53,7 +52,7 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
         this.DataProvider = DataProvider;
         AddDisposable(_itemsSource.Connect().Sort(SortExpressionComparer<FileSystemItem>.Ascending(x => x.Path)).Bind(out _items).Subscribe());
 
-        Server = Core.Servers.Value[DataProvider.DataProviderInstanceConfig.ServerId];
+        Server = Core.Servers.All[DataProvider.Config.Plugin.ServerId];
     }
 
     [RelayCommand]

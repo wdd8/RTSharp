@@ -75,7 +75,7 @@ public class Config
 
             public ushort DaemonPort { get; set; }
 
-            public string? TrustedThumbprint { get; set; }
+            public string TrustedThumbprint { get; set; } = null!; // set by deserializer
         }
 
         public class Look
@@ -184,11 +184,6 @@ public class Config
     }
   },
   "Servers": {
-    "example": {
-      "Host": "example.com",
-      "DaemonPort": 12345,
-      "TrustedThumbprint": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    }
   }
 }
 """;

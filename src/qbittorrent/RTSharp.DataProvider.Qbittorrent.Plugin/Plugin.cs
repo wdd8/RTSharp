@@ -5,6 +5,8 @@ using Avalonia.Threading;
 
 using Google.Protobuf.WellKnownTypes;
 
+using Nito.Disposables;
+
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Qbittorrent.Plugin.Mappers;
 using RTSharp.DataProvider.Qbittorrent.Plugin.ViewModels;
@@ -12,9 +14,11 @@ using RTSharp.DataProvider.Qbittorrent.Plugin.Views;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 
+using System.Reactive.Disposables;
+
 namespace RTSharp.DataProvider.Qbittorrent.Plugin;
 
-public class Plugin : BasePlugin
+public class Plugin : BasePlugin<QbittorrentDataProviderInstanceConfig>
 {
     public override string Name => "RTSharp data provider for qbittorrent";
 
@@ -30,34 +34,33 @@ public class Plugin : BasePlugin
         HasSettingsWindow: true
     );
 
-    public required override IPluginHost Host { get; set; }
-
-    public required IDataProviderHost DataProvider { get; set; }
+    public required IDataProviderHost<QbittorrentDataProviderInstanceConfig> Host { get; set; }
 
     internal DefaultActionQueueRenderer ActionQueue { get; set; } = null!; // init set
 
     private CancellationTokenSource DataProviderActive { get; set; } = null!; // init set
 
-    public override async Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
-    {
-        this.Host = Host;
+    private CompositeDisposable Disposables { get; } = new();
 
-        Progress(("Registering queue...", 0f));
+    public override async Task<IPlugin> Init(IPluginHost<QbittorrentDataProviderInstanceConfig> Host, Action<(string Status, float Percentage)> Progress)
+    {
+        Progress(("Registering data provider...", 0f));
+
+        DataProviderActive = new();
+        var dp = new DataProvider(this) {
+            Active = DataProviderActive.Token
+        };
+        this.Host = Host.RegisterDataProvider<QbittorrentDataProviderInstanceConfig>(dp);
+        Disposables.Add(this.Host);
+
+        Progress(("Registering queue...", 50f));
 
         await Dispatcher.UIThread.InvokeAsync(() => {
             ActionQueue = new DefaultActionQueueRenderer(
-                Host.PluginInstanceConfig.Name,
+                this.Host.Config.Plugin.Name,
                 new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Qbittorrent.Plugin/Assets/qbittorrent.png"))));
         });
-        Host.RegisterActionQueue(ActionQueue);
-
-        Progress(("Registering data provider...", 50f));
-
-        DataProvider dp;
-        DataProviderActive = new();
-        DataProvider = Host.RegisterDataProvider(dp = new DataProvider(this) {
-            Active = DataProviderActive.Token
-        });
+        Disposables.Add(this.Host.RegisterActionQueue(ActionQueue));
 
         Progress(("Loaded", 100f));
         return this;
@@ -66,7 +69,7 @@ public class Plugin : BasePlugin
     public override async Task ShowPluginSettings(object ParentWindow)
     {
         var client = Host.AttachedDaemonService!.GetGrpcService<GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>();
-        var headers = DataProvider.GetBuiltInDataProviderGrpcHeaders();
+        var headers = Host.GetBuiltInDataProviderGrpcHeaders();
 
         var settings = await client.GetSettingsAsync(new Empty(), headers: headers);
         var ifaces = await client.GetNetworkInterfacesAsync(new Empty(), headers: headers);
@@ -77,9 +80,8 @@ public class Plugin : BasePlugin
 
         var settingsWindow = new MainWindow {
             ViewModel = new MainWindowViewModel() {
-                PluginHost = Host,
                 ThisPlugin = this,
-                Title = Host.PluginInstanceConfig.Name + " qbittorrent settings",
+                Title = Host.Config.Plugin.Name + " qbittorrent settings",
                 Settings = SettingsMapper.MapFromProto(settings)
             }
         };
@@ -92,8 +94,7 @@ public class Plugin : BasePlugin
     public override Task Unload()
     {
         DataProviderActive.Cancel();
-        Host?.UnregisterDataProvider(DataProvider);
-        Host?.UnregisterActionQueue();
+        Disposables.Dispose();
         return Task.CompletedTask;
     }
 }

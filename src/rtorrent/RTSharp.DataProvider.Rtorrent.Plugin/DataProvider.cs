@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,18 +13,18 @@ using MsBox.Avalonia.Models;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.DataProvider;
-using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Utils;
 using File = RTSharp.Shared.Abstractions.File;
 using System.Threading.Channels;
+using RTSharp.Shared.Abstractions.Client;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin;
 
 public class DataProvider : IDataProvider
 {
     private Plugin ThisPlugin { get; }
-    public IPluginHost PluginHost { get; }
-    public IDataProviderHost Host => ThisPlugin.DataProvider;
+    public IDataProviderHost<RtorrentDataProviderInstanceConfig> Host => ThisPlugin.Host;
+    IDataProviderHost IDataProvider.Host => Host;
     public Guid GUID => ThisPlugin.GUID;
 
     public IDataProviderFiles Files { get; }
@@ -64,7 +62,6 @@ public class DataProvider : IDataProvider
     public DataProvider(Plugin ThisPlugin)
     {
         this.ThisPlugin = ThisPlugin;
-        this.PluginHost = ThisPlugin.Host;
 
         this.Files = new DataProviderFiles(ThisPlugin);
         this.Tracker = new DataProviderTracker(ThisPlugin);
@@ -74,14 +71,14 @@ public class DataProvider : IDataProvider
 
     public async Task<Torrent> GetTorrent(byte[] Hash)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
 
         return await client.GetTorrent(Hash);
     }
 
     public async Task<InfoHashDictionary<(bool MultiFile, IList<File> Files)>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
 
         var ret = await client.GetTorrentsFiles(In, cancellationToken: cancellationToken);
 
@@ -90,7 +87,7 @@ public class DataProvider : IDataProvider
 
     public async Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
         
         var ret = await client.GetTorrentsPeers(In, cancellationToken: cancellationToken);
         
@@ -99,7 +96,7 @@ public class DataProvider : IDataProvider
 
     public async Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
         
         var ret = await client.GetTorrentsTrackers(In, cancellationToken);
         
@@ -108,45 +105,47 @@ public class DataProvider : IDataProvider
 
     public async Task<System.Threading.Channels.ChannelReader<ListingChanges<Torrent, Torrent, byte[]>>> GetTorrentChanges(CancellationToken CancellationToken)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
+
+        var interval = ThisPlugin.Host.Config.ListUpdateInterval;
 
         var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
         combined.Token.Register(combined.Dispose);
 
-        return client.GetTorrentChanges(combined.Token);
+        return client.GetTorrentChanges(interval, combined.Token);
     }
 
     public async Task<TorrentStatuses> StartTorrents(IList<byte[]> In)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
         
         return await client.StartTorrents(In);
     }
 
     public async Task<TorrentStatuses> PauseTorrents(IList<byte[]> In)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
         
         return await client.PauseTorrents(In);
     }
 
     public async Task<TorrentStatuses> StopTorrents(IList<byte[]> In)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
         
         return await client.StopTorrents(In);
     }
 
     public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
 
         return await client.AddTorrents(In);
     }
 
     public async Task<Guid> ForceRecheck(IList<byte[]> In)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
 
         var id = await client.ForceRecheckTorrents(In);
 
@@ -155,7 +154,7 @@ public class DataProvider : IDataProvider
 
     public async Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> In)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
 
         var id = await client.ReannounceToAllTrackers(In);
 
@@ -164,7 +163,7 @@ public class DataProvider : IDataProvider
 
     public async Task<TorrentStatuses> RemoveTorrents(IList<byte[]> In)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
 
         var id = await client.RemoveTorrents(In);
 
@@ -173,7 +172,7 @@ public class DataProvider : IDataProvider
 
     public async Task<TorrentStatuses> RemoveTorrentsAndData(IList<Torrent> In)
     {
-        var server = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var server = Host.AttachedDaemonService!.GetTorrentsService(this);
         
         var result = await server.RemoveTorrentsAndData(In);
         
@@ -182,7 +181,7 @@ public class DataProvider : IDataProvider
 
     public async Task<InfoHashDictionary<byte[]>> GetDotTorrents(IList<Torrent> In)
     {
-        var server = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var server = Host.AttachedDaemonService!.GetTorrentsService(this);
         
         var result = await server.GetDotTorrents(In);
 
@@ -191,8 +190,8 @@ public class DataProvider : IDataProvider
 
     public async Task<Guid?> MoveDownloadDirectory(InfoHashDictionary<string> In, IList<(string SourceFile, string TargetFile)> Check)
     {
-        var server = PluginHost.AttachedDaemonService!;
-        var torrentsService = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var server = Host.AttachedDaemonService!;
+        var torrentsService = Host.AttachedDaemonService!.GetTorrentsService(this);
 
         if (Check.Select(x => x.TargetFile).Distinct().Count() != Check.Count) {
             throw new ArgumentException("Moving multiple torrents with same destination is currently unsupported");
@@ -212,7 +211,7 @@ public class DataProvider : IDataProvider
                 text: "All of the file names exist in destination directory, do you want to proceed without moving the files?",
                 @enum: ButtonEnum.YesNo,
                 icon: Icon.Info,
-                windowStartupLocation: WindowStartupLocation.CenterOwner).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+                windowStartupLocation: WindowStartupLocation.CenterOwner).ShowWindowDialogAsync(ThisPlugin.Host.MainWindow);
 
             if (msgbox == ButtonResult.Yes)
                 move = false;
@@ -237,7 +236,7 @@ public class DataProvider : IDataProvider
                 ContentMessage = "Some of the files exist in destination directory, how would you like to proceed?",
                 Icon = Icon.Warning,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
-            }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+            }).ShowWindowDialogAsync(ThisPlugin.Host.MainWindow);
 
             if (msgbox == "Move (overwrite)") {
                 var allowedToDeleteTarget = await server.AllowedToDeleteFiles(Check.Select(x => x.TargetFile));
@@ -265,7 +264,7 @@ public class DataProvider : IDataProvider
                         ContentMessage = $"There are insufficient permissions to overwrite {(onlySome ? "some of " : "")}target files, how would you like to proceed?",
                         Icon = Icon.Warning,
                         WindowStartupLocation = WindowStartupLocation.CenterOwner
-                    }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+                    }).ShowWindowDialogAsync(ThisPlugin.Host.MainWindow);
                     
                     if (msgbox == "Try to overwrite anyway") {
                     } else if (msgbox == "Don't move (may result in recheck failure)")
@@ -300,7 +299,7 @@ public class DataProvider : IDataProvider
                 ContentMessage = $"There are insufficient permissions to read one or more source files, how would you like to proceed?",
                 Icon = Icon.Warning,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
-            }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+            }).ShowWindowDialogAsync(ThisPlugin.Host.MainWindow);
             
             if (msgbox == "Proceed anyway") {
             }
@@ -332,7 +331,7 @@ public class DataProvider : IDataProvider
                 ContentMessage = $"There are insufficient permissions to delete {(onlySome ? "some " : "")}source files after move, how would you like to proceed?",
                 Icon = Icon.Warning,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
-            }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+            }).ShowWindowDialogAsync(ThisPlugin.Host.MainWindow);
             
             if (msgbox == "Try to delete anyway")
                 deleteSourceFiles = true;
@@ -350,7 +349,7 @@ public class DataProvider : IDataProvider
                 ContentMessage = err,
                 Icon = Icon.Error,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
-            }).ShowWindowDialogAsync((Window)PluginHost.MainWindow);
+            }).ShowWindowDialogAsync(ThisPlugin.Host.MainWindow);
 
             return null;
         }
@@ -362,7 +361,7 @@ public class DataProvider : IDataProvider
 
     public async Task<TorrentStatuses> SetLabels(IList<(byte[] Hash, string[] Labels)> In)
     {
-        var server = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var server = Host.AttachedDaemonService!.GetTorrentsService(this);
         
         var result = await server.SetLabels(In);
         
@@ -371,7 +370,7 @@ public class DataProvider : IDataProvider
 
     public async Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default)
     {
-        var server = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var server = Host.AttachedDaemonService!.GetTorrentsService(this);
         
         var result = await server.GetPieces(In, cancellationToken);
         
@@ -380,15 +379,13 @@ public class DataProvider : IDataProvider
 
     public async Task<IEnumerable<Torrent>> GetAllTorrents(CancellationToken cancellationToken = default)
     {
-        var client = PluginHost.AttachedDaemonService!.GetTorrentsService(this);
+        var client = Host.AttachedDaemonService!.GetTorrentsService(this);
 
         return await client.GetAllTorrents(cancellationToken);
     }
 
     public ChannelReader<DataProviderDaemonLogEntry> StreamLogs(int History, CancellationToken CancellationToken) =>
-        PluginHost.AttachedDaemonService!.StreamLogs(this, History, CancellationToken);
+        Host.AttachedDaemonService!.StreamLogs(this, History, CancellationToken);
 
     public Task SetSequentialDownload(IList<byte[]> In, bool Enabled) => throw new NotSupportedException();
-
-    public BasePlugin Plugin => ThisPlugin;
 }

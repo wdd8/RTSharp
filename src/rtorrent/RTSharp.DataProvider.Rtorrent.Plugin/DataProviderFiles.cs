@@ -13,7 +13,6 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin;
 public class DataProviderFiles : IDataProviderFiles
 {
     private Plugin ThisPlugin { get; }
-    public IPluginHost PluginHost { get; }
 
     public DataProviderFilesCapabilities Capabilities { get; } = new(
         GetDefaultSavePath: true
@@ -22,16 +21,15 @@ public class DataProviderFiles : IDataProviderFiles
     public DataProviderFiles(Plugin ThisPlugin)
     {
         this.ThisPlugin = ThisPlugin;
-        this.PluginHost = ThisPlugin.Host;
     }
 
     public async Task<string> GetDefaultSavePath()
     {
-        var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();
 
-        var settings = await client.GetSettingsAsync(new Empty(), headers: ThisPlugin.DataProvider.GetBuiltInDataProviderGrpcHeaders());
+        var settings = await client.GetSettingsAsync(new Empty(), headers: ThisPlugin.Host.GetBuiltInDataProviderGrpcHeaders());
 
-        PluginHost.Logger.Verbose($"Default save path: {settings.DefaultDirectoryForDownloads}");
+        ThisPlugin.Host.Logger.Verbose($"Default save path: {settings.DefaultDirectoryForDownloads}");
 
         return settings.DefaultDirectoryForDownloads;
     }

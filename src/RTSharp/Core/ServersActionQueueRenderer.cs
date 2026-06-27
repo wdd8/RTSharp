@@ -5,24 +5,33 @@ using RTSharp.Shared.Controls;
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RTSharp.Core;
 
 public class ServersActionQueueRenderer(string ServerName, IDaemonService DaemonService) : DefaultActionQueueRenderer(ServerName, BuiltInIcon.Get(BuiltInIcons.SERVER))
 {
-    private ConcurrentDictionary<Guid, TaskCompletionSource> ActionsTasks = new();
+    private readonly ConcurrentDictionary<Guid, TaskCompletionSource> ActionsTasks = new();
 
-    public async Task TrackServerActions()
+    public async Task TrackServerActions(CancellationToken ct = default)
     {
-        while (true) {
+        while (!ct.IsCancellationRequested) {
             try {
-                var channel = DaemonService.StreamScriptsStatus(default);
-                await foreach (var update in channel.ReadAllAsync()) {
+                var channel = DaemonService.StreamScriptsStatus(ct);
+                await foreach (var update in channel.ReadAllAsync(ct)) {
                     ApplyUpdate(update);
                 }
-            } finally {
-                await Task.Delay(TimeSpan.FromSeconds(5));
+            } catch (OperationCanceledException) when (ct.IsCancellationRequested) {
+                break;
+            } catch { }
+
+            if (!ct.IsCancellationRequested) {
+                try {
+                    await Task.Delay(TimeSpan.FromSeconds(5), ct);
+                } catch (OperationCanceledException) {
+                    break;
+                }
             }
         }
     }

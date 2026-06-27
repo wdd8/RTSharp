@@ -30,21 +30,19 @@ public class RTSharpPlugin : IPluginHost
 {
     internal PluginAssemblyLoadContext AssemblyLoadContext { get; private set; }
     internal Assembly? Assembly { get; private set; }
-    internal IPlugin Instance { get; set; }
+    internal IPlugin Instance { get; set; } = null!; // See Init
     internal IPluginInit? PluginInit { get; set; }
-    public PluginInstanceConfig PluginInstanceConfig { get; }
+    public IPluginConfigContainer<PluginInstanceConfig> Config { get; private set; }
 
     public string ModulePath { get; init; }
 
     public Guid InstanceId { get; init; }
 
-    public IConfigurationRoot PluginConfig { get; }
+    internal IConfigurationRoot PluginConfig { get; }
+    private Type ConfigType { get; }
     public string PluginConfigPath { get; }
 
-    private string? AttachedServerId { get; set; }
-
-    /// <inheritdoc />
-    public Shared.Abstractions.Version Version => Global.Consts.Version;
+    public Shared.Abstractions.Version HostVersion => Global.Consts.Version;
 
     public string PluginVersion {
         get {
@@ -57,24 +55,21 @@ public class RTSharpPlugin : IPluginHost
         }
     }
 
-    /// <inheritdoc />
-    public object MainWindow => App.MainWindow;
+    public Window MainWindow => App.MainWindow;
 
-    /// <inheritdoc />
     public void ShowTrayMessage(string Title, string Message)
     {
         throw new NotImplementedException();
     }
 
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
-    public RTSharpPlugin(PluginAssemblyLoadContext Context, Assembly Assembly, IConfigurationRoot PluginConfig, string PluginConfigPath, Guid InstanceId, string ModulePath)
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+    public RTSharpPlugin(PluginAssemblyLoadContext Context, Assembly? Assembly, IConfigurationRoot PluginConfig, string PluginConfigPath, Guid InstanceId, string ModulePath, Type ConfigType)
     {
         this.Assembly = Assembly;
         this.AssemblyLoadContext = Context;
         this.PluginConfig = PluginConfig;
         this.PluginConfigPath = PluginConfigPath;
-        this.PluginInstanceConfig = PluginConfig.GetSection("Plugin").Get<PluginInstanceConfig>()!;
+        this.ConfigType = ConfigType;
+        this.Config = (IPluginConfigContainer<PluginInstanceConfig>)PluginConfig.Get(ConfigType)!;
 
         this.InstanceId = InstanceId;
 
@@ -84,44 +79,29 @@ public class RTSharpPlugin : IPluginHost
         this.ModulePath = ModulePath;
     }
 
-    public IDataProviderHost RegisterDataProvider(IDataProvider In)
+    public IDataProviderHost<TConfig> RegisterDataProvider<TConfig>(IDataProvider In) where TConfig : IPluginConfigContainer<DataProviderInstanceConfig>
     {
-        var provider = new RTSharpDataProvider(this, In);
+        var provider = new RTSharpDataProvider<TConfig>(this, In);
 
-        if (provider.DataProviderInstanceConfig == null)
-            throw new InvalidOperationException($"{InstanceId} tried to register, but data provider section is not present");
+        if (provider.Config.Plugin.ServerId == null)
+            throw new InvalidOperationException($"{InstanceId} tried to register, but {nameof(provider.Config.Plugin.ServerId)} is missing");
 
-        if (provider.DataProviderInstanceConfig.ServerId == null)
-            throw new InvalidOperationException($"{InstanceId} tried to register, but {nameof(provider.DataProviderInstanceConfig.ServerId)} is missing");
-
-        if (AttachedServerId == null)
-            AttachedServerId = provider.DataProviderInstanceConfig.ServerId;
-        else if (AttachedServerId != provider.DataProviderInstanceConfig.ServerId)
-            AttachedServerId = null;
-
-        Dispatcher.UIThread.Invoke(() => Plugins.DataProviders.Edit(x => {
+        Dispatcher.UIThread.Invoke(() => Plugin.Plugins.DataProviders.Edit(x => {
             x.Add(provider);
         }));
 
         return provider;
     }
 
-    public void UnregisterDataProvider(object In)
+    public void UnregisterDataProvider(RTSharpDataProvider In)
     {
-        var dp = (RTSharpDataProvider)In;
-
-        if (dp == null)
-            return;
-
-        Dispatcher.UIThread.Invoke(() => Plugins.DataProviders.Edit(x => {
-            x.Remove(dp);
+        Dispatcher.UIThread.Invoke(() => Plugin.Plugins.DataProviders.Edit(x => {
+            x.Remove(In);
         }));
-        dp.CurrentTorrentChangesTaskCts.Cancel();
+        In.CurrentTorrentChangesTaskCts.Cancel();
     }
 
-    public void RegisterActionQueue(IActionQueueRenderer In) => Core.ActionQueue.RegisterActionQueue(this, In);
-
-    public void UnregisterActionQueue() => Core.ActionQueue.UnregisterActionQueue(this);
+    public IDisposable RegisterActionQueue(IActionQueueRenderer In) => Core.ActionQueue.RegisterActionQueue(this, In);
 
     public IDisposable RegisterRootMenuItem(MenuItem In)
     {
@@ -172,24 +152,25 @@ public class RTSharpPlugin : IPluginHost
         });
     }
 
-    public IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx) => Plugins.Hook(Plugins.HookType.TorrentListing_EvLoadingRow, fx);
-    public IDisposable HookTorrentListingEvLoadingCell(Action<object, string, DataGridCell> fx) => Plugins.Hook(Plugins.HookType.TorrentListing_EvLoadingCell, fx);
+    public IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx) => Plugin.Plugins.Hook(Plugin.Plugins.HookType.TorrentListing_EvLoadingRow, fx);
+    public IDisposable HookTorrentListingEvLoadingCell(Action<object, string, DataGridCell> fx) => Plugin.Plugins.Hook(Plugin.Plugins.HookType.TorrentListing_EvLoadingCell, fx);
 
     /// <summary>
     /// ViewModels.AddTorrentViewModel
     /// </summary>
     /// <param name="fx"></param>
     /// <returns></returns>
-    public IDisposable HookAddTorrentEvDragDrop(Func<object, ValueTask> fx) => Plugins.Hook(Plugins.HookType.AddTorrent_EvDragDrop, fx);
+    public IDisposable HookAddTorrentEvDragDrop(Func<object, ValueTask> fx) => Plugin.Plugins.Hook(Plugin.Plugins.HookType.AddTorrent_EvDragDrop, fx);
 
     public ILogger Logger =>
         Log.Logger
             .ForContext("PluginInstanceId", InstanceId)
             .ForContext("PluginGuid", Instance?.GUID.ToString() ?? "?")
-            .ForContext("PluginColor", PluginInstanceConfig.Color)
-            .ForContext("PluginDisplayName", PluginInstanceConfig.Name);
+            .ForContext("PluginDisplayName", Config.Plugin.Name);
 
     public IReadOnlyCollection<Torrent> Torrents => [.. Core.TorrentPolling.TorrentPolling.Torrents.GetSnapshot().Select(x => x.ToPluginModel())];
+
+    public IReadOnlyCollection<IPluginHost> Plugins => [.. Plugin.Plugins.LoadedPlugins.ToArray() ];
 
     public HttpClient HttpClient => Core.Http.Client;
 
@@ -201,26 +182,16 @@ public class RTSharpPlugin : IPluginHost
         Assembly = null;
         Instance = null!;
         AssemblyLoadContext = null!;
-        Plugins.LoadedPlugins.Remove(this);
-    }
-
-    public IDaemonService AttachedDaemonService
-    {
-        get {
-            if (AttachedServerId == null)
-                throw new InvalidOperationException("No singular server data providers registered");
-
-            return Core.Servers.Value[AttachedServerId];
-        }
+        Plugin.Plugins.LoadedPlugins.Remove(this);
     }
 
     public IServiceScope CreateScope() => Core.ServiceProvider.CreateScope();
 
-    public IReadOnlyList<IDaemonService> GetDaemonServices() => Core.Servers.Value.Select(x => x.Value).ToList().AsReadOnly();
+    public IReadOnlyList<IDaemonService> GetDaemonServices() => Core.Servers.All.Select(x => x.Value).ToList().AsReadOnly();
 
     public IDaemonService? GetDaemonService(string ServerId)
     {
-        if (Core.Servers.Value.TryGetValue(ServerId, out var ret))
+        if (Core.Servers.All.TryGetValue(ServerId, out var ret))
             return ret;
 
         return null;
@@ -229,19 +200,39 @@ public class RTSharpPlugin : IPluginHost
     public async Task SavePluginConfig(Action<JsonNode> Modifications)
     {
         var jsonRaw = await System.IO.File.ReadAllTextAsync(PluginConfigPath);
-        var json = JsonNode.Parse(jsonRaw)!;
+        var json = JsonNode.Parse(jsonRaw, documentOptions: new JsonDocumentOptions {
+            AllowTrailingCommas = true,
+            CommentHandling = JsonCommentHandling.Skip
+        })!;
 
         Modifications(json);
 
+        await WriteConfig(json.ToJsonString(new JsonSerializerOptions() { WriteIndented = true }));
+    }
+
+    public async Task SavePluginConfig<T>(Action<T> Modifications)
+    {
+        var jsonRaw = await System.IO.File.ReadAllTextAsync(PluginConfigPath);
+        var config = JsonSerializer.Deserialize<T>(jsonRaw, new JsonSerializerOptions {
+            AllowTrailingCommas = true,
+            ReadCommentHandling = JsonCommentHandling.Skip
+        })!;
+
+        Modifications(config);
+
+        await WriteConfig(JsonSerializer.Serialize(config, new JsonSerializerOptions() { WriteIndented = true }));
+    }
+
+    private async Task WriteConfig(string content)
+    {
         var newFileName = System.IO.Path.GetTempFileName();
-        await System.IO.File.WriteAllTextAsync(newFileName, json.ToJsonString(new JsonSerializerOptions() {
-            WriteIndented = true
-        }));
+        await System.IO.File.WriteAllTextAsync(newFileName, content);
 
         System.IO.File.Move(PluginConfigPath, PluginConfigPath + ".bak");
         System.IO.File.Move(newFileName, PluginConfigPath);
         System.IO.File.Delete(PluginConfigPath + ".bak");
 
         PluginConfig.Reload();
+        this.Config = (IPluginConfigContainer<PluginInstanceConfig>)PluginConfig.Get(ConfigType)!;
     }
 }

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace RTSharp.ServerScriptPlayground.Plugin;
 
-public class Plugin : BasePlugin
+public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 {
     public override string Name => "Server script playground";
 
@@ -28,20 +28,21 @@ public class Plugin : BasePlugin
         HasSettingsWindow: false
     );
 
-    public override IPluginHost Host { get; set; }
+    public required IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host { get; set; }
 
     IDisposable? RootMenuItem;
 
-    public override Task<IPlugin> Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
+    public override Task<IPlugin> Init(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, Action<(string Status, float Percentage)> Progress)
     {
+        this.Host = Host;
         Progress(("Initializing...", 0f));
 
         Dispatcher.UIThread.Invoke(() => {
-            RootMenuItem = Host.RegisterRootMenuItem(new MenuItem() {
+            RootMenuItem = this.Host.RegisterRootMenuItem(new MenuItem() {
                 Header = "Server scripting",
                 Command = new RelayCommand(() => {
                     var wnd = new PlaygroundWindow();
-                    wnd.ViewModel = new ViewModels.PlaygroundWindowViewModel(Host, wnd);
+                    wnd.ViewModel = new ViewModels.PlaygroundWindowViewModel(this.Host, wnd);
                     wnd.Show();
                 })
             });
