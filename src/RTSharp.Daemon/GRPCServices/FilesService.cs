@@ -10,7 +10,6 @@ using Mono.Unix;
 using Mono.Unix.Native;
 
 using RTSharp.Daemon.Protocols;
-using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Utils;
 
 using System.Runtime.InteropServices;

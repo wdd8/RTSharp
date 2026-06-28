@@ -9,6 +9,7 @@ using RTSharp.Shared.Utils;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
+
 namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 {
     public partial class TorrentPolling : BackgroundService
@@ -30,6 +31,19 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         internal List<PollingSubscription> Subscribers = [];
         internal Lock SubscribersLock = new();
         internal AsyncManualResetEvent ForceLoop;
+
+        private readonly List<HistoryEntry> GlobalHistory = [];
+
+        private static double ComputeSpeed(List<HistoryEntry> History, byte[] Hash, bool Uploaded)
+        {
+            Span<(DateTime, long)> buf = stackalloc (DateTime, long)[History.Count];
+            var c = 0;
+            foreach (var h in History) {
+                if (h.List.TryGetValue(Hash, out var t))
+                    buf[c++] = (h.Date, (long)(Uploaded ? t.Uploaded : t.Downloaded));
+            }
+            return SpeedMovingAverage.CalculateSpeed(buf[..c]);
+        }
 
         public PollingSubscription Subscribe(TimeSpan Interval)
         {
@@ -113,8 +127,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 var downSpeed = XMLUtils.GetValue<ulong>(ref xml);
 
                 var creationDateRaw = XMLUtils.GetValue<ulong>(ref xml);
-                ulong addDateRaw;
-                if (!UInt64.TryParse(XMLUtils.GetValue<string>(ref xml), out addDateRaw)) {
+                if (!UInt64.TryParse(XMLUtils.GetValue<string>(ref xml), out var addDateRaw)) {
                     addDateRaw = 0;
                 }
                 var finishedDateRaw = XMLUtils.GetValue<ulong>(ref xml);
@@ -259,7 +272,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 if (subs.Length > 0) {
                     static TimeSpan GCD(IList<TimeSpan> Input)
                     {
-                        TimeSpan GCDInner(TimeSpan a, TimeSpan b)
+                        static TimeSpan GCDInner(TimeSpan a, TimeSpan b)
                         {
                             var aTicks = a.Ticks;
                             var bTicks = b.Ticks;
@@ -281,14 +294,14 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                         return res;
                     }
 
-                    delay = GCD(subs.Select(x => x.Interval).ToList());
+                    delay = GCD([.. subs.Select(x => x.Interval)]);
                 }
 
                 Logger.LogTrace("Sleeping for {delay} for torrent poll", delay);
                 if (delay == TimeSpan.MaxValue)
-                    await Task.WhenAny(Task.Delay(-1), ForceLoop.WaitAsync(stoppingToken));
+                    await Task.WhenAny(Task.Delay(-1, stoppingToken), ForceLoop.WaitAsync(stoppingToken));
                 else
-                    await Task.WhenAny(Task.Delay(delay), ForceLoop.WaitAsync(stoppingToken));
+                    await Task.WhenAny(Task.Delay(delay, stoppingToken), ForceLoop.WaitAsync(stoppingToken));
                 ForceLoop.Reset();
 
                 (InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers) allTorrents;
@@ -296,7 +309,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     allTorrents = await GetAllTorrents();
                 } catch (Exception ex) {
                     Logger.LogError(ex, "Torrent poll failed");
-                    await Task.WhenAny(Task.Delay(1000), ForceLoop.WaitAsync());
+                    await Task.WhenAny(Task.Delay(1000, stoppingToken), ForceLoop.WaitAsync(stoppingToken));
                     continue;
                 }
 
@@ -305,17 +318,43 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
                 const int HISTORY_MAX = 5;
 
+                var entry = new HistoryEntry(DateTime.UtcNow, allTorrents.List, allTorrents.Trackers);
+
+                GlobalHistory.Add(entry);
+                if (GlobalHistory.Count > HISTORY_MAX)
+                    GlobalHistory.RemoveAt(0);
+
+                foreach (var (hash, torrent) in allTorrents.List) {
+                    var upSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: true);
+                    torrent.UPSpeed = upSpeed;
+
+                    if (torrent.CompletedSize >= torrent.WantedSize) {
+                        torrent.DLSpeed = 0;
+                        torrent.ETA = Duration.FromTimeSpan(TimeSpan.Zero);
+                    } else {
+                        var dlSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: false);
+                        torrent.DLSpeed = dlSpeed;
+                        if (dlSpeed == 0) {
+                            torrent.ETA = null;
+                        } else {
+                            var secs = (double)(torrent.Size - torrent.CompletedSize) / dlSpeed;
+                            torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
+                        }
+                    }
+
+                    if (torrent.UPSpeed > 0 || torrent.DLSpeed > 0)
+                        torrent.State |= TorrentState.Active;
+                }
+
+                PollingSubscription.LatestHistory = entry;
+
                 foreach (var sub in subs) {
                     if (sub.History.Count != 0 && sub.History.Last().Date + sub.Interval >= DateTime.UtcNow)
                         continue;
-                        
-                    var history = (DateTime.UtcNow, allTorrents.List, allTorrents.Trackers);
-                    sub.History.Add(history);
-                    PollingSubscription.LatestHistory = history; 
 
-                    if (sub.History.Count > HISTORY_MAX) {
+                    sub.History.Add(entry);
+                    if (sub.History.Count > HISTORY_MAX)
                         sub.History.RemoveAt(0);
-                    }
 
                     sub.EvNewDelta.Set();
                 }

@@ -1,10 +1,8 @@
 ﻿using Nito.AsyncEx;
 using System.Text;
-using Google.Protobuf.WellKnownTypes;
 using RTSharp.Shared.Utils;
 using RTSharp.Daemon.Protocols.DataProvider;
 
-using HistoryEntry = (System.DateTime Date, RTSharp.Shared.Utils.InfoHashDictionary<RTSharp.Daemon.Protocols.DataProvider.Torrent> List, RTSharp.Shared.Utils.InfoHashDictionary<RTSharp.Daemon.Protocols.DataProvider.TorrentsTrackersReply.Types.TorrentsTrackers> Trackers);
 
 namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 {
@@ -41,8 +39,6 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             if (CancellationToken.IsCancellationRequested)
                 return null;
 
-            HistoryEntry[] history;
-
             lock (HistoryLock) {
                 var last = History.Last();
                 currentList = last.List;
@@ -64,33 +60,22 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     previousList = previousEntry.List;
                     previousTrackers = previousEntry.Trackers;
                 }
-
-                history = History.ToArray();
             }
 
             var ret = new DeltaTorrentsListResponse();
 
             foreach (var (hash, torrent) in currentList) {
                 var trackers = currentTrackers[hash];
-                
+
                 Torrent? previous = null;
                 TorrentsTrackersReply.Types.TorrentsTrackers? curPreviousTrackers = null;
 
                 previousList?.TryGetValue(hash, out previous);
                 previousTrackers?.TryGetValue(hash, out curPreviousTrackers);
 
-                var primaryTracker = GetPrimaryTracker(trackers.Trackers);
-
                 void add(bool fullUpdate)
-                {                
+                {
                     if (fullUpdate) {
-                        if (torrent.UPSpeed == UInt64.MaxValue)
-                            torrent.UPSpeed = 0;
-                        if (torrent.DLSpeed == UInt64.MaxValue)
-                            torrent.DLSpeed = 0;
-
-                        torrent.PrimaryTracker = primaryTracker;
-
                         ret.FullUpdate.Add(torrent);
                     } else if (torrent.Downloaded >= torrent.WantedSize) {
                         var toAdd = new CompleteDeltaTorrentResponse() {
@@ -99,14 +84,14 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                             WantedSize = torrent.WantedSize,
                             FinishedOn = torrent.FinishedOn,
                             Uploaded = torrent.Uploaded,
-                            UPSpeed = torrent.UPSpeed == UInt64.MaxValue ? 0 : torrent.UPSpeed,
+                            UPSpeed = torrent.UPSpeed,
                             Labels = { torrent.Labels },
                             RemotePath = torrent.RemotePath,
                             SeedersTotal = torrent.SeedersTotal,
                             PeersTotal = torrent.PeersTotal,
                             PeersConnected = torrent.PeersConnected,
                             Priority = torrent.Priority,
-                            PrimaryTracker = primaryTracker,
+                            PrimaryTracker = torrent.PrimaryTracker,
                             StatusMessage = torrent.StatusMessage
                         };
                         ret.Complete.Add(toAdd);
@@ -118,8 +103,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                             Downloaded = torrent.Downloaded,
                             CompletedSize = torrent.CompletedSize,
                             Uploaded = torrent.Uploaded,
-                            DLSpeed = torrent.DLSpeed == UInt64.MaxValue ? 0 : torrent.DLSpeed,
-                            UPSpeed = torrent.UPSpeed == UInt64.MaxValue ? 0 : torrent.UPSpeed,
+                            DLSpeed = torrent.DLSpeed,
+                            UPSpeed = torrent.UPSpeed,
                             ETA = torrent.ETA,
                             Labels = { torrent.Labels },
                             RemotePath = torrent.RemotePath,
@@ -129,7 +114,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                             PeersTotal = torrent.PeersTotal,
                             Priority = torrent.Priority,
                             Wasted = torrent.Wasted,
-                            PrimaryTracker = primaryTracker,
+                            PrimaryTracker = torrent.PrimaryTracker,
                             StatusMessage = torrent.StatusMessage,
                             MagnetDummy = torrent.MagnetDummy
                         };
@@ -142,40 +127,12 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     continue;
                 }
 
-                var prevPrimaryTracker = GetPrimaryTracker(curPreviousTrackers?.Trackers);
-
-                torrent.UPSpeed = (ulong)ComputeSpeed(history, hash, Uploaded: true);
-
-                if (torrent.UPSpeed == 0 && previous.UPSpeed != 0) // Force send & reset
-                    torrent.UPSpeed = UInt64.MaxValue;
-
-                if (torrent.Downloaded == torrent.WantedSize)
-                    torrent.ETA = Duration.FromTimeSpan(TimeSpan.Zero);
-                else {
-                    torrent.DLSpeed = (ulong)ComputeSpeed(history, hash, Uploaded: false);
-
-                    if (torrent.DLSpeed == 0 && previous.DLSpeed != 0) {
-                        // Force send & reset
-                        torrent.DLSpeed = UInt64.MaxValue;
-                        torrent.ETA = null;
-                    } else {
-                        var secs = (double)(torrent.Size - torrent.Downloaded) / torrent.DLSpeed;
-                        if (secs >= Duration.MaxSeconds)
-                            torrent.ETA = null;
-                        else
-                            torrent.ETA = Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
-                    }
-                }
-
-                if (torrent.UPSpeed > 0 || torrent.DLSpeed > 0)
-                    torrent.State |= TorrentState.Active;
-
                 if (torrent.State != previous.State)
                     add(true);
                 else if (torrent.Downloaded >= torrent.WantedSize) {
                     // Complete
                     if (torrent.Uploaded != previous.Uploaded ||
-                        torrent.UPSpeed != 0 ||
+                        torrent.UPSpeed != previous.UPSpeed ||
                         !torrent.Labels.SequenceEqual(previous.Labels) ||
                         torrent.RemotePath != previous.RemotePath ||
                         torrent.FinishedOn.CompareTo(previous.FinishedOn) != 0 ||
@@ -184,7 +141,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                         torrent.PeersConnected != previous.PeersConnected ||
                         torrent.Priority != previous.Priority ||
                         TrackersChanged(trackers, curPreviousTrackers) ||
-                        primaryTracker?.Uri != prevPrimaryTracker?.Uri ||
+                        torrent.PrimaryTracker?.Uri != previous.PrimaryTracker?.Uri ||
                         torrent.StatusMessage != previous.StatusMessage ||
                         torrent.WantedSize != previous.WantedSize) {
 
@@ -192,7 +149,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     }
                 } else if (torrent.Downloaded != previous.Downloaded ||
                     torrent.CompletedSize != previous.CompletedSize ||
-                    torrent.DLSpeed != 0 ||
+                    torrent.DLSpeed != previous.DLSpeed ||
                     torrent.Uploaded != previous.Uploaded ||
                     !torrent.Labels.SequenceEqual(previous.Labels) ||
                     torrent.RemotePath != previous.RemotePath ||
@@ -203,7 +160,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     torrent.Priority != previous.Priority ||
                     torrent.Wasted != previous.Wasted ||
                     TrackersChanged(trackers, curPreviousTrackers) ||
-                    primaryTracker?.Uri != prevPrimaryTracker?.Uri ||
+                    torrent.PrimaryTracker?.Uri != previous.PrimaryTracker?.Uri ||
                     torrent.StatusMessage != previous.StatusMessage ||
                     torrent.MagnetDummy != previous.MagnetDummy ||
                     torrent.WantedSize != previous.WantedSize) {
@@ -220,17 +177,6 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             }
 
             return ret;
-        }
-
-        static double ComputeSpeed(HistoryEntry[] History, byte[] Hash, bool Uploaded)
-        {
-            Span<(DateTime, long)> buf = stackalloc (DateTime, long)[History.Length];
-            var c = 0;
-            foreach (var h in History) {
-                if (h.List.TryGetValue(Hash, out var t))
-                    buf[c++] = (h.Date, (long)(Uploaded ? t.Uploaded : t.Downloaded));
-            }
-            return SpeedMovingAverage.CalculateSpeed(buf[..c]);
         }
 
         static bool TrackersChanged(TorrentsTrackersReply.Types.TorrentsTrackers Current, TorrentsTrackersReply.Types.TorrentsTrackers? Previous)

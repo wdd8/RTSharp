@@ -6,17 +6,9 @@ namespace RTSharp.Daemon.Services
     /// <summary>
     /// Exponentially Weighted Moving Average
     /// </summary>
-    public class SpeedMovingAverage : ISpeedMovingAverage
+    public class SpeedMovingAverage(int ItemsMax, double Alpha = 0.8) : ISpeedMovingAverage
     {
-        private int ItemsMax;
-        private LinkedList<(DateTime TimeUtc, long TotalBytes)> Items = new();
-        private double Alpha;
-
-        public SpeedMovingAverage(int ItemsMax, double Alpha = 0.8)
-        {
-            this.ItemsMax = ItemsMax;
-            this.Alpha = Alpha;
-        }
+        private readonly LinkedList<(DateTime TimeUtc, long TotalBytes)> Items = new();
 
         public void Value(long TotalBytes) => Value(DateTime.UtcNow, TotalBytes);
 
