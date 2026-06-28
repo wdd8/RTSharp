@@ -23,10 +23,13 @@
 
 	<dialogHost:DialogHost IsOpen="{Binding ProgressDialogShown}">
         <dialogHost:DialogHost.DialogContent>
-            <StackPanel Margin="8 8 8 8" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.75)}">
-                <TextBlock FontWeight="Bold" Text="{Binding ProgressText}" />
-				<Button HorizontalAlignment="Center" Command="{Binding CancelCommand}">Cancel</Button>
-            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.75)}">
+                <views:BuiltInGifImage Grid.Column="0" Value="SEARCHING" HorizontalAlignment="Center" Margin="0,0,0,8" />
+                <StackPanel  Grid.Column="1" Margin="8 8 8 8">
+                    <TextBlock FontWeight="Bold" Text="{Binding ProgressText}" />
+				    <Button HorizontalAlignment="Center" Command="{Binding CancelCommand}">Cancel</Button>
+                </StackPanel>
+            </Grid>
         </dialogHost:DialogHost.DialogContent>
 		<Grid ColumnDefinitions="4*, 4, 8*" RowDefinitions="*">
 			<ListBox Grid.Column="0"

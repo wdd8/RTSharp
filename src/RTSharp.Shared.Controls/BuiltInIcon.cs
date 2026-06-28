@@ -1,4 +1,5 @@
-﻿using Avalonia.Media.Imaging;
+﻿using Avalonia.Labs.Gif;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
 using System.Collections.Concurrent;
@@ -19,6 +20,7 @@ public enum BuiltInIcons
     LINK_OK,
     LINK_BROKEN,
     PLANE,
+    SEARCHING,
 
     SERIOUS_EXCLAMATION,
     SERIOUS_INFO,
@@ -62,6 +64,7 @@ public static class BuiltInIcon
         { BuiltInIcons.LINK_OK, new Uri("avares://RTSharp/Assets/Icons/link_ok.ico") },
         { BuiltInIcons.LINK_BROKEN, new Uri("avares://RTSharp/Assets/Icons/link_broken.ico") },
         { BuiltInIcons.PLANE, new Uri("avares://RTSharp/Assets/Icons/plane.ico") },
+        { BuiltInIcons.SEARCHING, new Uri("avares://RTSharp/Assets/Icons/searching.gif") },
 
         { BuiltInIcons.SERIOUS_EXCLAMATION, new Uri("avares://RTSharp/Assets/Icons/serious_exclamation.ico") },
         { BuiltInIcons.SERIOUS_INFO, new Uri("avares://RTSharp/Assets/Icons/serious_info.ico") },
@@ -90,4 +93,6 @@ public static class BuiltInIcon
     }.ToFrozenDictionary();
 
     public static Bitmap Get(BuiltInIcons Icon) => Cache.GetOrAdd(Icon, icon => new Bitmap(AssetLoader.Open(Icons[icon])));
+
+    public static IGifSource GetGif(BuiltInIcons Icon) => GifStreamSource.FromUri(Icons[Icon]);
 }
