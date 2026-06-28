@@ -777,10 +777,10 @@ namespace RTSharp.Models
                 DataOwner = DataOwner.Instance,
                 State = _internalState,
                 Size = _size,
-                WantedSize = _size, // TODO: ??????????
+                WantedSize = _wantedSize,
                 PieceSize = PieceSize,
                 Wasted = _wasted,
-                Done = (float)_downloaded / _size * 100, // Maybe get from server?
+                Done = (float)_completedSize / _size * 100, // Maybe get from server?
                 Downloaded = _downloaded,
                 CompletedSize = _completedSize,
                 Uploaded = _uploaded,
