@@ -22,7 +22,14 @@ public class QbitClient
                 var uri = new Uri(Config.Uri);
 
                 Client = new QBittorrentClient(uri, ApiLevel.Auto);
-                await Client.LoginAsync(Config.Username, Config.Password);
+
+                if (!String.IsNullOrEmpty(Config.ApiKey)) {
+                    Client.SetApiKey(Config.ApiKey);
+                } else if (!String.IsNullOrEmpty(Config.Username)) {
+                    await Client.LoginAsync(Config.Username, Config.Password);
+                } else {
+                    throw new InvalidOperationException("qbittorrent data provider requires either ApiKey or Username/Password to be configured");
+                }
 
                 Created = DateTime.UtcNow;
                 return Client;

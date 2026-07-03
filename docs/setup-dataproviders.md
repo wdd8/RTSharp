@@ -24,12 +24,12 @@ Otherwise, run the following in a powershell window:
 ## Server side
 
 There are multiple options to run `RTSharp.Daemon`:
- * Systemd service - Packaged service, either regular or self-contained version. To run regular version, you will have to [install dotnet SDK & runtime](https://learn.microsoft.com/en-us/dotnet/core/install/linux). Configuration is read from /etc/rtsharp if it exists, or from application base path.
+ * Systemd service - Packaged service, either regular or self-contained version. To run regular version, you will have to [install dotnet SDK & runtime](https://learn.microsoft.com/en-us/dotnet/core/install/linux). Configuration is read from /etc/rtsharp-daemon if it exists, or from application base path.
  * Docker container - See [docker-compose.yml](src/RTSharp.Daemon/docker-compose.yml) for an example configuration. An example configuration will be created upon startup.
 
 ---
 
-1. Generate a public & private service certificates in `/etc/rtsharp`:
+1. Generate a public & private service certificates in `/etc/rtsharp-daemon`:
     ```
     openssl req -x509 -newkey rsa:4096 -nodes -keyout private.pem -out public.pem -days 36500
     ```
@@ -39,7 +39,7 @@ There are multiple options to run `RTSharp.Daemon`:
     openssl x509 -in public.pem -noout -fingerprint -sha256 | sed s/://g | cut -d= -f2
     ```
 
-3. Modify example configuration at `/etc/rtsharp/appsettings.json`:
+3. Modify example configuration at `/etc/rtsharp-daemon/appsettings.json`:
    1. Modify `ListenAddress` to listen on `DaemonPort` of your choosing
    2. Add clients certificate thumbprint you've noted down before to `AllowedClients`.
    
@@ -78,8 +78,9 @@ Example:
   "qbittorrent": {
     "my qbittorrent": {
       "Uri": "http://127.0.0.1:1234/",
-      "Username": "admin",
-      "Password": "changeme"
+      "ApiKey": "api-key" // api key, or...
+      "Username": "admin", // ...username+password
+      "Password": "changeme",
     }
   },
   "transmission": {
@@ -134,11 +135,12 @@ Example:
 
 ### qbittorrent
 
-qbittorrent implementation connects to its RPC server using a username and password via HTTP.
+qbittorrent implementation connects to its RPC server using a username and password or API key via HTTP. API key is superior to username+password.
 
 * `Uri` field must point to qbittorrent RPC server, for example `http://10.0.0.1:40000/`
-* `Username` field must be filled
-* `Password` field must be filled
+* `ApiKey` field should be filled with API key generated from qBittorrent WebUI
+* `Username` field is used together with password if `ApiKey` is not used
+* `Password` field is used together with username
 
 Example:
 ```

@@ -153,6 +153,18 @@ namespace QBittorrent.Client
         }
 
         /// <summary>
+        /// Authenticates this client using an API key.
+        /// </summary>
+        /// <param name="apiKey">The API key generated in the qBittorrent WebUI.</param>
+        public void SetApiKey(string apiKey)
+        {
+            if (apiKey == null)
+                throw new ArgumentNullException(nameof(apiKey));
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        }
+
+        /// <summary>
         /// Clears authentication on the remote qBittorrent server.
         /// </summary>
         /// <param name="token">The cancellation token.</param>
