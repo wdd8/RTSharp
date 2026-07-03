@@ -8,7 +8,7 @@ services:
       - "1234:1234" # Should correspond to config listen port
     volumes:
       # appsettings.json + mTLS certificates (public.pem / private.pem)
-      - ./config:/etc/rtsharp
+      - ./config:/etc/rtsharp-daemon
       # Torrent data, mounted at the same paths the torrent daemon uses.
       - ./data:/data
     restart: unless-stopped

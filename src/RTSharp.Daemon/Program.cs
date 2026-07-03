@@ -13,7 +13,7 @@ public static class Program
     private static string ResolveDaemonConfigPath()
     {
         if (OperatingSystem.IsLinux()) {
-            const string etcPath = "/etc/rtsharp";
+            const string etcPath = "/etc/rtsharp-daemon";
             if (Directory.Exists(etcPath))
                 return etcPath;
         }

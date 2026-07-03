@@ -13,8 +13,8 @@ COPY docker-context/${TARGETARCH}/ ./
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
  && mv ./appsettings.json ./appsettings.example.json \
- && mkdir -p /etc/rtsharp
+ && mkdir -p /etc/rtsharp-daemon
 
-VOLUME /etc/rtsharp
+VOLUME /etc/rtsharp-daemon
 
 ENTRYPOINT ["docker-entrypoint.sh"]

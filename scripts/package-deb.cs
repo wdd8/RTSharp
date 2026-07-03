@@ -68,6 +68,13 @@ Directory.CreateDirectory(Path.Combine(pkgDir, "usr", "bin"));
 
 CopyDirectory(srcDir, Path.Combine(pkgDir, installDir));
 
+var isDaemon = type == "daemon" || type == "daemon-self-contained";
+if (isDaemon) {
+    var etcDir = Path.Combine(pkgDir, "etc", "rtsharp-daemon");
+    Directory.CreateDirectory(etcDir);
+    File.Move(Path.Combine(pkgDir, installDir, "appsettings.json"), Path.Combine(etcDir, "appsettings.json"));
+}
+
 var execPath = Path.Combine(pkgDir, installDir, execName);
 File.SetUnixFileMode(execPath,
     UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
@@ -100,7 +107,9 @@ control.AppendLine($"Description: {description}");
 
 File.WriteAllText(Path.Combine(pkgDir, "DEBIAN", "control"), control.ToString());
 
-if (type == "daemon" || type == "daemon-self-contained") {
+if (isDaemon) {
+    File.WriteAllText(Path.Combine(pkgDir, "DEBIAN", "conffiles"), "/etc/rtsharp-daemon/appsettings.json\n");
+
     var execMode =
         UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
         UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
@@ -144,7 +153,7 @@ set -e
 SERVICE_FILE=/lib/systemd/system/rtsharp-daemon.service
 
 echo ""
-echo "RTSharp Daemon needs a user account to run as."
+echo "RT# Daemon needs a user account to run as."
 
 USERS=$(awk -F: '$3 >= 1000 && $3 < 65534 { print $1 }' /etc/passwd | sort | tr '\n' ' ')
 if [ -n "$USERS" ]; then
