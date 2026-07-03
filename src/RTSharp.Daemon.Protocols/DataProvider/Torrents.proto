@@ -47,6 +47,7 @@ message IncompleteDeltaTorrentResponse {
     bool MagnetDummy = 19;
     uint64 WantedSize = 20;
     bool SequentialDownload = 21;
+    uint64 HashingSpeed = 22;
 }
 
 message CompleteDeltaTorrentResponse {
@@ -104,6 +105,7 @@ message Torrent {
     string StatusMessage = 27;
     bool MagnetDummy = 28;
     bool SequentialDownload = 29;
+    uint64 HashingSpeed = 30;
 }
 
 enum TorrentState {

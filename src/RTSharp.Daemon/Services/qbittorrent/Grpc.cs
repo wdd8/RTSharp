@@ -543,6 +543,29 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
             var delta = new DeltaTorrentsListResponse();
 
+            using var smasScope = ServiceProvider.CreateScope();
+            var smas = smasScope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
+
+            void updateHashingSpeed(Protocols.DataProvider.Torrent Torrent)
+            {
+                if (Torrent.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing)) {
+                    var sma = smas.Get(InstanceKey, $"HashingSpeed_{Convert.ToHexString(Torrent.Hash.Span)}");
+                    sma.ValueIfChanged(DateTime.UtcNow, (long)Torrent.CompletedSize);
+                    var hashingSpeed = (ulong)Math.Max(0, sma.CalculateSpeed());
+                    Torrent.HashingSpeed = hashingSpeed;
+
+                    // No native ETA for hashing state
+                    if (hashingSpeed == 0 || Torrent.CompletedSize >= Torrent.WantedSize) {
+                        Torrent.ETA = null;
+                    } else {
+                        var secs = (double)(Torrent.WantedSize - Torrent.CompletedSize) / hashingSpeed;
+                        Torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
+                    }
+                } else {
+                    Torrent.HashingSpeed = 0;
+                }
+            }
+
             while (!CancellationToken.IsCancellationRequested) {
                 var partialData = await client.GetPartialDataAsync(rid, CancellationToken);
 
@@ -560,6 +583,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                         Hash = hash.ToByteString()
                     };
                     TorrentMapper.ApplyFromExternal(internalTorrent, Input);
+                    updateHashingSpeed(internalTorrent);
 
                     LatestTorrentsLock.EnterWriteLock();
                     {
@@ -588,6 +612,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                             var prevState = internalTorrent.State;
                             var prevSequential = internalTorrent.SequentialDownload;
                             TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
+                            updateHashingSpeed(internalTorrent);
 
                             if (internalTorrent.State != prevState || internalTorrent.SequentialDownload != prevSequential) {
                                 LatestTorrentsLock.EnterWriteLock();
@@ -614,6 +639,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                                 CompletedSize = internalTorrent.CompletedSize,
                                 Uploaded = internalTorrent.Uploaded,
                                 DLSpeed = internalTorrent.DLSpeed,
+                                HashingSpeed = internalTorrent.HashingSpeed,
                                 UPSpeed = internalTorrent.UPSpeed,
                                 ETA = internalTorrent.ETA,
                                 Labels = { internalTorrent.Labels },

@@ -104,6 +104,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                             CompletedSize = torrent.CompletedSize,
                             Uploaded = torrent.Uploaded,
                             DLSpeed = torrent.DLSpeed,
+                            HashingSpeed = torrent.HashingSpeed,
                             UPSpeed = torrent.UPSpeed,
                             ETA = torrent.ETA,
                             Labels = { torrent.Labels },
@@ -150,6 +151,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 } else if (torrent.Downloaded != previous.Downloaded ||
                     torrent.CompletedSize != previous.CompletedSize ||
                     torrent.DLSpeed != previous.DLSpeed ||
+                    torrent.HashingSpeed != previous.HashingSpeed ||
                     torrent.Uploaded != previous.Uploaded ||
                     !torrent.Labels.SequenceEqual(previous.Labels) ||
                     torrent.RemotePath != previous.RemotePath ||

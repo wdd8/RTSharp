@@ -296,6 +296,30 @@ public partial class TorrentListingViewModel : ObservableViewModel
                 }
             ),
             builder.Text(
+                header: "Hashing Speed",
+                property: Utils.CreateProperty<string>(nameof(Torrent.HashingSpeedDisplay), x => ((Torrent)x).HashingSpeedDisplay, null),
+                getter: x => x.HashingSpeed,
+                setter: null,
+                configure: c =>
+                {
+                    c.Width = new DataGridLength(70);
+                    c.ColumnKey = nameof(Torrent.HashingSpeed);
+                    c.CustomSortComparer = Comparer<ulong>.Default;
+                }
+            ),
+            builder.Text(
+                header: "DL + Hashing Speed",
+                property: Utils.CreateProperty<string>(nameof(Torrent.DLPlusHashingSpeedDisplay), x => ((Torrent)x).DLPlusHashingSpeedDisplay, null),
+                getter: x => x.DLSpeed + x.HashingSpeed,
+                setter: null,
+                configure: c =>
+                {
+                    c.Width = new DataGridLength(70);
+                    c.ColumnKey = nameof(Torrent.DLPlusHashingSpeedDisplay);
+                    c.CustomSortComparer = Comparer<ulong>.Default;
+                }
+            ),
+            builder.Text(
                 header: "UP Speed",
                 property: Utils.CreateProperty<string>(nameof(Torrent.UPSpeedDisplay), x => ((Torrent)x).UPSpeedDisplay, null),
                 getter: x => x.UPSpeed,

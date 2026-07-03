@@ -119,6 +119,29 @@ namespace RTSharp.Daemon.Services.transmission
 
             var delta = new DeltaTorrentsListResponse();
 
+            using var smasScope = ServiceProvider.CreateScope();
+            var smas = smasScope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
+
+            void updateHashingSpeed(Protocols.DataProvider.Torrent Torrent)
+            {
+                if (Torrent.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing)) {
+                    var sma = smas.Get(InstanceKey, $"HashingSpeed_{Convert.ToHexString(Torrent.Hash.Span)}");
+                    sma.ValueIfChanged(DateTime.UtcNow, (long)Torrent.CompletedSize);
+                    var hashingSpeed = (ulong)Math.Max(0, sma.CalculateSpeed());
+                    Torrent.HashingSpeed = hashingSpeed;
+
+                    // No native ETA for hashing state
+                    if (hashingSpeed == 0 || Torrent.CompletedSize >= Torrent.WantedSize) {
+                        Torrent.ETA = null;
+                    } else {
+                        var secs = (double)(Torrent.WantedSize - Torrent.CompletedSize) / hashingSpeed;
+                        Torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
+                    }
+                } else {
+                    Torrent.HashingSpeed = 0;
+                }
+            }
+
             var all = await client.TorrentGetAsync(null, ALL_FIELDS_EXCEPT_LISTS);
 
             foreach (var externalTorrent in all!.Torrents) {
@@ -127,6 +150,7 @@ namespace RTSharp.Daemon.Services.transmission
                     Hash = hash.ToByteString()
                 };
                 TorrentMapper.ApplyFromExternal(internalTorrent, externalTorrent);
+                updateHashingSpeed(internalTorrent);
 
                 delta.FullUpdate.Add(internalTorrent);
                 LatestTorrents[hash] = internalTorrent;
@@ -148,6 +172,7 @@ namespace RTSharp.Daemon.Services.transmission
                         Hash = Hash.ToByteString()
                     };
                     TorrentMapper.ApplyFromExternal(internalTorrent, Input);
+                    updateHashingSpeed(internalTorrent);
 
                     LatestTorrents[Hash] = internalTorrent;
                     HashToId[Hash] = Input.Id!.Value;
@@ -189,6 +214,7 @@ namespace RTSharp.Daemon.Services.transmission
                         var prevState = internalTorrent.State;
                         var prevSequential = internalTorrent.SequentialDownload;
                         TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
+                        updateHashingSpeed(internalTorrent);
 
                         if (internalTorrent.State != prevState || internalTorrent.SequentialDownload != prevSequential) {
                             LatestTorrents[hash] = internalTorrent;
@@ -213,6 +239,7 @@ namespace RTSharp.Daemon.Services.transmission
                             CompletedSize = internalTorrent.CompletedSize,
                             Uploaded = internalTorrent.Uploaded,
                             DLSpeed = internalTorrent.DLSpeed,
+                            HashingSpeed = internalTorrent.HashingSpeed,
                             UPSpeed = internalTorrent.UPSpeed,
                             ETA = internalTorrent.ETA,
                             Labels = { internalTorrent.Labels },

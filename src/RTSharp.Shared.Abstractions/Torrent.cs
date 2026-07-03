@@ -79,7 +79,12 @@ public class Torrent
     public required ulong DLSpeed { get; set; }
 
     /// <summary>
-    /// Upload speed, B/S
+    /// Hash-check (verification) speed, B/s
+    /// </summary>
+    public required ulong HashingSpeed { get; set; }
+
+    /// <summary>
+    /// Upload speed, B/s
     /// </summary>
     public required ulong UPSpeed { get; set; }
 

@@ -294,10 +294,11 @@
 			  </DataGrid.ColumnHeaderContextMenu>
 			  <DataGrid.Resources>
 				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentDoneTemplate">
-				  <dataGridEx:TorrentProgressCell Value="{Binding Done, Mode=OneWay}" ShowSequentialMarker="{Binding ShowSequentialDownloadMarker, Mode=OneWay}" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+				  <dataGridEx:TorrentProgressCell Value="{Binding Done, Mode=OneWay}" ShowSequentialMarker="{Binding ShowSequentialDownloadMarker, Mode=OneWay}" IsHashing="{Binding IsHashing, Mode=OneWay}" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
 				    FontSize="{DynamicResource ControlContentThemeFontSize}"
 				    FillBrush="{DynamicResource SystemControlHighlightAccentBrush}"
-				    TrackBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
+				    TrackBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+				    HashingTrackBrush="{DynamicResource NotificationCardWarningBackgroundBrush}" />
 				</DataTemplate>
 				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentTrackerTemplate">
 				  <StackPanel Orientation="Horizontal">

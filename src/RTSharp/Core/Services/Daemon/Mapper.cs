@@ -92,6 +92,7 @@ public static class Mapper
                 CompletedSize = In.CompletedSize,
                 Uploaded = In.Uploaded,
                 DLSpeed = In.DLSpeed,
+                HashingSpeed = In.HashingSpeed,
                 UPSpeed = In.UPSpeed,
                 ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
                 Labels = InternLabels(In.Labels),
@@ -126,6 +127,7 @@ public static class Mapper
             Existing.CompletedSize = In.CompletedSize;
             Existing.Uploaded = In.Uploaded;
             Existing.DLSpeed = In.DLSpeed;
+            Existing.HashingSpeed = In.HashingSpeed;
             Existing.UPSpeed = In.UPSpeed;
             Existing.ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan();
             Existing.Labels = InternLabels(In.Labels);
@@ -182,6 +184,7 @@ public static class Mapper
             CompletedSize = In.CompletedSize,
             Uploaded = In.Uploaded,
             DLSpeed = In.DLSpeed,
+            HashingSpeed = In.HashingSpeed,
             UPSpeed = In.UPSpeed,
             ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
             Labels = InternLabels(In.Labels),
@@ -216,6 +219,7 @@ public static class Mapper
             Torrent.CompletedSize = In.CompletedSize;
             Torrent.Uploaded = In.Uploaded;
             Torrent.DLSpeed = In.DLSpeed;
+            Torrent.HashingSpeed = In.HashingSpeed;
             Torrent.UPSpeed = In.UPSpeed;
             Torrent.ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan();
             ApplyLabels(In.Labels, Torrent);
@@ -254,6 +258,7 @@ public static class Mapper
             CompletedSize = Torrent.CompletedSize,
             Uploaded = In.Uploaded,
             DLSpeed = Torrent.DLSpeed,
+            HashingSpeed = Torrent.HashingSpeed,
             UPSpeed = In.UPSpeed,
             ETA = Torrent.ETA,
             Labels = InternLabels(In.Labels),

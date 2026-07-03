@@ -32,11 +32,20 @@ public class TorrentProgressCell : Control
             o => o.ShowSequentialMarker,
             (o, v) => o.ShowSequentialMarker = v);
 
+    public static readonly DirectProperty<TorrentProgressCell, bool> IsHashingProperty =
+        AvaloniaProperty.RegisterDirect<TorrentProgressCell, bool>(
+            nameof(IsHashing),
+            o => o.IsHashing,
+            (o, v) => o.IsHashing = v);
+
     public static readonly StyledProperty<IBrush?> TrackBrushProperty =
         AvaloniaProperty.Register<TorrentProgressCell, IBrush?>(nameof(TrackBrush));
 
     public static readonly StyledProperty<IBrush?> FillBrushProperty =
         AvaloniaProperty.Register<TorrentProgressCell, IBrush?>(nameof(FillBrush));
+
+    public static readonly StyledProperty<IBrush?> HashingTrackBrushProperty =
+        AvaloniaProperty.Register<TorrentProgressCell, IBrush?>(nameof(HashingTrackBrush));
 
     public static readonly AttachedProperty<IBrush?> ForegroundProperty =
         TextElement.ForegroundProperty.AddOwner<TorrentProgressCell>();
@@ -74,6 +83,11 @@ public class TorrentProgressCell : Control
         set => SetAndRaise(ShowSequentialMarkerProperty, ref field, value);
     }
 
+    public bool IsHashing {
+        get;
+        set => SetAndRaise(IsHashingProperty, ref field, value);
+    }
+
     public IBrush? TrackBrush {
         get => GetValue(TrackBrushProperty);
         set => SetValue(TrackBrushProperty, value);
@@ -82,6 +96,11 @@ public class TorrentProgressCell : Control
     public IBrush? FillBrush {
         get => GetValue(FillBrushProperty);
         set => SetValue(FillBrushProperty, value);
+    }
+
+    public IBrush? HashingTrackBrush {
+        get => GetValue(HashingTrackBrushProperty);
+        set => SetValue(HashingTrackBrushProperty, value);
     }
 
     public IBrush? Foreground {
@@ -119,8 +138,10 @@ public class TorrentProgressCell : Control
         AffectsRender<TorrentProgressCell>(
             ValueProperty,
             ShowSequentialMarkerProperty,
+            IsHashingProperty,
             TrackBrushProperty,
             FillBrushProperty,
+            HashingTrackBrushProperty,
             ForegroundProperty,
             FontFamilyProperty,
             FontSizeProperty,
@@ -144,7 +165,8 @@ public class TorrentProgressCell : Control
         var percent = Math.Clamp(Value, 0, 100);
         var fillWidth = trackRect.Width * percent / 100;
 
-        context.DrawRectangle(TrackBrush ?? DefaultTrackBrush, null, trackRect, CORNER_RADIUS);
+        var trackBrush = IsHashing ? (HashingTrackBrush ?? TrackBrush ?? DefaultTrackBrush) : (TrackBrush ?? DefaultTrackBrush);
+        context.DrawRectangle(trackBrush, null, trackRect, CORNER_RADIUS);
         if (fillWidth > 0) {
             using (context.PushClip(new RoundedRect(trackRect, CORNER_RADIUS))) {
                 context.DrawRectangle(FillBrush ?? DefaultFillBrush, null, new Rect(0, 0, fillWidth, trackRect.Height));

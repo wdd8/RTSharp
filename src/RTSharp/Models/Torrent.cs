@@ -113,8 +113,10 @@ namespace RTSharp.Models
         {
             get => _internalState;
             set {
-                if (SetProperty(ref _internalState, value))
+                if (SetProperty(ref _internalState, value)) {
                     OnPropertyChanged(nameof(ShowSequentialDownloadMarker));
+                    OnPropertyChanged(nameof(IsHashing));
+                }
             }
         }
 
@@ -292,6 +294,7 @@ namespace RTSharp.Models
                 if (_dlSpeed == value) return;
                 _dlSpeed = value;
                 DLSpeedDisplay = Converters.GetSIDataSpeed(value);
+                DLPlusHashingSpeedDisplay = Converters.GetSIDataSpeed(_dlSpeed + _hashingSpeed);
             }
         }
 
@@ -300,6 +303,35 @@ namespace RTSharp.Models
         {
             get => _dlSpeedDisplay;
             set => SetProperty(ref _dlSpeedDisplay, value);
+        }
+
+        /// <summary>
+        /// Hash-check (verification) speed, B/s
+        /// </summary>
+        private ulong _hashingSpeed;
+        public ulong HashingSpeed
+        {
+            get => _hashingSpeed;
+            set {
+                if (_hashingSpeed == value) return;
+                _hashingSpeed = value;
+                HashingSpeedDisplay = Converters.GetSIDataSpeed(value);
+                DLPlusHashingSpeedDisplay = Converters.GetSIDataSpeed(_dlSpeed + _hashingSpeed);
+            }
+        }
+
+        private string _hashingSpeedDisplay = null!;
+        public string HashingSpeedDisplay
+        {
+            get => _hashingSpeedDisplay;
+            set => SetProperty(ref _hashingSpeedDisplay, value);
+        }
+
+        private string _dlPlusHashingSpeedDisplay = null!;
+        public string DLPlusHashingSpeedDisplay
+        {
+            get => _dlPlusHashingSpeedDisplay;
+            set => SetProperty(ref _dlPlusHashingSpeedDisplay, value);
         }
 
         /// <summary>
@@ -593,6 +625,8 @@ namespace RTSharp.Models
 
         public bool ShowSequentialDownloadMarker => _isSequentialDownload && !_internalState.HasFlag(TORRENT_STATE.SEEDING);
 
+        public bool IsHashing => _internalState.HasFlag(TORRENT_STATE.HASHING);
+
         private Shared.Abstractions.Torrent? PendingChanges;
         private (IImage? Icon, string? DisplayName)? ResolvedTracker;
 
@@ -607,6 +641,8 @@ namespace RTSharp.Models
             _uploadedDisplay = Converters.ZeroBytes;
             _ratioDisplay = "0.000";
             _dlSpeedDisplay = Converters.ZeroBytesPerSec;
+            _hashingSpeedDisplay = Converters.ZeroBytesPerSec;
+            _dlPlusHashingSpeedDisplay = Converters.ZeroBytesPerSec;
             _upSpeedDisplay = Converters.ZeroBytesPerSec;
             _etaDisplay = Converters.ToAgoString(TimeSpan.Zero);
             _peersDisplay = new ConnectedTotalPair(0, 0).ToString();
@@ -682,6 +718,7 @@ namespace RTSharp.Models
                 State = EnumExt.ToString(changes.State);
                 _internalState = changes.State;
                 OnPropertyChanged(nameof(ShowSequentialDownloadMarker));
+                OnPropertyChanged(nameof(IsHashing));
             }
             if (_size != changes.Size) {
                 Size = changes.Size;
@@ -713,6 +750,9 @@ namespace RTSharp.Models
             }
             if (_dlSpeed != changes.DLSpeed) {
                 DLSpeed = changes.DLSpeed;
+            }
+            if (_hashingSpeed != changes.HashingSpeed) {
+                HashingSpeed = changes.HashingSpeed;
             }
             if (_upSpeed != changes.UPSpeed) {
                 UPSpeed = changes.UPSpeed;
@@ -785,6 +825,7 @@ namespace RTSharp.Models
                 CompletedSize = _completedSize,
                 Uploaded = _uploaded,
                 DLSpeed = _dlSpeed,
+                HashingSpeed = _hashingSpeed,
                 UPSpeed = _upSpeed,
                 ETA = _eta,
                 Labels = [.. _labels],

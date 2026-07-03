@@ -330,19 +330,30 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
                     if (torrent.CompletedSize >= torrent.WantedSize) {
                         torrent.DLSpeed = 0;
-                        torrent.ETA = Duration.FromTimeSpan(TimeSpan.Zero);
+                        torrent.HashingSpeed = 0;
+                        torrent.ETA = null;
+                    } else if (torrent.State.HasFlag(TorrentState.Hashing)) {
+                        var hashingSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: false);
+                        torrent.HashingSpeed = hashingSpeed;
+                        if (hashingSpeed == 0) {
+                            torrent.ETA = null;
+                        } else {
+                            var secs = (double)(torrent.WantedSize - torrent.CompletedSize) / hashingSpeed;
+                            torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
+                        }
                     } else {
+                        torrent.HashingSpeed = 0;
                         var dlSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: false);
                         torrent.DLSpeed = dlSpeed;
                         if (dlSpeed == 0) {
                             torrent.ETA = null;
                         } else {
-                            var secs = (double)(torrent.Size - torrent.CompletedSize) / dlSpeed;
+                            var secs = (double)(torrent.WantedSize - torrent.CompletedSize) / dlSpeed;
                             torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
                         }
                     }
 
-                    if (torrent.UPSpeed > 0 || torrent.DLSpeed > 0)
+                    if (torrent.UPSpeed > 0 || torrent.DLSpeed > 0 || torrent.HashingSpeed > 0)
                         torrent.State |= TorrentState.Active;
                 }
 
