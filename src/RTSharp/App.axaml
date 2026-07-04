@@ -51,6 +51,15 @@
             <Setter Property="AllowAutoHide" Value="False" />
         </Style>
 
+        <Style Selector="TabItem">
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+
+        <Style Selector="TabItem:selected /template/ Border#PART_SelectedPipe">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
         <Style Selector="DocumentControl">
           <Setter Property="IconTemplate">
             <DataTemplate x:DataType="dock:IDockable">

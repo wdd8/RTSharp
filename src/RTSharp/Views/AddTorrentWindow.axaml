@@ -76,14 +76,6 @@
         </TabItem>
         <TabItem>
             <TabItem.Header>
-                <TextBlock>Data provider options</TextBlock>
-            </TabItem.Header>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text=":)" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-            </StackPanel>
-        </TabItem>
-        <TabItem>
-            <TabItem.Header>
                 <TextBlock>Duplication</TextBlock>
             </TabItem.Header>
             <StackPanel Orientation="Horizontal">

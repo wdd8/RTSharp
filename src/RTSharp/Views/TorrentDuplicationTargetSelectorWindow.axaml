@@ -25,7 +25,7 @@
     
     <StackPanel Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE-24)}" Margin="0 8 0 0">
         <Grid Margin="0 0 0 8" ColumnDefinitions="Auto, *">
-            <TextBlock Grid.Column="0" FontWeight="Bold">Select destination for</TextBlock>
+            <TextBlock Grid.Column="0" FontWeight="Bold">Select destination for </TextBlock>
             <TextBlock Grid.Column="1" FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding SourceTorrent.Name}" />
         </Grid>
         <GroupBox Header="Plugin">

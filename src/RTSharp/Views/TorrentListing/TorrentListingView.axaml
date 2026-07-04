@@ -335,15 +335,6 @@
 			</Border>
 			<GridSplitter Grid.Row="2" ResizeDirection="Rows" />
 			<TabControl Grid.Row="3" SelectedIndex="{Binding SelectedTorrentDetailsTabIndex}">
-				<TabControl.Styles>
-					<Style Selector="TabItem">
-						<Setter Property="Margin" Value="0,-10,0,-10" />
-					</Style>
-					<Style Selector="Border#PART_SelectedPipe">
-						<Setter Property="Margin" Value="0,0,0,10" />
-					</Style>
-				</TabControl.Styles>
-
 				<TabItem Header="General" VerticalContentAlignment="Center">
 					<views:GeneralTorrentInfoView DataContext="{Binding GeneralInfoViewModel}" />
 				</TabItem>
