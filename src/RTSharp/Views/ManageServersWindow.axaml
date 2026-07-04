@@ -96,9 +96,7 @@
 
                 <TextBlock Grid.Column="0" Grid.Row="1" Classes="label">Endpoint:</TextBlock>
                 <TextBlock Grid.Column="1" Grid.Row="1" Classes="value">
-                    <Run Text="{Binding SelectedServer.Host}" />
-                    <Run Text=":" />
-                    <Run Text="{Binding SelectedServer.Port}" />
+                    <Run Text="{Binding SelectedServer.Host}" /><Run Text=":" /><Run Text="{Binding SelectedServer.Port}" />
                 </TextBlock>
 
                 <TextBlock Grid.Column="0" Grid.Row="2" Classes="label">Status:</TextBlock>
