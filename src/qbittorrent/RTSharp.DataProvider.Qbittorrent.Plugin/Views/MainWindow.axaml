@@ -575,29 +575,49 @@
                         </GroupBox>
 
                         <GroupBox Header="Authentication">
-                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Username:" />
-                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.WebUI.WebUIUsername}" />
+                            <StackPanel Orientation="Vertical" Spacing="6">
+                                <GroupBox Header="User">
+                                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="6">
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Username:" />
+                                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.WebUI.WebUIUsername}" />
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Password:" />
-                                <TextBox Grid.Row="1" Grid.Column="1" PasswordChar="•" PlaceholderText="(leave empty to keep current)" Text="{Binding Settings.WebUI.WebUIPassword}" />
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Password:" />
+                                        <TextBox Grid.Row="1" Grid.Column="1" PasswordChar="•" PlaceholderText="(leave empty to keep current)" Text="{Binding Settings.WebUI.WebUIPassword}" />
+                                    </Grid>
+                                </GroupBox>
 
-                                <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" IsChecked="{Binding Settings.WebUI.BypassLocalAuthentication}" Content="Bypass authentication for clients on localhost" />
-                                <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" IsChecked="{Binding Settings.WebUI.BypassAuthenticationSubnetWhitelistEnabled}" Content="Bypass authentication for clients in whitelisted IP subnets:" />
-                                <TextBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" AcceptsReturn="True" MinHeight="50" MaxHeight="120" Text="{Binding Settings.WebUI.BypassAuthenticationSubnetWhitelist}" IsEnabled="{Binding Settings.WebUI.BypassAuthenticationSubnetWhitelistEnabled}" />
+                                <GroupBox Header="API Key">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                        <TextBlock Grid.Column="0" Text="Key:" VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="1" IsReadOnly="True" PlaceholderText="Generate a key" Text="{Binding Settings.WebUI.WebUIApiKeyMasked, Mode=OneWay}" />
+                                        <Button Grid.Column="2" Command="{Binding CopyApiKeyCommand}" IsEnabled="{Binding Settings.WebUI.WebUIApiKey, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="Copy API key">
+                                            <i:Icon Value="fa7-solid fa7-copy" />
+                                        </Button>
+                                        <Button Grid.Column="3" Command="{Binding RotateApiKeyCommand}" ToolTip.Tip="Generate/Rotate API key">
+                                            <i:Icon Value="fa7-solid fa7-arrows-rotate" />
+                                        </Button>
+                                        <Button Grid.Column="4" Command="{Binding DeleteApiKeyCommand}" IsEnabled="{Binding Settings.WebUI.WebUIApiKey, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="Delete API key">
+                                            <i:Icon Value="fa7-solid fa7-trash" />
+                                        </Button>
+                                    </Grid>
+                                </GroupBox>
 
-                                <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto" RowSpacing="6" ColumnSpacing="6">
+                                <CheckBox IsChecked="{Binding Settings.WebUI.BypassLocalAuthentication}" Content="Bypass authentication for clients on localhost" />
+                                <CheckBox IsChecked="{Binding Settings.WebUI.BypassAuthenticationSubnetWhitelistEnabled}" Content="Bypass authentication for clients in whitelisted IP subnets:" />
+                                <TextBox AcceptsReturn="True" MinHeight="50" MaxHeight="120" Text="{Binding Settings.WebUI.BypassAuthenticationSubnetWhitelist}" IsEnabled="{Binding Settings.WebUI.BypassAuthenticationSubnetWhitelistEnabled}" />
+
+                                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto" RowSpacing="6" ColumnSpacing="6">
                                     <TextBlock Grid.Column="0" Text="Ban client after consecutive failures:" />
                                     <NumericUpDown Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.WebUI.WebUIMaxAuthenticationFailures}" />
                                     <TextBlock Grid.Column="2" Text="Ban duration:" Margin="12,0,0,0" />
                                     <NumericUpDown Grid.Column="3" Minimum="0" Increment="1" Value="{Binding Settings.WebUI.WebUIBanDuration}" />
                                 </Grid>
 
-                                <Grid Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,Auto" RowDefinitions="Auto" ColumnSpacing="6">
+                                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto" ColumnSpacing="6">
                                     <TextBlock Grid.Column="0" Text="Session timeout (sec):" />
                                     <NumericUpDown Grid.Column="1" Minimum="0" Increment="1" Value="{Binding Settings.WebUI.WebUISessionTimeout}" />
                                 </Grid>
-                            </Grid>
+                            </StackPanel>
                         </GroupBox>
 
                         <GroupBox>

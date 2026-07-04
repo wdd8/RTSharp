@@ -72,6 +72,9 @@ namespace QBittorrent.Client
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         private static readonly ApiVersion Version_2_11_0 = new ApiVersion(2, 11, 0);
 
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
+        private static readonly ApiVersion Version_2_14_1 = new ApiVersion(2, 14, 1);
+
         /// <summary>
         /// Gets the peer log.
         /// </summary>

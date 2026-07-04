@@ -209,6 +209,7 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin.Models
         [ObservableProperty] public partial string? WebUIUsername { get; set; }
         [ObservableProperty] public partial string? WebUIPassword { get; set; }
         [ObservableProperty] public partial string? WebUIPasswordHash { get; set; }
+        [ObservableProperty] [NotifyPropertyChangedFor(nameof(WebUIApiKeyMasked))] public partial string? WebUIApiKey { get; set; }
         [ObservableProperty] public partial bool WebUIHttps { get; set; }
         [ObservableProperty] public partial string? WebUISslKeyPath { get; set; }
         [ObservableProperty] public partial string? WebUISslCertificatePath { get; set; }
@@ -234,6 +235,11 @@ namespace RTSharp.DataProvider.Qbittorrent.Plugin.Models
         [ObservableProperty] public partial string? DynamicDnsDomain { get; set; }
         [ObservableProperty] public partial bool ReverseProxyEnabled { get; set; }
         [ObservableProperty] public partial string? ReverseProxiesList { get; set; }
+
+        public string WebUIApiKeyMasked =>
+            String.IsNullOrEmpty(WebUIApiKey) ? ""
+            : WebUIApiKey.Length <= 10 ? WebUIApiKey
+            : WebUIApiKey[..4] + new string('•', WebUIApiKey.Length - 10) + WebUIApiKey[^6..];
     }
 
     public partial class Advanced : ObservableObject

@@ -299,6 +299,16 @@ namespace QBittorrent.Client.Internal
                 ("json", json));
         }
 
+        public virtual (Uri url, HttpContent request) RotateApiKey()
+        {
+            return BuildForm(Url.RotateApiKey());
+        }
+
+        public virtual (Uri url, HttpContent request) DeleteApiKey()
+        {
+            return BuildForm(Url.DeleteApiKey());
+        }
+
         public abstract (Uri url, HttpContent request) Reannounce(IEnumerable<string> hashes);
 
         public abstract (Uri url, HttpContent request) EditTracker(string hash, Uri trackerUrl, Uri newTrackerUrl);

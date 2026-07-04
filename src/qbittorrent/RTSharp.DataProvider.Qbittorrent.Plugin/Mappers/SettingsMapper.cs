@@ -213,6 +213,7 @@ public static class SettingsMapper
         ret.WebUI.WebUIUpnp = p.WebUIUpnp ?? false;
         ret.WebUI.WebUIUsername = p.WebUIUsername;
         ret.WebUI.WebUIPasswordHash = p.WebUIPasswordHash;
+        ret.WebUI.WebUIApiKey = p.WebUIApiKey;
         ret.WebUI.WebUIHttps = p.WebUIHttps ?? false;
         ret.WebUI.WebUISslKeyPath = p.WebUISslKeyPath;
         ret.WebUI.WebUISslCertificatePath = p.WebUISslCertificatePath;

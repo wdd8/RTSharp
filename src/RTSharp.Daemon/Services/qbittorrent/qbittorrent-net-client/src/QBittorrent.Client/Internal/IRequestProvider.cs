@@ -138,6 +138,12 @@ namespace QBittorrent.Client.Internal
 
         (Uri url, HttpContent request) StopAll();
 
+        // API 2.14
+
+        (Uri url, HttpContent request) RotateApiKey();
+
+        (Uri url, HttpContent request) DeleteApiKey();
+
         // RSS
 
         (Uri url, HttpContent request) AddRssFolder(string path);

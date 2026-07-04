@@ -549,6 +549,22 @@ namespace QBittorrent.Client
             CancellationToken token = default);
 
         /// <summary>
+        /// Generates a new WebUI API key, invalidating any previously generated key.
+        /// </summary>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns>The newly generated API key.</returns>
+        Task<string> RotateApiKeyAsync(
+            CancellationToken token = default);
+
+        /// <summary>
+        /// Deletes the WebUI API key.
+        /// </summary>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns></returns>
+        Task DeleteApiKeyAsync(
+            CancellationToken token = default);
+
+        /// <summary>
         /// Quits qBittorrent.
         /// </summary>
         /// <param name="token">The cancellation token.</param>

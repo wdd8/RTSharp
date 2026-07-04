@@ -162,6 +162,10 @@ namespace QBittorrent.Client.Internal
 
         public Uri ShutdownApplication() => Create("api/v2/app/shutdown");
 
+        public Uri RotateApiKey() => Create("api/v2/app/rotateAPIKey");
+
+        public Uri DeleteApiKey() => Create("api/v2/app/deleteAPIKey");
+
         public Uri GetPeerLog(int afterId = -1) => Create("api/v2/log/peers", ("last_known_id", afterId.ToString()));
 
         public Uri Reannounce() => Create("api/v2/torrents/reannounce");

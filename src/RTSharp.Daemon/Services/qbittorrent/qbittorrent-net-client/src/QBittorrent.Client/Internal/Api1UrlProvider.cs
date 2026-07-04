@@ -143,6 +143,10 @@ namespace QBittorrent.Client.Internal
 
         public Uri ShutdownApplication() => Create("command/shutdown");
 
+        public Uri RotateApiKey() => throw new ApiNotSupportedException(ApiLevel.V2, new Version(2, 14, 1));
+
+        public Uri DeleteApiKey() => throw new ApiNotSupportedException(ApiLevel.V2, new Version(2, 14, 1));
+
         public Uri GetPeerLog(int afterId = -1) => throw new ApiNotSupportedException(ApiLevel.V2);
 
         public Uri Reannounce() => throw new ApiNotSupportedException(ApiLevel.V2);

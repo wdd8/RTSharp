@@ -11,6 +11,8 @@ service GRPCQBittorrentSettingsService {
     rpc SetSettings (QBittorrentSettings) returns (google.protobuf.Empty);
     rpc GetNetworkInterfaces (google.protobuf.Empty) returns (QBittorrentNetworkInterfaces);
     rpc GetNetworkInterfaceAddresses (QBittorrentNetworkInterfaceAddressRequest) returns (QBittorrentNetworkInterfaceAddresses);
+    rpc RotateApiKey (google.protobuf.Empty) returns (google.protobuf.StringValue);
+    rpc DeleteApiKey (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 message QBittorrentNetworkInterface {
@@ -225,6 +227,7 @@ message QBittorrentSettings {
     google.protobuf.StringValue WebUISslKeyPath = 116;
     google.protobuf.StringValue WebUIUsername = 117;
     google.protobuf.StringValue WebUIPassword = 118;
+    google.protobuf.StringValue WebUIApiKey = 210;
     google.protobuf.StringValue WebUIPasswordHash = 119;
     google.protobuf.BoolValue BypassLocalAuthentication = 120;
     google.protobuf.BoolValue BypassAuthenticationSubnetWhitelistEnabled = 121;

@@ -1,5 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using QBittorrent.Client.Converters;
 using QBittorrent.Client.Extensions;
 using System;
@@ -1122,6 +1123,37 @@ namespace QBittorrent.Client
             });
 
             await PostAsync(p => p.SetPreferences(json), token);
+        }
+
+        /// <summary>
+        /// Generates a new WebUI API key, invalidating any previously generated key.
+        /// </summary>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns>The newly generated API key.</returns>
+        public Task<string> RotateApiKeyAsync(
+            CancellationToken token = default)
+        {
+            return PostAsync(p => p.RotateApiKey(), token,
+                async response =>
+                {
+                    var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    return (string)JObject.Parse(json)["apiKey"];
+                },
+                minApiLevel: ApiLevel.V2,
+                minApiVersion: Version_2_14_1);
+        }
+
+        /// <summary>
+        /// Deletes the WebUI API key.
+        /// </summary>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns></returns>
+        public Task DeleteApiKeyAsync(
+            CancellationToken token = default)
+        {
+            return PostAsync(p => p.DeleteApiKey(), token,
+                minApiLevel: ApiLevel.V2,
+                minApiVersion: Version_2_14_1);
         }
 
 

@@ -2,29 +2,21 @@ using Google.Protobuf.WellKnownTypes;
 
 using Newtonsoft.Json.Linq;
 
-using System.Linq;
-
 using QBittorrent.Client;
 
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
+
+using Grpc.Core;
 
 namespace RTSharp.Daemon.Services.qbittorrent;
 
 public class SettingsGrpc
 {
-    QbitClient Client;
-    SessionsService Sessions;
-    ILogger Logger;
-    IServiceProvider ServiceProvider;
-    string InstanceKey;
+    private readonly QbitClient Client;
 
-    public SettingsGrpc([ServiceKey] string InstanceKey, SessionsService Sessions, ILogger<Grpc> Logger, IServiceProvider ServiceProvider)
+    public SettingsGrpc([ServiceKey] string InstanceKey, IServiceProvider ServiceProvider)
     {
         Client = ServiceProvider.GetRequiredKeyedService<QbitClient>(InstanceKey);
-        this.InstanceKey = InstanceKey;
-        this.ServiceProvider = ServiceProvider;
-        this.Sessions = Sessions;
-        this.Logger = Logger;
     }
 
     public async Task<StringValue> GetDefaultSavePath()
@@ -66,6 +58,27 @@ public class SettingsGrpc
         return result;
     }
 
+    public async Task<StringValue> RotateApiKey()
+    {
+        var client = await Client.Init();
+        try {
+            var key = await client.RotateApiKeyAsync();
+            return new StringValue { Value = key };
+        } catch (ApiNotSupportedException) {
+            throw new RpcException(new Status(StatusCode.Unimplemented, "API keys are not supported by this version of qBittorrent"));
+        }
+    }
+
+    public async Task DeleteApiKey()
+    {
+        var client = await Client.Init();
+        try {
+            await client.DeleteApiKeyAsync();
+        } catch (ApiNotSupportedException) {
+            throw new RpcException(new Status(StatusCode.Unimplemented, "API keys are not supported by this version of qBittorrent"));
+        }
+    }
+
     private static JToken? GetAdditional(IDictionary<string, JToken>? data, string key) =>
         data != null && data.TryGetValue(key, out var val) ? val : null;
 
@@ -105,6 +118,7 @@ public class SettingsGrpc
         // WebUI
         var reverseProxyEnabled = GetAdditional(p.AdditionalData, "web_ui_reverse_proxy_enabled");
         var reverseProxiesList = GetAdditional(p.AdditionalData, "web_ui_reverse_proxies_list");
+        var webUiApiKey = GetAdditional(p.AdditionalData, "web_ui_api_key");
 
         // Advanced
         var resumeDataStorageType = GetAdditional(p.AdditionalData, "resume_data_storage_type");
@@ -301,6 +315,7 @@ public class SettingsGrpc
             WebUIUpnp = p.WebUIUpnp,
             WebUIUsername = p.WebUIUsername,
             WebUIPasswordHash = p.WebUIPasswordHash,
+            WebUIApiKey = String.IsNullOrEmpty(webUiApiKey?.Value<string>()) ? null : webUiApiKey?.Value<string>(),
             WebUIHttps = p.WebUIHttps,
             WebUISslKeyPath = p.WebUISslKeyPath,
             WebUISslCertificatePath = p.WebUISslCertificatePath,
@@ -412,8 +427,7 @@ public class SettingsGrpc
         // Downloads
         if (p.ScanDirectories != null)
             foreach (var (path, loc) in p.ScanDirectories)
-                r.ScanDirectories[path] = loc.CustomFolder != null ? loc.CustomFolder
-                    : loc.StandardFolder == StandardSaveLocation.MonitoredFolder ? "0" : "1";
+                r.ScanDirectories[path] = loc.CustomFolder ?? (loc.StandardFolder == StandardSaveLocation.MonitoredFolder ? "0" : "1");
         // Connection
         if (p.BannedIpAddresses != null) r.BannedIpAddresses.AddRange(p.BannedIpAddresses);
         // BitTorrent

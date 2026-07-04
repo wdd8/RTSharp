@@ -171,6 +171,12 @@ namespace QBittorrent.Client.Internal
 
         Uri Stop();
 
+        // API 2.14
+
+        Uri RotateApiKey();
+
+        Uri DeleteApiKey();
+
         // RSS
 
         Uri AddRssFolder();

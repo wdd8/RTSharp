@@ -7,6 +7,11 @@ using CommunityToolkit.Mvvm.Input;
 
 using Google.Protobuf.WellKnownTypes;
 
+using Grpc.Core;
+
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
+
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Qbittorrent.Plugin.Mappers;
 using RTSharp.DataProvider.Qbittorrent.Plugin.Models;
@@ -21,6 +26,8 @@ public record NetworkInterfaceItem(string Id, string DisplayName);
 public partial class MainWindowViewModel : ObservableObject
 {
     private const string AnyAddressDisplay = "(Any address)";
+
+    public Func<string, Task> CopyToClipboard = null!; // view set
 
     public MainWindowViewModel()
     {
@@ -146,6 +153,71 @@ public partial class MainWindowViewModel : ObservableObject
             if (SelectedInterfaceAddress != null && !InterfaceAddresses.Contains(SelectedInterfaceAddress))
                 SelectedInterfaceAddress = AnyAddressDisplay;
         } catch { }
+    }
+
+    [RelayCommand]
+    public async Task CopyApiKey()
+    {
+        if (!String.IsNullOrEmpty(Settings.WebUI.WebUIApiKey))
+            await CopyToClipboard(Settings.WebUI.WebUIApiKey);
+    }
+
+    [RelayCommand]
+    public async Task RotateApiKey()
+    {
+        var message = Settings.WebUI.WebUIApiKey != null
+            ? "Rotate this API key? The current key will immediately stop working and a new key will be generated."
+            : "Generate an API key?";
+
+        var result = await MessageBoxManager.GetMessageBoxStandard(
+            title: "RT# - qbittorrent",
+            text: message,
+            @enum: ButtonEnum.YesNo,
+            icon: Icon.Question,
+            windowStartupLocation: WindowStartupLocation.CenterOwner).ShowWindowDialogAsync(ThisWindow);
+
+        if (result != ButtonResult.Yes)
+            return;
+
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetGrpcService<GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>();
+        try {
+            var response = await client.RotateApiKeyAsync(new Empty(), headers: ThisPlugin.Host.GetBuiltInDataProviderGrpcHeaders());
+            Settings.WebUI.WebUIApiKey = response.Value;
+        } catch (RpcException ex) {
+            await MessageBoxManager.GetMessageBoxStandard(
+                title: "RT# - qbittorrent",
+                text: ex.Message,
+                @enum: ButtonEnum.Ok,
+                icon: Icon.Error,
+                windowStartupLocation: WindowStartupLocation.CenterOwner).ShowWindowDialogAsync(ThisWindow);
+        }
+    }
+
+    [RelayCommand]
+    public async Task DeleteApiKey()
+    {
+        var result = await MessageBoxManager.GetMessageBoxStandard(
+            title: "RT# - qbittorrent",
+            text: "Delete this API key? The current key will immediately stop working.",
+            @enum: ButtonEnum.YesNo,
+            icon: Icon.Question,
+            windowStartupLocation: WindowStartupLocation.CenterOwner).ShowWindowDialogAsync(ThisWindow);
+
+        if (result != ButtonResult.Yes)
+            return;
+
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetGrpcService<GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>();
+        try {
+            await client.DeleteApiKeyAsync(new Empty(), headers: ThisPlugin.Host.GetBuiltInDataProviderGrpcHeaders());
+            Settings.WebUI.WebUIApiKey = null;
+        } catch (RpcException ex) {
+            await MessageBoxManager.GetMessageBoxStandard(
+                title: "RT# - qbittorrent",
+                text: ex.Message,
+                @enum: ButtonEnum.Ok,
+                icon: Icon.Error,
+                windowStartupLocation: WindowStartupLocation.CenterOwner).ShowWindowDialogAsync(ThisWindow);
+        }
     }
 
     [ObservableProperty]
