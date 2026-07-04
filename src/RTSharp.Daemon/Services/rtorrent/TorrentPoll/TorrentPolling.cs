@@ -3,7 +3,9 @@ using Google.Protobuf.WellKnownTypes;
 
 using Nito.AsyncEx;
 
+using RTSharp.Daemon.Exceptions;
 using RTSharp.Daemon.Protocols.DataProvider;
+using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Utils;
 
 using System.Diagnostics;
@@ -308,7 +310,10 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 try {
                     allTorrents = await GetAllTorrents();
                 } catch (Exception ex) {
-                    Logger.LogError(ex, "Torrent poll failed");
+                    if (ex is DataProviderFailure dpf)
+                        Logger.LogConnectionFailure(dpf);
+                    else
+                        Logger.LogError(ex, "Torrent poll failed");
                     await Task.WhenAny(Task.Delay(1000, stoppingToken), ForceLoop.WaitAsync(stoppingToken));
                     continue;
                 }

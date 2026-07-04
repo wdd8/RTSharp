@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.Extensions.Options;
+using RTSharp.Daemon.Exceptions;
 
 namespace RTSharp.Daemon.Services.rtorrent
 {
@@ -52,7 +53,11 @@ namespace RTSharp.Daemon.Services.rtorrent
                 var unixEp = new UnixDomainSocketEndPoint(listenPath);
 
                 Logger.LogDebug($"Connecting to {listenPath}");
-                await socket.ConnectAsync(unixEp);
+                try {
+                    await socket.ConnectAsync(unixEp, CancellationToken);
+                } catch (SocketException ex) {
+                    throw new DataProviderFailure(ex.Message, ex, listenPath);
+                }
                 stm = new NetworkStream(socket);
 
                 disconnect = () => {
@@ -64,9 +69,14 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                 var portRaw = listenPath.LastIndexOf(':');
                 var port = Int32.Parse(listenPath[(portRaw + 1)..]);
+                var destination = $"{listenPath[..portRaw]}:{port}";
 
-                Logger.LogDebug($"Connecting to {listenPath[..portRaw]}:{port}");
-                await tcp.ConnectAsync(listenPath[..portRaw], port);
+                Logger.LogDebug($"Connecting to {destination}");
+                try {
+                    await tcp.ConnectAsync(listenPath[..portRaw], port, CancellationToken);
+                } catch (SocketException ex) {
+                    throw new DataProviderFailure(ex.Message, ex, destination);
+                }
                 stm = tcp.GetStream();
 
                 disconnect = tcp.Close;

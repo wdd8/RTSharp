@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.Options;
 
+using RTSharp.Daemon.Exceptions;
+using RTSharp.Daemon.Utils;
+
 using Transmission.Net.Core;
 
 namespace RTSharp.Daemon.Services.transmission;
@@ -7,6 +10,8 @@ namespace RTSharp.Daemon.Services.transmission;
 public class TransmissionClient
 {
     ConfigModel Config;
+
+    public string Uri => Config.Uri;
 
     public TransmissionClient(IOptionsFactory<ConfigModel> Opts, [ServiceKey] string InstanceKey)
     {
@@ -26,8 +31,12 @@ public class TransmissionClient
                 Config.ConfigDir ??= session!.ConfigDirectory!;
 
                 return Client;
-            } catch {
+            } catch (Exception ex) {
                 Client = null;
+
+                if (ex.IsConnectionFailure())
+                    throw new DataProviderFailure(ex.Message, ex, Config.Uri);
+
                 throw;
             }
         }

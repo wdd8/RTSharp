@@ -1,11 +1,15 @@
 ﻿using Microsoft.Extensions.Options;
 using QBittorrent.Client;
+using RTSharp.Daemon.Exceptions;
+using RTSharp.Daemon.Utils;
 
 namespace RTSharp.Daemon.Services.qbittorrent;
 
 public class QbitClient
 {
     ConfigModel Config;
+
+    public string Uri => Config.Uri;
 
     public QbitClient(IOptionsFactory<ConfigModel> Opts, [ServiceKey] string InstanceKey)
     {
@@ -17,7 +21,7 @@ public class QbitClient
 
     public async Task<IQBittorrentClient2> Init()
     {
-        if (Client == null || DateTime.UtcNow - Created > TimeSpan.FromMinutes(30)) {
+        if (Client == null || (String.IsNullOrEmpty(Config.ApiKey) && DateTime.UtcNow - Created > TimeSpan.FromMinutes(30))) {
             try {
                 var uri = new Uri(Config.Uri);
 
@@ -33,9 +37,13 @@ public class QbitClient
 
                 Created = DateTime.UtcNow;
                 return Client;
-            } catch {
+            } catch (Exception ex) {
                 Client = null;
                 Created = DateTime.MinValue;
+
+                if (ex.IsConnectionFailure())
+                    throw new DataProviderFailure(ex.Message, ex, Config.Uri);
+
                 throw;
             }
         }

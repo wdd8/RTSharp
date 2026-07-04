@@ -1,10 +1,13 @@
+using Google.Protobuf.Collections;
+
 using Microsoft.Extensions.Options;
 
+using RTSharp.Daemon.Exceptions;
 using RTSharp.Daemon.GRPCServices.DataProvider;
 using RTSharp.Daemon.Protocols.DataProvider;
+using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Utils;
 
-using Google.Protobuf.Collections;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -136,6 +139,14 @@ public class PrometheusMetricsService(
             );
         } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
+        } catch (DataProviderFailure ex) {
+            Logger.LogError("Failed to refresh metrics for data provider {DataProvider}", dataProvider.InstanceKey);
+            ConnectionLog.LogConnectionFailure(Logger, ex);
+            return new DataProviderMetrics(
+                dataProvider.InstanceKey,
+                Array.Empty<TrackerStats>(),
+                stopwatch.Elapsed
+            );
         } catch (Exception ex) {
             Logger.LogError(ex, "Failed to refresh metrics for data provider {DataProvider}", dataProvider.InstanceKey);
             return new DataProviderMetrics(

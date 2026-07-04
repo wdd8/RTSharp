@@ -5,8 +5,10 @@ using Grpc.Core;
 
 using Microsoft.Extensions.Options;
 
+using RTSharp.Daemon.Exceptions;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Daemon.Services.FileTail;
+using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
@@ -187,13 +189,23 @@ namespace RTSharp.Daemon.Services.transmission
                 }
 
                 Task<TorrentsResult?>? fullUpdateResultTask = null;
-                if (fullUpdateQueue != null) {
-                    fullUpdateResultTask = client.TorrentGetAsync([.. fullUpdateQueue], ALL_FIELDS_EXCEPT_LISTS);
+                TorrentsResult? list;
+                try {
+                    if (fullUpdateQueue != null) {
+                        fullUpdateResultTask = client.TorrentGetAsync([.. fullUpdateQueue], ALL_FIELDS_EXCEPT_LISTS);
+                    }
+                    list = await client.TorrentGetRecentyActiveAsync(ALL_FIELDS_EXCEPT_LISTS);
+                } catch (Exception ex) when (ex.IsConnectionFailure()) {
+                    throw new DataProviderFailure(ex.Message, ex, Client.Uri);
                 }
-                var list = await client.TorrentGetRecentyActiveAsync(ALL_FIELDS_EXCEPT_LISTS);
-                
+
                 if (fullUpdateResultTask != null) {
-                    var fullUpdateResult = await fullUpdateResultTask;
+                    TorrentsResult? fullUpdateResult;
+                    try {
+                        fullUpdateResult = await fullUpdateResultTask;
+                    } catch (Exception ex) when (ex.IsConnectionFailure()) {
+                        throw new DataProviderFailure(ex.Message, ex, Client.Uri);
+                    }
                     list!.Torrents = [.. list!.Torrents, .. fullUpdateResult!.Torrents.ExceptBy(list!.Torrents.Select(x => x.Id), x => x.Id)];
                     if (fullUpdateResult.Removed != null) {
                         list!.Removed ??= [];

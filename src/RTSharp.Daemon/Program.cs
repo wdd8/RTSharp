@@ -40,7 +40,9 @@ public static class Program
             });
         });
 
-        builder.Services.AddGrpc();
+        builder.Services.AddGrpc(options => {
+            options.Interceptors.Add<RTSharp.Daemon.GRPCServices.Interceptors.DataProviderFailureInterceptor>();
+        });
         builder.Services.AddSingleton<RTSharp.Shared.Abstractions.ISpeedMovingAverageService, SpeedMovingAverageService>();
         builder.Services.AddSingleton<FileTransferService>();
         builder.Services.AddSingleton<SessionsService>();

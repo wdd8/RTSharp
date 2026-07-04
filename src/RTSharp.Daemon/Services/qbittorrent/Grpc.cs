@@ -5,7 +5,9 @@ using Grpc.Core;
 
 using QBittorrent.Client;
 
+using RTSharp.Daemon.Exceptions;
 using RTSharp.Daemon.Protocols.DataProvider;
+using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
@@ -512,22 +514,29 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
         public async Task<TorrentsListResponse> GetTorrentList()
         {
-            var client = await Client.Init();
+            try {
+                var client = await Client.Init();
 
-            var all = await client.GetTorrentListAsync();
+                var all = await client.GetTorrentListAsync();
 
-            var ret = new TorrentsListResponse {
-                List = {
-                    all.Select(x => {
-                        var internalTorrent = new Protocols.DataProvider.Torrent {
-                            Hash = Convert.FromHexString(x.Hash).ToByteString()
-                        };
-                        TorrentMapper.ApplyFromExternal(internalTorrent, x);
-                        return internalTorrent;
-                    })
+                var ret = new TorrentsListResponse {
+                    List = {
+                        all.Select(x => {
+                            var internalTorrent = new Protocols.DataProvider.Torrent {
+                                Hash = Convert.FromHexString(x.Hash).ToByteString()
+                            };
+                            TorrentMapper.ApplyFromExternal(internalTorrent, x);
+                            return internalTorrent;
+                        })
+                    }
+                };
+                return ret;
+            } catch (Exception ex) {
+                if (ex.IsConnectionFailure()) {
+                    throw new DataProviderFailure(ex.Message, ex, Client.Uri);
                 }
-            };
-            return ret;
+                throw;
+            }
         }
 
         public async Task GetTorrentListUpdates(GetTorrentListUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsListResponse> Res, CancellationToken CancellationToken)
@@ -567,7 +576,12 @@ namespace RTSharp.Daemon.Services.qbittorrent
             }
 
             while (!CancellationToken.IsCancellationRequested) {
-                var partialData = await client.GetPartialDataAsync(rid, CancellationToken);
+                PartialData partialData;
+                try {
+                    partialData = await client.GetPartialDataAsync(rid, CancellationToken);
+                } catch (Exception ex) when (ex.IsConnectionFailure()) {
+                    throw new DataProviderFailure(ex.Message, ex, Client.Uri);
+                }
 
                 rid = partialData.ResponseId;
 
