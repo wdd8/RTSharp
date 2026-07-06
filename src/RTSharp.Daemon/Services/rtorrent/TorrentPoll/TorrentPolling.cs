@@ -1,8 +1,6 @@
 ﻿using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
-using Nito.AsyncEx;
-
 using RTSharp.Daemon.Exceptions;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Daemon.Utils;
@@ -25,23 +23,35 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         {
             this.InstanceKey = InstanceKey;
             this.ScopeFactory = ScopeFactory;
-            this.ForceLoop = new AsyncManualResetEvent();
             this.Logger = Logger;
             this.PollingSubscriptionLogger = PollingSubscriptionLogger;
         }
 
         internal List<PollingSubscription> Subscribers = [];
         internal Lock SubscribersLock = new();
-        internal AsyncManualResetEvent ForceLoop;
 
-        private readonly List<HistoryEntry> GlobalHistory = [];
+        private TaskCompletionSource ForceLoopSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        private static double ComputeSpeed(List<HistoryEntry> History, byte[] Hash, bool Uploaded)
+        internal void ForceLoop() => ForceLoopSignal.TrySetResult();
+
+        private async Task WaitForNextCycle(TimeSpan Delay, CancellationToken StoppingToken)
+        {
+            var forceLoopTask = ForceLoopSignal.Task;
+            var delayTask = Delay == TimeSpan.MaxValue ? Task.Delay(-1, StoppingToken) : Task.Delay(Delay, StoppingToken);
+            await Task.WhenAny(delayTask, forceLoopTask);
+            ForceLoopSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        private readonly record struct SpeedSample(DateTime Date, InfoHashDictionary<(ulong Uploaded, ulong Downloaded)> Values);
+
+        private readonly List<SpeedSample> GlobalHistory = [];
+
+        private static double ComputeSpeed(List<SpeedSample> History, byte[] Hash, bool Uploaded)
         {
             Span<(DateTime, long)> buf = stackalloc (DateTime, long)[History.Count];
             var c = 0;
             foreach (var h in History) {
-                if (h.List.TryGetValue(Hash, out var t))
+                if (h.Values.TryGetValue(Hash, out var t))
                     buf[c++] = (h.Date, (long)(Uploaded ? t.Uploaded : t.Downloaded));
             }
             return SpeedMovingAverage.CalculateSpeed(buf[..c]);
@@ -55,7 +65,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 Subscribers.Add(ret);
             }
 
-            ForceLoop.Set();
+            ForceLoop();
             return ret;
         }
 
@@ -87,18 +97,35 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 + "d.peers_accounted=</string></value></param>"
                 + "</params></methodCall>";
 
-        [GeneratedRegex(@"(?<!\\),")]
-        private static partial Regex NonEscapedCommaRegex();
-
         [GeneratedRegex("magnet:\\?xt=urn:[a-z0-9]+:[a-z0-9]{32,40}&dn=.+&tr=.+")]
         private static partial Regex MagnetDummyRegex();
 
-        enum TorrentTrackerStatusMessage {
-            NA = 0,
-            Completed = 1,
-            Started = 2,
-            Stopped = 3,
-            Scrape = 4
+        private static string TrackerStatusMessage(ReadOnlySpan<char> Raw)
+        {
+            if (Raw.Length == 1) {
+                switch (Raw[0]) {
+                    case '0': return "NA";
+                    case '1': return "Completed";
+                    case '2': return "Started";
+                    case '3': return "Stopped";
+                    case '4': return "Scrape";
+                }
+            }
+            return Raw.ToString();
+        }
+
+        private static void ParseLabels(string Label, Google.Protobuf.Collections.RepeatedField<string> Labels)
+        {
+            var start = 0;
+            for (var x = 0; x < Label.Length; x++) {
+                if (Label[x] == ',' && (x == 0 || Label[x - 1] != '\\')) {
+                    if (x > start)
+                        Labels.Add(XMLUtils.Decode(Label[start..x]));
+                    start = x + 1;
+                }
+            }
+            if (start < Label.Length)
+                Labels.Add(XMLUtils.Decode(Label[start..]));
         }
 
         public async Task<(InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers)> GetAllTorrents()
@@ -116,6 +143,9 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
             var torrents = new InfoHashDictionary<Torrent>();
             var trackers = new InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers>();
+
+            Span<Range> trackerRanges = stackalloc Range[64];
+            Span<Range> trackerPartRanges = stackalloc Range[9];
 
             while (!XMLUtils.CheckFor(xml, XMLUtils.DATA_TOKEN_END)) {
                 XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
@@ -187,21 +217,26 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 if (statusMessage.Length != 0 && statusMessage != "Tracker: [Tried all trackers.]")
                     torrentState |= TorrentState.Errored;
                 
-                foreach (var trackerRaw in trackersRaw.Split('|', StringSplitOptions.RemoveEmptyEntries)) {
-                    var parts = trackerRaw.Split('^', StringSplitOptions.RemoveEmptyEntries);
+                var trackersRawSpan = trackersRaw.AsSpan();
+                var trackerCount = trackersRawSpan.Split(trackerRanges, '|', StringSplitOptions.RemoveEmptyEntries);
+
+                for (var x = 0; x < trackerCount; x++) {
+                    var trackerRaw = trackersRawSpan[trackerRanges[x]];
+                    var partCount = trackerRaw.Split(trackerPartRanges, '^', StringSplitOptions.RemoveEmptyEntries);
+                    Debug.Assert(partCount == 9);
 
                     var tracker = new TorrentTracker();
-                    tracker.ID = tracker.Uri = XMLUtils.Decode(parts[0]);
+                    tracker.ID = tracker.Uri = XMLUtils.Decode(trackerRaw[trackerPartRanges[0]].ToString());
                     TorrentTrackerStatus status;
-                    status = parts[1] == "1" ? TorrentTrackerStatus.Enabled : TorrentTrackerStatus.Disabled;
-                    status |= parts[2] == "1" ? TorrentTrackerStatus.Active : TorrentTrackerStatus.NotActive;
+                    status = trackerRaw[trackerPartRanges[1]] is "1" ? TorrentTrackerStatus.Enabled : TorrentTrackerStatus.Disabled;
+                    status |= trackerRaw[trackerPartRanges[2]] is "1" ? TorrentTrackerStatus.Active : TorrentTrackerStatus.NotActive;
                     tracker.Status = status;
-                    tracker.Seeders = UInt32.Parse(parts[3]);
-                    tracker.Peers = UInt32.Parse(parts[4]);
-                    tracker.Downloaded = UInt32.Parse(parts[5]);
-                    tracker.LastUpdated = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)UInt64.Parse(parts[6])));
-                    tracker.ScrapeInterval = Duration.FromTimeSpan(TimeSpan.FromSeconds(UInt32.Parse(parts[7])));
-                    tracker.StatusMessage = ((TorrentTrackerStatusMessage)Byte.Parse(parts[8])).ToString();
+                    tracker.Seeders = UInt32.Parse(trackerRaw[trackerPartRanges[3]]);
+                    tracker.Peers = UInt32.Parse(trackerRaw[trackerPartRanges[4]]);
+                    tracker.Downloaded = UInt32.Parse(trackerRaw[trackerPartRanges[5]]);
+                    tracker.LastUpdated = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)UInt64.Parse(trackerRaw[trackerPartRanges[6]])));
+                    tracker.ScrapeInterval = Duration.FromTimeSpan(TimeSpan.FromSeconds(UInt32.Parse(trackerRaw[trackerPartRanges[7]])));
+                    tracker.StatusMessage = TrackerStatusMessage(trackerRaw[trackerPartRanges[8]]);
 
                     seedersTotal += tracker.Seeders;
                     peersTotal += tracker.Peers;
@@ -245,7 +280,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     MagnetDummy = MagnetDummyRegex().IsMatch(decodedName)
                 };
 
-                torrent.Labels.Add(NonEscapedCommaRegex().Split(label).Where(x => !String.IsNullOrEmpty(x)).Select(XMLUtils.Decode));
+                ParseLabels(label, torrent.Labels);
                 trackers[hash] = new TorrentsTrackersReply.Types.TorrentsTrackers()
                 {
                     InfoHash = ByteString.CopyFrom(hash),
@@ -300,11 +335,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 }
 
                 Logger.LogTrace("Sleeping for {delay} for torrent poll", delay);
-                if (delay == TimeSpan.MaxValue)
-                    await Task.WhenAny(Task.Delay(-1, stoppingToken), ForceLoop.WaitAsync(stoppingToken));
-                else
-                    await Task.WhenAny(Task.Delay(delay, stoppingToken), ForceLoop.WaitAsync(stoppingToken));
-                ForceLoop.Reset();
+                await WaitForNextCycle(delay, stoppingToken);
 
                 (InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers) allTorrents;
                 try {
@@ -314,20 +345,27 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                         Logger.LogConnectionFailure(dpf);
                     else
                         Logger.LogError(ex, "Torrent poll failed");
-                    await Task.WhenAny(Task.Delay(1000, stoppingToken), ForceLoop.WaitAsync(stoppingToken));
+                    await WaitForNextCycle(TimeSpan.FromSeconds(1), stoppingToken);
                     continue;
                 }
 
                 if (delay == TimeSpan.MaxValue)
                     continue;
 
-                const int HISTORY_MAX = 5;
+                const int SPEED_HISTORY_MAX = 5;
+                const int SUBSCRIBER_HISTORY_MAX = 2;
 
-                var entry = new HistoryEntry(DateTime.UtcNow, allTorrents.List, allTorrents.Trackers);
+                var now = DateTime.UtcNow;
 
-                GlobalHistory.Add(entry);
-                if (GlobalHistory.Count > HISTORY_MAX)
+                var speedValues = new InfoHashDictionary<(ulong Uploaded, ulong Downloaded)>();
+                foreach (var (hash, torrent) in allTorrents.List)
+                    speedValues[hash] = (torrent.Uploaded, torrent.Downloaded);
+
+                GlobalHistory.Add(new SpeedSample(now, speedValues));
+                if (GlobalHistory.Count > SPEED_HISTORY_MAX)
                     GlobalHistory.RemoveAt(0);
+
+                var entry = new HistoryEntry(now, allTorrents.List, allTorrents.Trackers);
 
                 foreach (var (hash, torrent) in allTorrents.List) {
                     var upSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: true);
@@ -369,7 +407,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                         continue;
 
                     sub.History.Add(entry);
-                    if (sub.History.Count > HISTORY_MAX)
+                    if (sub.History.Count > SUBSCRIBER_HISTORY_MAX)
                         sub.History.RemoveAt(0);
 
                     sub.EvNewDelta.Set();

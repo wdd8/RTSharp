@@ -253,7 +253,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             lock (Instance.SubscribersLock) {
                 Instance.Subscribers.Remove(this);
             }
-            Instance.ForceLoop.Set();
+            Instance.ForceLoop();
         }
     }
 }

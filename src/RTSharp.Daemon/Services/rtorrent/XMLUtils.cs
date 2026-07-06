@@ -4,33 +4,10 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-using rm.Trie;
-
 namespace RTSharp.Daemon.Services.rtorrent
 {
     public class XMLUtils
     {
-        static Trie XmlEscapeTrie;
-        static Dictionary<string, char> XmlEscapeDict;
-
-        static XMLUtils()
-        {
-            XmlEscapeTrie = new Trie();
-            XmlEscapeTrie.AddWord("amp;");
-            XmlEscapeTrie.AddWord("quot;");
-            XmlEscapeTrie.AddWord("apos;");
-            XmlEscapeTrie.AddWord("lt;");
-            XmlEscapeTrie.AddWord("gt;");
-
-            XmlEscapeDict = new Dictionary<string, char>() {
-                { "amp;", '&' },
-                { "quot;", '"' },
-                { "apos;", '\'' },
-                { "lt;", '<' },
-                { "gt;", '>' }
-            };
-        }
-
         public static readonly byte[] NEWLINE = "\r\n"u8.ToArray();
 
         public static readonly byte[] METHOD_RESPONSE = "<methodResponse>\r\n"u8.ToArray();
@@ -399,46 +376,28 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public static string Decode(string In)
         {
-            if (In.IndexOf('&') < 0)
+            var andIndex = In.IndexOf('&');
+            if (andIndex < 0)
                 return In;
 
-            static string? check(ReadOnlySpan<char> span)
-            {
-                var x = 0;
-                var root = XmlEscapeTrie.GetRootTrieNode();
-                var sb = new StringBuilder();
+            var sb = new StringBuilder(In.Length);
+            sb.Append(In, 0, andIndex);
 
-                foreach (var chr in span) {
-                    var c = root.GetChild(chr);
-                    if (c == null) {
-                        if (!root.GetChildren().Any())
-                            return sb.ToString();
-                        return null;
-                    }
-
-                    root = c;
-                    sb.Append(c.Character);
-                    x++;
-                }
-
-                if (!root.GetChildren().Any())
-                    return sb.ToString();
-
-                return null;
-            }
-
-            var sb = new StringBuilder();
-
-            for (var x = 0;x < In.Length;x++) {
+            var x = andIndex;
+            while (x < In.Length) {
                 if (In[x] == '&') {
-                    var s = check(In[(x + 1)..].AsSpan());
-                    if (s != null) {
-                        sb.Append(XmlEscapeDict[s]);
-                        x += s.Length;
-                    } else
-                        sb.Append('&');
-                } else
+                    var right = In.AsSpan(x + 1);
+
+                    if (right.StartsWith("amp;")) { sb.Append('&'); x += 1 + 4; }
+                    else if (right.StartsWith("quot;")) { sb.Append('"'); x += 1 + 5; }
+                    else if (right.StartsWith("apos;")) { sb.Append('\''); x += 1 + 5; }
+                    else if (right.StartsWith("lt;")) { sb.Append('<'); x += 1 + 3; }
+                    else if (right.StartsWith("gt;")) { sb.Append('>'); x += 1 + 3; }
+                    else { sb.Append('&'); x += 1; }
+                } else {
                     sb.Append(In[x]);
+                    x += 1;
+                }
             }
 
             return sb.ToString();
