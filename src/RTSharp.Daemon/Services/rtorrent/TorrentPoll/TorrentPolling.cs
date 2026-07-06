@@ -130,169 +130,173 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
         public async Task<(InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers)> GetAllTorrents()
         {
-            ReadOnlyMemory<byte> xml;
+            SCGICommunication.ScgiResponse response;
 
             using (var scope = ScopeFactory.CreateScope()) {
                 var comm = scope.ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
 
-                xml = await comm.Get(AllTorrentsXml);
+                response = await comm.Get(AllTorrentsXml);
             }
 
-            XMLUtils.SeekTo(ref xml, XMLUtils.METHOD_RESPONSE);
-            XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_START);
+            using (response) {
+                var xml = response.Reader();
 
-            var torrents = new InfoHashDictionary<Torrent>();
-            var trackers = new InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers>();
+                XMLUtils.SeekTo(ref xml, XMLUtils.METHOD_RESPONSE);
+                XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_START);
 
-            Span<Range> trackerRanges = stackalloc Range[64];
-            Span<Range> trackerPartRanges = stackalloc Range[9];
+                var torrents = new InfoHashDictionary<Torrent>();
+                var trackers = new InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers>();
 
-            while (!XMLUtils.CheckFor(xml, XMLUtils.DATA_TOKEN_END)) {
-                XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+                Span<Range> trackerRanges = stackalloc Range[64];
+                Span<Range> trackerPartRanges = stackalloc Range[9];
 
-                var hashRaw = XMLUtils.GetValue<string>(ref xml);
-                var name = XMLUtils.GetValue<string>(ref xml);
-                var totalSize = XMLUtils.GetValue<ulong>(ref xml);
-                var downloaded = XMLUtils.GetValue<ulong>(ref xml);
-                var uploaded = XMLUtils.GetValue<ulong>(ref xml);
+                while (!XMLUtils.CheckFor(xml, XMLUtils.DATA_TOKEN_END)) {
+                    XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
 
-                var downSpeed = XMLUtils.GetValue<ulong>(ref xml);
+                    var hashRaw = XMLUtils.GetValue<string>(ref xml);
+                    var name = XMLUtils.GetValue<string>(ref xml);
+                    var totalSize = XMLUtils.GetValue<ulong>(ref xml);
+                    var downloaded = XMLUtils.GetValue<ulong>(ref xml);
+                    var uploaded = XMLUtils.GetValue<ulong>(ref xml);
 
-                var creationDateRaw = XMLUtils.GetValue<ulong>(ref xml);
-                if (!UInt64.TryParse(XMLUtils.GetValue<string>(ref xml), out var addDateRaw)) {
-                    addDateRaw = 0;
-                }
-                var finishedDateRaw = XMLUtils.GetValue<ulong>(ref xml);
+                    var downSpeed = XMLUtils.GetValue<ulong>(ref xml);
 
-                var label = XMLUtils.GetValue<string>(ref xml);
-                var torrentComment = XMLUtils.GetValue<string>(ref xml);
-                var isMultiFile = XMLUtils.GetValue<bool>(ref xml);
-                var directory = XMLUtils.Decode(XMLUtils.GetValue<string>(ref xml));
-                var priorityRaw = XMLUtils.GetValue<ulong>(ref xml);
-                var chunkSize = XMLUtils.GetValue<ulong>(ref xml);
-                var skippedTotal = XMLUtils.GetValue<ulong>(ref xml);
-
-                var trackersRaw = XMLUtils.GetValue<string>(ref xml);
-
-                var statusMessage = XMLUtils.Decode(XMLUtils.GetValue<string>(ref xml));
-
-                var isOpenRaw = XMLUtils.GetValue<bool>(ref xml);
-                var isActiveRaw = XMLUtils.GetValue<bool>(ref xml);
-                var isHashCheckingRaw = XMLUtils.GetValue<bool>(ref xml);
-                var isPrivateRaw = XMLUtils.GetValue<bool>(ref xml);
-
-                var seedersConnected = XMLUtils.GetValue<ulong>(ref xml);
-                var peersConnected = XMLUtils.GetValue<ulong>(ref xml);
-
-                XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
-
-                var hash = Convert.FromHexString(hashRaw);
-
-                var priority = (TorrentPriority)priorityRaw;
-
-                var curTrackers = new List<TorrentTracker>();
-                uint seedersTotal = 0, peersTotal = 0;
-
-                TorrentState torrentState;
-
-                if (isMultiFile) {
-                    // If multifile remove d.name from path. Base path shouldn't point to any inner files of torrent
-                    var lastSep = directory.LastIndexOf(System.IO.Path.DirectorySeparatorChar);
-                    directory = lastSep <= 0 ? "" : directory[..lastSep];
-                }
-
-                if (!isOpenRaw)
-                    torrentState = totalSize == downloaded ? TorrentState.Complete : TorrentState.Stopped; // TODO: partial downloads
-                else {
-                    if (isHashCheckingRaw)
-                        torrentState = TorrentState.Hashing;
-                    else {
-                        if (isActiveRaw)
-                            torrentState = totalSize == downloaded ? TorrentState.Seeding : TorrentState.Downloading; // TODO: partial downloads
-                        else
-                            torrentState = TorrentState.Paused;
+                    var creationDateRaw = XMLUtils.GetValue<ulong>(ref xml);
+                    if (!UInt64.TryParse(XMLUtils.GetValue<string>(ref xml), out var addDateRaw)) {
+                        addDateRaw = 0;
                     }
+                    var finishedDateRaw = XMLUtils.GetValue<ulong>(ref xml);
+
+                    var label = XMLUtils.GetValue<string>(ref xml);
+                    var torrentComment = XMLUtils.GetValue<string>(ref xml);
+                    var isMultiFile = XMLUtils.GetValue<bool>(ref xml);
+                    var directory = XMLUtils.Decode(XMLUtils.GetValue<string>(ref xml));
+                    var priorityRaw = XMLUtils.GetValue<ulong>(ref xml);
+                    var chunkSize = XMLUtils.GetValue<ulong>(ref xml);
+                    var skippedTotal = XMLUtils.GetValue<ulong>(ref xml);
+
+                    var trackersRaw = XMLUtils.GetValue<string>(ref xml);
+
+                    var statusMessage = XMLUtils.Decode(XMLUtils.GetValue<string>(ref xml));
+
+                    var isOpenRaw = XMLUtils.GetValue<bool>(ref xml);
+                    var isActiveRaw = XMLUtils.GetValue<bool>(ref xml);
+                    var isHashCheckingRaw = XMLUtils.GetValue<bool>(ref xml);
+                    var isPrivateRaw = XMLUtils.GetValue<bool>(ref xml);
+
+                    var seedersConnected = XMLUtils.GetValue<ulong>(ref xml);
+                    var peersConnected = XMLUtils.GetValue<ulong>(ref xml);
+
+                    XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+
+                    var hash = Convert.FromHexString(hashRaw);
+
+                    var priority = (TorrentPriority)priorityRaw;
+
+                    var curTrackers = new List<TorrentTracker>();
+                    uint seedersTotal = 0, peersTotal = 0;
+
+                    TorrentState torrentState;
+
+                    if (isMultiFile) {
+                        // If multifile remove d.name from path. Base path shouldn't point to any inner files of torrent
+                        var lastSep = directory.LastIndexOf(System.IO.Path.DirectorySeparatorChar);
+                        directory = lastSep <= 0 ? "" : directory[..lastSep];
+                    }
+
+                    if (!isOpenRaw)
+                        torrentState = totalSize == downloaded ? TorrentState.Complete : TorrentState.Stopped; // TODO: partial downloads
+                    else {
+                        if (isHashCheckingRaw)
+                            torrentState = TorrentState.Hashing;
+                        else {
+                            if (isActiveRaw)
+                                torrentState = totalSize == downloaded ? TorrentState.Seeding : TorrentState.Downloading; // TODO: partial downloads
+                            else
+                                torrentState = TorrentState.Paused;
+                        }
+                    }
+
+                    if (statusMessage.Length != 0 && statusMessage != "Tracker: [Tried all trackers.]")
+                        torrentState |= TorrentState.Errored;
+
+                    var trackersRawSpan = trackersRaw.AsSpan();
+                    var trackerCount = trackersRawSpan.Split(trackerRanges, '|', StringSplitOptions.RemoveEmptyEntries);
+
+                    for (var x = 0; x < trackerCount; x++) {
+                        var trackerRaw = trackersRawSpan[trackerRanges[x]];
+                        var partCount = trackerRaw.Split(trackerPartRanges, '^', StringSplitOptions.RemoveEmptyEntries);
+                        Debug.Assert(partCount == 9);
+
+                        var tracker = new TorrentTracker();
+                        tracker.ID = tracker.Uri = XMLUtils.Decode(trackerRaw[trackerPartRanges[0]].ToString());
+                        TorrentTrackerStatus status;
+                        status = trackerRaw[trackerPartRanges[1]] is "1" ? TorrentTrackerStatus.Enabled : TorrentTrackerStatus.Disabled;
+                        status |= trackerRaw[trackerPartRanges[2]] is "1" ? TorrentTrackerStatus.Active : TorrentTrackerStatus.NotActive;
+                        tracker.Status = status;
+                        tracker.Seeders = UInt32.Parse(trackerRaw[trackerPartRanges[3]]);
+                        tracker.Peers = UInt32.Parse(trackerRaw[trackerPartRanges[4]]);
+                        tracker.Downloaded = UInt32.Parse(trackerRaw[trackerPartRanges[5]]);
+                        tracker.LastUpdated = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)UInt64.Parse(trackerRaw[trackerPartRanges[6]])));
+                        tracker.ScrapeInterval = Duration.FromTimeSpan(TimeSpan.FromSeconds(UInt32.Parse(trackerRaw[trackerPartRanges[7]])));
+                        tracker.StatusMessage = TrackerStatusMessage(trackerRaw[trackerPartRanges[8]]);
+
+                        seedersTotal += tracker.Seeders;
+                        peersTotal += tracker.Peers;
+                        curTrackers.Add(tracker);
+                    }
+
+                    var primaryTracker = PollingSubscription.GetPrimaryTracker(curTrackers);
+
+                    if (torrentComment.StartsWith("VRS24mrker"))
+                        torrentComment = torrentComment[10..];
+
+                    var decodedName = XMLUtils.Decode(name);
+
+                    var torrent = new Torrent() {
+                        Hash = ByteString.CopyFrom(hash),
+                        Name = decodedName,
+                        State = torrentState,
+                        WantedSize = totalSize, // TODO: rtorrent supports not downloading specific files, this should account for it
+                        IsPrivate = isPrivateRaw,
+                        Size = totalSize,
+                        Downloaded = downloaded,
+                        CompletedSize = downloaded, // TODO: probably maybe should fix this in future since its possible to download partials with rtorrent
+                        Uploaded = uploaded,
+                        DLSpeed = downSpeed,
+                        CreatedOn = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)creationDateRaw)),
+                        AddedOn = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)addDateRaw)),
+                        FinishedOn = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)finishedDateRaw)),
+                        // label
+                        Comment = XMLUtils.Decode(torrentComment), // rutorrent compat
+                        RemotePath = directory,
+                        Priority = priority,
+                        ChunkSize = (uint)chunkSize,
+                        Wasted = skippedTotal,
+                        // trackers
+                        PrimaryTracker = primaryTracker,
+                        StatusMessage = statusMessage,
+                        SeedersConnected = (uint)seedersConnected,
+                        PeersConnected = (uint)peersConnected,
+                        SeedersTotal = seedersTotal,
+                        PeersTotal = peersTotal,
+                        MagnetDummy = MagnetDummyRegex().IsMatch(decodedName)
+                    };
+
+                    ParseLabels(label, torrent.Labels);
+                    trackers[hash] = new TorrentsTrackersReply.Types.TorrentsTrackers()
+                    {
+                        InfoHash = ByteString.CopyFrom(hash),
+                        Trackers = { curTrackers }
+                    };
+
+                    torrents[hash] = torrent;
                 }
 
-                if (statusMessage.Length != 0 && statusMessage != "Tracker: [Tried all trackers.]")
-                    torrentState |= TorrentState.Errored;
-                
-                var trackersRawSpan = trackersRaw.AsSpan();
-                var trackerCount = trackersRawSpan.Split(trackerRanges, '|', StringSplitOptions.RemoveEmptyEntries);
+                Debug.Assert(xml.Remaining == 31 + 2 + 9 + 2 + 17 + 2);
 
-                for (var x = 0; x < trackerCount; x++) {
-                    var trackerRaw = trackersRawSpan[trackerRanges[x]];
-                    var partCount = trackerRaw.Split(trackerPartRanges, '^', StringSplitOptions.RemoveEmptyEntries);
-                    Debug.Assert(partCount == 9);
-
-                    var tracker = new TorrentTracker();
-                    tracker.ID = tracker.Uri = XMLUtils.Decode(trackerRaw[trackerPartRanges[0]].ToString());
-                    TorrentTrackerStatus status;
-                    status = trackerRaw[trackerPartRanges[1]] is "1" ? TorrentTrackerStatus.Enabled : TorrentTrackerStatus.Disabled;
-                    status |= trackerRaw[trackerPartRanges[2]] is "1" ? TorrentTrackerStatus.Active : TorrentTrackerStatus.NotActive;
-                    tracker.Status = status;
-                    tracker.Seeders = UInt32.Parse(trackerRaw[trackerPartRanges[3]]);
-                    tracker.Peers = UInt32.Parse(trackerRaw[trackerPartRanges[4]]);
-                    tracker.Downloaded = UInt32.Parse(trackerRaw[trackerPartRanges[5]]);
-                    tracker.LastUpdated = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)UInt64.Parse(trackerRaw[trackerPartRanges[6]])));
-                    tracker.ScrapeInterval = Duration.FromTimeSpan(TimeSpan.FromSeconds(UInt32.Parse(trackerRaw[trackerPartRanges[7]])));
-                    tracker.StatusMessage = TrackerStatusMessage(trackerRaw[trackerPartRanges[8]]);
-
-                    seedersTotal += tracker.Seeders;
-                    peersTotal += tracker.Peers;
-                    curTrackers.Add(tracker);
-                }
-
-                var primaryTracker = PollingSubscription.GetPrimaryTracker(curTrackers);
-
-                if (torrentComment.StartsWith("VRS24mrker"))
-                    torrentComment = torrentComment[10..];
-
-                var decodedName = XMLUtils.Decode(name);
-
-                var torrent = new Torrent() {
-                    Hash = ByteString.CopyFrom(hash),
-                    Name = decodedName,
-                    State = torrentState,
-                    WantedSize = totalSize, // TODO: rtorrent supports not downloading specific files, this should account for it
-                    IsPrivate = isPrivateRaw,
-                    Size = totalSize,
-                    Downloaded = downloaded,
-                    CompletedSize = downloaded, // TODO: probably maybe should fix this in future since its possible to download partials with rtorrent
-                    Uploaded = uploaded,
-                    DLSpeed = downSpeed,
-                    CreatedOn = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)creationDateRaw)),
-                    AddedOn = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)addDateRaw)),
-                    FinishedOn = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)finishedDateRaw)),
-                    // label
-                    Comment = XMLUtils.Decode(torrentComment), // rutorrent compat
-                    RemotePath = directory,
-                    Priority = priority,
-                    ChunkSize = (uint)chunkSize,
-                    Wasted = skippedTotal,
-                    // trackers
-                    PrimaryTracker = primaryTracker,
-                    StatusMessage = statusMessage,
-                    SeedersConnected = (uint)seedersConnected,
-                    PeersConnected = (uint)peersConnected,
-                    SeedersTotal = seedersTotal,
-                    PeersTotal = peersTotal,
-                    MagnetDummy = MagnetDummyRegex().IsMatch(decodedName)
-                };
-
-                ParseLabels(label, torrent.Labels);
-                trackers[hash] = new TorrentsTrackersReply.Types.TorrentsTrackers()
-                {
-                    InfoHash = ByteString.CopyFrom(hash),
-                    Trackers = { curTrackers }
-                };
-
-                torrents[hash] = torrent;
+                return (torrents, trackers);
             }
-
-            Debug.Assert(xml.Length == 31 + 2 + 9 + 2 + 17 + 2);
-
-            return (torrents, trackers);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

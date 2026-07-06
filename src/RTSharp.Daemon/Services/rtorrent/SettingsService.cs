@@ -87,7 +87,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 xml.Append("<value><struct><member><name>methodName</name><value><string>" + setting.RtorrentSetting + "</string></value></member><member><name>params</name><value><array><data /></array></value></member></struct></value>");
             }
             xml.Append("</data></array></value></param></params></methodCall>");
-            var result = await Scgi.Get(xml.ToString());
+            using var response = await Scgi.Get(xml.ToString());
+            var result = response.Reader();
             var ret = new Dictionary<string, object>();
 
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
@@ -95,16 +96,16 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             foreach (var setting in Settings) {
                 XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
-                Debug.Assert(result[..2].Span.SequenceEqual(stackalloc[] { (byte)'<', (byte)'v' }));
+                Debug.Assert(XMLUtils.CheckFor(result, "<v"u8));
 
 #if DEBUG
                 switch (setting.DataType) {
                     case SCGI_DATA_TYPE.I8:
                     case SCGI_DATA_TYPE.BOOL_AS_I8:
-                        Debug.Assert(result[..11].Span.SequenceEqual(Encoding.UTF8.GetBytes("<value><i8>")));
+                        Debug.Assert(XMLUtils.CheckFor(result, "<value><i8>"u8));
                         break;
                     case SCGI_DATA_TYPE.STRING:
-                        Debug.Assert(result[..15].Span.SequenceEqual(Encoding.UTF8.GetBytes("<value><string>")));
+                        Debug.Assert(XMLUtils.CheckFor(result, "<value><string>"u8));
                         break;
                 }
 #endif
@@ -134,7 +135,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                     }
                 }
 
-                Debug.Assert(result[..2].Span.SequenceEqual(stackalloc[] { (byte)'<', (byte)'/' }));
+                Debug.Assert(XMLUtils.CheckFor(result, "</"u8));
                 XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
             }
 
@@ -192,14 +193,15 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
             xml.Append("</data></array></value></param></params></methodCall>");
 
-            var result = await Scgi.Get(xml.ToString());
+            using var response = await Scgi.Get(xml.ToString());
+            var result = response.Reader();
 
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
             var ret = new CommandReply();
 
             foreach (var setting in sentSettings) {
-                Debug.Assert(result.Length > 15);
+                Debug.Assert(result.Remaining > 15);
 
                 if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
                     //<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not set local address: Name or service not known.</string></value></member>\r\n</struct></value>\r\n
@@ -209,7 +211,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 }
 
                 XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
-                Debug.Assert(result[..2].Span.SequenceEqual(stackalloc[] { (byte)'<', (byte)'v' }));
+                Debug.Assert(XMLUtils.CheckFor(result, "<v"u8));
 
                 var responseType = XMLUtils.GetValueType(result);
 

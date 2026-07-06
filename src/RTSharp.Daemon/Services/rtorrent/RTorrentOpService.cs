@@ -45,7 +45,8 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
             xml.Append("</data></array></value></param></params></methodCall>");
 
-            var result = await Scgi.Get(xml.ToString());
+            using var response = await Scgi.Get(xml.ToString());
+            var result = response.Reader();
 
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<params>\r\n<param><value><array><data>\r\n<value><array><data>\r\n<value><array><data>\r\n<value><array><data>\r\n<value><i8>2268332032</i8></value>\r\n<value><i8>1</i8></value>\r\n<value><string>ubuntusway-22.10-desktop-amd64.iso</string></value>\r\n<value><i8>4327</i8></value>\r\n<value><i8>0</i8></value>\r\n<value><i8>0</i8></value>\r\n</data></array></value>\r\n<value><array><data>\r\n<value><i8>262144</i8></value>\r\n<value><i8>1</i8></value>\r\n<value><string>.pad/262144</string></value>\r\n<value><i8>1</i8></value>\r\n<value><i8>0</i8></value>\r\n<value><i8>0</i8></value>\r\n</data></array></value>\r\n<value><array><data>\r\n<value><i8>113</i8></value>\r\n<value><i8>1</i8></value>\r\n<value><string>ubuntusway-22.10-desktop-amd64.md5.txt</string></value>\r\n<value><i8>2</i8></value>\r\n<value><i8>0</i8></value>\r\n<value><i8>0</i8></value>\r\n</data></array></value>\r\n<value><array><data>\r\n<value><i8>524175</i8></value>\r\n<value><i8>1</i8></value>\r\n<value><string>.pad/524175</string></value>\r\n<value><i8>1</i8></value>\r\n<value><i8>0</i8></value>\r\n<value><i8>0</i8></value>\r\n</data></array></value>\r\n<value><array><data>\r\n<value><i8>145</i8></value>\r\n<value><i8>1</i8></value>\r\n<value><string>ubuntusway-22.10-desktop-amd64.sha256.txt</string></value>\r\n<value><i8>2</i8></value>\r\n<value><i8>0</i8></value>\r\n<value><i8>0</i8></value>\r\n</data></array></value>\r\n</data></array></value>\r\n</data></array></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<params>\r\n<param><value><array><data>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not find info-hash.</string></value></member>\r\n</struct></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
@@ -118,7 +119,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 xml.Append("<value><struct><member><name>methodName</name><value><string>d.is_multi_file</string></value></member><member><name>params</name><value><array><data><value><string>" + hexStr + "</string></value></data></array></value></member></struct></value>");
             }
             xml.Append("</data></array></value></param></params></methodCall>");
-            var result = await Scgi.Get(xml.ToString());
+            using var response = await Scgi.Get(xml.ToString());
+            var result = response.Reader();
 
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<params>\r\n<param><value><array><data>\r\n<value><array><data>\r\n<value><string>/home/user/torrentdata/smartos-20221201T010802Z</string></value>\r\n</data></array></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
 

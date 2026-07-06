@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Text;
 
 namespace RTSharp.Daemon.Services.rtorrent
 {
@@ -22,17 +21,21 @@ namespace RTSharp.Daemon.Services.rtorrent
                 using var scope = ScopeFactory.CreateScope();
                 var scgi = scope.ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
 
-                ReadOnlyMemory<byte> result;
+                SCGICommunication.ScgiResponse pidResponse;
                 try {
-                    result = await scgi.Get("<?xml version=\"1.0\"?><methodCall><methodName>system.pid</methodName><params></params></methodCall>", stoppingToken);
+                    pidResponse = await scgi.Get("<?xml version=\"1.0\"?><methodCall><methodName>system.pid</methodName><params></params></methodCall>", stoppingToken);
                 } catch {
                     await Task.Delay(1000, stoppingToken);
                     continue;
                 }
 
-                XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
-                XMLUtils.SeekFixed(ref result, XMLUtils.SINGLE_PARAM);
-                var pid = XMLUtils.GetValue<long>(ref result);
+                long pid;
+                using (pidResponse) {
+                    var result = pidResponse.Reader();
+                    XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
+                    XMLUtils.SeekFixed(ref result, XMLUtils.SINGLE_PARAM);
+                    pid = XMLUtils.GetValue<long>(ref result);
+                }
 
                 Process proc;
                 try {
@@ -45,9 +48,9 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                 Logger.LogTrace("Rtorrent: " + pid);
 
-                var response = await scgi.Get("<?xml version=\"1.0\" ?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data><value><struct><member><name>methodName</name><value><string>method.set_key</string></value></member><member><name>params</name><value><array><data><value><string></string></value><value><string>event.download.finished</string></value><value><string>seedingtimertsharp</string></value><value><string>d.custom.set=seedingtime,\"$execute.capture={date,+%s}\"</string></value></data></array></value></member></struct></value><value><struct><member><name>methodName</name><value><string>method.set_key</string></value></member><member><name>params</name><value><array><data><value><string></string></value><value><string>event.download.inserted_new</string></value><value><string>addtimertsharp</string></value><value><string>d.custom.set=addtime,\"$execute.capture={date,+%s}\"</string></value></data></array></value></member></struct></value><value><struct><member><name>methodName</name><value><string>network.xmlrpc.size_limit.set</string></value></member><member><name>params</name><value><array><data><value><string></string></value><value><i8>67108863</i8></value></data></array></value></member></struct></value></data></array></value></param></params></methodCall>", stoppingToken);
+                using var response = await scgi.Get("<?xml version=\"1.0\" ?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data><value><struct><member><name>methodName</name><value><string>method.set_key</string></value></member><member><name>params</name><value><array><data><value><string></string></value><value><string>event.download.finished</string></value><value><string>seedingtimertsharp</string></value><value><string>d.custom.set=seedingtime,\"$execute.capture={date,+%s}\"</string></value></data></array></value></member></struct></value><value><struct><member><name>methodName</name><value><string>method.set_key</string></value></member><member><name>params</name><value><array><data><value><string></string></value><value><string>event.download.inserted_new</string></value><value><string>addtimertsharp</string></value><value><string>d.custom.set=addtime,\"$execute.capture={date,+%s}\"</string></value></data></array></value></member></struct></value><value><struct><member><name>methodName</name><value><string>network.xmlrpc.size_limit.set</string></value></member><member><name>params</name><value><array><data><value><string></string></value><value><i8>67108863</i8></value></data></array></value></member></struct></value></data></array></value></param></params></methodCall>", stoppingToken);
 
-                var responseStr = Encoding.UTF8.GetString(response.Span);
+                var responseStr = XMLUtils.GetUtf8String(response.Body);
                 if (responseStr.Contains("faultCode", StringComparison.Ordinal)) {
                     Logger.LogError($"Rtorrent triggers: {responseStr}");
                     Logger.LogError("Torrent add/finish times may be unavailable");

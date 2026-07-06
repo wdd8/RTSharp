@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+using System.Buffers;
+using System.Buffers.Text;
+using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -21,7 +24,84 @@ namespace RTSharp.Daemon.Services.rtorrent
         private static string? WslAddress;
 #endif
 
-        public async Task<ReadOnlyMemory<byte>> Get(string Xml, CancellationToken CancellationToken = default)
+        private static readonly byte[] EXPECTED_HEADER = "Status: 200 OK\r\nContent-Type: text/xml\r\nContent-Length: "u8.ToArray();
+
+        /// <summary>
+        /// Owns the connection's PipeReader for the lifetime of the caller's parse. Dispose only after all parsing
+        /// against <see cref="Reader"/> results is complete - disposing recycles the pooled segments backing the body.
+        /// </summary>
+        public readonly struct ScgiResponse : IDisposable
+        {
+            private readonly PipeReader PipeReader;
+            private readonly Action Disconnect;
+            public readonly ReadOnlySequence<byte> Body;
+
+            internal ScgiResponse(PipeReader PipeReader, Action Disconnect, ReadOnlySequence<byte> Body)
+            {
+                this.PipeReader = PipeReader;
+                this.Disconnect = Disconnect;
+                this.Body = Body;
+            }
+
+            public SequenceReader<byte> Reader() => new SequenceReader<byte>(Body);
+
+            public void Dispose()
+            {
+                PipeReader.AdvanceTo(Body.End);
+                PipeReader.Complete();
+                Disconnect();
+            }
+        }
+
+        private static async Task<int> ReadContentLengthAsync(PipeReader Reader, CancellationToken CancellationToken)
+        {
+            while (true) {
+                var readResult = await Reader.ReadAsync(CancellationToken);
+                var buffer = readResult.Buffer;
+                var reader = new SequenceReader<byte>(buffer);
+
+                if (reader.Remaining < EXPECTED_HEADER.Length) {
+                    if (readResult.IsCompleted)
+                        throw new Exception("Got EOF while reading SCGI response header");
+                    Reader.AdvanceTo(buffer.Start, buffer.End);
+                    continue;
+                }
+
+                Span<byte> headerBuf = stackalloc byte[EXPECTED_HEADER.Length];
+                reader.TryCopyTo(headerBuf);
+                Debug.Assert(headerBuf.SequenceEqual(EXPECTED_HEADER));
+                reader.Advance(EXPECTED_HEADER.Length);
+
+                if (!reader.TryReadTo(out ReadOnlySequence<byte> lenSeq, (byte)'\r', advancePastDelimiter: true)) {
+                    if (readResult.IsCompleted)
+                        throw new Exception("Got EOF while reading content length");
+                    Reader.AdvanceTo(buffer.Start, buffer.End);
+                    continue;
+                }
+
+                if (lenSeq.Length > 8)
+                    throw new Exception("Malformed data (content length too long)");
+
+                // Trailing \n\r\n after the \r already consumed above
+                if (reader.Remaining < 3) {
+                    if (readResult.IsCompleted)
+                        throw new Exception("Got EOF while reading content length terminator");
+                    Reader.AdvanceTo(buffer.Start, buffer.End);
+                    continue;
+                }
+                reader.Advance(3);
+
+                Span<byte> lenBuf = stackalloc byte[8];
+                lenSeq.CopyTo(lenBuf);
+                if (!Utf8Parser.TryParse(lenBuf[..(int)lenSeq.Length], out int len, out _))
+                    throw new Exception("Malformed content length");
+
+                Reader.AdvanceTo(reader.Position);
+                return len;
+            }
+        }
+
+        public async Task<ScgiResponse> Get(string Xml, CancellationToken CancellationToken = default)
         {
             var payload = SCGIPayloadBuilder.BuildPayload(Xml);
             NetworkStream stm;
@@ -84,51 +164,26 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             await stm.WriteAsync(payload, CancellationToken);
 
-            var start = new byte[56];
+            var pipeReader = PipeReader.Create(stm, new StreamPipeReaderOptions(pool: MemoryPool<byte>.Shared, leaveOpen: true));
 
-            await stm.ReadExactlyAsync(start, CancellationToken);
-            int recv;
-
-            Debug.Assert(Encoding.ASCII.GetString(start) == "Status: 200 OK\r\nContent-Type: text/xml\r\nContent-Length: ");
-
-            var lenBuffer = new char[8]; // 99 MiB max
-
-            recv = 0;
-            while (true) {
-                if (recv >= 8)
-                    throw new Exception("Malformed data (content length too long)");
-
-                var @byte = stm.ReadByte();
-                if (@byte == -1)
-                    throw new Exception("Got EOF while reading content length");
-
-                var chr = (char)@byte;
-
-                if (chr == '\r') {
-                    _ = stm.ReadByte(); // \n
-                    _ = stm.ReadByte(); // \r
-                    _ = stm.ReadByte(); // \n
-                    recv = -2;
-                    break;
-                }
-
-                lenBuffer[recv++] = chr;
+            int len;
+            ReadResult bodyResult;
+            try {
+                len = await ReadContentLengthAsync(pipeReader, CancellationToken);
+                bodyResult = await pipeReader.ReadAtLeastAsync(len, CancellationToken);
+            } catch {
+                await pipeReader.CompleteAsync();
+                disconnect();
+                throw;
             }
 
-            if (recv != -2)
-                throw new Exception("Content length reading did not complete");
+            var body = bodyResult.Buffer.Slice(0, len);
 
-            var len = Int32.Parse(lenBuffer);
-            Memory<byte> buffer = new byte[len];
-            await stm.ReadExactlyAsync(buffer, CancellationToken);
-
-            disconnect();
-
-            return buffer;
+            return new ScgiResponse(pipeReader, disconnect, body);
         }
-        
-        
-        
+
+
+
         public Task<XMLUtils.TorrentsResult[]> XmlActionTorrents(IList<byte[]> Hashes, params string[] Actions) =>
             XmlActionTorrentsMulti(Hashes.Select(x => (x, Array.Empty<string>())), Actions, (action, hash, reply) => reply == "0");
 
@@ -137,7 +192,8 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         private async Task<XMLUtils.TorrentsResult[]> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, string[] Params)> HashParams, string[] Actions, Func<string, byte[], string, bool> FxExpectedReply)
         {
-            var result = await XmlActionTorrentsMulti(HashParams, Actions);
+            using var response = await XmlActionTorrentsMulti(HashParams, Actions);
+            var result = response.Reader();
 
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
@@ -181,7 +237,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret.ToArray();
         }
 
-        public async Task<ReadOnlyMemory<byte>> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, string[] Params)> HashParams, string[] Actions)
+        public async Task<ScgiResponse> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, string[] Params)> HashParams, string[] Actions)
         {
             var xml = new StringBuilder();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
@@ -195,12 +251,10 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             xml.Append("</data></array></value></param></params></methodCall>");
 
-            var result = await Get(xml.ToString());
-
-            return result;
+            return await Get(xml.ToString());
         }
 
-        public async Task<ReadOnlyMemory<byte>> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, (string Action, string[] Params)[] Actions)> In)
+        public async Task<ScgiResponse> XmlActionTorrentsMulti(IEnumerable<(byte[] Hash, (string Action, string[] Params)[] Actions)> In)
         {
             var xml = new StringBuilder();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
@@ -214,9 +268,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             xml.Append("</data></array></value></param></params></methodCall>");
 
-            var result = await Get(xml.ToString());
-
-            return result;
+            return await Get(xml.ToString());
         }
     }
 }

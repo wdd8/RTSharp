@@ -194,7 +194,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             xml.Append("</data></array></value></param></params></methodCall>");
 
             // TODO: more error handling
-            var result = await Scgi.Get(xml.ToString());
+            using var response = await Scgi.Get(xml.ToString());
 
             xml.Clear();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
@@ -202,7 +202,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 xml.Append("<value><struct><member><name>methodName</name><value><string>d.save_full_session</string></value></member><member><name>params</name><value><array><data><value><string>" + hash + "</string></value></data></array></value></member></struct></value>");
             }
             xml.Append("</data></array></value></param></params></methodCall>");
-            var result2 = await Scgi.Get(xml.ToString());
+            using var response2 = await Scgi.Get(xml.ToString());
 
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<params>\r\n<param><value><array><data>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<fault>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Call XML not a proper XML-RPC call.  Incorrect Base64 padding</string></value></member>\r\n</struct></value>\r\n</fault>\r\n</methodResponse>\r\n
@@ -228,6 +228,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                     }
                 }
             }
+
+            var result = response.Reader();
 
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             if (XMLUtils.MaybeSeekFixed(ref result, XMLUtils.FAULT_TOKEN)) {
@@ -341,7 +343,8 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             xml.Append("</data></array></value></param></params></methodCall>");
 
-            var result = await Scgi.Get(xml.ToString());
+            using var response = await Scgi.Get(xml.ToString());
+            var result = response.Reader();
 
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
@@ -533,7 +536,8 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
             xml.Append("</data></array></value></param></params></methodCall>");
 
-            var result = await Scgi.Get(xml.ToString());
+            using var response = await Scgi.Get(xml.ToString());
+            var result = response.Reader();
 
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
@@ -824,7 +828,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                     xml.Append("<param><value><string>" + basePath.Target + "</string></value></param>");
                     xml.Append("</params></methodCall>");
 
-                    var result = await Scgi.Get(xml.ToString());
+                    using var response = await Scgi.Get(xml.ToString());
+                    var result = response.Reader();
 
                     // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<fault>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Wrong object type.</string></value></member>\r\n</struct></value>\r\n</fault>\r\n</methodResponse>\r\n
 
@@ -976,7 +981,8 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             xml.Append("</data></array></value></param></params></methodCall>");
 
-            var result = await Scgi.Get(xml.ToString());
+            using var response = await Scgi.Get(xml.ToString());
+            var result = response.Reader();
 
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
@@ -1042,7 +1048,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 throw new RpcException(new Status(StatusCode.NotFound, "Torrent file not found"));
             }
 
-            var torrentDetails = await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ ("d.directory", []), ("d.custom1", []), ("d.custom2", []), ("d.custom", [ "x-filename" ]), ("d.custom", [ "addtime" ]) ]) ]);
+            using var torrentDetailsResponse = await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ ("d.directory", []), ("d.custom1", []), ("d.custom2", []), ("d.custom", [ "x-filename" ]), ("d.custom", [ "addtime" ]) ]) ]);
+            var torrentDetails = torrentDetailsResponse.Reader();
             XMLUtils.SeekTo(ref torrentDetails, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_START);
 
@@ -1119,7 +1126,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
 
             // Set label
-            await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ label ]) ], [ "d.custom1.set" ]);
+            using (await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ label ]) ], [ "d.custom1.set" ])) { }
 
             // Override addtime later
             Sessions.RunSession("Edit tracker", new(), async session => {
@@ -1129,7 +1136,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 Logger.LogInformation("Sleeping for 20sec before setting addtime...");
                 await Task.Delay(TimeSpan.FromSeconds(20), session.Cts.Token);
                 Logger.LogInformation("Setting addtime");
-                await Scgi.XmlActionTorrentsMulti([(InfoHash.ToByteArray(), [ "addtime", addtime ])], ["d.custom.set"]);
+                using (await Scgi.XmlActionTorrentsMulti([(InfoHash.ToByteArray(), [ "addtime", addtime ])], ["d.custom.set"])) { }
                 session.Progress.State = TASK_STATE.DONE;
                 session.Progress.Progress = 100f;
             });
@@ -1256,7 +1263,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             xml.Append($"<param><value><string>{peer}</string></value></param>");
             xml.Append("</params></methodCall>");
 
-            var res = await Scgi.Get(xml.ToString(), cancellationToken);
+            using var res = await Scgi.Get(xml.ToString(), cancellationToken);
 
             return new();
         }
@@ -1279,7 +1286,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             xml.Append("<value><struct><member><name>methodName</name><value><string>p.disconnect</string></value></member><member><name>params</name><value><array><data><value><string>" + target + "</string></value></data></array></value></member></struct></value>");
             xml.Append("</data></array></value></param></params></methodCall>");
 
-            await Scgi.Get(xml.ToString(), cancellationToken);
+            using (await Scgi.Get(xml.ToString(), cancellationToken)) { }
 
             return new();
         }

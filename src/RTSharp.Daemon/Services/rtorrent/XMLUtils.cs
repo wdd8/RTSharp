@@ -1,4 +1,5 @@
-﻿using System.Buffers.Text;
+using System.Buffers;
+using System.Buffers.Text;
 using System.Diagnostics;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -48,13 +49,13 @@ namespace RTSharp.Daemon.Services.rtorrent
         public static readonly byte[] I8_TOKEN_END = "</i8>"u8.ToArray();
 
         public static readonly byte[] ENDING_TAG = "</"u8.ToArray();
-        
+
         public record FaultStatus
         {
             public required string Command { get; set; }
             public required string FaultCode { get; set; }
             public required string FaultString { get; set; }
-            
+
             public string ToFailureString()
             {
                 return $"{Command}: {FaultCode} {FaultString}";
@@ -72,84 +73,104 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SeekTo(ref ReadOnlyMemory<byte> In, ReadOnlySpan<byte> What)
-        {
-            In = In[(In.Span.IndexOf(What) + What.Length)..];
-        }
+        private const int VALUETYPE_BUF_SIZE = 32;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SeekToBefore(ref ReadOnlyMemory<byte> In, ReadOnlySpan<byte> What)
+        public static string GetUtf8String(ReadOnlySequence<byte> Seq)
         {
-            In = In[In.Span.IndexOf(What)..];
-        }
+            if (Seq.IsSingleSegment)
+                return Encoding.UTF8.GetString(Seq.FirstSpan);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SeekFixed(ref ReadOnlyMemory<byte> In, int Length)
-        {
-            In = In[Length..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SeekFixed(ref ReadOnlyMemory<byte> In, ReadOnlySpan<byte> What)
-        {
-            Debug.Assert(In[..What.Length].Span.SequenceEqual(What));
-            In = In[What.Length..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool MaybeSeekFixed(ref ReadOnlyMemory<byte> In, ReadOnlySpan<byte> What)
-        {
-            if (In[..What.Length].Span.SequenceEqual(What)) {
-                In = In[What.Length..];
-                return true;
+            if (Seq.Length <= 256) {
+                Span<byte> buf = stackalloc byte[(int)Seq.Length];
+                Seq.CopyTo(buf);
+                return Encoding.UTF8.GetString(buf);
             }
-            return false;
+
+            var rented = ArrayPool<byte>.Shared.Rent((int)Seq.Length);
+            try {
+                Seq.CopyTo(rented);
+                return Encoding.UTF8.GetString(rented, 0, (int)Seq.Length);
+            } finally {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool CheckFor(ReadOnlyMemory<byte> In, ReadOnlySpan<byte> What)
+        private static ReadOnlySpan<byte> GetContiguous(ReadOnlySequence<byte> Seq, Span<byte> Scratch)
         {
-            return In.Length >= What.Length && In[..What.Length].Span.SequenceEqual(What);
+            if (Seq.IsSingleSegment)
+                return Seq.FirstSpan;
+
+            Debug.Assert(Seq.Length <= Scratch.Length);
+            var slice = Scratch[..(int)Seq.Length];
+            Seq.CopyTo(slice);
+            return slice;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ReadOnlyMemory<byte> GetBytesUntilNextTag(ref ReadOnlyMemory<byte> In)
+        public static void SeekTo(ref SequenceReader<byte> In, ReadOnlySpan<byte> What)
         {
-            var end = In.Span.IndexOf(ENDING_TAG);
-            Debug.Assert(end != -1);
+            var found = In.TryReadTo(out ReadOnlySequence<byte> _, What, advancePastDelimiter: true);
+            Debug.Assert(found);
+        }
 
-            var ret = In[..end];
-            In = In[(end + 2)..];
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SeekToBefore(ref SequenceReader<byte> In, ReadOnlySpan<byte> What)
+        {
+            var found = In.TryReadTo(out ReadOnlySequence<byte> _, What, advancePastDelimiter: false);
+            Debug.Assert(found);
+        }
 
-            end = In.Span.IndexOf((byte)'>');
-            Debug.Assert(end != -1);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SeekFixed(ref SequenceReader<byte> In, int Length)
+        {
+            In.Advance(Length);
+        }
 
-            In = In[(end + 1)..];
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SeekFixed(ref SequenceReader<byte> In, ReadOnlySpan<byte> What)
+        {
+            Debug.Assert(In.IsNext(What, advancePast: false));
+            In.Advance(What.Length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool MaybeSeekFixed(ref SequenceReader<byte> In, ReadOnlySpan<byte> What)
+        {
+            return In.IsNext(What, advancePast: true);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool CheckFor(SequenceReader<byte> In, ReadOnlySpan<byte> What)
+        {
+            return In.IsNext(What, advancePast: false);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ReadOnlySequence<byte> GetBytesUntilNextTag(ref SequenceReader<byte> In)
+        {
+            var found = In.TryReadTo(out ReadOnlySequence<byte> ret, ENDING_TAG, advancePastDelimiter: true);
+            Debug.Assert(found);
+
+            found = In.TryAdvanceTo((byte)'>', advancePastDelimiter: true);
+            Debug.Assert(found);
 
             return ret;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string GetUntilNextTag(ref ReadOnlyMemory<byte> In)
-            => Encoding.UTF8.GetString(GetBytesUntilNextTag(ref In).Span);
+        public static string GetUntilNextTag(ref SequenceReader<byte> In)
+            => GetUtf8String(GetBytesUntilNextTag(ref In));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SeekNextTag(ref ReadOnlyMemory<byte> In)
+        public static void SeekNextTag(ref SequenceReader<byte> In)
         {
-            var i = In.Span.IndexOf((byte)'<');
-            Debug.Assert(i != -1);
-
-            var ret = In[..i];
-
-            i = In.Span.IndexOf((byte)'>');
-            Debug.Assert(i != -1);
-
-            In = In[(i + 1)..];
+            var found = In.TryAdvanceTo((byte)'>', advancePastDelimiter: true);
+            Debug.Assert(found);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string GetAnyValue(ref ReadOnlyMemory<byte> In)
+        public static string GetAnyValue(ref SequenceReader<byte> In)
         {
             SeekFixed(ref In, VALUE_TOKEN);
             SeekNextTag(ref In);
@@ -163,7 +184,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T GetValue<T>(ref ReadOnlyMemory<byte> In)
+        public static T GetValue<T>(ref SequenceReader<byte> In)
         {
             SeekFixed(ref In, VALUE_TOKEN);
             T ret;
@@ -174,42 +195,56 @@ namespace RTSharp.Daemon.Services.rtorrent
                     var str = GetUntilNextTag(ref In);
                     ret = Unsafe.As<string, T>(ref str);
                     break;
-                case Type strType when strType == typeof(int):
+                case Type strType when strType == typeof(int): {
                     SeekFixed(ref In, I4_TOKEN);
-                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out int i32, out _);
+                    Span<byte> val = stackalloc byte[VALUETYPE_BUF_SIZE];
+                    Utf8Parser.TryParse(GetContiguous(GetBytesUntilNextTag(ref In), val), out int i32, out _);
                     ret = Unsafe.As<int, T>(ref i32);
                     break;
-                case Type strType when strType == typeof(uint):
+                }
+                case Type strType when strType == typeof(uint): {
                     SeekFixed(ref In, I4_TOKEN);
-                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out uint u32, out _);
+                    Span<byte> val = stackalloc byte[VALUETYPE_BUF_SIZE];
+                    Utf8Parser.TryParse(GetContiguous(GetBytesUntilNextTag(ref In), val), out uint u32, out _);
                     ret = Unsafe.As<uint, T>(ref u32);
                     break;
-                case Type strType when strType == typeof(short):
+                }
+                case Type strType when strType == typeof(short): {
                     SeekFixed(ref In, 4);
-                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out short i16, out _);
+                    Span<byte> val = stackalloc byte[VALUETYPE_BUF_SIZE];
+                    Utf8Parser.TryParse(GetContiguous(GetBytesUntilNextTag(ref In), val), out short i16, out _);
                     ret = Unsafe.As<short, T>(ref i16);
                     break;
-                case Type strType when strType == typeof(ushort):
+                }
+                case Type strType when strType == typeof(ushort): {
                     SeekFixed(ref In, 4);
-                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out ushort u16, out _);
+                    Span<byte> val = stackalloc byte[VALUETYPE_BUF_SIZE];
+                    Utf8Parser.TryParse(GetContiguous(GetBytesUntilNextTag(ref In), val), out ushort u16, out _);
                     ret = Unsafe.As<ushort, T>(ref u16);
                     break;
-                case Type strType when strType == typeof(long):
+                }
+                case Type strType when strType == typeof(long): {
                     SeekFixed(ref In, I8_TOKEN);
-                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out long i64, out _);
+                    Span<byte> val = stackalloc byte[VALUETYPE_BUF_SIZE];
+                    Utf8Parser.TryParse(GetContiguous(GetBytesUntilNextTag(ref In), val), out long i64, out _);
                     ret = Unsafe.As<long, T>(ref i64);
                     break;
-                case Type strType when strType == typeof(ulong):
+                }
+                case Type strType when strType == typeof(ulong): {
                     SeekFixed(ref In, I8_TOKEN);
-                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out ulong u64, out _);
+                    Span<byte> val = stackalloc byte[VALUETYPE_BUF_SIZE];
+                    Utf8Parser.TryParse(GetContiguous(GetBytesUntilNextTag(ref In), val), out ulong u64, out _);
                     ret = Unsafe.As<ulong, T>(ref u64);
                     break;
-                case Type strType when strType == typeof(bool):
+                }
+                case Type strType when strType == typeof(bool): {
                     SeekFixed(ref In, 4); // Works for i4 too
-                    Utf8Parser.TryParse(GetBytesUntilNextTag(ref In).Span, out long boolVal, out _);
+                    Span<byte> val = stackalloc byte[VALUETYPE_BUF_SIZE];
+                    Utf8Parser.TryParse(GetContiguous(GetBytesUntilNextTag(ref In), val), out long boolVal, out _);
                     var @bool = boolVal == 1;
                     ret = Unsafe.As<bool, T>(ref @bool);
                     break;
+                }
                 default:
                     throw new ArgumentException(nameof(T));
             }
@@ -220,7 +255,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret;
         }
 
-        public static IEnumerable<KeyValuePair<string, string>> GetStruct(ref ReadOnlyMemory<byte> In)
+        public static IEnumerable<KeyValuePair<string, string>> GetStruct(ref SequenceReader<byte> In)
         {
             var ret = new List<KeyValuePair<string, string>>();
 
@@ -229,7 +264,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             MaybeSeekFixed(ref In, NEWLINE);
 
             while (!CheckFor(In, ENDING_TAG)) {
-                Debug.Assert(In.Span[..14].SequenceEqual("<member><name>"u8));
+                Debug.Assert(In.IsNext("<member><name>"u8, advancePast: false));
 
                 string name, value;
                 SeekFixed(ref In, MEMBER_TOKEN);
@@ -251,7 +286,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 MaybeSeekFixed(ref In, NEWLINE);
 
                 ret.Add(new KeyValuePair<string, string>(name, value));
-                Debug.Assert(In.Length >= 2);
+                Debug.Assert(In.Remaining >= 2);
             }
 
             SeekFixed(ref In, STRUCT_TOKEN_END);
@@ -261,7 +296,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret;
         }
 
-        public static FaultStatus GetFaultStruct(ref ReadOnlyMemory<byte> In, string Command)
+        public static FaultStatus GetFaultStruct(ref SequenceReader<byte> In, string Command)
         {
             // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-506</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Method 'base_path' not defined</string></value></member>\r\n</struct></value>\r\n
             string faultCode = "", faultString = "";
@@ -280,10 +315,9 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret;
         }
 
-        public static FaultStatus? TryGetFaultStruct(ref ReadOnlyMemory<byte> In, string Command)
+        public static FaultStatus? TryGetFaultStruct(ref SequenceReader<byte> In, string Command)
         {
             // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-506</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Method 'base_path' not defined</string></value></member>\r\n</struct></value>\r\n
-            
 
             var check = In;
             if (!MaybeSeekFixed(ref check, VALUE_TOKEN))
@@ -295,9 +329,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 return null;
             if (!MaybeSeekFixed(ref check, NAME_TOKEN))
                 return null;
-            if (check.Length < 10)
-                return null;
-            if (!check[..9].Span.SequenceEqual("faultCode"u8))
+            if (!check.IsNext("faultCode"u8, advancePast: false))
                 return null;
 
             string faultCode = "", faultString = "";
@@ -317,27 +349,40 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret;
         }
 
-        public static SCGI_DATA_TYPE? GetValueType(ReadOnlyMemory<byte> In)
+        public static SCGI_DATA_TYPE? GetValueType(SequenceReader<byte> In)
         {
-            Debug.Assert(In.Span[..8].SequenceEqual(Encoding.UTF8.GetBytes("<value><")));
+            Span<byte> buf = stackalloc byte[12];
+            var len = 0;
+            {
+                var peek = In;
+                while (len < buf.Length && peek.TryRead(out var b))
+                    buf[len++] = b;
+            }
 
-            In = In[8..];
+            Debug.Assert(len >= 8);
+            Debug.Assert(buf[..8].SequenceEqual("<value><"u8));
 
-            switch (In.Span[0]) {
+            if (len < 9)
+                return null;
+
+            switch (buf[8]) {
                 case (byte)'s':
-                    Debug.Assert(In.Length > 6);
-
-                    if (In.Span[3] == (byte)'u') // stru ct
+                    Debug.Assert(len > 11);
+                    if (len < 12)
+                        return null;
+                    if (buf[11] == (byte)'u') // stru ct
                         return SCGI_DATA_TYPE.STRUCT;
-                    else if (In.Span[3] == (byte)'i') // stri ng
+                    else if (buf[11] == (byte)'i') // stri ng
                         return SCGI_DATA_TYPE.STRING;
-                    goto default;
+                    return null;
                 case (byte)'i':
-                    if (In.Span[1] == (byte)'4')
+                    if (len < 10)
+                        return null;
+                    if (buf[9] == (byte)'4')
                         return SCGI_DATA_TYPE.I4;
-                    else if (In.Span[1] == (byte)'8')
+                    else if (buf[9] == (byte)'8')
                         return SCGI_DATA_TYPE.I8;
-                    goto default;
+                    return null;
                 default:
                     return null;
             }
@@ -376,28 +421,33 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public static string Decode(string In)
         {
-            var andIndex = In.IndexOf('&');
+            var span = In.AsSpan();
+            var andIndex = span.IndexOf('&');
             if (andIndex < 0)
                 return In;
 
             var sb = new StringBuilder(In.Length);
-            sb.Append(In, 0, andIndex);
+            sb.Append(span[..andIndex]);
 
             var x = andIndex;
-            while (x < In.Length) {
-                if (In[x] == '&') {
-                    var right = In.AsSpan(x + 1);
+            while (x < span.Length) {
+                var right = span[(x + 1)..];
 
-                    if (right.StartsWith("amp;")) { sb.Append('&'); x += 1 + 4; }
-                    else if (right.StartsWith("quot;")) { sb.Append('"'); x += 1 + 5; }
-                    else if (right.StartsWith("apos;")) { sb.Append('\''); x += 1 + 5; }
-                    else if (right.StartsWith("lt;")) { sb.Append('<'); x += 1 + 3; }
-                    else if (right.StartsWith("gt;")) { sb.Append('>'); x += 1 + 3; }
-                    else { sb.Append('&'); x += 1; }
-                } else {
-                    sb.Append(In[x]);
-                    x += 1;
+                if (right.StartsWith("amp;")) { sb.Append('&'); x += 1 + 4; }
+                else if (right.StartsWith("quot;")) { sb.Append('"'); x += 1 + 5; }
+                else if (right.StartsWith("apos;")) { sb.Append('\''); x += 1 + 5; }
+                else if (right.StartsWith("lt;")) { sb.Append('<'); x += 1 + 3; }
+                else if (right.StartsWith("gt;")) { sb.Append('>'); x += 1 + 3; }
+                else { sb.Append('&'); x += 1; }
+
+                var rest = span[x..];
+                var next = rest.IndexOf('&');
+                if (next < 0) {
+                    sb.Append(rest);
+                    break;
                 }
+                sb.Append(rest[..next]);
+                x += next;
             }
 
             return sb.ToString();
