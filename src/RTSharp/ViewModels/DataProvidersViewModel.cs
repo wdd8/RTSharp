@@ -140,6 +140,7 @@ namespace RTSharp.ViewModels
         private uint ActiveTorrentCount;
 
         private SPEED_CHART_MODE? CurrentSpeedChartMode;
+        private bool SpeedChartWasIdle = true;
 
         private readonly Axis SpeedChartXAxis;
 
@@ -278,7 +279,7 @@ namespace RTSharp.ViewModels
 #endif
 
             if (SpeedChartEnabled) {
-                AddSpeedChartSample(DLSpeed, UPSpeed, DateTime.Now);
+                AddSpeedChartSample(DLSpeed, UPSpeed);
             }
         }
 
@@ -328,8 +329,21 @@ namespace RTSharp.ViewModels
             prev = new TorrentStats(In.DLSpeed, In.UPSpeed, active);
         }
 
-        public void AddSpeedChartSample(ulong DLSpeed, ulong UPSpeed, DateTime When)
+        public void AddSpeedChartSample(ulong DLSpeed, ulong UPSpeed)
         {
+            var now = DateTime.Now;
+
+            var isActive = DLSpeed > 0 || UPSpeed > 0;
+
+            if (isActive && SpeedChartWasIdle) {
+                var sampleBefore = now - TimeSpan.FromMilliseconds(1);
+
+                DLSpeedChartValues.Add(new DateTimePoint(sampleBefore, 0));
+                UPSpeedChartValues.Add(new DateTimePoint(sampleBefore, 0));
+            }
+
+            SpeedChartWasIdle = !isActive;
+
             SPEED_CHART_MODE chartMode = SPEED_CHART_MODE.UPLOAD;
 
             if (DLSpeed > UPSpeed) {
@@ -347,15 +361,15 @@ namespace RTSharp.ViewModels
             }
 
             if (chartMode == SPEED_CHART_MODE.DOWNLOAD) {
-                DLSpeedChartValues.Add(new DateTimePoint(When, value));
-                UPSpeedChartValues.Add(new DateTimePoint(When, null));
+                DLSpeedChartValues.Add(new DateTimePoint(now, value));
+                UPSpeedChartValues.Add(new DateTimePoint(now, null));
             } else {
-                DLSpeedChartValues.Add(new DateTimePoint(When, null));
-                UPSpeedChartValues.Add(new DateTimePoint(When, value));
+                DLSpeedChartValues.Add(new DateTimePoint(now, null));
+                UPSpeedChartValues.Add(new DateTimePoint(now, value));
             }
 
             CurrentSpeedChartMode = chartMode;
-            RemoveOldChartValues(When);
+            RemoveOldChartValues(now);
             UpdateYAxisScale();
         }
 
