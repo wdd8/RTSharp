@@ -1,6 +1,8 @@
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+
+using RTSharp.Daemon.Primitives;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Shared.Utils;
 
@@ -55,10 +57,11 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return new Empty();
         }
 
+        // unused for now.. maybe later?
         public override async Task<Empty> TransmitTorrentData(TransmitTorrentDataInput Req, ServerCallContext Ctx)
         {
             var sourceDp = RegisteredDataProviders.GetDataProvider(Ctx);
-            await TorrentOps.TransmitTorrent(sourceDp, Req.Hash.ToByteArray(), Req.TargetProviderKey, Req.TargetUri, Req.SourceUri, Req.TargetPath, Ctx.CancellationToken);
+            await TorrentOps.TransmitTorrent(sourceDp, Req.Hash.ToByteArray(), new DataProviderEndpoint(Req.TargetUri, Req.TargetProviderKey), Req.SourceUri, Req.TargetPath, Ctx.CancellationToken);
             return new Empty();
         }
 

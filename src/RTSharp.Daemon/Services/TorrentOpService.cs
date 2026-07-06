@@ -4,6 +4,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 
 using RTSharp.Daemon.GRPCServices.DataProvider;
+using RTSharp.Daemon.Primitives;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Shared.Utils;
 
@@ -164,10 +165,11 @@ public class TorrentOpService
         });
     }
 
-    public async Task TransmitTorrent(RegisteredDataProvider SourceDp, byte[] Hash, string TargetProviderKey, string TargetUri, string SourceUri, string TargetPath, CancellationToken CancellationToken)
+    public async Task TransmitTorrent(RegisteredDataProvider SourceDp, byte[] Hash, DataProviderEndpoint Target, string SourceUri, string TargetPath, CancellationToken CancellationToken)
     {
-        ArgumentException.ThrowIfNullOrEmpty(TargetProviderKey, nameof(TargetProviderKey));
-        ArgumentException.ThrowIfNullOrEmpty(TargetUri, nameof(TargetUri));
+        // TODO: SourceUri should ideally be known by the server as it has the data provider registered in it.. but if we are listening on 0.0.0.0, what's our URI?
+        ArgumentException.ThrowIfNullOrEmpty(Target.ProviderKey, nameof(Target.ProviderKey));
+        ArgumentException.ThrowIfNullOrEmpty(Target.Uri, nameof(Target.Uri));
         ArgumentException.ThrowIfNullOrEmpty(SourceUri, nameof(SourceUri));
         ArgumentException.ThrowIfNullOrEmpty(TargetPath, nameof(TargetPath));
 
@@ -179,8 +181,8 @@ public class TorrentOpService
         var filesReply = filesTask.Result;
         var files = filesReply.Reply.FirstOrDefault(x => x.InfoHash.ToByteArray().SequenceEqual(Hash)) ?? throw new InvalidOperationException($"No file listing returned for hash {Convert.ToHexString(Hash)}");
 
-        var targetClient = Channels.GetTorrentServiceClient(TargetUri);
-        var headers = new CallOptions(headers: new Metadata { { "data-provider", TargetProviderKey } });
+        var targetClient = Channels.GetTorrentServiceClient(Target.Uri);
+        var headers = new CallOptions(headers: new Metadata { { "data-provider", Target.ProviderKey } });
 
         var session = await targetClient.ReceiveTorrentDataAsync(new ReceiveTorrentDataInput {
             Hash = Hash.ToByteString(),
@@ -192,7 +194,7 @@ public class TorrentOpService
             TargetPath = TargetPath
         }, headers);
 
-        var serverClient = Channels.GetServerClient(TargetUri);
+        var serverClient = Channels.GetServerClient(Target.Uri);
         var progress = serverClient.ScriptStatus(session, cancellationToken: CancellationToken);
         await foreach (var info in progress.ResponseStream.ReadAllAsync(CancellationToken)) {
             if (info.State == Protocols.TaskState.Done)
@@ -206,14 +208,14 @@ public class TorrentOpService
 
     public class RemoteOps(TorrentOpService Local, SessionsService Sessions, ChannelsService Channels, FileTransferService FileTransfer, ILogger<RemoteOps> Logger)
     {
-        public async Task ForceRecheckTorrents(string TargetUri, string TargetProviderKey, byte[] Hash, ScriptProgressState Progress, CancellationToken CancellationToken)
+        public async Task ForceRecheckTorrents(DataProviderEndpoint Target, byte[] Hash, ScriptProgressState Progress, CancellationToken CancellationToken)
         {
-            var targetClient = Channels.GetTorrentServiceClient(TargetUri);
-            var headers = new CallOptions(headers: new Metadata { { "data-provider", TargetProviderKey } });
+            var targetClient = Channels.GetTorrentServiceClient(Target.Uri);
+            var headers = new CallOptions(headers: new Metadata { { "data-provider", Target.ProviderKey } });
 
             var session = await targetClient.ForceRecheckTorrentsAsync(new Torrents { Hashes = { Hash.ToByteString() } }, headers);
 
-            var serverClient = Channels.GetServerClient(TargetUri);
+            var serverClient = Channels.GetServerClient(Target.Uri);
             var progress = serverClient.ScriptStatus(session, cancellationToken: CancellationToken);
             await foreach (var info in progress.ResponseStream.ReadAllAsync(CancellationToken)) {
                 if (info.State == Protocols.TaskState.Done)
@@ -223,10 +225,10 @@ public class TorrentOpService
             }
         }
 
-        public async Task<TorrentsReply> TryStartSeeding(string TargetUri, string TargetProviderKey, byte[] Hash, CancellationToken CancellationToken)
+        public async Task<TorrentsReply> TryStartSeeding(DataProviderEndpoint Target, byte[] Hash, CancellationToken CancellationToken)
         {
-            var targetClient = Channels.GetTorrentServiceClient(TargetUri);
-            var opts = new CallOptions(headers: new Metadata { { "data-provider", TargetProviderKey } }, cancellationToken: CancellationToken);
+            var targetClient = Channels.GetTorrentServiceClient(Target.Uri);
+            var opts = new CallOptions(headers: new Metadata { { "data-provider", Target.ProviderKey } }, cancellationToken: CancellationToken);
 
             var ret = await targetClient.TryStartSeedingAsync(new Torrents { Hashes = { Hash.ToByteString() } }, opts);
             return ret;

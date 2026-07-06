@@ -64,6 +64,7 @@ public static class TorrentDuplication
 #pragma lib "Grpc.Core.Api"
 #pragma lib "Google.Protobuf"
 
+using RTSharp.Daemon.Primitives;
 using RTSharp.Daemon.GRPCServices.DataProvider;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Daemon.Services;
@@ -84,14 +85,16 @@ public class Main(RegisteredDataProviders DataProviders, RTSharp.Daemon.Services
 
         if (!string.IsNullOrEmpty(Variables["TargetUri"])) {
             Session.Progress.Text = "Transmitting...";
-            await TorrentOps.TransmitTorrent(sourceDp, hash, Variables["TargetProvider"], Variables["TargetUri"], Variables["SourceUri"], Variables["TargetPath"], CancellationToken);
+            var target = new DataProviderEndpoint(Variables["TargetUri"], Variables["TargetProvider"]);
+            await TorrentOps.TransmitTorrent(sourceDp, hash, target, Variables["SourceUri"], Variables["TargetPath"], CancellationToken);
         }
 
         Session.Progress.Text = "Rechecking...";
         // TODO: use fast-resume
         if (!string.IsNullOrEmpty(Variables["TargetUri"])) {
-            await TorrentOps.Remote.ForceRecheckTorrents(Variables["TargetUri"], Variables["TargetProvider"], hash, Session.Progress, CancellationToken);
-            await TorrentOps.Remote.TryStartSeeding(Variables["TargetUri"], Variables["TargetProvider"], hash, CancellationToken);
+            var target = new DataProviderEndpoint(Variables["TargetUri"], Variables["TargetProvider"]);
+            await TorrentOps.Remote.ForceRecheckTorrents(target, hash, Session.Progress, CancellationToken);
+            await TorrentOps.Remote.TryStartSeeding(target, hash, CancellationToken);
         } else {
             var targetDp = DataProviders.GetDataProvider(Variables["TargetProvider"]) ?? throw new InvalidOperationException($"Unknown target data provider: {Variables["TargetProvider"]}");
             var torrents = new Torrents { Hashes = { RTSharp.Shared.Utils.GrpcExtensions.ToByteString(hash) } };
