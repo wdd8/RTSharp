@@ -2,16 +2,15 @@
 using RTSharp.Shared.Utils;
 using RTSharp.Daemon.Protocols.DataProvider;
 using Grpc.Core;
-using Status = RTSharp.Daemon.Protocols.DataProvider.Status;
 
 namespace RTSharp.Daemon.Services.rtorrent
 {
-    public class TorrentOpService
+    public class RTorrentOpService
     {
         private SCGICommunication Scgi;
         private SettingsService Settings;
     
-        public TorrentOpService(IServiceProvider ServiceProvider, [ServiceKey] string InstanceKey)
+        public RTorrentOpService(IServiceProvider ServiceProvider, [ServiceKey] string InstanceKey)
         {
             this.Scgi = ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
             this.Settings = ServiceProvider.GetRequiredKeyedService<SettingsService>(InstanceKey);

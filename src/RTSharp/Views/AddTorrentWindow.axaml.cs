@@ -21,8 +21,12 @@ namespace RTSharp.Views
                 vm!.SelectRemoteDirectoryDialog = SelectRemoteDirectoryDialogAsync;
                 vm!.PreviewClipboard = PreviewClipboardAsync;
                 vm!.GetClipboard = GetClipboardAsync;
+                vm!.DuplicationTargetSelector.SelectRemoteDirectoryDialog = SelectDuplicationTargetRemoteDirectoryDialogAsync;
             });
         }
+
+        private Task<string?> SelectDuplicationTargetRemoteDirectoryDialogAsync(string? Input) =>
+            DuplicationTargetSelectorControl.DefaultSelectRemoteDirectoryDialogImpl(this, ViewModel!.DuplicationTargetSelector.SelectedProvider, Input);
 
         private async Task<string?> SelectRemoteDirectoryDialogAsync(string? Input)
         {
@@ -38,7 +42,7 @@ namespace RTSharp.Views
             var result = await dialog.ShowDialog<string?>(this);
             return result;
         }
-        
+
         private void CancelWindow()
         {
             this.Close();

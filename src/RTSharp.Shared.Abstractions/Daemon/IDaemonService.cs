@@ -131,4 +131,6 @@ public interface IDaemonService
     string Host { get; }
 
     ushort Port { get; }
+
+    Uri Uri { get; }
 }

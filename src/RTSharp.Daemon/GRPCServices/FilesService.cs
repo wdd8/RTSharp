@@ -157,7 +157,12 @@ public partial class FilesService(
 
         var streams = Req.Paths.ToDictionary(x => x, x => {
             try {
-                return File.OpenRead(x);
+                return new FileStream(x, new FileStreamOptions {
+                    Mode = FileMode.Open,
+                    Access = FileAccess.Read,
+                    Share = FileShare.Read,
+                    Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+                });
             } catch (UnauthorizedAccessException) {
                 throw;
             }
@@ -172,14 +177,22 @@ public partial class FilesService(
                 if (Req.StartByte > 0)
                     file.Seek((long)Req.StartByte, SeekOrigin.Begin);
 
+                var totalBytes = bytesToRead ?? (ulong)file.Length - Req.StartByte;
+
                 await Res.WriteAsync(new FileBuffer {
-                    Path = path
+                    Header = new FileBuffer.Types.FileHeader {
+                        Path = path,
+                        TotalBytes = totalBytes
+                    }
                 });
-                await FileTransferService.SendFile(path, file, Res, bytesToRead);
+                await FileTransferService.SendFile(file, Res, bytesToRead);
+                await file.DisposeAsync();
             }
             Logger.LogInformation($"File send done");
             await Res.WriteAsync(new FileBuffer {
-                Path = ""
+                Header = new FileBuffer.Types.FileHeader {
+                    Path = ""
+                }
             });
         } catch (Exception ex) {
             Logger.LogError(ex, "Internal_SendFiles: transfer task failed");

@@ -2,42 +2,35 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using RTSharp.Models;
-using RTSharp.Plugin;
-using RTSharp.Shared.Abstractions.DataProvider;
 
 using Serilog;
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.ComponentModel;
 
 namespace RTSharp.ViewModels
 {
     public partial class TorrentDuplicationTargetSelectorWindowViewModel : ObservableObject
     {
-        public List<IDataProvider> DataProviders => [.. Plugins.DataProviders.Items.Select(x => x.Instance)];
+        public DuplicationTargetSelectorViewModel Selector { get; } = new();
 
-        [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
-        [NotifyCanExecuteChangedFor(nameof(ConfirmClickCommand))]
-        public partial IDataProvider? SelectedProvider { get; set; }
-
-        [ObservableProperty]
-        public partial string? RemoteTargetPath { get; set; }
-
-        [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
-        public partial bool RemoteTargetPathEnabled { get; set; }
         public Torrent SourceTorrent { get; }
-
-        public Func<string?, Task<string?>> SelectRemoteDirectoryDialog { get; set; } = null!; // view set
 
         public Action<bool> CloseDialog { get; set; } = null!; // view set
 
         public TorrentDuplicationTargetSelectorWindowViewModel(Torrent SourceTorrent)
         {
             this.SourceTorrent = SourceTorrent;
+
+            var orig = Selector.ResolveTarget;
+            Selector.ResolveTarget = async provider => {
+                if (SourceTorrent.DataOwner.Config.Plugin.ServerId != provider.Host.Config.Plugin.ServerId)
+                    return await orig(provider);
+
+                return (SourceTorrent.RemotePath, false);
+            };
+
+            Selector.PropertyChanged += Selector_PropertyChanged;
 
             foreach (var hook in Plugin.Plugins.GetHookAsync<object>(Plugin.Plugins.HookType.AddTorrent_EvDragDrop)) {
                 try {
@@ -48,53 +41,23 @@ namespace RTSharp.ViewModels
             }
         }
 
-        partial void OnSelectedProviderChanged(IDataProvider? value)
+        private void Selector_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            _ = UpdateRemoteTargetForProvider(value);
-        }
-
-        private async Task UpdateRemoteTargetForProvider(IDataProvider? provider)
-        {
-            try {
-                RemoteTargetPathEnabled = false;
-                if (provider == null)
-                    return;
-
-                RemoteTargetPathEnabled = true;
-
-                if (SourceTorrent.DataOwner.Config.Plugin.ServerId != provider.Host.Config.Plugin.ServerId) {
-                    var savePath = await provider.Files.GetDefaultSavePath();
-                    RemoteTargetPath = savePath;
-                } else {
-                    RemoteTargetPath = SourceTorrent.RemotePath;
-                    RemoteTargetPathEnabled = false;
-                }
-            } catch (Exception ex) {
-                Log.Logger.Error(ex, $"Failed to get default save path");
-            }
-        }
-
-        public bool CanExecuteBrowseRemoteDirectoryClick() => RemoteTargetPathEnabled;
-
-        [RelayCommand(CanExecute = nameof(CanExecuteBrowseRemoteDirectoryClick))]
-        public async Task BrowseRemoteDirectoryClick()
-        {
-            var directory = await SelectRemoteDirectoryDialog(RemoteTargetPath);
-
-            if (directory != null)
-                RemoteTargetPath = directory;
+            if (e.PropertyName == nameof(Selector.SelectedProvider))
+                ConfirmClickCommand.NotifyCanExecuteChanged();
         }
 
         public bool CanExecuteConfirmClick()
         {
-            if (SelectedProvider == null)
+            if (Selector.SelectedProvider == null)
                 return false;
 
-            if (SourceTorrent.DataOwner.Host.InstanceId == SelectedProvider.Host.Config.Plugin.InstanceId)
+            if (SourceTorrent.DataOwner.Host.InstanceId == Selector.SelectedProvider.Host.Config.Plugin.InstanceId)
                 return false;
 
             return true;
         }
+
         [RelayCommand(CanExecute = nameof(CanExecuteConfirmClick))]
         public void ConfirmClick()
         {

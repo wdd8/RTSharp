@@ -307,7 +307,7 @@ namespace RTSharp.Core.Services.Daemon
             
             return new Guid(resp.Value.Span);
         }
-        
+
         public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
         {
             var call = TorrentClient.AddTorrents(headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());

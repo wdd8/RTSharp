@@ -65,76 +65,70 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.stop", "d.close"));
         }
 
-        public async Task<BytesValue> ForceRecheckTorrents(Torrents Req, CancellationToken CancellationToken)
+        public async Task ForceRecheckTorrents(Torrents Req, ScriptProgressState Progress, CancellationToken CancellationToken)
         {
             var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
             var res = await Scgi.XmlActionTorrents(hashes, "d.check_hash");
-            
-            var successfulRechecks = res.Where(x => x.Status.All(i => i.FaultCode == "0"));
 
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
-            
-            var session = Sessions.CreateSession("Force recheck torrents", cts, async (session) => {
-                session.Progress.Progress = 0f;
-                session.Progress.State = TASK_STATE.RUNNING;
-                
-                var sw = Stopwatch.StartNew();
+            await PollForceRecheck(res, Progress, CancellationToken);
+        }
 
-                var stateObserved = new InfoHashDictionary<bool>();
+        private async Task PollForceRecheck(XMLUtils.TorrentsResult[] res, ScriptProgressState Progress, CancellationToken CancellationToken)
+        {
+            Progress.Progress = 0f;
+            Progress.State = TASK_STATE.RUNNING;
 
-                using var sub = TorrentPolling.Subscribe(TimeSpan.FromSeconds(1));
-                
-                while (true) {
-                    var changes = await sub.GetChanges(false, cts.Token);
-                    
-                    if (cts.IsCancellationRequested) {
-                        session.Progress.State = TASK_STATE.FAILED;
-                        break;
-                    }
-                    
-                    if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
-                        foreach (var torrentResult in res) {
-                            var torrentState = changes!.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                            torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                            torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                            
-                            if (torrentState == null)
-                                continue;
-                            
-                            if (torrentState.Value.HasFlag(TorrentState.Hashing)) {
-                                stateObserved[torrentResult.InfoHash] = true;
-                                break;
-                            }
+            var sw = Stopwatch.StartNew();
+
+            var stateObserved = new InfoHashDictionary<bool>();
+
+            using var sub = TorrentPolling.Subscribe(TimeSpan.FromSeconds(1));
+
+            while (true) {
+                var changes = await sub.GetChanges(false, CancellationToken);
+
+                if (CancellationToken.IsCancellationRequested) {
+                    Progress.State = TASK_STATE.FAILED;
+                    break;
+                }
+
+                if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
+                    foreach (var torrentResult in res) {
+                        var torrentState = changes!.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                        torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                        torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+
+                        if (torrentState == null)
+                            continue;
+
+                        if (torrentState.Value.HasFlag(TorrentState.Hashing)) {
+                            stateObserved[torrentResult.InfoHash] = true;
+                            break;
                         }
-                    }
-                    
-                    if (stateObserved.Count != 0) {
-                        foreach (var torrentResult in res) {
-                            var torrentState = changes!.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                            torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                            torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                            
-                            if (torrentState == null)
-                                continue;
-                            
-                            if (!torrentState.Value.HasFlag(TorrentState.Hashing)) {
-                                stateObserved[torrentResult.InfoHash] = false;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (stateObserved.All(x => !x.Value)) {
-                        session.Progress.State = TASK_STATE.DONE;
-                        break;
                     }
                 }
-            });
-            
-            return new BytesValue
-            {
-                Value = session.Id.ToByteString()
-            };
+
+                if (stateObserved.Count != 0) {
+                    foreach (var torrentResult in res) {
+                        var torrentState = changes!.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                        torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+                        torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
+
+                        if (torrentState == null)
+                            continue;
+
+                        if (!torrentState.Value.HasFlag(TorrentState.Hashing)) {
+                            stateObserved[torrentResult.InfoHash] = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (stateObserved.All(x => !x.Value)) {
+                    Progress.State = TASK_STATE.DONE;
+                    break;
+                }
+            }
         }
 
         public async Task<TorrentsReply> ReannounceToAllTrackers(Torrents Req)
@@ -886,7 +880,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 session.Progress.State = TASK_STATE.DONE;
                 session.Progress.Text = "Done";
             }
-            var session = Sessions.CreateSession("Move download directory", cts, fx);
+            var session = Sessions.RunSession("Move download directory", cts, fx);
 
             return session.Id.ToByteArray().ToBytesValue();
         }
@@ -1128,7 +1122,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ label ]) ], [ "d.custom1.set" ]);
 
             // Override addtime later
-            Sessions.CreateSession("Edit tracker", new(), async session => {
+            Sessions.RunSession("Edit tracker", new(), async session => {
                 session.Progress.State = TASK_STATE.RUNNING;
                 session.Progress.Text = "Delay override created on date on torrent...";
 

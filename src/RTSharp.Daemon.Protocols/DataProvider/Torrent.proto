@@ -12,6 +12,10 @@ service GRPCTorrentService {
     rpc PauseTorrents (Torrents) returns (TorrentsReply);
     rpc StopTorrents (Torrents) returns (TorrentsReply);
     rpc ForceRecheckTorrents (Torrents) returns (google.protobuf.BytesValue);
+    rpc TryStartSeeding(Torrents) returns (TorrentsReply);
+    rpc WaitForTorrentCompletion (google.protobuf.BytesValue) returns (google.protobuf.Empty);
+    rpc TransmitTorrentData (TransmitTorrentDataInput) returns (google.protobuf.Empty);
+    rpc ReceiveTorrentData (ReceiveTorrentDataInput) returns (google.protobuf.BytesValue);
     rpc ReannounceToAllTrackers (Torrents) returns (TorrentsReply);
     rpc AddTorrents (stream NewTorrentsData) returns (TorrentsReply);
     rpc GetTorrentsFiles (Torrents) returns (TorrentsFilesReply);
@@ -31,6 +35,29 @@ service GRPCTorrentService {
     rpc AddPeer (SinglePeerArgs) returns (google.protobuf.Empty);
     rpc BanPeer (SinglePeerArgs) returns (google.protobuf.Empty);
     rpc SetSequentialDownload (SetSequentialDownloadArgs) returns (google.protobuf.Empty);
+}
+
+message TransmitTorrentDataInput {
+    bytes Hash = 1;
+    string TargetProviderKey = 2;
+    string TargetUri = 3;
+    string SourceUri = 4;
+    string TargetPath = 5;
+}
+
+message ReceiveTorrentDataInput {
+    bytes Hash = 1;
+    string SourceUri = 2;
+    string SourceName = 3;
+    string SourceRemotePath = 4;
+    bool SourceMultiFile = 5;
+
+    message FileEntry {
+        string Path = 1;
+        uint64 Size = 2;
+    }
+    repeated FileEntry Files = 6;
+    string TargetPath = 7;
 }
 
 message SetSequentialDownloadArgs {

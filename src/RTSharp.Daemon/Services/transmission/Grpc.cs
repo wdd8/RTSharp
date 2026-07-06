@@ -389,7 +389,14 @@ namespace RTSharp.Daemon.Services.transmission
 
         public Task<TorrentsReply> StopTorrents(Torrents In) => PerformVoidActionObj(In, (client, obj) => client.TorrentStopAsync(obj));
 
-        public async Task<BytesValue> ForceRecheckTorrents(Torrents In, CancellationToken CancellationToken)
+        public async Task ForceRecheckTorrents(Torrents In, ScriptProgressState Progress, CancellationToken CancellationToken)
+        {
+            var (res, hashes) = await SendForceRecheck(In);
+
+            await PollForceRecheck(res, hashes, Progress, CancellationToken);
+        }
+
+        private async Task<((byte[] Hash, IList<Exception> Exceptions)[] Res, byte[][] Hashes)> SendForceRecheck(Torrents In)
         {
             var client = await Client.Init();
 
@@ -401,142 +408,139 @@ namespace RTSharp.Daemon.Services.transmission
                 exception = ex;
             }
 
-            Logger.LogInformation("Recheck sent");
+            Logger.LogDebug("Recheck sent");
 
             var res = In.Hashes.Select(x => (Hash: x.ToByteArray(), Exceptions: exception == null ? (IList<Exception>)Array.Empty<Exception>() : ([exception]))).ToArray();
 
             var hashes = In.Hashes.Select(x => x.ToByteArray()).ToArray();
 
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
+            return (res, hashes);
+        }
 
-            var session = Sessions.CreateSession("Force recheck torrents", cts, async (session) => {
-                session.Progress.Progress = 0f;
-                session.Progress.State = TASK_STATE.RUNNING;
+        private async Task PollForceRecheck((byte[] Hash, IList<Exception> Exceptions)[] res, byte[][] hashes, ScriptProgressState Progress, CancellationToken CancellationToken)
+        {
+            var client = await Client.Init();
 
-                var sw = Stopwatch.StartNew();
+            Progress.Progress = 0f;
+            Progress.State = TASK_STATE.RUNNING;
 
-                var stateObserved = new InfoHashDictionary<TorrentStatus?>();
-                var stateObserved2 = new InfoHashDictionary<TorrentStatus?>();
-                foreach (var torrentResult in res) {
-                    stateObserved[torrentResult.Hash] = null;
-                    stateObserved2[torrentResult.Hash] = null;
+            var sw = Stopwatch.StartNew();
+
+            var stateObserved = new InfoHashDictionary<TorrentStatus?>();
+            var stateObserved2 = new InfoHashDictionary<TorrentStatus?>();
+            foreach (var torrentResult in res) {
+                stateObserved[torrentResult.Hash] = null;
+                stateObserved2[torrentResult.Hash] = null;
+            }
+
+            while (true) {
+                if (CancellationToken.IsCancellationRequested)
+                    break;
+
+                Logger.LogDebug("Getting partial data inside session");
+
+                var partialData = await client.TorrentGetRecentyActiveAsync(TorrentFields.HASH_STRING, TorrentFields.STATUS);
+
+                Logger.LogDebug("Got partial data inside session");
+
+                foreach (var hash in hashes) {
+                    var hashStr = Convert.ToHexStringLower(hash);
+
+                    var torrentState = partialData!.Torrents?.FirstOrDefault(x => x.HashString!.Equals(hashStr, StringComparison.OrdinalIgnoreCase))?.Status;
+
+                    if (torrentState == null) {
+                        Logger.LogDebug($"Torrent {hashStr} no changes");
+                        continue;
+                    }
+
+                    Logger.LogDebug($"Torrent {hashStr} state: {torrentState.Value}");
+
+                    var currentValue =
+                        torrentState.Value == TorrentStatus.Verifying ||
+                        torrentState.Value == TorrentStatus.VerifyQueue ? TorrentStatus.Verifying : torrentState.Value;
+
+                    if (stateObserved2[hash] != currentValue) {
+                        stateObserved[hash] = stateObserved2[hash];
+                        stateObserved2[hash] = currentValue;
+
+                        Logger.LogDebug($"State transition for {hashStr}: {stateObserved[hash]} -> {stateObserved2[hash]}");
+                    }
                 }
 
-                while (true) {
-                    if (cts.IsCancellationRequested)
-                        break;
+                if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
+                    // Torrents at this point are seeding (did not enter hashing state), hashing, or completed hashing
 
-                    Logger.LogDebug("Getting partial data inside session");
-
-                    var partialData = await client.TorrentGetRecentyActiveAsync(TorrentFields.HASH_STRING, TorrentFields.STATUS);
-
-                    Logger.LogDebug("Got partial data inside session");
-
+                    bool pass = true;
                     foreach (var hash in hashes) {
-                        var hashStr = Convert.ToHexStringLower(hash);
+                        var s = stateObserved[hash];
+                        var s2 = stateObserved2[hash];
 
-                        var torrentState = partialData!.Torrents?.FirstOrDefault(x => x.HashString!.Equals(hashStr, StringComparison.OrdinalIgnoreCase))?.Status;
-
-                        if (torrentState == null) {
-                            Logger.LogDebug($"Torrent {hashStr} no changes");
+                        // Can't retrieve
+                        if (s == null && s2 == null) {
+                            Logger.LogDebug($"(2) Cannot retrieve state for {Convert.ToHexStringLower(hash)}");
                             continue;
                         }
 
-                        Logger.LogDebug($"Torrent {hashStr} state: {torrentState.Value}");
-
-                        var currentValue =
-                            torrentState.Value == TorrentStatus.Verifying ||
-                            torrentState.Value == TorrentStatus.VerifyQueue ? TorrentStatus.Verifying : torrentState.Value;
-
-                        if (stateObserved2[hash] != currentValue) {
-                            stateObserved[hash] = stateObserved2[hash];
-                            stateObserved2[hash] = currentValue;
-
-                            Logger.LogDebug($"State transition for {hashStr}: {stateObserved[hash]} -> {stateObserved2[hash]}");
-                        }
-                    }
-
-                    if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
-                        // Torrents at this point are seeding (did not enter hashing state), hashing, or completed hashing
-
-                        bool pass = true;
-                        foreach (var hash in hashes) {
-                            var s = stateObserved[hash];
-                            var s2 = stateObserved2[hash];
-
-                            // Can't retrieve
-                            if (s == null && s2 == null) {
-                                Logger.LogDebug($"(2) Cannot retrieve state for {Convert.ToHexStringLower(hash)}");
-                                continue;
-                            }
-
-                            // Only one state transition
-                            if (s == null && s2 != null) {
-                                Logger.LogDebug($"(2) {Convert.ToHexStringLower(hash)} only one state transision");
-                                pass = false;
-                                break;
-                            }
-
-                            // Hashing
-                            if (s2 == TorrentStatus.Verifying) {
-                                Logger.LogDebug($"(2) {Convert.ToHexStringLower(hash)} still hashing");
-                                pass = false;
-                                break;
-                            }
-
-                            // Still hashing
+                        // Only one state transition
+                        if (s == null && s2 != null) {
+                            Logger.LogDebug($"(2) {Convert.ToHexStringLower(hash)} only one state transision");
                             pass = false;
                             break;
                         }
 
-                        if (pass) {
-                            Logger.LogDebug("(2) Observed all");
+                        // Hashing
+                        if (s2 == TorrentStatus.Verifying) {
+                            Logger.LogDebug($"(2) {Convert.ToHexStringLower(hash)} still hashing");
+                            pass = false;
                             break;
                         }
-                    } else if (sw.Elapsed < TimeSpan.FromMinutes(10)) {
-                        // Torrents at this point should be hashing or completed hashing
 
-                        bool pass = true;
-                        foreach (var hash in hashes) {
-                            var s = stateObserved[hash];
-                            var s2 = stateObserved2[hash];
-
-                            // Can't retrieve
-                            if (s == null && s2 == null) {
-                                Logger.LogDebug($"(1) Cannot retrieve state for {Convert.ToHexStringLower(hash)}");
-                                continue;
-                            }
-
-                            // Still hashing
-                            if (s2 == TorrentStatus.Verifying) {
-                                Logger.LogDebug($"(1) {Convert.ToHexStringLower(hash)} still hashing");
-                                pass = false;
-                                break;
-                            }
-                        }
-
-                        if (pass) {
-                            Logger.LogDebug("(1) Observed all");
-                            session.Progress.State = TASK_STATE.DONE;
-                            break;
-                        }
-                    } else {
-                        Logger.LogWarning("Finishing checking for rehash state after 10 minutes");
-                        session.Progress.State = TASK_STATE.FAILED;
+                        // Still hashing
+                        pass = false;
                         break;
                     }
 
-                    await Task.Delay(1000); // TODO: Customizable?
+                    if (pass) {
+                        Logger.LogDebug("(2) Observed all");
+                        break;
+                    }
+                } else if (sw.Elapsed < TimeSpan.FromMinutes(10)) {
+                    // Torrents at this point should be hashing or completed hashing
+
+                    bool pass = true;
+                    foreach (var hash in hashes) {
+                        var s = stateObserved[hash];
+                        var s2 = stateObserved2[hash];
+
+                        // Can't retrieve
+                        if (s == null && s2 == null) {
+                            Logger.LogDebug($"(1) Cannot retrieve state for {Convert.ToHexStringLower(hash)}");
+                            continue;
+                        }
+
+                        // Still hashing
+                        if (s2 == TorrentStatus.Verifying) {
+                            Logger.LogDebug($"(1) {Convert.ToHexStringLower(hash)} still hashing");
+                            pass = false;
+                            break;
+                        }
+                    }
+
+                    if (pass) {
+                        Logger.LogDebug("(1) Observed all");
+                        Progress.State = TASK_STATE.DONE;
+                        break;
+                    }
+                } else {
+                    Logger.LogWarning("Finishing checking for rehash state after 10 minutes");
+                    Progress.State = TASK_STATE.FAILED;
+                    break;
                 }
 
-                Logger.LogDebug("Session complete");
-            });
+                await Task.Delay(1000); // TODO: Customizable?
+            }
 
-            Logger.LogDebug("Returning");
-
-            return new BytesValue {
-                Value = session.Id.ToByteString()
-            };
+            Logger.LogDebug("Session complete");
         }
 
         public Task<TorrentsReply> ReannounceToAllTrackers(Torrents In) => PerformVoidActionObj(In, (client, obj) => client.TorrentReannounceAsync(obj));
@@ -877,7 +881,7 @@ namespace RTSharp.Daemon.Services.transmission
                 session.Progress.Text = "Done";
             }
 
-            var session = Sessions.CreateSession("Move download directory", cts, fx);
+            var session = Sessions.RunSession("Move download directory", cts, fx);
 
             return session.Id.ToByteArray().ToBytesValue();
         }

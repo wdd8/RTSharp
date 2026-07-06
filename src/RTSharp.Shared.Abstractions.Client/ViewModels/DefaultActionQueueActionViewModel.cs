@@ -19,10 +19,12 @@ public partial class DefaultActionQueueActionViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasProgress))]
+    [NotifyPropertyChangedFor(nameof(HasProgressText))]
     [NotifyPropertyChangedFor(nameof(ProgressLabel))]
     public partial float ProgressDone { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProgressText))]
     [NotifyPropertyChangedFor(nameof(ProgressLabel))]
     public partial string ProgressString { get; set; }
 
@@ -32,9 +34,11 @@ public partial class DefaultActionQueueActionViewModel : ObservableObject
 
     public bool HasProgress => ProgressDone > 0;
 
+    public bool HasProgressText => ProgressDone > 0 || !string.IsNullOrEmpty(ProgressString);
+
     public string ProgressLabel => ProgressDone > 0
         ? $"{Math.Round(ProgressDone, 1)}%" + (string.IsNullOrEmpty(ProgressString) ? "" : $" {ProgressString}")
-        : "";
+        : ProgressString ?? "";
 
     public Thickness IndentMargin => new(Depth * 16, 0, 0, 0);
 

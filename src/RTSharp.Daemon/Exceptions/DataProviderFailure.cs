@@ -1,11 +1,6 @@
 namespace RTSharp.Daemon.Exceptions;
 
-public class DataProviderFailure : Exception
+public class DataProviderFailure(string Message, Exception Inner, string Destination) : Exception(Message, Inner)
 {
-    public string Destination { get; }
-
-    public DataProviderFailure(string Message, Exception Inner, string Destination) : base(Message, Inner)
-    {
-        this.Destination = Destination;
-    }
+    public string Destination { get; } = Destination;
 }

@@ -23,7 +23,7 @@ namespace RTSharp.Daemon
             var pathsStr = Variables["Paths"];
             var paths = JsonSerializer.Deserialize<List<Paths>>(pathsStr)!;
 
-            var channel = await Channels.GetFilesClient(target);
+            var channel = Channels.GetFilesClient(target);
 
             transfer.State = TASK_STATE.RUNNING;
 

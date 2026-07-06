@@ -2,9 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
         xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
 		xmlns:vm="using:RTSharp.ViewModels"
+		xmlns:local="using:RTSharp.Views"
         Name="window"
         mc:Ignorable="d"
         MinWidth="453"
@@ -24,19 +24,7 @@
     </Window.Styles>
     
     <StackPanel Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE-24)}" Margin="0 8 0 0">
-        <Grid Margin="0 0 0 8" ColumnDefinitions="Auto, *">
-            <TextBlock Grid.Column="0" FontWeight="Bold">Select destination for </TextBlock>
-            <TextBlock Grid.Column="1" FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding SourceTorrent.Name}" />
-        </Grid>
-        <GroupBox Header="Plugin">
-            <views:DataProviderSelection DataProviders="{Binding DataProviders}" SelectedProvider="{Binding SelectedProvider}" HorizontalAlignment="Stretch" />
-        </GroupBox>
-        <GroupBox Header="Remote directory">
-            <DockPanel>
-                <Button DockPanel.Dock="Right" Margin="5,0,0,0" Command="{Binding BrowseRemoteDirectoryClickCommand}">Browse...</Button>
-                <TextBox Text="{Binding RemoteTargetPath}" IsEnabled="{Binding RemoteTargetPathEnabled}" />
-            </DockPanel>
-        </GroupBox>
+        <local:DuplicationTargetSelectorControl DataContext="{Binding Selector}" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 16 0 0">
             <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding ConfirmClickCommand}">Confirm</Button>
             <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding CancelClickCommand}">Cancel</Button>

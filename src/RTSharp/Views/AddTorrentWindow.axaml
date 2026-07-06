@@ -4,15 +4,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
         xmlns:vm="clr-namespace:RTSharp.ViewModels"
+        xmlns:core="clr-namespace:RTSharp.Core"
+        xmlns:local="clr-namespace:RTSharp.Views"
         mc:Ignorable="d"
         x:Class="RTSharp.Views.AddTorrentWindow"
 		x:DataType="vm:AddTorrentViewModel"
         Title="RT# - Add torrent"
         Width="420"
         MinWidth="420"
-        Height="416"
-        MinHeight="416"
-        MaxHeight="416"
+        Height="400"
+        MinHeight="400"
+        MaxHeight="400"
         Name="window"
         Icon="/Assets/rtsharp.ico">
     <Design.DataContext>
@@ -78,9 +80,30 @@
             <TabItem.Header>
                 <TextBlock>Duplication</TextBlock>
             </TabItem.Header>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text=":)" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-            </StackPanel>
+            <DockPanel Margin="8">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <local:DuplicationTargetSelectorControl DataContext="{Binding DuplicationTargetSelector}" />
+                    <Button Margin="0,8,0,0"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Command="{Binding AddDuplicationTargetClickCommand}">Add target</Button>
+                </StackPanel>
+                <ListBox ItemsSource="{Binding DuplicationTargets}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="core:TorrentDuplication+DuplicationTarget">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                    <TextBlock FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding Provider.Host.Config.Plugin.Name}" />
+                                    <TextBlock TextTrimming="CharacterEllipsis" Text="{Binding RemoteTargetPath}" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Command="{Binding $parent[Window].((vm:AddTorrentViewModel)DataContext).RemoveDuplicationTargetClickCommand}"
+                                        CommandParameter="{Binding}">Remove</Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
         </TabItem>
     </TabControl>
 </Window>

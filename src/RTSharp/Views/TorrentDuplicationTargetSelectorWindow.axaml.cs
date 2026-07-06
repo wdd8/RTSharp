@@ -12,7 +12,7 @@ public partial class TorrentDuplicationTargetSelectorWindow : VmWindow<TorrentDu
         InitializeComponent();
 
         BindViewModelActions(vm => {
-            vm!.SelectRemoteDirectoryDialog = SelectRemoteDirectoryDialogAsync;
+            vm!.Selector.SelectRemoteDirectoryDialog = SelectRemoteDirectoryDialogAsync;
             vm!.CloseDialog = CloseDialog;
         });
     }
@@ -22,19 +22,6 @@ public partial class TorrentDuplicationTargetSelectorWindow : VmWindow<TorrentDu
         Close(Input);
     }
 
-    private async Task<string?> SelectRemoteDirectoryDialogAsync(string? Input)
-    {
-        if (ViewModel!.SelectedProvider == null)
-            return null;
-
-        var dialog = new DirectorySelectorWindow() {
-            ViewModel = new DirectorySelectorWindowViewModel(ViewModel!.SelectedProvider!) {
-                WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider.Host.Config.Plugin.Name})"
-            }
-        };
-
-        await dialog.ViewModel.SetCurrentFolder(Input);
-        var result = await dialog.ShowDialog<string?>(this);
-        return result;
-    }
+    private Task<string?> SelectRemoteDirectoryDialogAsync(string? Input) =>
+        DuplicationTargetSelectorControl.DefaultSelectRemoteDirectoryDialogImpl(this, ViewModel!.Selector.SelectedProvider, Input);
 }

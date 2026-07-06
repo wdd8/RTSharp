@@ -4,6 +4,7 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using RTSharp.Core;
 using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions.DataProvider;
 
@@ -11,6 +12,7 @@ using Serilog;
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -70,13 +72,43 @@ namespace RTSharp.ViewModels
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(AddClickCommand))]
-        public partial string RemoteTargetPath { get; set; }
+        public partial string RemoteTargetPath { get; set; } = "";
 
         [ObservableProperty]
-        public partial object DataProviderOptions { get; set; }
+        public partial object? DataProviderOptions { get; set; }
 
-        [ObservableProperty]
-        public partial List<IDataProvider> DuplicationTargets { get; set; }
+        public ObservableCollection<TorrentDuplication.DuplicationTarget> DuplicationTargets { get; } = new();
+
+        public DuplicationTargetSelectorViewModel DuplicationTargetSelector { get; } = new();
+
+        public AddTorrentViewModel()
+        {
+            DuplicationTargetSelector.ProviderFilter = provider => provider != SelectedProvider && !DuplicationTargets.Any(x => x.Provider == provider);
+
+            DuplicationTargetSelector.PropertyChanged += (_, e) => {
+                if (e.PropertyName == nameof(DuplicationTargetSelector.SelectedProvider) || e.PropertyName == nameof(DuplicationTargetSelector.RemoteTargetPath))
+                    AddDuplicationTargetClickCommand.NotifyCanExecuteChanged();
+            };
+        }
+
+        public bool CanExecuteAddDuplicationTargetClick() => DuplicationTargetSelector.SelectedProvider != null && DuplicationTargetSelector.RemoteTargetPath != null;
+
+        [RelayCommand(CanExecute = nameof(CanExecuteAddDuplicationTargetClick))]
+        public void AddDuplicationTargetClick()
+        {
+            DuplicationTargets.Add(new TorrentDuplication.DuplicationTarget(DuplicationTargetSelector.SelectedProvider!, DuplicationTargetSelector.RemoteTargetPath!));
+
+            DuplicationTargetSelector.SelectedProvider = null;
+            DuplicationTargetSelector.RemoteTargetPath = null;
+            DuplicationTargetSelector.RefreshDataProviders();
+        }
+
+        [RelayCommand]
+        public void RemoveDuplicationTargetClick(TorrentDuplication.DuplicationTarget Target)
+        {
+            DuplicationTargets.Remove(Target);
+            DuplicationTargetSelector.RefreshDataProviders();
+        }
 
         private bool _startTorrent;
         public bool StartTorrent {
@@ -179,6 +211,10 @@ namespace RTSharp.ViewModels
 
         partial void OnSelectedProviderChanged(IDataProvider? value)
         {
+            DuplicationTargetSelector.RefreshDataProviders();
+            if (DuplicationTargetSelector.SelectedProvider == value)
+                DuplicationTargetSelector.SelectedProvider = null;
+
             if (value == null)
                 return;
 

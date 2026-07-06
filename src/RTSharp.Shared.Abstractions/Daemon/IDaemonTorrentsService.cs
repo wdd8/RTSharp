@@ -28,7 +28,7 @@ public interface IDaemonTorrentsService
     Task<TorrentStatuses> StopTorrents(IList<byte[]> Hashes);
     
     Task<Guid> ForceRecheckTorrents(IList<byte[]> Hashes);
-    
+
     Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In);
     
     Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> Hashes);

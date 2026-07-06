@@ -30,6 +30,10 @@ namespace RTSharp.Daemon.RuntimeCompilation
 		private UnloadableLoadContext? Alc { get; set; }
 		private bool IsDisposed { get; set; }
 
+		private int RefCount;
+		private bool Cached = true;
+		private readonly Lock DisposeLock = new();
+
 		public DynamicScript(MemoryStream Assembly, string[] Tags)
 		{
 			this.Assembly = Assembly;
@@ -51,6 +55,26 @@ namespace RTSharp.Daemon.RuntimeCompilation
 			}
 		}
 
+		public void AddRef()
+		{
+			Interlocked.Increment(ref RefCount);
+		}
+
+		public void RemoveRef()
+		{
+			if (Interlocked.Decrement(ref RefCount) <= 0 && !Cached) {
+				Dispose();
+			}
+		}
+
+		public void TryExpire()
+		{
+			Cached = false;
+			if (RefCount <= 0) {
+				Dispose();
+			}
+		}
+
 		public void Dispose()
 		{
 			Dispose(true);
@@ -66,16 +90,18 @@ namespace RTSharp.Daemon.RuntimeCompilation
 				return;
 			}
 
-			if (IsDisposed)
-				return;
+			lock (DisposeLock) {
+				if (IsDisposed)
+					return;
 
-			_classType = null;
-			Alc!.Unload();
-			Alc = null;
-			try { Assembly?.Dispose(); } catch { }
-			Assembly = null!;
+				_classType = null;
+				Alc!.Unload();
+				Alc = null;
+				try { Assembly?.Dispose(); } catch { }
+				Assembly = null!;
 
-			IsDisposed = true;
+				IsDisposed = true;
+			}
 		}
 
 		~DynamicScript()

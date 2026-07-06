@@ -6,7 +6,7 @@ using RTSharp.Daemon.Utils;
 
 namespace RTSharp.Daemon.GRPCServices.Interceptors;
 
-public class DataProviderFailureInterceptor(ILogger<DataProviderFailureInterceptor> Logger) : Interceptor
+public class GrpcInterceptor(ILogger<GrpcInterceptor> Logger) : Interceptor
 {
     public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
     {
@@ -15,6 +15,9 @@ public class DataProviderFailureInterceptor(ILogger<DataProviderFailureIntercept
         } catch (DataProviderFailure ex) {
             Logger.LogConnectionFailure(ex);
             throw new RpcException(new Status(StatusCode.Unavailable, ex.Message));
+        } catch (OperationCanceledException ex) {
+            // no one cares
+            throw new RpcException(new Status(StatusCode.Cancelled, ex.Message));
         }
     }
 
@@ -25,6 +28,9 @@ public class DataProviderFailureInterceptor(ILogger<DataProviderFailureIntercept
         } catch (DataProviderFailure ex) {
             Logger.LogConnectionFailure(ex);
             throw new RpcException(new Status(StatusCode.Unavailable, ex.Message));
+        } catch (OperationCanceledException ex) {
+            // no one cares
+            throw new RpcException(new Status(StatusCode.Cancelled, ex.Message));
         }
     }
 }

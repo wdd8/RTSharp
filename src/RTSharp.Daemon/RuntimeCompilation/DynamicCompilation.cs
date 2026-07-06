@@ -8,11 +8,18 @@ using System.Reflection;
 using System.Text;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace RTSharp.Daemon.RuntimeCompilation
 {
 	public static class DynamicCompilation
 	{
+		private static readonly TimeSpan CompilationCacheIdleTimeout = TimeSpan.FromMinutes(30);
+
+		public static readonly MemoryCache Cache = new(new MemoryCacheOptions {
+			ExpirationScanFrequency = TimeSpan.FromMinutes(1)
+		});
+
 		const string BuiltInUsingsPragma = "#pragma usings";
 
 		static readonly Dictionary<string, AssemblyMetadata> AssemblyMetadatas = new Dictionary<string, AssemblyMetadata>();
@@ -283,14 +290,29 @@ namespace RTSharp.Daemon.RuntimeCompilation
 		}
 
 		public static DynamicScript<T> Compile<T>(
+			byte[] Hash,
 			ref string Script,
 			string Name,
 			IEnumerable<string> BuiltInAssemblyReferences,
 			IEnumerable<string> BuiltInUsings)
 		{
-			var (ms, pragmaTags) = CompileAssembly(ref Script, Name, BuiltInAssemblyReferences, BuiltInUsings);
+			var key = Convert.ToBase64String(Hash);
+			var script = Script;
 
-            return new DynamicScript<T>(ms, pragmaTags);
-        }
-    }
+			var compilation = Cache.GetOrCreate(key, entry => {
+				entry.SetSlidingExpiration(CompilationCacheIdleTimeout);
+				entry.RegisterPostEvictionCallback(static (_, value, _, _) => {
+					((DynamicScript<T>)value!).TryExpire();
+				});
+
+                var (ms, pragmaTags) = CompileAssembly(ref script, Name, BuiltInAssemblyReferences, BuiltInUsings);
+
+                return new DynamicScript<T>(ms, pragmaTags);
+            })!;
+
+			Script = script;
+
+			return compilation;
+		}
+	}
 }

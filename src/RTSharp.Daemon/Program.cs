@@ -41,13 +41,13 @@ public static class Program
         });
 
         builder.Services.AddGrpc(options => {
-            options.Interceptors.Add<RTSharp.Daemon.GRPCServices.Interceptors.DataProviderFailureInterceptor>();
+            options.Interceptors.Add<RTSharp.Daemon.GRPCServices.Interceptors.GrpcInterceptor>();
         });
         builder.Services.AddSingleton<RTSharp.Shared.Abstractions.ISpeedMovingAverageService, SpeedMovingAverageService>();
         builder.Services.AddSingleton<FileTransferService>();
         builder.Services.AddSingleton<SessionsService>();
         builder.Services.AddSingleton<ChannelsService>();
-        builder.Services.AddSingleton<TorrentService>();
+        builder.Services.AddSingleton<TorrentOpService>();
         builder.Services.Configure<RTSharp.Daemon.Services.Prometheus.PrometheusOptions>(builder.Configuration.GetSection("Prometheus"));
         builder.Services.AddSingleton<RTSharp.Daemon.Services.Prometheus.PrometheusMetricsService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<RTSharp.Daemon.Services.Prometheus.PrometheusMetricsService>());
@@ -58,7 +58,7 @@ public static class Program
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.TorrentPoll.TorrentPolling>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.SCGICommunication>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.Grpc>(key);
-            builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.TorrentOpService>(key);
+            builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.RTorrentOpService>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.SettingsService>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.RtorrentMonitor>(key);
             builder.Services.AddHostedService(services => services.GetRequiredKeyedService<RTSharp.Daemon.Services.rtorrent.RtorrentMonitor>(key));
@@ -122,6 +122,9 @@ public static class Program
         }
 
         builder.WebHost.ConfigureKestrel(kestrelServerOptions => {
+            kestrelServerOptions.Limits.Http2.InitialStreamWindowSize = 8 * 1024 * 1024;
+            kestrelServerOptions.Limits.Http2.InitialConnectionWindowSize = 16 * 1024 * 1024;
+
             foreach (var address in builder.Configuration.GetListenAddresses()) {
                 kestrelServerOptions.Listen(IPEndPoint.Parse(address), cfg => {
                     cfg.UseHttps(opts => {

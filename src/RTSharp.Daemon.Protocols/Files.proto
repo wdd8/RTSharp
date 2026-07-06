@@ -89,8 +89,13 @@ message SendFilesInput {
 }
 
 message FileBuffer {
-    oneof Data {
+    message FileHeader {
         string Path = 1;
+        uint64 TotalBytes = 2;
+    }
+
+    oneof Data {
+        FileHeader Header = 1;
         bytes Buffer = 2;
     }
 }

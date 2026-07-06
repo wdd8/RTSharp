@@ -39,6 +39,17 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
         };
     }
 
+    private static void CountByState(ActionQueueAction action, ref int notCompleted, ref int failed)
+    {
+        if (!action.IsCompleted)
+            notCompleted++;
+        if (action.State == ACTION_STATE.FAILED)
+            failed++;
+
+        foreach (var child in action.ChildActions)
+            CountByState(child, ref notCompleted, ref failed);
+    }
+
     private static void FlattenActions(IEnumerable<ActionQueueAction> actions, List<DefaultActionQueueActionViewModel> result, int depth)
     {
         foreach (var action in actions) {
@@ -119,6 +130,8 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
             }
         };
 
+        Action.ChildAdded += TrackAction;
+
         foreach (var child in Action.ChildActions) {
             TrackAction(child);
         }
@@ -142,6 +155,13 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
             _ = Task.Delay(TimeSpan.FromSeconds(delay)).ContinueWith(_ => {
                 lock (ActionsLock) {
                     _actions.Remove(Action);
+
+                    int notCompleted = 0, failed = 0;
+                    CountByState(Action, ref notCompleted, ref failed);
+                    if (notCompleted > 0)
+                        ActionQueueVm.ActionsInQueue = (uint)Math.Max(0, (int)ActionQueueVm.ActionsInQueue - notCompleted);
+                    if (failed > 0)
+                        ActionQueueVm.ErroredActions = (uint)Math.Max(0, (int)ActionQueueVm.ErroredActions - failed);
                 }
                 ActionExpired(Action);
                 lock (ActionsLock) {
@@ -153,7 +173,8 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
         Action.OnFail((ex, task) => {
             lock (ActionsLock) {
                 RenderActionQueue(Actions);
-                ActionQueueVm.ErroredActions++;
+                if (Action.State == ACTION_STATE.FAILED)
+                    ActionQueueVm.ErroredActions++;
                 ActionQueueVm.ActionsInQueue--;
             }
             queueActionExpiration(Action);

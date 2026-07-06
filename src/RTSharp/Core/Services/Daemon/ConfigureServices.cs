@@ -71,6 +71,7 @@ public static class ConfigureServices
         var pkcs12 = X509CertificateLoader.LoadPkcs12(x509.Export(X509ContentType.Pkcs12), null);
 
         var handler = new SocketsHttpHandler();
+        handler.InitialHttp2StreamWindowSize = 16 * 1024 * 1024;
         handler.PlaintextStreamFilter = (context, cancellationToken) => {
             if (context.PlaintextStream is System.Net.Security.SslStream tlsStm)
                 DaemonService.RemoteCipherSuites[serverId] = tlsStm.NegotiatedCipherSuite.ToString();

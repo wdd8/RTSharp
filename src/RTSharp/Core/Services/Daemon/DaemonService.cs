@@ -24,6 +24,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -66,6 +67,8 @@ public class DaemonService : IDaemonService
 
     public ushort Port { get; }
 
+    public Uri Uri { get; }
+
     public CancellationToken CancellationToken => Cts.Token;
 
     public Notifyable<TimeSpan> Latency { get; private set; } = new();
@@ -83,6 +86,13 @@ public class DaemonService : IDaemonService
 
         Host = Server.Host;
         Port = Server.DaemonPort;
+
+        var builder = new UriBuilder {
+            Host = Host,
+            Port = Port,
+            Scheme = "https"
+        };
+        Uri = builder.Uri;
 
         _ = Task.Run(PingLoop);
     }

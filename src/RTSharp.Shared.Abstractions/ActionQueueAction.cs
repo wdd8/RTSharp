@@ -85,7 +85,15 @@ namespace RTSharp.Shared.Abstractions
 
         public event EventHandler<ProgressChangedEvArgs>? ProgressChanged;
 
+        public event Action<ActionQueueAction>? ChildAdded;
+
         public ConcurrentBag<ActionQueueAction> ChildActions { get; } = [];
+
+        private void AddChildAction(ActionQueueAction Child)
+        {
+            ChildActions.Add(Child);
+            ChildAdded?.Invoke(Child);
+        }
 
         protected ActionQueueAction(Guid Id, string Name, RUN_MODE? RunMode, Func<ActionQueueAction, Task<object?>>? FxCreateTask, ActionQueueAction? Parent)
         {
@@ -135,14 +143,14 @@ namespace RTSharp.Shared.Abstractions
         public ActionQueueAction<TChild> CreateChild<TChild>(Guid Id, string Name, RUN_MODE RunMode, Func<ActionQueueAction, ActionQueueAction<TChild>, Task<TChild>> FxCreateTask)
         {
             var ret = new ActionQueueAction<TChild>(new ActionQueueAction(Id, Name, RunMode, async (task) => await FxCreateTask(this, (ActionQueueAction<TChild>)task), this));
-            ChildActions.Add(ret);
+            AddChildAction(ret);
             return ret;
         }
 
         public ActionQueueAction CreateChild(Guid Id, string Name, RUN_MODE RunMode, Func<ActionQueueAction, ActionQueueAction, Task> FxCreateTask)
         {
             var ret = new ActionQueueAction(Id, Name, RunMode, async (task) => { await FxCreateTask(this, task); return null; }, this);
-            ChildActions.Add(ret);
+            AddChildAction(ret);
             return ret;
         }
 
@@ -188,7 +196,10 @@ namespace RTSharp.Shared.Abstractions
 
                 foreach (var fx in OnFailFxs)
                     fx(task.Exception!, task);
-                
+
+                foreach (var childAction in ChildActions.Where(x => x.RunMode == RUN_MODE.DEPENDS_ON_PARENT))
+                    childAction.CancelAsUnreachable();
+
                 Log.Logger.Error(task.Exception, "Action failed");
             }, TaskContinuationOptions.OnlyOnFaulted);
             RunningTask.ContinueWith(task => {
@@ -196,7 +207,10 @@ namespace RTSharp.Shared.Abstractions
 
                 foreach (var fx in OnFailFxs)
                     fx(task.Exception!, task);
-                
+
+                foreach (var childAction in ChildActions.Where(x => x.RunMode == RUN_MODE.DEPENDS_ON_PARENT))
+                    childAction.CancelAsUnreachable();
+
             }, TaskContinuationOptions.OnlyOnCanceled);
 
             foreach (var childAction in ChildActions.Where(x => x.RunMode == RUN_MODE.PARALLEL_DONT_WAIT_ON_PARENT)) {
@@ -204,6 +218,20 @@ namespace RTSharp.Shared.Abstractions
             }
 
             return RunningTask;
+        }
+
+        internal void CancelAsUnreachable()
+        {
+            if (RunningTask != null)
+                return;
+
+            this.State = ACTION_STATE.CANCELLED;
+
+            foreach (var fx in OnFailFxs)
+                fx(null, null);
+
+            foreach (var childAction in ChildActions)
+                childAction.CancelAsUnreachable();
         }
 
         public int GetChildActionCount() => GetChildActionCount(this);

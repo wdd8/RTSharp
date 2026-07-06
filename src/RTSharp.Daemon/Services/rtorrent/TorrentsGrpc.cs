@@ -11,7 +11,7 @@ namespace RTSharp.Daemon.Services.rtorrent
     {
         private readonly TorrentPolling TorrentPolling;
         private readonly SCGICommunication Scgi;
-        private readonly TorrentOpService TorrentOpService;
+        private readonly RTorrentOpService TorrentOpService;
         private readonly ILogger Logger;
         private readonly SessionsService Sessions;
         private readonly IServiceProvider ServiceProvider;
@@ -22,7 +22,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         {
             TorrentPolling = ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey);
             Scgi = ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
-            TorrentOpService = ServiceProvider.GetRequiredKeyedService<TorrentOpService>(InstanceKey);
+            TorrentOpService = ServiceProvider.GetRequiredKeyedService<RTorrentOpService>(InstanceKey);
             this.Sessions = Sessions;
             this.Logger = Logger;
             this.ServiceProvider = ServiceProvider;

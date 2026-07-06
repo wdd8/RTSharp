@@ -2,6 +2,7 @@ using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.DataProvider;
+using RTSharp.Shared.Utils;
 
 using System;
 using System.Collections.Generic;
@@ -25,7 +26,7 @@ public class TorrentAdd
 
     public record struct TorrentAddInput(
         IList<(string Source, AddTorrentsOptions Options)> Sources,
-        IEnumerable<IDataProvider> DuplicationTargets,
+        IEnumerable<TorrentDuplication.DuplicationTarget> DuplicationTargets,
         START_MODE StartMode);
 
     public static async Task AddTorrents(IDataProvider Primary, TorrentAddInput Input)
@@ -51,7 +52,8 @@ public class TorrentAdd
 
         var files = (await Task.WhenAll(tasks)).Select((data, x) => (data.Content, data.Filename, Input.Sources[x].Options)).ToList();
 
-        var action = ActionQueueAction.New<TorrentStatuses>("Add torrents", (action) => {
+        ActionQueueAction<TorrentStatuses> parentAction;
+        var action = parentAction = ActionQueueAction.New<TorrentStatuses>("Add torrents", (action) => {
             return Primary.AddTorrents(files);
         });
         if (Primary.Capabilities.ForceStartTorrentOnAdd == null) {
@@ -59,7 +61,7 @@ public class TorrentAdd
                 case START_MODE.DO_NOTHING:
                     break;
                 case START_MODE.START:
-                    action.CreateChild<TorrentStatuses>("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, (parent, action) => {
+                    action = action.CreateChild<TorrentStatuses>("Start torrents", RUN_MODE.DEPENDS_ON_PARENT, (parent, action) => {
                         var res = parent.GetResult()!;
                         foreach (var (hash, exceptions) in res) {
                             if (exceptions.All(x => x == null))
@@ -69,19 +71,10 @@ public class TorrentAdd
                         }
 
                         return Primary.StartTorrents([.. res.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash)]);
-                    }).CreateChild("Start torrent completion", RUN_MODE.DEPENDS_ON_PARENT, (startTorrentAction, action) => {
-                        foreach (var (hash, exceptions) in startTorrentAction.GetResult()!) {
-                            if (exceptions.All(x => x == null))
-                                plugin.Logger.Information($"Torrent {Convert.ToHexString(hash)} started");
-                            else
-                                plugin.Logger.Error($"{Convert.ToHexString(hash)}: {String.Join("\n", exceptions.Select(x => x.Message))}");
-                        }
-
-                        return default;
                     });
                     break;
-                case START_MODE.RECHECK_AND_START:
-                    action.CreateChild<TorrentStatuses>("Recheck", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
+                case START_MODE.RECHECK_AND_START: // TODO: not really compatible with duplication but not exposed to user either
+                    action = action.CreateChild<TorrentStatuses>("Recheck", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
                         var torrentHashes = parent.GetResult()!.Where(x => x.Exceptions.All(i => i == null)).Select(x => x.Hash).ToArray();
 
                         var guid = await Primary.ForceRecheck(torrentHashes);
@@ -99,14 +92,34 @@ public class TorrentAdd
             }
         }
 
+        if (Input.DuplicationTargets.Any()) {
+            action.CreateChild("Duplicate", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
+                var parser = new BencodeNET.Torrents.TorrentParser();
+                var filesByHash = new InfoHashDictionary<(byte[] Content, string Name)>();
+
+                foreach (var (content, fileName, options) in files) {
+                    try {
+                        using var ms = new MemoryStream(content);
+                        var parsed = parser.Parse(ms);
+                        filesByHash[parsed.OriginalInfoHashBytes] = (content, parsed.DisplayName);
+                    } catch (Exception ex) {
+                        plugin.Logger.Error(ex, "Duplication: failed to parse a source .torrent for correlation");
+                    }
+                }
+
+                var successfulAdds = parent.GetResult()!
+                    .Where(x => x.Exceptions.All(e => e == null) && filesByHash.ContainsKey(x.Hash))
+                    .Select(x => (x.Hash, filesByHash[x.Hash].Content, filesByHash[x.Hash].Name))
+                    .ToList();
+
+                if (successfulAdds.Count > 0)
+                    _ = TorrentDuplication.AddAndQueue(Primary, successfulAdds, Input.DuplicationTargets);
+            });
+        }
+
         var queue = ActionQueue.GetActionQueueEntry(Plugins.GetPluginOrDefault(Primary));
         if (queue != null) {
-            var response = await queue.Queue.RunAction(action);
-
-            foreach (var torrent in response!) {
-                if (torrent.Exceptions.Any(x => x != null))
-                    plugin.Logger.Error($"{Convert.ToHexString(torrent.Hash)}: {String.Join("; ", torrent.Exceptions.Select(x => x.Message))}");
-            }
+            await queue.Queue.RunAction(parentAction);
         }
     }
 }

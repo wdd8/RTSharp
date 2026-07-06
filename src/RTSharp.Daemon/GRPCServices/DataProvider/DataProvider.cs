@@ -31,6 +31,8 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
             return dp;
         }
 
+        public RegisteredDataProvider? GetDataProvider(string InstanceKey) => ServiceProvider.GetKeyedService<RegisteredDataProvider>(InstanceKey);
+
         public IEnumerable<RegisteredDataProvider> GetDataProviders()
         {
             foreach (var type in Enum.GetValues<DataProviderType>()) {

@@ -66,6 +66,8 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
             throw new InstantiationException($"{DynamicScript.ClassType.Name} has not been resolved");
         }
 
+        DynamicScript.AddRef();
+
         session = new ScriptSession {
             Id = id,
             Name = Name,
@@ -86,7 +88,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         return session;
     }
 
-    internal ScriptSession CreateSession(string Name, CancellationTokenSource Cts, Func<ScriptSession, Task> Fx)
+    internal ScriptSession RunSession(string Name, CancellationTokenSource Cts, Func<ScriptSession, Task> Fx)
     {
         ScriptSession session;
 
@@ -250,6 +252,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
 
         session.Cts.Dispose();
         session.Scope?.Dispose();
+        session.Script?.RemoveRef();
 
         return true;
     }
