@@ -732,38 +732,41 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 session.Progress.State = TASK_STATE.RUNNING;
                 session.Progress.Progress = 0f;
 
+                var sessLock = new Lock();
+                var totalCount = Req.Torrents.Count;
+                var completedCount = 0;
+
                 var tasks = new List<Task<(ByteString Hash, IList<Exception> Exceptions)>>();
                 foreach (var req in Req.Torrents) {
                     tasks.Add(Task.Run(async () => {
                         Exception? exception = null;
 
                         ScriptProgressState progress;
-                        session.Progress.Chain =
-                        [
-                            ..(session.Progress.Chain ?? []),
-                            progress = new ScriptProgressState(session) {
-                                Text = $"Setting location for {Convert.ToHexString(req.InfoHash.Span)} to {req.TargetDirectory}",
-                                Progress = 0f,
-                                State = TASK_STATE.RUNNING
-                            },
-                        ];
+                        lock (sessLock) {
+                            session.Progress.Chain =
+                            [
+                                ..(session.Progress.Chain ?? []),
+                                progress = new ScriptProgressState(session) {
+                                    Text = $"Setting location for {Convert.ToHexString(req.InfoHash.Span)} to {req.TargetDirectory}",
+                                    Progress = 0f,
+                                    State = TASK_STATE.RUNNING
+                                },
+                            ];
+                        }
 
                         try {
                             await client.SetLocationAsync(Convert.ToHexString(req.InfoHash.Span), req.TargetDirectory, cts.Token);
                         } catch (Exception ex) {
+                            exception = ex;
+
                             progress.State = TASK_STATE.FAILED;
                             progress.Text = $"Failed to set location. {ex.Message}";
                             progress.StateData = ex.ToString();
-                            progress.Progress = 100f;
-
-                            session.Progress.State = progress.State;
-                            session.Progress.Text = progress.Text;
-                            session.Progress.StateData = progress.StateData;
-                            cts.Cancel();
                         }
 
                         progress.Progress = 100f;
-                        session.Progress.Progress = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).Count() / (float)tasks.Count * 100;
+                        progress.State = progress.State == TASK_STATE.FAILED ? TASK_STATE.FAILED : TASK_STATE.DONE;
+                        session.Progress.Progress = Interlocked.Increment(ref completedCount) / (float)totalCount * 100;
 
                         return (req.InfoHash, exception == null ? (IList<Exception>)Array.Empty<Exception>() : [ exception ]);
                     }));
@@ -771,6 +774,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                 await Task.WhenAll(tasks);
 
+                session.Progress.Progress = 100f;
                 session.Progress.State = TASK_STATE.DONE;
                 session.Progress.StateData = "";
                 session.Progress.Text = "Done";

@@ -86,11 +86,6 @@ public class ServersActionQueueRenderer(string ServerName, IDaemonService Daemon
             return tcs;
         }
 
-        if (state.State == TASK_STATE.DONE) {
-            getTcs()?.SetResult();
-        } else if (state.State == TASK_STATE.FAILED) {
-            getTcs()?.SetException(new Exception(state.Text));
-        }
 
         action.ChangeProgress(state.State switch {
             TASK_STATE.WAITING => ACTION_STATE.WAITING,
@@ -99,6 +94,12 @@ public class ServersActionQueueRenderer(string ServerName, IDaemonService Daemon
             TASK_STATE.FAILED => ACTION_STATE.FAILED,
             _ => ACTION_STATE.CANCELLED
         }, state.Progress ?? 0, state.Text);
+
+        if (state.State == TASK_STATE.DONE) {
+            getTcs()?.SetResult();
+        } else if (state.State == TASK_STATE.FAILED) {
+            getTcs()?.SetException(new Exception(state.Text));
+        }
     }
 
     private void UpdateAction(ActionQueueAction action, ScriptProgressState state)
