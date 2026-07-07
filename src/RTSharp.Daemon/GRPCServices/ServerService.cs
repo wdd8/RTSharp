@@ -73,6 +73,7 @@ namespace RTSharp.Daemon.GRPCServices
                     TASK_STATE.RUNNING => TaskState.Running,
                     TASK_STATE.FAILED => TaskState.Failed,
                     TASK_STATE.DONE => TaskState.Done,
+                    TASK_STATE.CANCELLED => TaskState.Cancelled,
                     _ => throw new IndexOutOfRangeException()
                 },
                 Chain = { includeChain ? In.Chain?.Select(x => MapProgressState(x, includeChain: true)) ?? [] : [] },

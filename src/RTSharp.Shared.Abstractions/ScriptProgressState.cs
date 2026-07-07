@@ -7,7 +7,8 @@ public enum TASK_STATE
     WAITING,
     RUNNING,
     DONE,
-    FAILED
+    FAILED,
+    CANCELLED
 }
 
 public class ScriptProgressState

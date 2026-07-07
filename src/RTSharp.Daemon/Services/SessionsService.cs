@@ -126,6 +126,10 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
             Logger.LogError(x.Exception, $"Session {Session.Id} failed");
             Session.Progress.State = TASK_STATE.FAILED;
         }, TaskContinuationOptions.OnlyOnFaulted);
+        Session.Execution!.ContinueWith(x => {
+            Logger.LogInformation($"Session {Session.Id} was cancelled");
+            Session.Progress.State = TASK_STATE.CANCELLED;
+        }, TaskContinuationOptions.OnlyOnCanceled);
     }
 
     public ChannelReader<(ScriptSessionUpdate Update, bool IncludeChain)> MonitorSessionUpdates(bool IncludeFullUpdate, bool StreamUpdates, CancellationToken CancellationToken)
@@ -242,7 +246,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         ScriptSession? session;
         lock (SessionsLock) {
             session = Sessions.FirstOrDefault(x => x.Id == Id);
-            if (session == null || session.Progress.State != TASK_STATE.DONE) {
+            if (session == null || (session.Progress.State != TASK_STATE.DONE && session.Progress.State != TASK_STATE.FAILED && session.Progress.State != TASK_STATE.CANCELLED)) {
                 return false;
             }
 

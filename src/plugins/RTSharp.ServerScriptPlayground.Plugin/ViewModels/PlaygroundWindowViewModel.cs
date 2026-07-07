@@ -37,7 +37,7 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
         if (SelectedServer == null)
             return;
 
-        var server = Host.GetDaemonService(SelectedServer);
+        var server = Host.GetDaemonService(SelectedServer)!;
 
         if (CurrentScriptId != null) {
             try { await server.QueueScriptCancellation(CurrentScriptId.Value); } catch { }
@@ -47,7 +47,7 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
         }
 
         try {
-            CurrentScriptId = await server.RunCustomScript(Script, $"PlaygroundScript_{DateTime.UtcNow:o}", new System.Collections.Generic.Dictionary<string, string> { });
+            CurrentScriptId = await server.RunCustomScript(Script, $"PlaygroundScript_{DateTime.UtcNow.Ticks}", new System.Collections.Generic.Dictionary<string, string> { });
         } catch (Exception ex) {
             await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
 

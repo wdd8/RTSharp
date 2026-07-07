@@ -28,6 +28,11 @@
                 <ItemsRepeater.ItemTemplate>
                     <DataTemplate x:DataType="vm:DefaultActionQueueActionViewModel">
                         <Border Margin="{Binding IndentMargin}" Padding="0,2">
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Cancel" Command="{Binding CancelCommand}" IsEnabled="{Binding CanCancel}" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <StackPanel Spacing="3">
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
                                     <Ellipse Grid.Column="0" Width="7" Height="7" Fill="{Binding StatusBrush}"

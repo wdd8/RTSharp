@@ -334,6 +334,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
                 TaskState.Running => TASK_STATE.RUNNING,
                 TaskState.Waiting => TASK_STATE.WAITING,
                 TaskState.Failed => TASK_STATE.FAILED,
+                TaskState.Cancelled => TASK_STATE.CANCELLED,
                 _ => throw new ArgumentOutOfRangeException()
             },
             Text = In.Text,
@@ -360,7 +361,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         try {
             await foreach (var progressData in stream.ResponseStream.ReadAllAsync()) {
                 Progress?.Invoke(MapProgressState(progressData));
-                if (progressData.State == TaskState.Done || progressData.State == TaskState.Failed) {
+                if (progressData.State == TaskState.Done || progressData.State == TaskState.Failed || progressData.State == TaskState.Cancelled) {
                     cts.Cancel();
                 }
             }

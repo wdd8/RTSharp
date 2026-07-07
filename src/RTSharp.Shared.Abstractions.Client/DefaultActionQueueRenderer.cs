@@ -50,7 +50,7 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
             CountByState(child, ref notCompleted, ref failed);
     }
 
-    private static void FlattenActions(IEnumerable<ActionQueueAction> actions, List<DefaultActionQueueActionViewModel> result, int depth)
+    private void FlattenActions(IEnumerable<ActionQueueAction> actions, List<DefaultActionQueueActionViewModel> result, int depth)
     {
         foreach (var action in actions) {
             result.Add(new DefaultActionQueueActionViewModel {
@@ -59,7 +59,9 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
                 Depth = depth,
                 State = action.State,
                 ProgressDone = action.ProgressDone,
-                ProgressString = action.ProgressString ?? ""
+                ProgressString = action.ProgressString ?? "",
+                CanCancel = CanCancelAction(action),
+                RequestCancel = _ => CancelAction(action)
             });
             if (action.ChildActions.Any())
                 FlattenActions(action.ChildActions, result, depth + 1);
@@ -103,6 +105,7 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
                 existing.State = item.State;
                 existing.ProgressDone = item.ProgressDone;
                 existing.ProgressString = item.ProgressString;
+                existing.CanCancel = item.CanCancel;
             } else {
                 existingActions.Insert(x, item);
                 byId[item.Id] = item;
@@ -115,6 +118,9 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
     public virtual void ActionCompleted(ActionQueueAction Action) { }
     public virtual void ActionErrored(ActionQueueAction Action) { }
     public virtual void ActionExpired(ActionQueueAction Action) { }
+
+    public virtual bool CanCancelAction(ActionQueueAction Action) => false;
+    public virtual void CancelAction(ActionQueueAction Action) { }
 
     private void TrackAction(ActionQueueAction Action)
     {

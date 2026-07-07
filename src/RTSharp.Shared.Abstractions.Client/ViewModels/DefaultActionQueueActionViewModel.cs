@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace RTSharp.Shared.Abstractions.Client.ViewModels;
 
@@ -16,6 +17,15 @@ public partial class DefaultActionQueueActionViewModel : ObservableObject
     public required Guid Id { get; init; }
     public required string Name { get; init; }
     public required int Depth { get; init; }
+
+    public Action<DefaultActionQueueActionViewModel>? RequestCancel { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
+    public partial bool CanCancel { get; set; }
+
+    [RelayCommand(CanExecute = nameof(CanCancel))]
+    private void Cancel() => RequestCancel?.Invoke(this);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasProgress))]

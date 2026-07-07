@@ -74,6 +74,16 @@ public class ServersActionQueueRenderer(string ServerName, IDaemonService Daemon
         _ = DaemonService.RemoveScriptSession(Action.Id);
     }
 
+    public override bool CanCancelAction(ActionQueueAction Action) => Action.Parent == null && !Action.IsCompleted;
+
+    public override void CancelAction(ActionQueueAction Action)
+    {
+        var sessionId = Action.Id;
+        _ = Task.Run(async () => {
+            try { await DaemonService.QueueScriptCancellation(sessionId); } catch { }
+        });
+    }
+
     private void ChangeProgress(ActionQueueAction action, ScriptProgressState state)
     {
         TaskCompletionSource? getTcs()
@@ -92,6 +102,7 @@ public class ServersActionQueueRenderer(string ServerName, IDaemonService Daemon
             TASK_STATE.RUNNING => ACTION_STATE.RUNNING,
             TASK_STATE.DONE => ACTION_STATE.DONE,
             TASK_STATE.FAILED => ACTION_STATE.FAILED,
+            TASK_STATE.CANCELLED => ACTION_STATE.CANCELLED,
             _ => ACTION_STATE.CANCELLED
         }, state.Progress ?? 0, state.Text);
 
@@ -99,6 +110,8 @@ public class ServersActionQueueRenderer(string ServerName, IDaemonService Daemon
             getTcs()?.SetResult();
         } else if (state.State == TASK_STATE.FAILED) {
             getTcs()?.SetException(new Exception(state.Text));
+        } else if (state.State == TASK_STATE.CANCELLED) {
+            getTcs()?.SetCanceled();
         }
     }
 
