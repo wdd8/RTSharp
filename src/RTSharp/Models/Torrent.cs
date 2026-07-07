@@ -467,7 +467,7 @@ namespace RTSharp.Models
             set {
                 if (_createdOnDate == value) return;
                 _createdOnDate = value;
-                CreatedOnDateDisplay = value == null ? "" : value.Value.ToString();
+                CreatedOnDateDisplay = value == null ? "" : value.Value.ToLocalTime().ToString();
             }
         }
 
@@ -511,7 +511,7 @@ namespace RTSharp.Models
             set {
                 if (_finishedOnDate == value) return;
                 _finishedOnDate = value;
-                FinishedOnDateDisplay = value == null ? "" : value.Value.ToString();
+                FinishedOnDateDisplay = value == null ? "" : value.Value.ToLocalTime().ToString();
             }
         }
 
@@ -543,7 +543,7 @@ namespace RTSharp.Models
             set {
                 if (_addedOnDate == value) return;
                 _addedOnDate = value;
-                AddedOnDateDisplay = value.ToString();
+                AddedOnDateDisplay = value.ToLocalTime().ToString();
             }
         }
 

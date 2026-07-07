@@ -86,9 +86,9 @@ public class TorrentMapper
         if (External.Priority != null)
             Stored.Priority = MapFromExternalPriority(External.Priority.Value);
         if (External.CompletionOn != null)
-            Stored.FinishedOn = Timestamp.FromDateTime(External.CompletionOn.Value.ToUniversalTime());
+            Stored.FinishedOn = Timestamp.FromDateTime(DateTime.SpecifyKind(External.CompletionOn.Value, DateTimeKind.Utc));
         if (External.AddedOn != null)
-            Stored.AddedOn = Timestamp.FromDateTime(External.AddedOn.Value.ToUniversalTime());
+            Stored.AddedOn = Timestamp.FromDateTime(DateTime.SpecifyKind(External.AddedOn.Value, DateTimeKind.Utc));
         if (!String.IsNullOrEmpty(External.CurrentTracker)) {
             Stored.PrimaryTracker = new Protocols.DataProvider.TorrentTracker
             {
@@ -150,9 +150,9 @@ public class TorrentMapper
         Stored.SeedersTotal = (uint)External.TotalSeeds;
         Stored.Priority = MapFromExternalPriority(External.Priority);
         if (External.CompletionOn != null)
-            Stored.FinishedOn = Timestamp.FromDateTime(External.CompletionOn.Value.ToUniversalTime());
+            Stored.FinishedOn = Timestamp.FromDateTime(DateTime.SpecifyKind(External.CompletionOn.Value, DateTimeKind.Utc));
         if (External.AddedOn != null)
-            Stored.AddedOn = Timestamp.FromDateTime(External.AddedOn.Value.ToUniversalTime());
+            Stored.AddedOn = Timestamp.FromDateTime(DateTime.SpecifyKind(External.AddedOn.Value, DateTimeKind.Utc));
         if (!String.IsNullOrEmpty(External.CurrentTracker)) {
             Stored.PrimaryTracker = new Protocols.DataProvider.TorrentTracker {
                 ID = External.CurrentTracker,
