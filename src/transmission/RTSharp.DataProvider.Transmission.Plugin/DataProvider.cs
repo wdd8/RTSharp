@@ -90,7 +90,7 @@ public class DataProvider : IDataProvider
         return await client.GetDotTorrents(In);
     }
 
-    public async Task<InfoHashDictionary<(bool MultiFile, IList<Shared.Abstractions.File> Files)>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken = default)
+    public async Task<InfoHashDictionary<TorrentFiles>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken = default)
     {
         var client = Host.AttachedDaemonService.GetTorrentsService(this);
 

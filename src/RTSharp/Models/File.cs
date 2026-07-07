@@ -160,8 +160,10 @@ namespace RTSharp.Models
             return ret;
         }
 
-        public static File FromPluginModel(string TorrentName, bool MultiFile, IList<Shared.Abstractions.File> In)
+        public static File FromPluginModel(string TorrentName, Shared.Abstractions.TorrentFiles TorrentFiles)
         {
+            var (MultiFile, In) = TorrentFiles;
+
             File map(Shared.Abstractions.File In)
             {
                 var ret = new File {

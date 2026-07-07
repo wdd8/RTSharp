@@ -119,7 +119,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             return;
                         }
                     }
-                    (bool MultiFile, IList<File> Files) files;
+                    TorrentFiles files;
                     try {
                         files = (await current!.DataOwner.Instance.GetFiles(new List<Torrent> { current.ToPluginModel() }, selectionChange)).FirstOrDefault().Value;
 
@@ -128,7 +128,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                         if (files.Files.Any()) {
                             FilesViewModel.MultiFile = files.MultiFile;
-                            FilesChanges.Writer.TryWrite((current, Models.File.FromPluginModel(current.Name, files.MultiFile, files.Files)));
+                            FilesChanges.Writer.TryWrite((current, Models.File.FromPluginModel(current.Name, files)));
                         }
                     } catch {
                         return;

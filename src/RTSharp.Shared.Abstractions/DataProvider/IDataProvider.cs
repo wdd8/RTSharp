@@ -22,7 +22,7 @@ public interface IDataProvider : IDataProviderBase<DataProviderCapabilities>
 
     public Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken = default);
 
-    public Task<InfoHashDictionary<(bool MultiFile, IList<File> Files)>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken = default);
+    public Task<InfoHashDictionary<TorrentFiles>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken = default);
 
     public Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default);
 

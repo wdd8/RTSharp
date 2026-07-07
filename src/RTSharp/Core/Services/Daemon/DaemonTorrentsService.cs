@@ -227,13 +227,13 @@ namespace RTSharp.Core.Services.Daemon
             }).ToList());
         }
         
-        public async Task<InfoHashDictionary<(bool MultiFile, IList<File> Files)>> GetTorrentsFiles(IList<Shared.Abstractions.Torrent> In, CancellationToken cancellationToken)
+        public async Task<InfoHashDictionary<TorrentFiles>> GetTorrentsFiles(IList<Shared.Abstractions.Torrent> In, CancellationToken cancellationToken)
         {
             var resp = await TorrentClient.GetTorrentsFilesAsync(new Torrents {
                 Hashes = { In.Select(x => x.Hash.ToByteString()) }
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders(), cancellationToken: cancellationToken);
 
-            var ret = new InfoHashDictionary<(bool MultiFile, IList<File> Files)>();
+            var ret = new InfoHashDictionary<TorrentFiles>();
             
             foreach (var torrent in resp.Reply) {
                 var files = new List<File>(torrent.Files.Count);
@@ -257,7 +257,7 @@ namespace RTSharp.Core.Services.Daemon
                     }
                 }));
 
-                ret[torrent.InfoHash.ToByteArray()] = (torrent.MultiFile, files);
+                ret[torrent.InfoHash.ToByteArray()] = new TorrentFiles(torrent.MultiFile, files);
             }
 
             return ret;
