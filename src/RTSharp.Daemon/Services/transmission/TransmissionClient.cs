@@ -18,7 +18,7 @@ public class TransmissionClient
         Config = Opts.Create(InstanceKey);
     }
 
-    private Transmission.Net.TransmissionClient? Client;
+    private volatile Transmission.Net.TransmissionClient? Client;
 
     public async ValueTask<ITransmissionClient> Init()
     {

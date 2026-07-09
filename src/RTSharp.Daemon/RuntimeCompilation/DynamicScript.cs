@@ -31,7 +31,7 @@ namespace RTSharp.Daemon.RuntimeCompilation
 		private bool IsDisposed { get; set; }
 
 		private int RefCount;
-		private bool Cached = true;
+		private volatile bool Cached = true;
 		private readonly Lock DisposeLock = new();
 
 		public DynamicScript(MemoryStream Assembly, string[] Tags)

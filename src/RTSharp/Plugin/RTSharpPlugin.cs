@@ -153,7 +153,7 @@ public class RTSharpPlugin : IPluginHost
     }
 
     public IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx) => Plugin.Plugins.Hook(Plugin.Plugins.HookType.TorrentListing_EvLoadingRow, fx);
-    public IDisposable HookTorrentListingEvLoadingCell(Action<object, string, DataGridCell> fx) => Plugin.Plugins.Hook(Plugin.Plugins.HookType.TorrentListing_EvLoadingCell, fx);
+    public IDisposable HookTorrentListingEvLoadingCell(string ColumnKey, Action<object, DataGridCell> fx) => Plugin.Plugins.HookLoadingCell(ColumnKey, fx);
 
     /// <summary>
     /// ViewModels.AddTorrentViewModel

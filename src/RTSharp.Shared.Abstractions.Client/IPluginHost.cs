@@ -99,11 +99,13 @@ public interface IPluginHost
     IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx);
 
     /// <summary>
-    /// Hooks TorrentListing EvLoadingCell event, which then allows to modify appearance or behavior of a cell. First argument is <c>RTSharp.Models.Torrent</c>, second is <c>ColumnKey</c>.
+    /// Hooks TorrentListing EvLoadingCell event for a single column, which then allows to modify appearance or
+    /// behavior of a cell. First argument is <c>RTSharp.Models.Torrent</c>.
     /// </summary>
+    /// <param name="ColumnKey">Column to hook</param>
     /// <param name="fx">Hook function</param>
     /// <returns>Unhook</returns>
-    IDisposable HookTorrentListingEvLoadingCell(Action<object, string, DataGridCell> fx);
+    IDisposable HookTorrentListingEvLoadingCell(string ColumnKey, Action<object, DataGridCell> fx);
 
     /// <summary>
     /// Hooks AddTorrent EvDragDrop event, which allows to modify AddTorrent window ViewModel

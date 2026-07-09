@@ -248,16 +248,13 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             }
         }
 
-        var loadingCellHooks = Plugin.Plugins.GetHook<object, string, DataGridCell>(Plugin.Plugins.HookType.TorrentListing_EvLoadingCell);
+        for (var x = 0;x < e.Row.Cells.Count;x++) {
+            var cell = e.Row.Cells[x];
+            var columnKey = (string)cell.OwningColumn.ColumnKey;
 
-        if (loadingCellHooks.Length > 0) {
-            for (var x = 0;x < e.Row.Cells.Count;x++) {
-                var cell = e.Row.Cells[x];
-                var columnKey = (string)cell.OwningColumn.ColumnKey;
-
-                foreach (var hook in loadingCellHooks) {
-                    hook(torrent, columnKey, cell);
-                }
+            var loadingCellHooks = Plugin.Plugins.GetLoadingCellHooks(columnKey);
+            foreach (var hook in loadingCellHooks) {
+                hook(torrent, cell);
             }
         }
 

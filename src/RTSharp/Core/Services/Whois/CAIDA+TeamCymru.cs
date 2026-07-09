@@ -34,8 +34,8 @@ public sealed partial class CaidaTeamCymruWhoisProvider(DomainParser DomainParse
     private static readonly TeamCymruConnection CymruConnection = new();
 
     private static MemoryMappedFile? CaidaMmap;
-    private static MemoryMappedViewAccessor? CaidaMmapView;
-    private static int CaidaCount;
+    private static volatile MemoryMappedViewAccessor? CaidaMmapView;
+    private static volatile int CaidaCount;
     private static DateTime CaidaLoadedAt = DateTime.MinValue;
 
     private static readonly TimeSpan CAIDA_REFRESH_INTERVAL = TimeSpan.FromDays(7);

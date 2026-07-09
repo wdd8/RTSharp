@@ -111,7 +111,7 @@ public abstract class RTSharpDataProvider : IDataProviderHost
     public IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In) => Host.RegisterTorrentContextMenuItem(In);
     public IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove) => Host.RegisterTorrentContextMenuItem(Add, Remove);
     public IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx) => Host.HookTorrentListingEvLoadingRow(fx);
-    public IDisposable HookTorrentListingEvLoadingCell(Action<object, string, DataGridCell> fx) => Host.HookTorrentListingEvLoadingCell(fx);
+    public IDisposable HookTorrentListingEvLoadingCell(string ColumnKey, Action<object, DataGridCell> fx) => Host.HookTorrentListingEvLoadingCell(ColumnKey, fx);
     public IDisposable HookAddTorrentEvDragDrop(Func<object, ValueTask> fx) => Host.HookAddTorrentEvDragDrop(fx);
     public IReadOnlyCollection<Torrent> Torrents => Host.Torrents;
     public IReadOnlyCollection<IPluginHost> Plugins => Host.Plugins;

@@ -13,7 +13,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         public List<HistoryEntry> History { get; } = new();
         public Lock HistoryLock = new();
         
-        internal static HistoryEntry LatestHistory;
+        internal static volatile HistoryEntry? LatestHistory;
 
         private TorrentPolling Instance;
         private ILogger<PollingSubscription> Logger;
@@ -45,10 +45,10 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 currentTrackers = last.Trackers;
 
                 if (!AlwaysFullUpdate) {
-                    var previousEntry = History.Count >= 2 ? History[^2] : default;
+                    HistoryEntry? previousEntry = History.Count >= 2 ? History[^2] : null;
 
                     if (Logger.IsEnabled(LogLevel.Debug)) {
-                        var idx = History.IndexOf(previousEntry);
+                        var idx = previousEntry != null ? History.IndexOf(previousEntry) : -1;
                         var str = new StringBuilder();
                         for (var x = 0;x < History.Count;x++) {
                             str.AppendLine($"History {x + 1}: {History[x].Date.ToString("O")}{(x == idx ? " <<< previous" : "")}");
@@ -57,8 +57,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                         Logger.LogDebug(str.ToString());
                     }
 
-                    previousList = previousEntry.List;
-                    previousTrackers = previousEntry.Trackers;
+                    previousList = previousEntry?.List;
+                    previousTrackers = previousEntry?.Trackers;
                 }
             }
 
@@ -217,7 +217,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
         public static (Torrent Torrent, TorrentsTrackersReply.Types.TorrentsTrackers Trackers)? GetLatestHistoryEntry(byte[] Hash)
         {
-            if (LatestHistory.List.TryGetValue(Hash, out var torrent) && LatestHistory.Trackers.TryGetValue(Hash, out var trackers))
+            var latest = LatestHistory;
+            if (latest != null && latest.List.TryGetValue(Hash, out var torrent) && latest.Trackers.TryGetValue(Hash, out var trackers))
                 return (torrent, trackers);
 
             return null;

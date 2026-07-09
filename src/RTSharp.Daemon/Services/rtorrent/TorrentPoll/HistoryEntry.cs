@@ -3,7 +3,7 @@ using RTSharp.Shared.Utils;
 
 namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 {
-    public readonly struct HistoryEntry
+    public sealed class HistoryEntry
     {
         public DateTime Date { get; }
         public InfoHashDictionary<Torrent> List { get; }

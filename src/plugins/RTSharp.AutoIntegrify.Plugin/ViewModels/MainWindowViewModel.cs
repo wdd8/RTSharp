@@ -96,7 +96,7 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
     [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
     public bool canExecuteCancel = true;
 
-    private CancellationTokenSource Cancellation = new();
+    private volatile CancellationTokenSource Cancellation = new();
 
     private bool IsMultiFile;
 

@@ -44,22 +44,55 @@ public static class Plugins
     public enum HookType
     {
         TorrentListing_EvLoadingRow,
-        TorrentListing_EvLoadingCell,
         AddTorrent_EvDragDrop,
     }
 
-    private static object[][] Hooks = Array.Empty<object[]>();
-    private static FrozenDictionary<HookType, Lock> HookLocks;
+    private static readonly object[][] Hooks;
+    private static readonly FrozenDictionary<HookType, Lock> HookLocks;
+
+    private static FrozenDictionary<string, Action<object, DataGridCell>[]> CellHooksByColumn = new Dictionary<string, Action<object, DataGridCell>[]>().ToFrozenDictionary();
+    private static readonly Lock CellHooksByColumnLock = new();
 
     static Plugins()
     {
         Hooks = new object[Enum.GetValues<HookType>().Length][];
 
         Hooks[(int)HookType.TorrentListing_EvLoadingRow] = Array.Empty<Action<object, DataGridRowEventArgs>>();
-        Hooks[(int)HookType.TorrentListing_EvLoadingCell] = Array.Empty<Action<object, string, DataGridCell>>();
         Hooks[(int)HookType.AddTorrent_EvDragDrop] = Array.Empty<Func<object, ValueTask>>();
 
         HookLocks = Enum.GetValues<HookType>().ToDictionary(x => x, _ => new Lock()).ToFrozenDictionary();
+    }
+
+    public static IDisposable HookLoadingCell(string ColumnKey, Action<object, DataGridCell> fx)
+    {
+        lock (CellHooksByColumnLock) {
+            var current = Volatile.Read(ref CellHooksByColumn);
+            var newDict = new Dictionary<string, Action<object, DataGridCell>[]>(current);
+            newDict[ColumnKey] = newDict.TryGetValue(ColumnKey, out var existing) ? [ ..existing, fx ] : [ fx ];
+            Volatile.Write(ref CellHooksByColumn, newDict.ToFrozenDictionary());
+        }
+
+        return Disposable.Create(() => {
+            lock (CellHooksByColumnLock) {
+                var current = Volatile.Read(ref CellHooksByColumn);
+                if (!current.TryGetValue(ColumnKey, out var existing))
+                    return;
+
+                var newDict = new Dictionary<string, Action<object, DataGridCell>[]>(current);
+                var newArr = existing.Where(x => x != fx).ToArray();
+                if (newArr.Length == 0)
+                    newDict.Remove(ColumnKey);
+                else
+                    newDict[ColumnKey] = newArr;
+                Volatile.Write(ref CellHooksByColumn, newDict.ToFrozenDictionary());
+            }
+        });
+    }
+
+    internal static Action<object, DataGridCell>[] GetLoadingCellHooks(string ColumnKey)
+    {
+        var dict = Volatile.Read(ref CellHooksByColumn);
+        return dict.TryGetValue(ColumnKey, out var hooks) ? hooks : Array.Empty<Action<object, DataGridCell>>();
     }
 
     public static IDisposable Hook<T>(HookType type, Func<T, ValueTask> fx)
@@ -100,25 +133,6 @@ public static class Plugins
         });
     }
 
-    public static IDisposable Hook<T, T2, T3>(HookType type, Action<T, T2, T3> fx)
-    {
-        lock (HookLocks[type]) {
-            var list = (Action<T, T2, T3>[])Hooks[(int)type];
-            var newList = list.ToList();
-            newList.Add(fx);
-            Hooks[(int)type] = newList.ToArray();
-        }
-
-        return Disposable.Create(() => {
-            lock (HookLocks[type]) {
-                var list = (Action<T, T2, T3>[])Hooks[(int)type];
-                var newList = list.ToList();
-                newList.Remove(fx);
-                Hooks[(int)type] = newList.ToArray();
-            }
-        });
-    }
-
     public static IDisposable Hook<T>(HookType type, Action<T> fx)
     {
         lock (HookLocks[type]) {
@@ -139,16 +153,13 @@ public static class Plugins
     }
 
     internal static Action<T>[] GetHook<T>(HookType type) =>
-        (Action<T>[])Hooks[(int)type];
+        (Action<T>[])Volatile.Read(ref Hooks[(int)type]);
 
     internal static Action<T, T2>[] GetHook<T, T2>(HookType type) =>
-        (Action<T, T2>[])Hooks[(int)type];
-
-    internal static Action<T, T2, T3>[] GetHook<T, T2, T3>(HookType type) =>
-        (Action<T, T2, T3>[])Hooks[(int)type];
+        (Action<T, T2>[])Volatile.Read(ref Hooks[(int)type]);
 
     internal static Func<T, ValueTask>[] GetHookAsync<T>(HookType type) =>
-        (Func<T, ValueTask>[])Hooks[(int)type];
+        (Func<T, ValueTask>[])Volatile.Read(ref Hooks[(int)type]);
 
     [RequiresUnreferencedCode("Plugins")]
     private static PluginManifest? GetManifest(string ModuleDir)

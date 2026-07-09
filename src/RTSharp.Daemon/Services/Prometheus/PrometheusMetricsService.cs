@@ -20,7 +20,7 @@ public class PrometheusMetricsService(
     IOptionsMonitor<PrometheusOptions> Options,
     ILogger<PrometheusMetricsService> Logger) : BackgroundService
 {
-    private string MetricsText = Render(Array.Empty<DataProviderMetrics>(), DateTimeOffset.UnixEpoch);
+    private volatile string MetricsText = Render(Array.Empty<DataProviderMetrics>(), DateTimeOffset.UnixEpoch);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

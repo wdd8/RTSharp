@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 public static class Program
 {
-    public static ReloadableServerCertificate ServerCertificate = null!; // set later
+    public static volatile ReloadableServerCertificate ServerCertificate = null!; // set later
 
     private static string ResolveDaemonConfigPath()
     {

@@ -35,7 +35,7 @@ internal sealed class PluginHostProxy<TConfig>(IPluginHost Inner) : IPluginHost<
     public IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove) => Inner.RegisterTorrentContextMenuItem(Add, Remove);
 
     public IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx) => Inner.HookTorrentListingEvLoadingRow(fx);
-    public IDisposable HookTorrentListingEvLoadingCell(Action<object, string, DataGridCell> fx) => Inner.HookTorrentListingEvLoadingCell(fx);
+    public IDisposable HookTorrentListingEvLoadingCell(string ColumnKey, Action<object, DataGridCell> fx) => Inner.HookTorrentListingEvLoadingCell(ColumnKey, fx);
     public IDisposable HookAddTorrentEvDragDrop(Func<object, ValueTask> fx) => Inner.HookAddTorrentEvDragDrop(fx);
 
     public IReadOnlyCollection<Torrent> Torrents => Inner.Torrents;

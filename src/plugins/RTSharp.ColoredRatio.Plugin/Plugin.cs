@@ -4,6 +4,7 @@ using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Torrent = RTSharp.Models.Torrent;
@@ -30,36 +31,47 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 
     IDisposable Hook;
 
+    static readonly Dictionary<int, SolidColorBrush> BrushCache = [];
+
+    static SolidColorBrush GetBrush(double ratio)
+    {
+        var clamped = (int)Math.Round(ratio * 100);
+        if (BrushCache.TryGetValue(clamped, out var cached))
+            return cached;
+
+        Color color;
+        if (ratio < 1)
+            color = Color.FromRgb((byte)(255 - (int)(ratio / 1 * 100)), 0, 0);
+        else if (ratio >= 1 && ratio <= 5)
+            color = Color.FromRgb(0, (byte)(100 + (int)((ratio - 1) / 4 * 155)), 0);
+        else if (ratio > 5 && ratio <= 25)
+            color = Color.FromRgb((byte)(255 - (int)((ratio - 5) / 20 * 245)), 0, (byte)(255 - (int)((ratio - 5) / 25 * 245)));
+        else if (ratio == Double.MaxValue)
+            color = Color.FromRgb(0, 0, 0);
+        else
+            color = Color.FromRgb(255, 255, 255);
+
+        var brush = new SolidColorBrush(color);
+        BrushCache[clamped] = brush;
+        return brush;
+    }
+
     public override Task<IPlugin> Init(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
         Progress(("Initializing...", 0f));
 
-        Hook = this.Host.HookTorrentListingEvLoadingCell((dataContext, columnKey, cell) => {
-            if (columnKey != nameof(Torrent.Ratio)) {
-                return;
-            }
-            
+        Hook = this.Host.HookTorrentListingEvLoadingCell(nameof(Torrent.Ratio), (dataContext, cell) => {
             var torrent = (Torrent)dataContext!;
             var ratio = torrent.Ratio;
 
-            Color color;
-            if (ratio < 1)
-                color = Color.FromRgb((byte)(255 - (int)(ratio / 1 * 100)), 0, 0);
-            else if (ratio >= 1 && ratio <= 5)
-                color = Color.FromRgb(0, (byte)(100 + (int)((ratio - 1) / 4 * 155)), 0);
-            else if (ratio > 5 && ratio <= 25)
-                color = Color.FromRgb((byte)(255 - (int)((ratio - 5) / 20 * 245)), 0, (byte)(255 - (int)((ratio - 5) / 25 * 245)));
-            else if (ratio == Double.MaxValue)
-                color = Color.FromRgb(0, 0, 0);
-            else
-                color = Color.FromRgb(255, 255, 255);
+            var brush = GetBrush(ratio);
+            if (cell.Foreground != brush)
+                cell.Foreground = brush;
 
-            cell.Foreground = new SolidColorBrush(color);
-            if (ratio > 5)
-                cell.Background = Brushes.Black;
-            else
-                cell.Background = null;
+            var background = ratio > 5 ? Brushes.Black : null;
+            if (cell.Background != background)
+                cell.Background = background;
         });
 
         Progress(("Done", 100f));
