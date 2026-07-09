@@ -29,7 +29,7 @@ public class TorrentAdd
         IEnumerable<TorrentDuplication.DuplicationTarget> DuplicationTargets,
         START_MODE StartMode);
 
-    public static async Task AddTorrents(IDataProvider Primary, TorrentAddInput Input)
+    public static async Task<IList<Torrent>> AddTorrents(IDataProvider Primary, TorrentAddInput Input)
     {
         var plugin = Plugins.GetPluginOrDefault(Primary) ?? throw new NullReferenceException("No plugin corresponding to data provider found");
 
@@ -92,8 +92,13 @@ public class TorrentAdd
             }
         }
 
+        var getAddedTorrents = action.CreateChild<IList<Torrent>>("Get added torrents", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
+            var addedHashes = parent.GetResult()!.Where(x => x.Exceptions.All(e => e == null)).Select(x => x.Hash);
+            return await Task.WhenAll(addedHashes.Select(Primary.GetTorrent));
+        });
+
         if (Input.DuplicationTargets.Any()) {
-            action.CreateChild("Duplicate", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
+            getAddedTorrents.CreateChild("Duplicate", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
                 var parser = new BencodeNET.Torrents.TorrentParser();
                 var filesByHash = new InfoHashDictionary<(byte[] Content, string Name)>();
 
@@ -108,18 +113,22 @@ public class TorrentAdd
                 }
 
                 var successfulAdds = parent.GetResult()!
-                    .Where(x => x.Exceptions.All(e => e == null) && filesByHash.ContainsKey(x.Hash))
-                    .Select(x => (x.Hash, filesByHash[x.Hash].Content, filesByHash[x.Hash].Name))
+                    .Where(x => filesByHash.ContainsKey(x.Hash))
+                    .Select(x => (x, filesByHash[x.Hash].Content))
                     .ToList();
 
                 if (successfulAdds.Count > 0)
-                    _ = TorrentDuplication.AddAndQueue(Primary, successfulAdds, Input.DuplicationTargets);
+                    _ = TorrentDuplication.AddAndQueue(successfulAdds, Input.DuplicationTargets);
             });
         }
 
         var queue = ActionQueue.GetActionQueueEntry(Plugins.GetPluginOrDefault(Primary));
-        if (queue != null) {
-            await queue.Queue.RunAction(parentAction);
-        }
+        if (queue == null)
+            return [];
+
+        await queue.Queue.RunAction(parentAction);
+        await parentAction.WaitForCompletion();
+
+        return getAddedTorrents.GetResult()!;
     }
 }

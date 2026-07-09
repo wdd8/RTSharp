@@ -15,7 +15,9 @@ using RTSharp.Shared.Utils;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Channels;
 
 using Transmission.Net.Api;
 using Transmission.Net.Api.Entity;

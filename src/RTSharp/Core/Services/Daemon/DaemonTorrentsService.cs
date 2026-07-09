@@ -322,7 +322,7 @@ namespace RTSharp.Core.Services.Daemon
                 });
             }
             for (var x = 0;x < In.Count;x++) {
-                foreach (var chunk in In[x].Data.Chunk(4096)) {
+                foreach (var chunk in In[x].Data.Chunk(65535)) {
                     await call.RequestStream.WriteAsync(new NewTorrentsData {
                         TData = new NewTorrentsData.Types.TorrentData {
                             Id = x.ToString(),

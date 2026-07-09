@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
@@ -14,7 +8,6 @@ using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Utils;
-using File = RTSharp.Shared.Abstractions.File;
 using System.Threading.Channels;
 using RTSharp.Shared.Abstractions.Client;
 

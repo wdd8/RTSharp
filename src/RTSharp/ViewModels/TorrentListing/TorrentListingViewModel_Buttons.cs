@@ -471,7 +471,7 @@ public partial class TorrentListingViewModel
 
                     var sourceTorrent = In.First(x => x.Hash.SequenceEqual(hash));
 
-                    Core.TorrentDuplication.QueueSingle(sourceTorrent.DataOwner.Instance, hash, sourceTorrent.Name, targetDataProvider, dests[hash].Directory);
+                    Core.TorrentDuplication.QueueSingle(sourceTorrent.ToPluginModel(), targetDataProvider, dests[hash].Directory);
                 }
 
                 return default;

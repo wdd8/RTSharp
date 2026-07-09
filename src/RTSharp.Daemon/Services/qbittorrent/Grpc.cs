@@ -64,6 +64,10 @@ namespace RTSharp.Daemon.Services.qbittorrent
             var ret = new TorrentsReply();
             var hashes = new HashSet<string>();
 
+            var rid = 0;
+            var changes = await client.GetPartialDataAsync(rid, default);
+            rid = changes.ResponseId;
+
             foreach (var (id, torrent) in torrents) {
                 torrent.Data.Position = 0;
 
@@ -116,6 +120,28 @@ namespace RTSharp.Daemon.Services.qbittorrent
                         }
                     }
                 });
+            }
+
+            // I think it's actually fine, but let's check for its existence anyway
+            var unaccounted = ret.Torrents.Select(x => Convert.ToHexStringLower(x.InfoHash.Span)).ToHashSet();
+
+            if (unaccounted.Count > 0) {
+                var sw = Stopwatch.StartNew();
+                while (sw.Elapsed.TotalSeconds < 30) {
+                    changes = await client.GetPartialDataAsync(rid, default);
+                    rid = changes.ResponseId;
+
+                    if (changes.TorrentsChanged?.Count > 0) {
+                        foreach (var torrent in changes.TorrentsChanged) {
+                            unaccounted.Remove(torrent.Key);
+                        }
+                    }
+
+                    if (unaccounted.Count == 0)
+                        break;
+
+                    await Task.Delay(1000); // needs cancellation token
+                }
             }
 
             return ret;

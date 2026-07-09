@@ -14,7 +14,7 @@ public static class TorrentDuplication
 {
     public record DuplicationTarget(IDataProvider Provider, string RemoteTargetPath);
 
-    public static async Task AddAndQueue(IDataProvider Source, IReadOnlyList<(byte[] Hash, byte[] TorrentBytes, string Name)> Torrents, IEnumerable<DuplicationTarget> Targets)
+    public static async Task AddAndQueue(IReadOnlyList<(Torrent Torrent, byte[] TorrentBytes)> Torrents, IEnumerable<DuplicationTarget> Targets)
     {
         foreach (var target in Targets) {
             try {
@@ -24,8 +24,8 @@ public static class TorrentDuplication
                     Options: new AddTorrentsOptions(null, target.RemoteTargetPath)
                 ))]);
 
-                foreach (var (hash, _, name) in Torrents) {
-                    QueueSingle(Source, hash, name, target.Provider, target.RemoteTargetPath);
+                foreach (var (torrent, bytes) in Torrents) {
+                    QueueSingle(torrent, target.Provider, target.RemoteTargetPath);
                 }
             } catch (Exception ex) {
                 Log.Logger.Error(ex, $"Duplication: failed to queue duplication to {target.Provider.Host.Config.Plugin.Name}");
@@ -33,28 +33,30 @@ public static class TorrentDuplication
         }
     }
 
-    internal static void QueueSingle(IDataProvider Source, byte[] Hash, string Name, IDataProvider Target, string TargetPath)
+    internal static void QueueSingle(Torrent Torrent, IDataProvider Target, string TargetPath)
     {
         Uri? sourceUri = null, targetUri = null;
 
-        if (Source.Host.Config.Plugin.ServerId != Target.Host.Config.Plugin.ServerId) {
+        var source = Torrent.DataOwner;
+
+        if (source.Host.Config.Plugin.ServerId != Target.Host.Config.Plugin.ServerId) {
             targetUri = Target.Host.AttachedDaemonService.Uri;
-            sourceUri = Source.Host.AttachedDaemonService.Uri;
+            sourceUri = source.Host.AttachedDaemonService.Uri;
         }
 
         var variables = new Dictionary<string, string> {
-            ["Hash"] = Convert.ToHexString(Hash),
-            ["SourceProvider"] = Source.Host.Config.Plugin.ProviderName,
+            ["Hash"] = Convert.ToHexString(Torrent.Hash),
+            ["SourceProvider"] = source.Host.Config.Plugin.ProviderName,
             ["TargetProvider"] = Target.Host.Config.Plugin.ProviderName,
             ["TargetUri"] = targetUri?.AbsoluteUri ?? "",
             ["SourceUri"] = sourceUri?.AbsoluteUri ?? "",
             ["TargetPath"] = TargetPath
         };
 
-        _ = Source.Host.AttachedDaemonService.RunCustomScript(Script, $"Duplicate '{Name}'", variables)
+        _ = source.Host.AttachedDaemonService.RunCustomScript(Script, $"Duplicate '{Torrent.Name}'", variables)
             .ContinueWith(t => {
                 if (t.IsFaulted)
-                    Log.Logger.Error(t.Exception, $"Duplication: failed to queue script on {Source.Host.Config.Plugin.Name}");
+                    Log.Logger.Error(t.Exception, $"Duplication: failed to queue script on {source.Host.Config.Plugin.Name}");
             });
     }
 

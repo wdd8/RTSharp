@@ -89,6 +89,18 @@ namespace RTSharp.Shared.Abstractions
 
         public ConcurrentBag<ActionQueueAction> ChildActions { get; } = [];
 
+        private readonly TaskCompletionSource<object?> CompletionTcs = new();
+
+        public Task<object?> Completion => CompletionTcs.Task;
+
+        public async Task WaitForCompletion()
+        {
+            await Completion;
+
+            foreach (var childAction in ChildActions.Where(x => x.RunMode == RUN_MODE.DEPENDS_ON_PARENT))
+                await childAction.WaitForCompletion();
+        }
+
         private void AddChildAction(ActionQueueAction Child)
         {
             ChildActions.Add(Child);
@@ -186,7 +198,9 @@ namespace RTSharp.Shared.Abstractions
 
                 foreach (var fx in OnDoneFxs)
                     fx(task.Result, task);
-                
+
+                CompletionTcs.TrySetResult(task.Result);
+
                 foreach (var childAction in ChildActions.Where(x => x.RunMode == RUN_MODE.DEPENDS_ON_PARENT)) {
                     childAction.RunAction();
                 }
@@ -196,6 +210,8 @@ namespace RTSharp.Shared.Abstractions
 
                 foreach (var fx in OnFailFxs)
                     fx(task.Exception!, task);
+
+                CompletionTcs.TrySetException(task.Exception!);
 
                 foreach (var childAction in ChildActions.Where(x => x.RunMode == RUN_MODE.DEPENDS_ON_PARENT))
                     childAction.CancelAsUnreachable();
@@ -207,6 +223,8 @@ namespace RTSharp.Shared.Abstractions
 
                 foreach (var fx in OnFailFxs)
                     fx(task.Exception!, task);
+
+                CompletionTcs.TrySetCanceled();
 
                 foreach (var childAction in ChildActions.Where(x => x.RunMode == RUN_MODE.DEPENDS_ON_PARENT))
                     childAction.CancelAsUnreachable();
@@ -229,6 +247,8 @@ namespace RTSharp.Shared.Abstractions
 
             foreach (var fx in OnFailFxs)
                 fx(null, null);
+
+            CompletionTcs.TrySetCanceled();
 
             foreach (var childAction in ChildActions)
                 childAction.CancelAsUnreachable();
