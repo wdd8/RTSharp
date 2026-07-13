@@ -1,11 +1,11 @@
-using System.Collections;
+using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 
 namespace RTSharp.Shared.Utils
 {
-    public class ByteArrayComparer : IEqualityComparer<byte[]>, IAlternateEqualityComparer<ReadOnlySpan<byte>, byte[]>
+    public class HashBytesComparer : IEqualityComparer<byte[]>, IAlternateEqualityComparer<ReadOnlySpan<byte>, byte[]>
     {
-        public static ByteArrayComparer Default => field ??= new ByteArrayComparer();
+        public static HashBytesComparer Default => field ??= new HashBytesComparer();
 
         public byte[] Create(ReadOnlySpan<byte> alternate) => alternate.ToArray();
 
@@ -20,18 +20,22 @@ namespace RTSharp.Shared.Utils
 
         public bool Equals(ReadOnlySpan<byte> alternate, byte[] other) => alternate.SequenceEqual(other);
 
-        public int GetHashCode(byte[] obj)
-        {
-            var h = new HashCode();
-            h.AddBytes(obj);
-            return h.ToHashCode();
-        }
+        public int GetHashCode(byte[] obj) => GetHashCode(obj.AsSpan());
 
         public int GetHashCode(ReadOnlySpan<byte> alternate)
         {
-            var h = new HashCode();
-            h.AddBytes(alternate);
-            return h.ToHashCode();
+            if (alternate.Length >= sizeof(ulong)) {
+                var h = unchecked(
+                    BinaryPrimitives.ReadUInt64LittleEndian(alternate) *
+                    0x9E3779B97F4A7C15 +
+                    BinaryPrimitives.ReadUInt64LittleEndian(alternate[^sizeof(ulong)..])
+                ); // ???
+                return unchecked((int)(h ^ (h >> 32))); // mix
+            }
+
+            var hc = new HashCode();
+            hc.AddBytes(alternate);
+            return hc.ToHashCode();
         }
     }
 
@@ -50,9 +54,9 @@ namespace RTSharp.Shared.Utils
         }
     }
 
-    public class ByteArrayGuidComparer : IEqualityComparer<(byte[], Guid)>
+    public class HashBytesGuidComparer : IEqualityComparer<(byte[], Guid)>
     {
-        public static ByteArrayGuidComparer Default => field ??= new ByteArrayGuidComparer();
+        public static HashBytesGuidComparer Default => field ??= new HashBytesGuidComparer();
 
         public bool Equals((byte[], Guid) obj1, (byte[], Guid) obj2)
         {
@@ -61,7 +65,8 @@ namespace RTSharp.Shared.Utils
 
         public int GetHashCode((byte[], Guid) obj)
         {
-            return HashCode.Combine(obj.Item1, obj.Item2);
+            // Hash the array's contents (matching Equals), not its reference.
+            return HashCode.Combine(HashBytesComparer.Default.GetHashCode(obj.Item1), obj.Item2);
         }
     }
 }

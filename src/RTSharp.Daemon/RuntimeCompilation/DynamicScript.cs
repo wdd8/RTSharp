@@ -31,7 +31,7 @@ namespace RTSharp.Daemon.RuntimeCompilation
 		private bool IsDisposed { get; set; }
 
 		private int RefCount;
-		private volatile bool Cached = true;
+		private bool Cached = true;
 		private readonly Lock DisposeLock = new();
 
 		public DynamicScript(MemoryStream Assembly, string[] Tags)
@@ -55,23 +55,33 @@ namespace RTSharp.Daemon.RuntimeCompilation
 			}
 		}
 
-		public void AddRef()
+		public bool TryAddRef()
 		{
-			Interlocked.Increment(ref RefCount);
+			lock (DisposeLock) {
+				if (IsDisposed)
+					return false;
+
+				RefCount++;
+				return true;
+			}
 		}
 
 		public void RemoveRef()
 		{
-			if (Interlocked.Decrement(ref RefCount) <= 0 && !Cached) {
-				Dispose();
+			lock (DisposeLock) {
+				if (--RefCount <= 0 && !Cached) {
+					Dispose();
+				}
 			}
 		}
 
 		public void TryExpire()
 		{
-			Cached = false;
-			if (RefCount <= 0) {
-				Dispose();
+			lock (DisposeLock) {
+				Cached = false;
+				if (RefCount <= 0) {
+					Dispose();
+				}
 			}
 		}
 

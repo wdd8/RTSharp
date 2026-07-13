@@ -15,6 +15,8 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
         public DataProviderType Type { get; } = Type;
         
         public T Resolve<T>() where T : notnull => ServiceProvider.GetRequiredKeyedService<T>(InstanceKey);
+
+        public override string ToString() => $"{Type}:{InstanceKey}";
     }
 
     public class RegisteredDataProviders(IServiceProvider ServiceProvider, IConfiguration Configuration)

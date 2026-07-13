@@ -24,7 +24,7 @@ namespace RTSharp.Core.Services.Cache.Images
         public ImageCache(Config Config)
         {
             this.Config = Config;
-            Images ??= new(Config.Caching.Value.InMemoryImages, new ByteArrayComparer());
+            Images ??= new(Config.Caching.Value.InMemoryImages, new HashBytesComparer());
         }
 
         private static async Task<SqliteConnection> New()

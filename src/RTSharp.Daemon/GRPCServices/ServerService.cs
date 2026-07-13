@@ -16,7 +16,7 @@ namespace RTSharp.Daemon.GRPCServices
     {
         public override Task<Empty> Test(Empty request, ServerCallContext context) => Task.FromResult(new Empty());
 
-        public override Task<ScriptSessionReply> StartScript(StartScriptInput Req, ServerCallContext context)
+        public override async Task<ScriptSessionReply> StartScript(StartScriptInput Req, ServerCallContext context)
         {
             try {
                 Logger.LogDebug("Compiling script...");
@@ -25,9 +25,9 @@ namespace RTSharp.Daemon.GRPCServices
                 var script = Req.Script;
                 var hash = System.Security.Cryptography.SHA512.HashData(System.Text.Encoding.UTF8.GetBytes(script));
 
-                var compilation = DynamicCompilation.Compile<IScript>(
+                var compilation = await DynamicCompilation.Compile<IScript>(
                     hash,
-                    ref script,
+                    script,
                     Req.Name,
                     [ "RTSharp.Daemon", "RTSharp.Daemon.Protocols", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils", "System.Collections", "System.Linq", "System.Text.Json", "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging", "System.ComponentModel" ],
                     [ "System", "System.Threading.Tasks", "System.Threading", "System.Collections.Generic", "RTSharp.Daemon", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils" ]);
@@ -36,19 +36,19 @@ namespace RTSharp.Daemon.GRPCServices
 
                 Logger.LogInformation("Script ID {id} is running...", session.Id);
 
-                session.Execution!.ContinueWith(task => {
+                _ = session.Execution!.ContinueWith(task => {
                     Logger.LogInformation("Script ID {id} has finished", session.Id);
                 }, TaskContinuationOptions.OnlyOnRanToCompletion);
-                session.Execution!.ContinueWith(task => {
+                _ = session.Execution!.ContinueWith(task => {
                     Logger.LogInformation($"Script ID {{id}} has errored: {task.Exception}", session.Id);
                 }, TaskContinuationOptions.OnlyOnFaulted);
-                session.Execution!.ContinueWith(task => {
+                _ = session.Execution!.ContinueWith(task => {
                     Logger.LogInformation("Script ID {id} was cancelled", session.Id);
                 }, TaskContinuationOptions.OnlyOnCanceled);
 
-                return Task.FromResult(new ScriptSessionReply {
+                return new ScriptSessionReply {
                     Id = session.Id.ToByteString()
-                });
+                };
             } catch (CompilationFailureException ex) {
                 throw new RpcException(new Status(StatusCode.InvalidArgument, string.Join('\n', ex.Message.Split([ "\r\n", "\n" ], StringSplitOptions.None).Where(x => !x.StartsWith("warning")))));
             } catch (PragmaParsingException ex) {
@@ -59,6 +59,9 @@ namespace RTSharp.Daemon.GRPCServices
                 throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
             } catch (InterfaceNotFoundException ex) {
                 throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+            } catch (Exception ex) {
+                Logger.LogError(ex, "Failed to compile script");
+                throw;
             }
         }
 

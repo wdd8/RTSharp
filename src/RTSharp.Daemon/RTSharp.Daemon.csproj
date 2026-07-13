@@ -22,10 +22,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="BencodeNET" Version="5.0.0" />
     <PackageReference Include="CliWrap" Version="3.10.2" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.80.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.3.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.6.0" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
   </ItemGroup>
@@ -33,6 +34,7 @@
   <ItemGroup>
     <ProjectReference Include="..\RTSharp.Daemon.Protocols\RTSharp.Daemon.Protocols.csproj" />
     <ProjectReference Include="..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj" />
+    <ProjectReference Include="..\RTSharp.Shared.Utils\RTSharp.Shared.Utils.csproj" />
     <ProjectReference Include="Services\qbittorrent\qbittorrent-net-client\src\QBittorrent.Client\QBittorrent.Client.csproj" />
     <ProjectReference Include="Services\transmission\Transmission.Net\Transmission.Net\Transmission.Net.csproj" />
   </ItemGroup>

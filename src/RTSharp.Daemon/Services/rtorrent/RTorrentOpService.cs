@@ -1,7 +1,11 @@
-﻿using System.Text;
-using RTSharp.Shared.Utils;
+﻿using Grpc.Core;
+
 using RTSharp.Daemon.Protocols.DataProvider;
-using Grpc.Core;
+using RTSharp.Shared.Utils;
+
+using System.Text;
+
+using Transmission.Net.Arguments;
 
 namespace RTSharp.Daemon.Services.rtorrent
 {
@@ -9,11 +13,19 @@ namespace RTSharp.Daemon.Services.rtorrent
     {
         private SCGICommunication Scgi;
         private SettingsService Settings;
-    
+        private V1ToV2InfoHashCache Cache;
+
         public RTorrentOpService(IServiceProvider ServiceProvider, [ServiceKey] string InstanceKey)
         {
             this.Scgi = ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
             this.Settings = ServiceProvider.GetRequiredKeyedService<SettingsService>(InstanceKey);
+            this.Cache = ServiceProvider.GetRequiredService<V1ToV2InfoHashCache>();
+        }
+
+        private byte[] ToNative(byte[] RTSHash)
+        {
+            var v1 = Cache.ToV1(RTSHash) ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, $"Unknown v2 info hash {Convert.ToHexString(RTSHash)}"));
+            return v1;
         }
         
         public async Task<InfoHashDictionary<string>> GetDotTorrentFilePaths(IEnumerable<byte[]> Hashes)
@@ -23,13 +35,12 @@ namespace RTSharp.Daemon.Services.rtorrent
             if (String.IsNullOrEmpty(sessionSetting))
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.Internal, "Received empty session path"));
 
-            if (sessionSetting[^1] == '/')
-                sessionSetting = sessionSetting[..^1];
+            sessionSetting = Path.TrimEndingDirectorySeparator(sessionSetting);
 
             var ret = new InfoHashDictionary<string>();
 
             foreach (var hash in Hashes) {
-                ret[hash] = $"{sessionSetting}/{Convert.ToHexString(hash)}.torrent";
+                ret[hash] = Path.Combine(sessionSetting, $"{Convert.ToHexString(ToNative(hash))}.torrent");
             }
 
             return ret;
@@ -39,7 +50,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         {
             var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in Hashes) {
-                var sHash = Convert.ToHexString(hash);
+                var sHash = Convert.ToHexString(ToNative(hash));
 
                 xml.Append("<value><struct><member><name>methodName</name><value><string>f.multicall</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value><value><string></string></value><value><string>f.size_bytes=</string></value><value><string>f.priority=</string></value><value><string>f.path=</string></value><value><string>f.completed_chunks=</string></value><value><string>f.prioritize_first=</string></value><value><string>f.prioritize_last=</string></value></data></array></value></member></struct></value>");
             }
@@ -114,7 +125,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         {
             var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in Hashes) {
-                var hexStr = Convert.ToHexString(hash);
+                var hexStr = Convert.ToHexString(ToNative(hash));
                 xml.Append("<value><struct><member><name>methodName</name><value><string>d.directory</string></value></member><member><name>params</name><value><array><data><value><string>" + hexStr + "</string></value></data></array></value></member></struct></value>");
                 xml.Append("<value><struct><member><name>methodName</name><value><string>d.is_multi_file</string></value></member><member><name>params</name><value><array><data><value><string>" + hexStr + "</string></value></data></array></value></member></struct></value>");
             }

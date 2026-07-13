@@ -4,25 +4,25 @@ namespace RTSharp.Shared.Utils
 {
     public class InfoHashDictionary<T> : Dictionary<byte[], T>
     {
-        public InfoHashDictionary() : base(ByteArrayComparer.Default)
+        public InfoHashDictionary() : base(HashBytesComparer.Default)
         {
         }
 
-        public InfoHashDictionary(int capacity) : base(capacity, ByteArrayComparer.Default)
+        public InfoHashDictionary(int capacity) : base(capacity, HashBytesComparer.Default)
         {
         }
     }
 
     public class ConcurrentInfoHashDictionary<T> : ConcurrentDictionary<byte[], T>
     {
-        public ConcurrentInfoHashDictionary() : base(ByteArrayComparer.Default)
+        public ConcurrentInfoHashDictionary() : base(HashBytesComparer.Default)
         {
         }
     }
 
     public class ConcurrentInfoHashOwnerDictionary<T> : ConcurrentDictionary<(byte[], Guid), T>
     {
-        public ConcurrentInfoHashOwnerDictionary() : base(ByteArrayGuidComparer.Default)
+        public ConcurrentInfoHashOwnerDictionary() : base(HashBytesGuidComparer.Default)
         {
         }
     }

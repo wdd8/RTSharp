@@ -45,6 +45,7 @@ public class DataProvider : IDataProvider
         ReannounceToAllTrackers: true,
         GetDotTorrent: true,
         ForceStartTorrentOnAdd: null,
+        FastResumeOnAdd: true,
         MoveDownloadDirectory: true,
         RemoveTorrent: true,
         RemoveTorrentAndData: true,

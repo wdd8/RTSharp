@@ -17,6 +17,7 @@ using RTSharp.Daemon.Services.rtorrent.TorrentPoll;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
+using System.Buffers;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO.Pipelines;
@@ -38,7 +39,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             return new TorrentsReply {
                 Torrents = {
                     In.Select(x => new TorrentsReply.Types.TorrentReply {
-                        InfoHash = x.InfoHash.ToByteString(),
+                        InfoHash = ToRTSHash(x.InfoHash).ToByteString(),
                         Status = {
                             x.Status.Select(GrpcExtensions.ToStatus)
                         }
@@ -49,26 +50,29 @@ namespace RTSharp.Daemon.Services.rtorrent
     
         public async Task<TorrentsReply> StartTorrents(Torrents Req)
         {
-            var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
+            var hashes = Req.Hashes.Select(x => ToNative(x.Span)).ToArray();
             return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.open", "d.start"));
         }
 
         public async Task<TorrentsReply> PauseTorrents(Torrents Req)
         {
-            var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
+            var hashes = Req.Hashes.Select(x => ToNative(x.Span)).ToArray();
             return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.stop"));
         }
 
         public async Task<TorrentsReply> StopTorrents(Torrents Req)
         {
-            var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
+            var hashes = Req.Hashes.Select(x => ToNative(x.Span)).ToArray();
             return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.stop", "d.close"));
         }
 
         public async Task ForceRecheckTorrents(Torrents Req, ScriptProgressState Progress, CancellationToken CancellationToken)
         {
-            var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
+            var hashes = Req.Hashes.Select(x => ToNative(x.Span)).ToArray();
             var res = await Scgi.XmlActionTorrents(hashes, "d.check_hash");
+
+            foreach (var result in res)
+                result.InfoHash = ToRTSHash(result.InfoHash);
 
             await PollForceRecheck(res, Progress, CancellationToken);
         }
@@ -133,25 +137,92 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public async Task<TorrentsReply> ReannounceToAllTrackers(Torrents Req)
         {
-            var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
+            var hashes = Req.Hashes.Select(x => ToNative(x.Span)).ToArray();
             return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.tracker_announce"));
         }
 
-        record Torrent(string Path, string Filename, MemoryStream Data);
+        private async Task<byte[]?> TryBuildFastResume(BDictionary BTorrentDict, BencodeNET.Torrents.Torrent BTorrent, string BaseDirectory)
+        {
+            if (String.IsNullOrEmpty(BaseDirectory))
+                return null;
+
+            if (!await BencodeUtils.FastVerifyFilesOnDisk(BTorrent, BaseDirectory, Logger))
+                return null;
+
+            var pieceLength = BTorrent.PieceSize;
+            var totalChunks = BTorrent.Pieces.Length / 20;
+
+            var resumeFiles = new BList();
+            long offset = 0;
+
+            void addResumeFile(string DiskPath, long Size) {
+                long completedChunks;
+                if (Size == 0) {
+                    completedChunks = 0;
+                } else {
+                    var firstChunk = offset / pieceLength;
+                    var lastChunk = (offset + Size - 1) / pieceLength;
+                    completedChunks = lastChunk - firstChunk + 1;
+                }
+
+                var mtime = new DateTimeOffset(File.GetLastWriteTimeUtc(DiskPath)).ToUnixTimeSeconds();
+
+                resumeFiles.Add(new BDictionary {
+                    { "completed", new BNumber(completedChunks) },
+                    { "mtime", new BNumber(mtime) },
+                    { "priority", new BNumber(1) }
+                });
+
+                offset += Size;
+            }
+
+            if (BTorrent.Files is { Count: > 0 }) {
+                var contentDir = Path.Combine(BaseDirectory, BTorrent.DisplayName);
+                foreach (var file in BTorrent.Files)
+                    addResumeFile(Path.Combine([ contentDir, ..(file.Path ?? file.PathUtf8) ]), file.FileSize);
+            } else {
+                addResumeFile(Path.Combine(BaseDirectory, BTorrent.DisplayName), BTorrent.File.FileSize);
+            }
+
+            BTorrentDict["libtorrent_resume"] = new BDictionary {
+                { "bitfield", new BNumber(totalChunks) },
+                { "files", resumeFiles }
+            };
+
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            BTorrentDict["rtorrent"] = new BDictionary {
+                { "chunks_done", new BNumber(totalChunks) },
+                { "chunks_wanted", new BNumber(0) },
+                { "complete", new BNumber(1) },
+                { "hashing", new BNumber(0) },
+                { "directory", new BString(BaseDirectory) },
+                { "timestamp.finished", new BNumber(now) },
+                { "timestamp.started", new BNumber(now) }
+            };
+
+            return BTorrentDict.EncodeAsBytes();
+        }
+
+        record Torrent(string Path, string Filename, MemoryStream Data, bool FastResume = false);
 
         private async Task<TorrentsReply> AddTorrents(Dictionary<string, Torrent> Torrents)
         {
             var parser = new TorrentParser();
+            var bencodeParser = new BencodeParser();
             var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             var ret = new TorrentsReply();
             var hashes = new HashSet<string>();
+            var rtsHashes = new List<byte[]>();
 
             foreach (var (id, torrent) in Torrents) {
                 torrent.Data.Position = 0;
 
                 BencodeNET.Torrents.Torrent btorrent;
+                BDictionary bTorrentDict;
                 try {
                     btorrent = parser.Parse(torrent.Data);
+                    torrent.Data.Position = 0;
+                    bTorrentDict = bencodeParser.Parse<BDictionary>(torrent.Data);
                 } catch {
                     ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                         InfoHash = Array.Empty<byte>().ToByteString(),
@@ -166,10 +237,27 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                 hashes.Add(btorrent.OriginalInfoHash);
 
-                torrent.Data.Position = 0;
+                var (v1, v2) = BencodeUtils.GetInfoHashes(bTorrentDict);
+                if (v1 != null)
+                    Cache.Add(v1, v2);
+                var rtsHash = (v2 ?? v1)!;
+                rtsHashes.Add(rtsHash);
+
+                byte[] rawTorrent;
+
+                if (torrent.FastResume) {
+                    var fastResumeTorrent = await TryBuildFastResume(bTorrentDict, btorrent, torrent.Path);
+                    if (fastResumeTorrent != null)
+                        rawTorrent = fastResumeTorrent;
+                    else {
+                        Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", btorrent.OriginalInfoHash);
+                        rawTorrent = torrent.Data.ToArray();
+                    }
+                } else
+                    rawTorrent = torrent.Data.ToArray();
 
                 xml.Append("<value><struct><member><name>methodName</name><value><string>load.raw</string></value></member><member><name>params</name><value><array><data><value><string></string></value><value><base64>");
-                xml.Append(Convert.ToBase64String(torrent.Data.ToArray()));
+                xml.Append(Convert.ToBase64String(rawTorrent));
                 xml.Append("</base64></value>");
 
                 if (!String.IsNullOrEmpty(torrent.Filename))
@@ -180,13 +268,20 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                 if (!String.IsNullOrEmpty(btorrent.Comment))
                     xml.Append("<value><string>d.custom2.set=\"" + XMLUtils.Encode(btorrent.Comment) + "\"</string></value>");
+
+                if (torrent.FastResume) {
+                    // soos
+                    xml.Append("<value><string>d.hashing.set=1</string></value>");
+                    xml.Append("<value><string>view.filter_download=hashing</string></value>");
+                }
+
                 xml.Append("</data></array></value></member></struct></value>");
 
                 torrent.Data.Dispose();
 
                 // TODO: move after Scgi.Get
                 ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
-                    InfoHash = btorrent.OriginalInfoHashBytes.ToByteString(),
+                    InfoHash = rtsHash.ToByteString(),
                     Status = { GrpcExtensions.SuccessfulStatus("load_raw") }
                 });
             }
@@ -209,8 +304,8 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             var sw = Stopwatch.StartNew();
             var accountedFor = new InfoHashDictionary<bool>();
-            foreach (var hash in hashes) {
-                accountedFor[Convert.FromHexString(hash)] = false;
+            foreach (var hash in rtsHashes) {
+                accountedFor[hash] = false;
             }
 
             using (var sub = TorrentPolling.Subscribe(TimeSpan.FromSeconds(1))) {
@@ -238,19 +333,21 @@ namespace RTSharp.Daemon.Services.rtorrent
                     InfoHash = Array.Empty<byte>().ToByteString(),
                     Status = { GrpcExtensions.ToStatus(XMLUtils.GetFaultStruct(ref result, "load_raw")) }
                 });
+                Logger.LogInformation($"Added {ret.Torrents.Count} torrents (2)");
                 return ret;
             } else {
+                Logger.LogInformation($"Added {ret.Torrents.Count} torrents");
                 return ret;
             }
         }
 
-        public async Task<TorrentsReply> AddTorrents(IAsyncStreamReader<NewTorrentsData> Req)
+        public async Task<TorrentsReply> AddTorrents(IAsyncEnumerable<NewTorrentsData> Req)
         {
             var torrents = new Dictionary<string, Torrent>();
-            await foreach (var chunk in Req.ReadAllAsync()) {
+            await foreach (var chunk in Req) {
                 switch (chunk.DataCase) {
                     case NewTorrentsData.DataOneofCase.TMetadata:
-                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream());
+                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume);
                         break;
                     case NewTorrentsData.DataOneofCase.TData:
                         torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.ToByteArray());
@@ -285,7 +382,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public async Task<TorrentsReply> RemoveTorrents(Torrents Req)
         {
-            var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
+            var hashes = Req.Hashes.Select(x => ToNative(x.Span)).ToArray();
             return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.erase"));
         }
 
@@ -334,7 +431,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             var xml = new StringBuilder();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in Req.Hashes) {
-                var sHash = Convert.ToHexString(hash.Span);
+                var sHash = Convert.ToHexString(ToNative(hash.Span));
 
                 foreach (var action in actions) {
                     xml.Append("<value><struct><member><name>methodName</name><value><string>" + action + "</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value></data></array></value></member></struct></value>");
@@ -452,7 +549,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                         basePath
                     };
                     foreach (var file in btorrent.Files) {
-                        var components = file.PathUtf8 ?? file.Path;
+                        var components = file.Path ?? file.PathUtf8;
 
                         if (components == null) {
                             torrentReply.Status.Add(new Protocols.DataProvider.Status() {
@@ -463,11 +560,11 @@ namespace RTSharp.Daemon.Services.rtorrent
                             continue;
                         }
 
-                        var folder = string.Join('/', components.Take(components.Count - 1));
-                        if (!String.IsNullOrEmpty(folder))
-                            folders.Add(basePath + "/" + folder);
+                        var folder = components.Take(components.Count - 1);
+                        if (folder.Any())
+                            folders.Add(Path.Combine([ basePath, ..folder ]));
 
-                        var fullPath = basePath + "/" + string.Join('/', components);
+                        var fullPath = Path.Combine([ basePath, ..components ]);
                         Logger.LogInformation($"Deleting file \"{fullPath}\"");
                         System.IO.File.Delete(fullPath);
                     }
@@ -483,6 +580,17 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
 
             return ret;
+        }
+
+        public async Task<Stream> GetDotTorrentStream(ByteString Hash, CancellationToken CancellationToken)
+        {
+            var filePaths = await TorrentOpService.GetDotTorrentFilePaths([Hash.ToByteArray()]);
+            var path = filePaths.First().Value;
+
+            if (!File.Exists(path))
+                throw new RpcException(new Status(StatusCode.NotFound, ".torrent file doesn't exist"));
+
+            return File.OpenRead(path);
         }
 
         public async Task GetDotTorrents(Torrents Req, IServerStreamWriter<DotTorrentsData> Res, CancellationToken CancellationToken)
@@ -530,7 +638,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         {
             var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in Req.Hashes) {
-                var sHash = Convert.ToHexString(hash.Span);
+                var sHash = Convert.ToHexString(ToNative(hash.Span));
 
                 xml.Append("<value><struct><member><name>methodName</name><value><string>p.multicall</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value><value><string></string></value><value><string>p.id=</string></value><value><string>p.client_version=</string></value><value><string>p.down_total=</string></value><value><string>p.up_total=</string></value><value><string>p.down_rate=</string></value><value><string>p.up_rate=</string></value><value><string>p.completed_percent=</string></value><value><string>p.peer_rate=</string></value><value><string>p.is_incoming=</string></value><value><string>p.is_encrypted=</string></value><value><string>p.snubbed=</string></value><value><string>p.is_obfuscated=</string></value><value><string>p.is_preferred=</string></value><value><string>p.is_unwanted=</string></value><value><string>p.address=</string></value><value><string>p.port=</string></value></data></array></value></member></struct></value>");
             }
@@ -821,10 +929,11 @@ namespace RTSharp.Daemon.Services.rtorrent
                     settingPath.State = TASK_STATE.RUNNING;
                     settingPath.Text = "Setting directories...";
 
-                    await Scgi.XmlActionTorrents(new[] { torrent.InfoHash.ToByteArray() }, "d.stop", "d.close");
+                    var nativeHash = ToNative(torrent.InfoHash.Span);
+                    await Scgi.XmlActionTorrents([ nativeHash ], "d.stop", "d.close");
 
                     var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>d.directory.set</methodName><params>");
-                    xml.Append("<param><value><string>" + Convert.ToHexString(torrent.InfoHash.Span) + "</string></value></param>");
+                    xml.Append("<param><value><string>" + Convert.ToHexString(nativeHash) + "</string></value></param>");
                     xml.Append("<param><value><string>" + basePath.Target + "</string></value></param>");
                     xml.Append("</params></methodCall>");
 
@@ -876,7 +985,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                     setState.State = TASK_STATE.RUNNING;
 
-                    await Scgi.XmlActionTorrents(new[] { torrent.InfoHash.ToByteArray() }, "d.stop", "d.open", "d.start");
+                    await Scgi.XmlActionTorrents([ nativeHash ], "d.stop", "d.open", "d.start");
 
                     setState.Progress = 100f;
                     setState.State = TASK_STATE.DONE;
@@ -958,13 +1067,16 @@ namespace RTSharp.Daemon.Services.rtorrent
         public async Task<TorrentsReply> SetLabels(SetLabelsArgs Req)
         {
             var labels = new InfoHashDictionary<string>();
+            var input = new List<(byte[], string)>();
 
             foreach (var pair in Req.In) {
-                labels.Add(pair.InfoHash.ToByteArray(), String.Join(',', pair.Labels.Select(XMLUtils.Encode).Select(x => x.Replace(",", "\\,"))));
+                var native = ToNative(pair.InfoHash.Span);
+                var label = String.Join(',', pair.Labels.Select(XMLUtils.Encode).Select(x => x.Replace(",", "\\,")));
+                labels[native] = label;
+                input.Add((native, label));
             }
 
-            var input = Req.In.Select(x => (x.InfoHash.ToByteArray(), labels[x.InfoHash.ToByteArray()])).ToArray();
-            return ToTorrentsReply(await Scgi.XmlActionTorrentsParam(input, "d.custom1.set", (action, hash, reply) => reply == labels[hash]));
+            return ToTorrentsReply(await Scgi.XmlActionTorrentsParam(input.ToArray(), "d.custom1.set", (action, hash, reply) => reply == labels[hash]));
         }
 
         public async Task<TorrentsPiecesReply> GetTorrentsPieces(Torrents Req)
@@ -974,7 +1086,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             var xml = new StringBuilder();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in Req.Hashes) {
-                var sHash = Convert.ToHexString(hash.Span);
+                var sHash = Convert.ToHexString(ToNative(hash.Span));
 
                 xml.Append("<value><struct><member><name>methodName</name><value><string>d.bitfield</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value></data></array></value></member></struct></value>");
             }
@@ -1028,14 +1140,109 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret;
         }
 
-        public Task<Protocols.DataProvider.Torrent> GetTorrent(BytesValue Hash)
+        public async Task<Protocols.DataProvider.Torrent> GetTorrent(BytesValue Hash)
         {
-            var torrent = PollingSubscription.GetLatestHistoryEntry(Hash.Value.ToByteArray());
+            var hash = Hash.Value.ToByteArray();
 
-            if (torrent == null)
+            (string Action, string[] Params)[] actions = [
+                ("d.name", []),
+                ("d.size_bytes", []),
+                ("d.completed_bytes", []),
+                ("d.up.total", []),
+                ("d.down.rate", []),
+                ("d.creation_date", []),
+                ("d.custom", [ "addtime" ]),
+                ("d.timestamp.finished", []),
+                ("d.custom1", []), // label
+                ("d.custom2", []), // torrent comment
+                ("d.is_multi_file", []),
+                ("d.directory", []),
+                ("d.priority", []),
+                ("d.chunk_size", []),
+                ("d.skip.total", []),
+                ("t.multicall", [ "<string></string>", "t.url=", "t.is_enabled=", "t.is_usable=", "t.scrape_complete=", "t.scrape_incomplete=", "t.scrape_downloaded=", "t.scrape_time_last=", "t.normal_interval=", "t.latest_event=" ]),
+                ("d.message", []),
+                ("d.is_open", []),
+                ("d.is_active", []),
+                ("d.is_hash_checking", []),
+                ("d.is_private", []),
+                ("d.peers_complete", []),
+                ("d.peers_accounted", [])
+            ];
+
+            using var response = await Scgi.XmlActionTorrentsMulti([ (ToNative(hash), actions) ]);
+            var result = response.Reader();
+
+            XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
+            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
+
+            if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT)
                 throw new RpcException(new Status(StatusCode.NotFound, "Torrent not found"));
 
-            return Task.FromResult(torrent.Value.Torrent);
+            static T ReadEntry<T>(ref SequenceReader<byte> Reader)
+            {
+                XMLUtils.SeekFixed(ref Reader, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+                var value = XMLUtils.GetValue<T>(ref Reader);
+                XMLUtils.SeekFixed(ref Reader, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+                return value;
+            }
+
+            var name = ReadEntry<string>(ref result);
+            var totalSize = ReadEntry<ulong>(ref result);
+            var downloaded = ReadEntry<ulong>(ref result);
+            var uploaded = ReadEntry<ulong>(ref result);
+            var downSpeed = ReadEntry<ulong>(ref result);
+            var creationDateRaw = ReadEntry<ulong>(ref result);
+            if (!UInt64.TryParse(ReadEntry<string>(ref result), out var addDateRaw))
+                addDateRaw = 0;
+            var finishedDateRaw = ReadEntry<ulong>(ref result);
+            var label = ReadEntry<string>(ref result);
+            var torrentComment = ReadEntry<string>(ref result);
+            var isMultiFile = ReadEntry<bool>(ref result);
+            var directory = XMLUtils.Decode(ReadEntry<string>(ref result));
+            var priorityRaw = ReadEntry<ulong>(ref result);
+            var chunkSize = ReadEntry<ulong>(ref result);
+            var skippedTotal = ReadEntry<ulong>(ref result);
+
+            var curTrackers = new List<TorrentTracker>();
+            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+
+            while (!XMLUtils.CheckFor(result, XMLUtils.DATA_TOKEN_END)) {
+                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+
+                var url = XMLUtils.GetValue<string>(ref result);
+                var isEnabled = XMLUtils.GetValue<bool>(ref result);
+                var isUsable = XMLUtils.GetValue<bool>(ref result);
+                var scrapeComplete = XMLUtils.GetValue<ulong>(ref result);
+                var scrapeIncomplete = XMLUtils.GetValue<ulong>(ref result);
+                var scrapeDownloaded = XMLUtils.GetValue<ulong>(ref result);
+                var scrapeTimeLast = XMLUtils.GetValue<ulong>(ref result);
+                var normalInterval = XMLUtils.GetValue<ulong>(ref result);
+                var latestEvent = XMLUtils.GetValue<ulong>(ref result);
+
+                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+
+                curTrackers.Add(Mapper.MapFromRaw(url, isEnabled, isUsable, (uint)scrapeComplete, (uint)scrapeIncomplete, (uint)scrapeDownloaded, scrapeTimeLast, (uint)normalInterval, latestEvent.ToString()));
+            }
+
+            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+
+            var statusMessage = XMLUtils.Decode(ReadEntry<string>(ref result));
+            var isOpen = ReadEntry<bool>(ref result);
+            var isActive = ReadEntry<bool>(ref result);
+            var isHashChecking = ReadEntry<bool>(ref result);
+            var isPrivate = ReadEntry<bool>(ref result);
+            var seedersConnected = ReadEntry<ulong>(ref result);
+            var peersConnected = ReadEntry<ulong>(ref result);
+
+            return Mapper.MapFromRaw(
+                hash, name, totalSize, downloaded, uploaded, downSpeed,
+                creationDateRaw, addDateRaw, finishedDateRaw, label, torrentComment,
+                isMultiFile, directory, priorityRaw, chunkSize, skippedTotal,
+                statusMessage, isOpen, isActive, isHashChecking, isPrivate,
+                seedersConnected, peersConnected, curTrackers);
         }
 
         public async Task<Empty> EditTracker(ByteString InfoHash, string Existing, string New, CancellationToken cancellationToken)
@@ -1048,7 +1255,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 throw new RpcException(new Status(StatusCode.NotFound, "Torrent file not found"));
             }
 
-            using var torrentDetailsResponse = await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ ("d.directory", []), ("d.custom1", []), ("d.custom2", []), ("d.custom", [ "x-filename" ]), ("d.custom", [ "addtime" ]) ]) ]);
+            var nativeHash = ToNative(InfoHash.Span);
+            using var torrentDetailsResponse = await Scgi.XmlActionTorrentsMulti([ (nativeHash, [ ("d.directory", []), ("d.custom1", []), ("d.custom2", []), ("d.custom", [ "x-filename" ]), ("d.custom", [ "addtime" ]) ]) ]);
             var torrentDetails = torrentDetailsResponse.Reader();
             XMLUtils.SeekTo(ref torrentDetails, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref torrentDetails, XMLUtils.MULTICALL_START);
@@ -1126,7 +1334,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
 
             // Set label
-            using (await Scgi.XmlActionTorrentsMulti([ (InfoHash.ToByteArray(), [ label ]) ], [ "d.custom1.set" ])) { }
+            using (await Scgi.XmlActionTorrentsMulti([ (nativeHash, [ label ]) ], [ "d.custom1.set" ])) { }
 
             // Override addtime later
             Sessions.RunSession("Edit tracker", new(), async session => {
@@ -1136,7 +1344,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 Logger.LogInformation("Sleeping for 20sec before setting addtime...");
                 await Task.Delay(TimeSpan.FromSeconds(20), session.Cts.Token);
                 Logger.LogInformation("Setting addtime");
-                using (await Scgi.XmlActionTorrentsMulti([(InfoHash.ToByteArray(), [ "addtime", addtime ])], ["d.custom.set"])) { }
+                using (await Scgi.XmlActionTorrentsMulti([(nativeHash, [ "addtime", addtime ])], ["d.custom.set"])) { }
                 session.Progress.State = TASK_STATE.DONE;
                 session.Progress.Progress = 100f;
             });
@@ -1253,7 +1461,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public async Task<Empty> AddPeer(ByteString InfoHash, ByteString IPAddress, uint Port, CancellationToken cancellationToken)
         {
-            var sHash = Convert.ToHexString(InfoHash.Span);
+            var sHash = Convert.ToHexString(ToNative(InfoHash.Span));
             var ip = new System.Net.IPAddress(IPAddress.Span).ToString();
             var peer = $"{ip}:{Port}";
 
@@ -1270,7 +1478,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public async Task<Empty> BanPeer(ByteString InfoHash, ByteString IPAddress, uint Port, CancellationToken cancellationToken)
         {
-            var sHash = Convert.ToHexString(InfoHash.Span);
+            var sHash = Convert.ToHexString(ToNative(InfoHash.Span));
 
             var peers = await GetTorrentsPeers(new Torrents { Hashes = { InfoHash } });
 

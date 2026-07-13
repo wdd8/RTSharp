@@ -12,23 +12,37 @@ namespace RTSharp.Daemon.Services.rtorrent
         private readonly TorrentPolling TorrentPolling;
         private readonly SCGICommunication Scgi;
         private readonly RTorrentOpService TorrentOpService;
+        private readonly V1ToV2InfoHashCache Cache;
         private readonly ILogger Logger;
         private readonly SessionsService Sessions;
         private readonly IServiceProvider ServiceProvider;
         private readonly IOptionsFactory<ConfigModel> Opts;
         private readonly string InstanceKey;
 
-        public Grpc(IOptionsFactory<ConfigModel> Opts, [ServiceKey] string InstanceKey, IServiceProvider ServiceProvider, SessionsService Sessions, ILogger<Grpc> Logger)
+        public Grpc(IOptionsFactory<ConfigModel> Opts, [ServiceKey] string InstanceKey, IServiceProvider ServiceProvider, SessionsService Sessions, V1ToV2InfoHashCache Cache, ILogger<Grpc> Logger)
         {
             TorrentPolling = ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey);
             Scgi = ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
             TorrentOpService = ServiceProvider.GetRequiredKeyedService<RTorrentOpService>(InstanceKey);
+            this.Cache = Cache;
             this.Sessions = Sessions;
             this.Logger = Logger;
             this.ServiceProvider = ServiceProvider;
             this.Opts = Opts;
             this.InstanceKey = InstanceKey;
         }
+
+        /// <summary>RTSHash info hash -&gt; rtorrent's native v1 hash. Identity for a v1 hash; NotFound for an unknown v2 hash.</summary>
+        private byte[] ToNative(ReadOnlySpan<byte> RTSHash)
+        {
+            var v1 = Cache.ToV1(RTSHash);
+            if (v1 == null)
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, $"Unknown v2 info hash {Convert.ToHexString(RTSHash)}"));
+            return v1;
+        }
+
+        /// <summary>rtorrent's native v1 hash -&gt; rtsHash info hash (full v2 for hybrids, else identity).</summary>
+        private byte[] ToRTSHash(byte[] V1) => Cache.TryGetRTSHash(V1, out var rtsHash) ? rtsHash : V1;
     
         public async Task<TorrentsListResponse> GetTorrentList()
         {

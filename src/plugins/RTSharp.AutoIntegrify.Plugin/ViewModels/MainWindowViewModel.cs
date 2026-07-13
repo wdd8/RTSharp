@@ -11,6 +11,7 @@ using MsBox.Avalonia.Models;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Controls;
+using RTSharp.Shared.Utils;
 
 using System;
 using System.Collections.Generic;
@@ -30,7 +31,7 @@ public partial class FileInfo : ObservableObject
 {
     public required TorrentFile File { get; init; }
 
-    public required (ulong Start, ulong End, byte[] Hash)[] PieceHashes { get; init; }
+    public required BencodeUtils.PieceHash[] PieceHashes { get; init; }
 
     public Range PieceRange { get; init; }
 
@@ -474,27 +475,17 @@ done:;
             throw;
         }
 
-        var blockSize = 20;
-
         var pieces = new List<PieceState>();
 
-        if (btorrent.Files == null)
-            IsMultiFile = false;
-        else
-            IsMultiFile = true;
+        IsMultiFile = btorrent.Files != null;
 
-        var files = btorrent.Files?.Select(x => new TorrentFile(
-            FullPath: x.FullPath.Replace(System.IO.Path.DirectorySeparatorChar, '/'),
-            FileSize: x.FileSize
-        ))?.ToArray() ?? [ new TorrentFile(
-            FullPath: btorrent.File.FileName,
-            FileSize: btorrent.File.FileSize
-        ) ];
+        // TODO: SHA-256
+        var fileHashes = BencodeUtils.AssignHashesToPieces(btorrent);
 
-        for (var x = 0;x < files.Length;x++) {
-            var file = files[x];
+        foreach (var fileHash in fileHashes) {
+            var file = new TorrentFile(fileHash.FullPath, fileHash.FileSize);
 
-            if (file.FileSize < btorrent.PieceSize) {
+            if (fileHash.PieceHashes.Length == 0) {
                 Dispatcher.UIThread.Invoke(() => {
                     ProgressText = $"{file}: File too small";
                     Files.Add(new FileInfo
@@ -508,88 +499,15 @@ done:;
                 continue;
             }
 
-            /*
-             * Assuming:
-             * 
-             * Torrent containing:
-             * file1 (1000 bytes)
-             * file2 (3000 bytes)
-             * file3 (2000 bytes)
-             * file4 (405000 bytes)
-             * file5 (155120 bytes)
-             * 
-             * Piece length: 16384 bytes
-             * 
-             * Current `file`: file4
-             */
-
-            /*
-             * Start bytes in the whole torrent
-             * 
-             * |file1|--file2--|-file3-|---Z---file4---Z---|--Z--file5--Z--|
-             *                         ^
-             */
-            var start = files[..x].Sum(x => x.FileSize);
-
-            var unaligned = start % btorrent.PieceSize != 0 ? 1 : 0;
-
-            /*
-             * Start bytes in the whole torrent aligned to piece size, but after `baseStart`
-             * 
-             * |file1|--file2--|-file3-|---Z---file4---Z---|--Z--file5--Z--|
-             *                         ^^
-             */
-            var startPieceAligned = ((start / btorrent.PieceSize) + unaligned) * btorrent.PieceSize;
-
-            /*
-             * End bytes in the whole torrent
-             * 
-             * |file1|--file2--|-file3-|---Z---file4---Z---|--Z--file5--Z--|
-             *                                             ^
-             */
-            var end = start + file.FileSize;
-
-            /*
-             * End bytes in the whole torrent aligned to piece size, but before end bytes in the whole torrent
-             * 
-             * |file1|--file2--|-file3-|---Z---file4---Z---|--Z--file5--Z--|
-             *                                            ^^
-             */
-            var endingBytesAligned = (end / btorrent.PieceSize) * btorrent.PieceSize;
-
-            /*
-             * Offset of starting piece of the file
-             * 
-             * "pieces": "<hex>|pieces_for_file1|--pieces_for_file2--|-pieces_for_file3-|---Z---pieces_for_file4---Z---|--Z--pieces_for_file5--Z--|</hex>"
-             *                                                                          ^
-             */
-            var startingPiecesBytes = (int)(startPieceAligned / btorrent.PieceSize) * blockSize;
-
-            // Same for ending...
-            var endingPiecesBytes = (int)(endingBytesAligned / btorrent.PieceSize) * blockSize;
-
-            /*
-             * Pieces that belong to the file
-             * 
-             * "pieces": "<hex>|pieces_for_file1|--pieces_for_file2--|-pieces_for_file3-|---Z---pieces_for_file4---Z---|--Z--pieces_for_file5--Z--|</hex>"
-             *                                                                          <------------------------------>
-             */
-            var piecesBytesRange = btorrent.Pieces[startingPiecesBytes..endingPiecesBytes];
-
-            // TODO: SHA-256
             Files.Add(new FileInfo {
                 File = file,
-                PieceHashes = [.. piecesBytesRange.Chunk(blockSize).Select((x, i) => (
-                    Start: (ulong)((startPieceAligned - start) + ((i) * btorrent.PieceSize)),
-                    End: (ulong)((startPieceAligned - start) + ((i + 1) * btorrent.PieceSize)),
-                    Hash: x
-                ))],
-                PieceRange = (startingPiecesBytes/blockSize)..(endingPiecesBytes/blockSize),
+                PieceHashes = fileHash.PieceHashes,
+                PieceRange = fileHash.PieceRange,
                 Resolved = RESOLVE_STATE.PENDING
             });
         }
 
-        pieces.AddRange(Enumerable.Repeat(PieceState.NotDownloaded, (int)Math.Ceiling(files.Sum(x => x.FileSize) / (float)btorrent.PieceSize)));
+        pieces.AddRange(Enumerable.Repeat(PieceState.NotDownloaded, (int)Math.Ceiling(fileHashes.Sum(x => x.FileSize) / (float)btorrent.PieceSize)));
 
         Dispatcher.UIThread.Invoke(() => {
             Pieces = pieces;

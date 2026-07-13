@@ -13,6 +13,7 @@
         bool GetDotTorrent,
         bool AddTorrent,
         bool? ForceStartTorrentOnAdd,
+        bool FastResumeOnAdd,
         bool MoveDownloadDirectory,
         bool RemoveTorrent,
         bool RemoveTorrentAndData,

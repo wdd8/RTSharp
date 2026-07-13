@@ -200,7 +200,7 @@ namespace RTSharp.ViewModels
             } else
                 return;
 
-            input.Sources = sources.Select(x => (x, new Shared.Abstractions.AddTorrentsOptions(null, RemoteTargetPath))).ToList();
+            input.Sources = sources.Select(x => (x, new Shared.Abstractions.AddTorrentsOptions(null, RemoteTargetPath, false))).ToList();
             input.StartMode = StartTorrent ? Core.TorrentAdd.START_MODE.START : Core.TorrentAdd.START_MODE.DO_NOTHING;
             input.DuplicationTargets = DuplicationTargets;
 

@@ -201,12 +201,12 @@ namespace RTSharp.Daemon.Services.rtorrent
             var ret = new List<XMLUtils.TorrentsResult>();
 
             foreach (var (hash, _) in HashParams) {
+                var statuses = new List<XMLUtils.FaultStatus>();
 
                 foreach (var action in Actions) {
                     if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
                         // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not find info-hash.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not find info-hash.</string></value></member>\r\n</struct></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
-                        var status = XMLUtils.GetFaultStruct(ref result, action);
-                        ret.Add(new XMLUtils.TorrentsResult(hash, [ status ]));
+                        statuses.Add(XMLUtils.GetFaultStruct(ref result, action));
 
                         continue;
                     }
@@ -215,23 +215,23 @@ namespace RTSharp.Daemon.Services.rtorrent
                     var resp = XMLUtils.GetAnyValue(ref result);
 
                     if (FxExpectedReply(action, hash, resp)) {
-                        ret.Add(new XMLUtils.TorrentsResult(hash, [ new XMLUtils.FaultStatus
-                        {
+                        statuses.Add(new XMLUtils.FaultStatus {
                             Command = action,
                             FaultCode = "0",
                             FaultString = ""
-                        } ]));
+                        });
                     } else {
-                        ret.Add(new XMLUtils.TorrentsResult(hash, [ new XMLUtils.FaultStatus
-                        {
+                        statuses.Add(new XMLUtils.FaultStatus {
                             Command = action,
                             FaultCode = resp,
                             FaultString = "Unexpected response"
-                        } ]));
+                        });
                     }
 
                     XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
                 }
+
+                ret.Add(new XMLUtils.TorrentsResult(hash, [.. statuses]));
             }
 
             return ret.ToArray();

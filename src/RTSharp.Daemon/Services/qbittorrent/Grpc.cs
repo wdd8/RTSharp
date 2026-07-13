@@ -1,3 +1,5 @@
+using BencodeNET.Parsing;
+
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
@@ -33,26 +35,39 @@ namespace RTSharp.Daemon.Services.qbittorrent
             this.Logger = Logger;
         }
 
+        // Keyed by native hash
         private InfoHashDictionary<Protocols.DataProvider.Torrent> LatestTorrents = new();
-
         private ReaderWriterLockSlim LatestTorrentsLock = new();
+
+        private static string ToNativeHex(ReadOnlySpan<byte> RTSHash) => Convert.ToHexStringLower(RTSHash[..InfoHash.V1Length]);
+
+        private static byte[] RTSHashFromInfo(string? V1Hex, string? V2Hex, string NativeHex)
+        {
+            if (!String.IsNullOrEmpty(V2Hex))
+                return Convert.FromHexString(V2Hex);
+
+            if (!String.IsNullOrEmpty(V1Hex))
+                return Convert.FromHexString(V1Hex);
+
+            return Convert.FromHexString(NativeHex);
+        }
 
         public string PathCombineFSlash(string a, string b)
         {
             return Path.Combine(a, b).Replace("\\", "/");
         }
 
-        record Torrent(string Path, string Filename, MemoryStream Data);
+        record Torrent(string Path, string Filename, MemoryStream Data, bool FastResume = false);
 
-        public async Task<TorrentsReply> AddTorrents(IAsyncStreamReader<NewTorrentsData> Req)
+        public async Task<TorrentsReply> AddTorrents(IAsyncEnumerable<NewTorrentsData> Req)
         {
             var client = await Client.Init();
 
             var torrents = new Dictionary<string, Torrent>();
-            await foreach (var chunk in Req.ReadAllAsync()) {
+            await foreach (var chunk in Req) {
                 switch (chunk.DataCase) {
                     case NewTorrentsData.DataOneofCase.TMetadata:
-                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream());
+                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume);
                         break;
                     case NewTorrentsData.DataOneofCase.TData:
                         torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.ToByteArray());
@@ -61,19 +76,25 @@ namespace RTSharp.Daemon.Services.qbittorrent
             }
 
             var parser = new BencodeNET.Torrents.TorrentParser();
+            var bencodeParser = new BencodeNET.Parsing.BencodeParser();
             var ret = new TorrentsReply();
-            var hashes = new HashSet<string>();
-
-            var rid = 0;
-            var changes = await client.GetPartialDataAsync(rid, default);
-            rid = changes.ResponseId;
+            var unaccountedNative = new HashSet<string>();
 
             foreach (var (id, torrent) in torrents) {
                 torrent.Data.Position = 0;
 
                 BencodeNET.Torrents.Torrent btorrent;
+                byte[] torrentId;
+                byte[] rtsHash;
                 try {
                     btorrent = parser.Parse(torrent.Data);
+
+                    torrent.Data.Position = 0;
+                    var (v1, v2) = BencodeUtils.GetInfoHashes(bencodeParser.Parse<BencodeNET.Objects.BDictionary>(torrent.Data));
+                    // qbittorrent identifies torrents by the truncated v2 info hash when one exists
+                    torrentId = v2 != null ? InfoHash.TruncateV2(v2) : v1!;
+                    // RTSHash is the full v2 for hybrids/v2, else v1.
+                    rtsHash = (v2 ?? v1)!;
                 } catch (Exception ex) {
                     ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                         InfoHash = Array.Empty<byte>().ToByteString(),
@@ -88,16 +109,28 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 }
 
                 try {
+                    var skipHashChecking = false;
+                    if (torrent.FastResume) {
+                        skipHashChecking = await BencodeUtils.FastVerifyFilesOnDisk(btorrent, torrent.Path, Logger);
+                        if (!skipHashChecking)
+                            Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", Convert.ToHexString(torrentId));
+                    }
+
                     var path = Path.GetTempFileName();
                     await System.IO.File.WriteAllBytesAsync(path, torrent.Data.ToArray());
+
+                    Logger.LogInformation($"{InstanceKey}: Adding torrent {Convert.ToHexString(torrentId)}");
 
                     await client.AddTorrentsAsync(new AddTorrentFilesRequest {
                         DownloadFolder = torrent.Path,
                         Paused = true,
+                        SkipHashChecking = skipHashChecking,
                         TorrentFiles = { path }
                     });
 
                     System.IO.File.Delete(path);
+
+                    unaccountedNative.Add(Convert.ToHexStringLower(torrentId));
                 } catch (Exception) {
                     ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                         InfoHash = Array.Empty<byte>().ToByteString(),
@@ -111,7 +144,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 }
 
                 ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
-                    InfoHash = btorrent.OriginalInfoHashBytes.ToByteString(),
+                    InfoHash = rtsHash.ToByteString(),
                     Status = {
                         new Protocols.DataProvider.Status() {
                             Command = "",
@@ -122,22 +155,19 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 });
             }
 
-            // I think it's actually fine, but let's check for its existence anyway
-            var unaccounted = ret.Torrents.Select(x => Convert.ToHexStringLower(x.InfoHash.Span)).ToHashSet();
+            if (unaccountedNative.Count > 0) {
+                Logger.LogInformation($"{InstanceKey}: Looking for torrents {String.Join(", ", unaccountedNative)}");
 
-            if (unaccounted.Count > 0) {
                 var sw = Stopwatch.StartNew();
                 while (sw.Elapsed.TotalSeconds < 30) {
-                    changes = await client.GetPartialDataAsync(rid, default);
-                    rid = changes.ResponseId;
+                    var list = await client.GetTorrentListAsync(new TorrentListQuery { Hashes = [.. unaccountedNative] });
 
-                    if (changes.TorrentsChanged?.Count > 0) {
-                        foreach (var torrent in changes.TorrentsChanged) {
-                            unaccounted.Remove(torrent.Key);
-                        }
+                    foreach (var torrent in list) {
+                        if (unaccountedNative.Remove(torrent.Hash))
+                            Logger.LogInformation($"{InstanceKey}: Torrent {torrent.Hash}");
                     }
 
-                    if (unaccounted.Count == 0)
+                    if (unaccountedNative.Count == 0)
                         break;
 
                     await Task.Delay(1000); // needs cancellation token
@@ -161,7 +191,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
             Exception? exception = null;
 
             try {
-                await client.RecheckAsync(Req.Hashes.Select(x => Convert.ToHexString(x.Span)));
+                await client.RecheckAsync(Req.Hashes.Select(x => ToNativeHex(x.Span)));
             } catch (Exception ex) {
                 exception = ex;
             }
@@ -193,60 +223,48 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 stateObserved2[torrentResult.Hash] = QBittorrent.Client.TorrentState.Unknown;
             }
 
-            int rid = 1;
+            var hashStrs = hashes.Select(x => ToNativeHex(x)).ToArray();
 
             try {
                 while (true) {
                     if (CancellationToken.IsCancellationRequested)
                         break;
 
-                    Logger.LogDebug("Getting partial data inside session");
+                    Logger.LogDebug("Getting torrent list");
 
-                    var partialData = await client.GetPartialDataAsync(rid, CancellationToken);
-
-                    rid = partialData.ResponseId;
-
-                    Logger.LogDebug("Got partial data inside session " + rid);
+                    var list = await client.GetTorrentListAsync(new TorrentListQuery { Hashes = hashStrs }, CancellationToken);
+                    var byHash = list.ToDictionary(x => x.Hash);
 
                     foreach (var hash in hashes) {
-                        var hashStr = Convert.ToHexStringLower(hash);
+                        // Compare against qbittorrent's native hash; stateObserved dicts stay keyed by rtsHash.
+                        var hashStr = ToNativeHex(hash);
 
-                        var torrentInfo = partialData.TorrentsChanged != null &&
-                            partialData.TorrentsChanged.TryGetValue(hashStr, out var changedTorrentInfo)
-                                ? changedTorrentInfo
-                                : null;
-
-                        if (torrentInfo == null) {
-                            Logger.LogDebug($"Torrent {hashStr} no changes");
+                        if (!byHash.TryGetValue(hashStr, out var torrentInfo)) {
+                            Logger.LogDebug($"Torrent {hashStr} not in list");
                             continue;
                         }
 
-                        var currentValue = stateObserved2[hash];
-                        if (torrentInfo.State != null) {
-                            Logger.LogDebug($"Torrent {hashStr} state: {torrentInfo.State.Value}");
+                        Logger.LogDebug($"Torrent {hashStr} state: {torrentInfo.State}");
 
-                            currentValue =
-                                torrentInfo.State.Value == QBittorrent.Client.TorrentState.CheckingDownload ||
-                                torrentInfo.State.Value == QBittorrent.Client.TorrentState.CheckingUpload ||
-                                torrentInfo.State.Value == QBittorrent.Client.TorrentState.QueuedForChecking ? QBittorrent.Client.TorrentState.CheckingDownload : torrentInfo.State.Value;
+                        var currentValue =
+                            torrentInfo.State == QBittorrent.Client.TorrentState.CheckingDownload ||
+                            torrentInfo.State == QBittorrent.Client.TorrentState.CheckingUpload ||
+                            torrentInfo.State == QBittorrent.Client.TorrentState.QueuedForChecking ? QBittorrent.Client.TorrentState.CheckingDownload : torrentInfo.State;
 
-                            if (stateObserved2[hash] != currentValue) {
-                                stateObserved[hash] = stateObserved2[hash];
-                                stateObserved2[hash] = currentValue;
+                        if (stateObserved2[hash] != currentValue) {
+                            stateObserved[hash] = stateObserved2[hash];
+                            stateObserved2[hash] = currentValue;
 
-                                Logger.LogDebug($"State transition for {hashStr}: {stateObserved[hash]} -> {stateObserved2[hash]}");
-                            }
+                            Logger.LogDebug($"State transition for {hashStr}: {stateObserved[hash]} -> {stateObserved2[hash]}");
                         }
 
-                        if (torrentInfo.Progress != null) {
-                            var currentProgress = torrentInfo.Progress.Value;
+                        var currentProgress = torrentInfo.Progress;
 
-                            if (currentValue == QBittorrent.Client.TorrentState.CheckingDownload && progressObserved.TryGetValue(hash, out var previousProgress) && previousProgress != currentProgress) {
-                                progressLastMoved[hash] = sw.Elapsed;
-                            }
-
-                            progressObserved[hash] = currentProgress;
+                        if (currentValue == QBittorrent.Client.TorrentState.CheckingDownload && progressObserved.TryGetValue(hash, out var previousProgress) && previousProgress != currentProgress) {
+                            progressLastMoved[hash] = sw.Elapsed;
                         }
+
+                        progressObserved[hash] = currentProgress;
                     }
 
                     if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
@@ -328,24 +346,11 @@ namespace RTSharp.Daemon.Services.qbittorrent
             }
         }
 
-        /*public async Task<IEnumerable<Torrent>> GetAllTorrents()
+        public async Task<Stream> GetDotTorrentStream(ByteString Hash, CancellationToken CancellationToken)
         {
             var client = await Client.Init();
-
-            var list = await client.GetTorrentListAsync();
-
-            var torrents = list.Select(x => (External: x, Internal: TorrentMapper.MapFromExternal(x)));
-
-            LatestTorrentsLock.EnterWriteLock();
-            {
-                foreach (var torrent in torrents) {
-                    LatestTorrents[torrent.Internal.Hash] = (torrent.Internal, torrent.External);
-                }
-            }
-            LatestTorrentsLock.ExitWriteLock();
-
-            return torrents.Select(x => x.Internal);
-        }*/
+            return await client.GetTorrentFileAsync(ToNativeHex(Hash.Span), CancellationToken);
+        }
 
         public async Task GetDotTorrents(Torrents Req, IServerStreamWriter<DotTorrentsData> Res, CancellationToken CancellationToken)
         {
@@ -363,7 +368,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 }, CancellationToken);
 
                 try {
-                    var stm = await client.GetTorrentFileAsync(Convert.ToHexString(hash.Span), CancellationToken);
+                    var stm = await client.GetTorrentFileAsync(ToNativeHex(hash.Span), CancellationToken);
 
                     int read = 0;
                     Memory<byte> buffer = new byte[4096];
@@ -392,14 +397,14 @@ namespace RTSharp.Daemon.Services.qbittorrent
         {
             var client = await Client.Init();
 
-            var files = Req.Hashes.Select(x => (Hash: x.ToByteArray(), Files: client.GetTorrentContentsAsync(Convert.ToHexString(x.Span), null))).ToArray();
+            var files = Req.Hashes.Select(x => (Hash: x.ToByteArray(), Files: client.GetTorrentContentsAsync(ToNativeHex(x.Span), null))).ToArray();
 
             await Task.WhenAll(files.Select(x => x.Files));
 
             InfoHashDictionary<Protocols.DataProvider.Torrent> torrents;
             LatestTorrentsLock.EnterReadLock();
             {
-                torrents = Req.Hashes.Select(x => LatestTorrents[x.ToByteArray()]).ToInfoHashDictionary(x => x.Hash.ToByteArray(), x => x);
+                torrents = Req.Hashes.Select(x => LatestTorrents[InfoHash.TruncateV2(x.Span)]).ToInfoHashDictionary(x => x.Hash.ToByteArray(), x => x);
             }
             LatestTorrentsLock.ExitReadLock();
 
@@ -441,7 +446,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
         {
             var client = await Client.Init();
 
-            var tasks = Req.Hashes.Select(x => (Hash: x, Peers: client.GetPeerPartialDataAsync(Convert.ToHexString(x.Span), 0))).ToArray();
+            var tasks = Req.Hashes.Select(x => (Hash: x, Peers: client.GetPeerPartialDataAsync(ToNativeHex(x.Span), 0))).ToArray();
             await Task.WhenAll(tasks.Select(x => x.Peers));
 
             using var scope = ServiceProvider.CreateScope();
@@ -462,7 +467,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                         Protocols.DataProvider.Torrent? torrent;
 
                         LatestTorrentsLock.EnterReadLock(); {
-                            LatestTorrents.TryGetValue(x.Hash.ToByteArray(), out torrent);
+                            LatestTorrents.TryGetValue(InfoHash.TruncateV2(x.Hash.Span), out torrent);
                         } LatestTorrentsLock.ExitReadLock();
 
                         return new TorrentsPeersReply.Types.TorrentsPeers {
@@ -528,7 +533,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
             var client = await Client.Init();
 
             var torrent = await client.GetTorrentListAsync(new TorrentListQuery {
-                Hashes = [ Convert.ToHexString(Hash.Value.Span) ]
+                Hashes = [ ToNativeHex(Hash.Value.Span) ]
             });
 
             if (!torrent.Any())
@@ -553,7 +558,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                     List = {
                         all.Select(x => {
                             var internalTorrent = new Protocols.DataProvider.Torrent {
-                                Hash = Convert.FromHexString(x.Hash).ToByteString()
+                                Hash = RTSHashFromInfo(x.InfoHashV1, x.InfoHashV2, x.Hash).ToByteString()
                             };
                             TorrentMapper.ApplyFromExternal(internalTorrent, x);
                             return internalTorrent;
@@ -620,18 +625,40 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 delta.Complete.Clear();
                 delta.Removed.Clear();
 
-                void fullUpdate(string StrHash, TorrentPartialInfo Input)
+                async Task<byte[]> resolveRTSHash(string NativeHash, string? V1Hex, string? V2Hex)
                 {
-                    var hash = Convert.FromHexString(StrHash);
+                    if (!String.IsNullOrEmpty(V2Hex))
+                        return Convert.FromHexString(V2Hex);
+                    if (!String.IsNullOrEmpty(V1Hex))
+                        return Convert.FromHexString(V1Hex);
+
+                    // Partial row or older qbit lacking the infohash fields: one-shot full fetch to recover them.
+                    try {
+                        var full = await client.GetTorrentListAsync(new TorrentListQuery { Hashes = [ NativeHash ] });
+                        var info = full.Count == 0 ? default : full[0];
+                        if (info != null && (!String.IsNullOrEmpty(info.InfoHashV2) || !String.IsNullOrEmpty(info.InfoHashV1)))
+                            return RTSHashFromInfo(info.InfoHashV1, info.InfoHashV2, NativeHash);
+                    } catch (Exception ex) {
+                        Logger.LogTrace(ex, "Failed to resolve rtsHash for {Hash}", NativeHash);
+                    }
+
+                    // qbit < 4.4 (no v2 support anyway) or a torrent that could not be resolved.
+                    return Convert.FromHexString(NativeHash);
+                }
+
+                async Task fullUpdate(string StrHash, TorrentPartialInfo Input)
+                {
+                    var native = Convert.FromHexString(StrHash);
+                    var rtsHash = await resolveRTSHash(StrHash, Input.InfoHashV1, Input.InfoHashV2);
                     var internalTorrent = new Protocols.DataProvider.Torrent {
-                        Hash = hash.ToByteString()
+                        Hash = rtsHash.ToByteString()
                     };
                     TorrentMapper.ApplyFromExternal(internalTorrent, Input);
                     updateHashingSpeed(internalTorrent);
 
                     LatestTorrentsLock.EnterWriteLock();
                     {
-                        LatestTorrents[hash] = internalTorrent;
+                        LatestTorrents[native] = internalTorrent;
                     }
                     LatestTorrentsLock.ExitWriteLock();
 
@@ -640,38 +667,25 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                 if (partialData.FullUpdate && partialData.TorrentsChanged != null) {
                     foreach (var (strHash, changedTorrent) in partialData.TorrentsChanged) {
-                        fullUpdate(strHash, changedTorrent);
+                        await fullUpdate(strHash, changedTorrent);
                     }
                 } else if (partialData.TorrentsChanged != null) {
                     foreach (var (strHash, changedTorrent) in partialData.TorrentsChanged) {
-                        var hash = Convert.FromHexString(strHash);
-                        Protocols.DataProvider.Torrent internalTorrent;
+                        var native = Convert.FromHexString(strHash);
 
-                        if (!LatestTorrents.TryGetValue(hash, out var torrent)) {
-                            fullUpdate(strHash, changedTorrent);
+                        if (!LatestTorrents.TryGetValue(native, out var internalTorrent)) {
+                            await fullUpdate(strHash, changedTorrent);
                             continue;
-                        } else {
-                            internalTorrent = torrent;
-                            
-                            var prevState = internalTorrent.State;
-                            var prevSequential = internalTorrent.SequentialDownload;
-                            TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
-                            updateHashingSpeed(internalTorrent);
+                        }
 
-                            if (internalTorrent.State != prevState || internalTorrent.SequentialDownload != prevSequential) {
-                                LatestTorrentsLock.EnterWriteLock();
-                                {
-                                    LatestTorrents[hash] = internalTorrent;
-                                }
-                                LatestTorrentsLock.ExitWriteLock();
+                        var prevState = internalTorrent.State;
+                        var prevSequential = internalTorrent.SequentialDownload;
+                        TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
+                        updateHashingSpeed(internalTorrent);
 
-                                delta.FullUpdate.Add(internalTorrent);
-                                continue;
-                            } else {
-                                LatestTorrentsLock.EnterWriteLock(); { 
-                                    LatestTorrents[hash] = internalTorrent;
-                                } LatestTorrentsLock.ExitWriteLock();
-                            }
+                        if (internalTorrent.State != prevState || internalTorrent.SequentialDownload != prevSequential) {
+                            delta.FullUpdate.Add(internalTorrent);
+                            continue;
                         }
 
                         if (internalTorrent.CompletedSize != internalTorrent.WantedSize) {
@@ -733,9 +747,12 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                         LatestTorrentsLock.EnterWriteLock();
                         foreach (var strHash in partialData.TorrentsRemoved) {
-                            var hash = Convert.FromHexString(strHash);
-                            delta.Removed.Add(hash.ToByteString());
-                            LatestTorrents.Remove(hash);
+                            var native = Convert.FromHexString(strHash);
+                            if (LatestTorrents.Remove(native, out var removed)) {
+                                delta.Removed.Add(removed.Hash);
+                            } else {
+                                delta.Removed.Add(native.ToByteString());
+                            }
                         }
                     } finally {
                         LatestTorrentsLock.ExitWriteLock();
@@ -781,7 +798,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                         }
 
                         try {
-                            await client.SetLocationAsync(Convert.ToHexString(req.InfoHash.Span), req.TargetDirectory, cts.Token);
+                            await client.SetLocationAsync(ToNativeHex(req.InfoHash.Span), req.TargetDirectory, cts.Token);
                         } catch (Exception ex) {
                             exception = ex;
 
@@ -821,7 +838,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                     Exception? exception = null;
 
                     try {
-                        await Fx(client, Convert.ToHexString(hash.Span));
+                        await Fx(client, ToNativeHex(hash.Span));
                     } catch (Exception ex) {
                         exception = ex;
                     }
@@ -869,8 +886,8 @@ namespace RTSharp.Daemon.Services.qbittorrent
                     Exception? exception = null;
 
                     try {
-                        await client.ClearTorrentTagsAsync(Convert.ToHexString(hash.Span));
-                        await client.AddTorrentTagsAsync(Convert.ToHexString(hash.Span), labels);
+                        await client.ClearTorrentTagsAsync(ToNativeHex(hash.Span));
+                        await client.AddTorrentTagsAsync(ToNativeHex(hash.Span), labels);
                     } catch (Exception ex) {
                         exception = ex;
                     }
@@ -905,7 +922,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
         {
             var client = await Client.Init();
 
-            var tasks = Req.Hashes.Select(x => (Torrent: x, Pieces: client.GetTorrentPiecesStatesAsync(Convert.ToHexString(x.Span)))).ToArray();
+            var tasks = Req.Hashes.Select(x => (Torrent: x, Pieces: client.GetTorrentPiecesStatesAsync(ToNativeHex(x.Span)))).ToArray();
         
             return new TorrentsPiecesReply {
                 Reply = {
@@ -951,7 +968,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
             var client = await Client.Init();
 
             var groups = Req.Hashes.Chunk(50).Select(x => x.Select(async x => {
-                var trackers = await client.GetTorrentTrackersAsync(Convert.ToHexString(x.Span), CancellationToken);
+                var trackers = await client.GetTorrentTrackersAsync(ToNativeHex(x.Span), CancellationToken);
 
                 if (trackers == null) {
                     return new TorrentsTrackersReply.Types.TorrentsTrackers {
@@ -1013,7 +1030,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "New is not an Uri"));
             }
 
-            await client.EditTrackerAsync(Convert.ToHexString(InfoHash.Span), existing, @new, CancellationToken);
+            await client.EditTrackerAsync(ToNativeHex(InfoHash.Span), existing, @new, CancellationToken);
 
             return new();
         }
@@ -1039,7 +1056,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "Tracker is not an Uri"));
             }
 
-            await client.AddTrackerAsync(Convert.ToHexString(InfoHash.Span), tracker, cancellationToken);
+            await client.AddTrackerAsync(ToNativeHex(InfoHash.Span), tracker, cancellationToken);
 
             return new();
         }
@@ -1052,7 +1069,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "Tracker is not an Uri"));
             }
 
-            await client.DeleteTrackerAsync(Convert.ToHexString(InfoHash.Span), tracker, cancellationToken);
+            await client.DeleteTrackerAsync(ToNativeHex(InfoHash.Span), tracker, cancellationToken);
 
             return new();
         }
@@ -1063,7 +1080,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
             var ip = new System.Net.IPAddress(IPAddress.Span).ToString();
 
-            await client.AddTorrentPeersAsync([Convert.ToHexString(InfoHash.Span)], [$"{ip}:{Port}"], cancellationToken);
+            await client.AddTorrentPeersAsync([ToNativeHex(InfoHash.Span)], [$"{ip}:{Port}"], cancellationToken);
 
             return new();
         }
@@ -1083,7 +1100,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
         {
             var client = await Client.Init();
 
-            var torrents = await client.GetTorrentListAsync(new TorrentListQuery { Hashes = InfoHashes.Select(x => Convert.ToHexString(x.Span)) }, cancellationToken);
+            var torrents = await client.GetTorrentListAsync(new TorrentListQuery { Hashes = InfoHashes.Select(x => ToNativeHex(x.Span)) }, cancellationToken);
             var toToggle = torrents.Where(x => x.SequentialDownload != Enabled).Select(x => x.Hash).ToArray();
 
             await client.ToggleSequentialDownloadAsync(toToggle, cancellationToken);

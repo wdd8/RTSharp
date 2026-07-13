@@ -344,19 +344,26 @@ public partial class FilesService(
     [LibraryImport("libc")]
     private static partial nint ioctl(nint dest_fd, nint op, nint src_fd);
 
-    public override async Task<Empty> LinkFiles(LinkFilesInput Req, ServerCallContext Ctx)
+    public override Task<Empty> LinkFiles(LinkFilesInput Req, ServerCallContext Ctx)
     {
         if (Req.Source.Count != Req.Target.Count) {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Source and Target path count must match"));
         }
 
         foreach (var (src, dst) in Req.Source.Zip(Req.Target)) {
-            int hSrcFile = -1;
-            int hDstFile = -1;
-            bool created = false;
+            LinkFile(src, dst, Req.Type);
+        }
+        return Task.FromResult(new Empty());
+    }
 
-            try {
-                if (Req.Type.HasFlag(LinkFilesInput.Types.LinkType.Reflink)) {
+    public static void LinkFile(string src, string dst, LinkFilesInput.Types.LinkType Type)
+    {
+        int hSrcFile = -1;
+        int hDstFile = -1;
+        bool created = false;
+
+        try {
+            if (Type.HasFlag(LinkFilesInput.Types.LinkType.Reflink)) {
                     try {
                         hSrcFile = Syscall.open(src, OpenFlags.O_RDONLY);
                         if (hSrcFile == -1) {
@@ -415,7 +422,7 @@ public partial class FilesService(
                         created = true;
                 }
 
-                if (Req.Type.HasFlag(LinkFilesInput.Types.LinkType.Hardlink) && !created) {
+                if (Type.HasFlag(LinkFilesInput.Types.LinkType.Hardlink) && !created) {
                     for (var x = 0;x < 2;x++) {
                         var resp = Syscall.link(src, dst);
                         if (resp != 0) {
@@ -439,7 +446,5 @@ public partial class FilesService(
                 if (hDstFile != -1)
                     _ = Syscall.close(hDstFile);
             }
-        }
-        return new();
     }
 }

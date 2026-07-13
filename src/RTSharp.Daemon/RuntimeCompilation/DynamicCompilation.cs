@@ -23,8 +23,12 @@ namespace RTSharp.Daemon.RuntimeCompilation
 		const string BuiltInUsingsPragma = "#pragma usings";
 
 		static readonly Dictionary<string, AssemblyMetadata> AssemblyMetadatas = new Dictionary<string, AssemblyMetadata>();
+        static readonly Lock AssemblyMetadatasLock = new();
 
-		private static string GetAssemblyLocationByName(string Name)
+		static readonly Dictionary<string, SemaphoreSlim> CompileLocks = new();
+		static readonly Lock CompileLocksLock = new();
+
+        private static string GetAssemblyLocationByName(string Name)
 		{
 			var asms = AppDomain.CurrentDomain.GetAssemblies();
 			var asm = asms.FirstOrDefault(x => x!.FullName!.Substring(0, x.FullName.IndexOf(',', StringComparison.Ordinal)) == Name);
@@ -108,22 +112,24 @@ namespace RTSharp.Daemon.RuntimeCompilation
 				};
 			var sourceGenAssemblies = new List<string>();
 
-			if (AssemblyMetadatas.Count == 0) {
-				foreach (var reference in baseReferences) {
-					AssemblyMetadatas[reference!] = AssemblyMetadata.CreateFromFile(GetAssemblyLocationByName(reference!));
-				}
-			}
+            lock (AssemblyMetadatasLock) {
+			    if (AssemblyMetadatas.Count == 0) {
+				    foreach (var reference in baseReferences) {
+					    AssemblyMetadatas[reference!] = AssemblyMetadata.CreateFromFile(GetAssemblyLocationByName(reference!));
+				    }
+			    }
 
-			foreach (var reference in baseReferences) {
-				references.Add(AssemblyMetadatas[reference].GetReference());
-			}
+			    foreach (var reference in baseReferences) {
+				    references.Add(AssemblyMetadatas[reference].GetReference());
+			    }
 
-			foreach (var reference in BuildInAssemblyReferences) {
-				if (!AssemblyMetadatas.ContainsKey(reference))
-					AssemblyMetadatas[reference] = AssemblyMetadata.CreateFromFile(GetAssemblyLocationByName(reference));
+			    foreach (var reference in BuildInAssemblyReferences) {
+				    if (!AssemblyMetadatas.ContainsKey(reference))
+					    AssemblyMetadatas[reference] = AssemblyMetadata.CreateFromFile(GetAssemblyLocationByName(reference));
 
-				references.Add(AssemblyMetadatas[reference].GetReference());
-			}
+				    references.Add(AssemblyMetadatas[reference].GetReference());
+			    }
+            }
 
 			int lineStart = 0;
 
@@ -224,7 +230,7 @@ namespace RTSharp.Daemon.RuntimeCompilation
             string copy = Script;
 			var (_, _, pragmaTags, _) = TransformScript(ref copy, new string[] { }, new string[] { });
 
-			return pragmaTags.ToArray();
+			return [.. pragmaTags];
 		}
 
 		public static (MemoryStream Assembly, string[] PragmaTags) CompileAssembly(
@@ -247,7 +253,13 @@ namespace RTSharp.Daemon.RuntimeCompilation
 			
 			Debug.WriteLine($"Generators: {string.Join(',', generators.Select(x => x.GetType().Name))}...");
 
-			var asmName = Name + "_" + Guid.NewGuid().ToString()[..8];
+			var sanitizedName = string.Create(Name.Length, Name, static (span, name) => {
+				for (var x = 0; x < name.Length; x++) {
+					var ch = name[x];
+					span[x] = char.IsLetterOrDigit(ch) || ch is '_' or '-' or '.' ? ch : '_';
+				}
+			});
+			var asmName = sanitizedName + "_" + Guid.NewGuid().ToString()[..8];
 			var encoding = Encoding.UTF8;
 
 			var buffer = encoding.GetBytes(script);
@@ -289,30 +301,45 @@ namespace RTSharp.Daemon.RuntimeCompilation
 			return (ms, pragmaTags.ToArray());
 		}
 
-		public static DynamicScript<T> Compile<T>(
+		public static async Task<DynamicScript<T>> Compile<T>(
 			byte[] Hash,
-			ref string Script,
+			string Script,
 			string Name,
 			IEnumerable<string> BuiltInAssemblyReferences,
 			IEnumerable<string> BuiltInUsings)
 		{
 			var key = Convert.ToBase64String(Hash);
-			var script = Script;
 
-			var compilation = Cache.GetOrCreate(key, entry => {
-				entry.SetSlidingExpiration(CompilationCacheIdleTimeout);
-				entry.RegisterPostEvictionCallback(static (_, value, _, _) => {
-					((DynamicScript<T>)value!).TryExpire();
-				});
+			SemaphoreSlim keyLock;
+			lock (CompileLocksLock) {
+				if (!CompileLocks.TryGetValue(key, out keyLock!)) {
+					keyLock = new SemaphoreSlim(1, 1);
+					CompileLocks[key] = keyLock;
+				}
+			}
 
-                var (ms, pragmaTags) = CompileAssembly(ref script, Name, BuiltInAssemblyReferences, BuiltInUsings);
+			await keyLock.WaitAsync(); try {
+				var script = Script;
 
-                return new DynamicScript<T>(ms, pragmaTags);
-            })!;
+				var compilation = Cache.GetOrCreate(key, entry => {
+					entry.SetSlidingExpiration(CompilationCacheIdleTimeout);
+					entry.RegisterPostEvictionCallback(static (_, value, _, _) => {
+						((DynamicScript<T>)value!).TryExpire();
+					});
 
-			Script = script;
+					var (ms, pragmaTags) = CompileAssembly(ref script, Name, BuiltInAssemblyReferences, BuiltInUsings);
 
-			return compilation;
+					return new DynamicScript<T>(ms, pragmaTags);
+				})!;
+
+				if (!compilation.TryAddRef()) {
+                    throw new InvalidOperationException();
+                }
+
+				return compilation;
+			} finally {
+				keyLock.Release();
+			}
 		}
 	}
 }

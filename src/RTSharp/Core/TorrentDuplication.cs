@@ -6,51 +6,47 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace RTSharp.Core;
+
+internal record DuplicationScriptTarget(string Provider, string? Uri, string Path);
+
+[JsonSerializable(typeof(List<DuplicationScriptTarget>))]
+internal partial class DuplicationScriptTargetContext : JsonSerializerContext { }
 
 public static class TorrentDuplication
 {
     public record DuplicationTarget(IDataProvider Provider, string RemoteTargetPath);
 
-    public static async Task AddAndQueue(IReadOnlyList<(Torrent Torrent, byte[] TorrentBytes)> Torrents, IEnumerable<DuplicationTarget> Targets)
+    public static void AddAndQueue(IReadOnlyList<Torrent> Torrents, IEnumerable<DuplicationTarget> Targets)
     {
-        foreach (var target in Targets) {
-            try {
-                await target.Provider.AddTorrents([.. Torrents.Select(x => (
-                    Data: x.TorrentBytes,
-                    Filename: (string?)null,
-                    Options: new AddTorrentsOptions(null, target.RemoteTargetPath)
-                ))]);
+        var targets = Targets.ToList();
+        if (targets.Count == 0)
+            return;
 
-                foreach (var (torrent, bytes) in Torrents) {
-                    QueueSingle(torrent, target.Provider, target.RemoteTargetPath);
-                }
-            } catch (Exception ex) {
-                Log.Logger.Error(ex, $"Duplication: failed to queue duplication to {target.Provider.Host.Config.Plugin.Name}");
-            }
+        foreach (var torrent in Torrents) {
+            QueueSingle(torrent, targets);
         }
     }
 
-    internal static void QueueSingle(Torrent Torrent, IDataProvider Target, string TargetPath)
+    internal static void QueueSingle(Torrent Torrent, IReadOnlyList<DuplicationTarget> Targets)
     {
-        Uri? sourceUri = null, targetUri = null;
-
         var source = Torrent.DataOwner;
+        var sourceServerId = source.Host.Config.Plugin.ServerId;
 
-        if (source.Host.Config.Plugin.ServerId != Target.Host.Config.Plugin.ServerId) {
-            targetUri = Target.Host.AttachedDaemonService.Uri;
-            sourceUri = source.Host.AttachedDaemonService.Uri;
-        }
+        var scriptTargets = Targets.Select(t => new DuplicationScriptTarget(
+            t.Provider.Host.Config.Plugin.ProviderName,
+            t.Provider.Host.Config.Plugin.ServerId == sourceServerId ? "" : t.Provider.Host.AttachedDaemonService.Uri.AbsoluteUri,
+            t.RemoteTargetPath
+        )).ToList();
 
         var variables = new Dictionary<string, string> {
             ["Hash"] = Convert.ToHexString(Torrent.Hash),
             ["SourceProvider"] = source.Host.Config.Plugin.ProviderName,
-            ["TargetProvider"] = Target.Host.Config.Plugin.ProviderName,
-            ["TargetUri"] = targetUri?.AbsoluteUri ?? "",
-            ["SourceUri"] = sourceUri?.AbsoluteUri ?? "",
-            ["TargetPath"] = TargetPath
+            ["SourceUri"] = source.Host.AttachedDaemonService.Uri.AbsoluteUri,
+            ["Targets"] = JsonSerializer.Serialize(scriptTargets, DuplicationScriptTargetContext.Default.ListDuplicationScriptTarget)
         };
 
         _ = source.Host.AttachedDaemonService.RunCustomScript(Script, $"Duplicate '{Torrent.Name}'", variables)
@@ -71,37 +67,83 @@ using RTSharp.Daemon.GRPCServices.DataProvider;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Daemon.Services;
 using RTSharp.Shared.Utils;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 
 public class Main(RegisteredDataProviders DataProviders, RTSharp.Daemon.Services.TorrentOpService TorrentOps) : IScript
 {
+    record DuplicationScriptTarget(string Provider, string? Uri, string Path);
+
     public async Task Execute(Dictionary<string, string> Variables, IScriptSession Session, CancellationToken CancellationToken)
     {
         Session.Progress.State = TASK_STATE.RUNNING;
         Session.Progress.Text = "Waiting for source torrent to complete...";
 
         var hash = Convert.FromHexString(Variables["Hash"]);
+        var sourceUri = Variables["SourceUri"];
         var sourceDp = DataProviders.GetDataProvider(Variables["SourceProvider"]) ?? throw new InvalidOperationException($"Unknown source data provider '{Variables["SourceProvider"]}'");
+        var targets = JsonSerializer.Deserialize<DuplicationScriptTarget[]>(Variables["Targets"]) ?? Array.Empty<DuplicationScriptTarget>();
 
         await TorrentOps.WaitForCompletion(sourceDp, hash, CancellationToken);
 
-        if (!string.IsNullOrEmpty(Variables["TargetUri"])) {
-            Session.Progress.Text = "Transmitting...";
-            var target = new DataProviderEndpoint(Variables["TargetUri"], Variables["TargetProvider"]);
-            await TorrentOps.TransmitTorrent(sourceDp, hash, target, Variables["SourceUri"], Variables["TargetPath"], CancellationToken);
+        var dotTorrentMs = new MemoryStream();
+        var getDotTorrentTask = Task.Run(async () => {
+            using (var stream = await TorrentOps.GetDotTorrentStream(sourceDp, hash, CancellationToken)) {
+                await stream.CopyToAsync(dotTorrentMs, CancellationToken);
+                dotTorrentMs.Position = 0;
+            }
+        });
+
+        foreach (var server in targets.GroupBy(t => t.Uri)) {
+            var paths = server.Select(t => t.Path).Distinct().ToList();
+
+            if (String.IsNullOrEmpty(server.Key)) {
+                Session.Progress.Text = "Linking files...";
+                foreach (var path in paths)
+                    await TorrentOps.LinkFiles(sourceDp, hash, path, CancellationToken);
+            } else {
+                var endpoint = new DataProviderEndpoint(server.Key, server.First().Provider);
+
+                var initialPath = paths[0];
+                Session.Progress.Text = "Transmitting...";
+                await TorrentOps.TransmitTorrent(sourceDp, hash, endpoint, sourceUri, initialPath, CancellationToken);
+
+                if (paths.Count > 1) {
+                    Session.Progress.Text = "Linking files...";
+                    var source = await TorrentOps.GetTorrent(sourceDp, hash);
+                    var filesReply = await TorrentOps.GetTorrentsFiles(sourceDp, new Torrents { Hashes = { hash.ToByteString() } });
+                    var files = filesReply.Reply.FirstOrDefault(x => x.InfoHash.ToByteArray().SequenceEqual(hash)) ?? throw new InvalidOperationException($"No file listing returned for hash {Convert.ToHexString(hash)}");
+
+                    foreach (var path in paths.Skip(1))
+                        await TorrentOps.Remote.LinkFiles(endpoint, initialPath, path, source.Name, files, CancellationToken);
+                }
+            }
         }
 
-        Session.Progress.Text = "Rechecking...";
-        // TODO: use fast-resume
-        if (!string.IsNullOrEmpty(Variables["TargetUri"])) {
-            var target = new DataProviderEndpoint(Variables["TargetUri"], Variables["TargetProvider"]);
-            await TorrentOps.Remote.ForceRecheckTorrents(target, hash, Session.Progress, CancellationToken);
-            await TorrentOps.Remote.TryStartSeeding(target, hash, CancellationToken);
-        } else {
-            var targetDp = DataProviders.GetDataProvider(Variables["TargetProvider"]) ?? throw new InvalidOperationException($"Unknown target data provider: {Variables["TargetProvider"]}");
-            var torrents = new Torrents { Hashes = { RTSharp.Shared.Utils.GrpcExtensions.ToByteString(hash) } };
-            await TorrentOps.ForceRecheckTorrents(targetDp, torrents, Session.Progress, CancellationToken);
-            await TorrentOps.TryStartSeeding(targetDp, torrents, CancellationToken);
+        Session.Progress.Text = "Adding torrents...";
+        await getDotTorrentTask;
+        foreach (var target in targets) {
+            if (String.IsNullOrEmpty(target.Uri)) {
+                var targetDp = DataProviders.GetDataProvider(target.Provider) ?? throw new InvalidOperationException($"Unknown target data provider: {target.Provider}");
+                await TorrentOps.AddTorrent(targetDp, dotTorrentMs, target.Path, "", true);
+            } else {
+                var endpoint = new DataProviderEndpoint(target.Uri, target.Provider);
+                await TorrentOps.Remote.AddTorrent(endpoint, dotTorrentMs, target.Path, "", true, CancellationToken);
+            }
+            dotTorrentMs.Position = 0;
+        }
+        dotTorrentMs.Dispose();
+
+        Session.Progress.Text = "Starting...";
+        foreach (var target in targets) {
+            if (String.IsNullOrEmpty(target.Uri)) {
+                var targetDp = DataProviders.GetDataProvider(target.Provider) ?? throw new InvalidOperationException($"Unknown target data provider: {target.Provider}");
+                await TorrentOps.TryStartSeeding(targetDp, new Torrents { Hashes = { hash.ToByteString() } }, CancellationToken);
+            } else {
+                var endpoint = new DataProviderEndpoint(target.Uri, target.Provider);
+                await TorrentOps.Remote.TryStartSeeding(endpoint, hash, CancellationToken);
+            }
         }
 
         Session.Progress.Text = "Done";

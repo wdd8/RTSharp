@@ -28,7 +28,7 @@
         <DataGrid.ContextMenu>
             <ContextMenu>
                 <MenuItem Header="Copy exception"
-                    Command="{Binding CopyException}"
+                    Command="{Binding CopyExceptionCommand}"
                     CommandParameter="{Binding #MainGrid.SelectedItems}"
                     IsEnabled="{Binding #MainGrid.((models:LogEntry)SelectedItem).HasException}"
             />

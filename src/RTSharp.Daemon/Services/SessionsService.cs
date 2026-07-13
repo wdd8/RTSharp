@@ -57,16 +57,21 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         IScript? instance;
 
         try {
-            instance = (IScript?)ActivatorUtilities.CreateInstance(scope.ServiceProvider, DynamicScript.ClassType);
-        } catch (Exception ex) {
-            throw new InstantiationException(ex.Message);
-        }
+            try {
+                instance = (IScript?)ActivatorUtilities.CreateInstance(scope.ServiceProvider, DynamicScript.ClassType);
+            } catch (Exception ex) {
+                throw new InstantiationException(ex.Message);
+            }
 
-        if (instance == null) {
-            throw new InstantiationException($"{DynamicScript.ClassType.Name} has not been resolved");
+            if (instance == null) {
+                throw new InstantiationException($"{DynamicScript.ClassType.Name} has not been resolved");
+            }
+        } catch {
+            scope.Dispose();
+            cts.Dispose();
+            DynamicScript.RemoveRef();
+            throw;
         }
-
-        DynamicScript.AddRef();
 
         session = new ScriptSession {
             Id = id,

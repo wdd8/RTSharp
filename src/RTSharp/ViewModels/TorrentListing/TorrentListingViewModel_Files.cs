@@ -84,7 +84,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     }
 
                     FilesViewModel.File.Update(file);
-                    update(FilesViewModel.File.Children, file.Children);
+                    //update(FilesViewModel.File.Children, file.Children);
                 }
 
                 lastFetchedFor = fetchedFor;

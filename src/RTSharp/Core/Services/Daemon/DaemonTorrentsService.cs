@@ -317,7 +317,8 @@ namespace RTSharp.Core.Services.Daemon
                     TMetadata = new NewTorrentsData.Types.Metadata {
                         Id = x.ToString(),
                         Path = In[x].Options.RemoteTargetPath,
-                        Filename = In[x].Filename ?? ""
+                        Filename = In[x].Filename ?? "",
+                        FastResume = In[x].Options.FastResume
                     }
                 });
             }

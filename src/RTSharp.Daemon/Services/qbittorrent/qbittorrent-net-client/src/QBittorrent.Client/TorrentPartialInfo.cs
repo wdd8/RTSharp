@@ -17,6 +17,18 @@ namespace QBittorrent.Client
     public class TorrentPartialInfo
     {
         /// <summary>
+        /// Torrent v1 (SHA-1) info hash. Available on qBittorrent 4.4+ (WebUI API >= 2.8.4); null otherwise or on partial rows that don't include it.
+        /// </summary>
+        [JsonProperty("infohash_v1")]
+        public string InfoHashV1 { get; set; }
+
+        /// <summary>
+        /// Torrent v2 (SHA-256) info hash. Available on qBittorrent 4.4+ (WebUI API >= 2.8.4); null for v1-only torrents, older servers, or partial rows that don't include it.
+        /// </summary>
+        [JsonProperty("infohash_v2")]
+        public string InfoHashV2 { get; set; }
+
+        /// <summary>
         /// Torrent name
         /// </summary>
         [JsonProperty("name")]

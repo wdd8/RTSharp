@@ -173,6 +173,7 @@ message NewTorrentsData {
         string Id = 1;
         string Path = 2;
         string Filename = 3;
+        bool FastResume = 4;
     }
     message TorrentData {
         string Id = 1;
