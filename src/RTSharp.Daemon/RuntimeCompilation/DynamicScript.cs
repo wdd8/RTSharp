@@ -31,13 +31,24 @@ namespace RTSharp.Daemon.RuntimeCompilation
 		private bool IsDisposed { get; set; }
 
 		private int RefCount;
-		private bool Cached = true;
 		private readonly Lock DisposeLock = new();
 
-		public DynamicScript(MemoryStream Assembly, string[] Tags)
+		private readonly TimeSpan IdleTimeout;
+		private readonly Timer IdleTimer;
+
+		private readonly Action<DynamicScript<T>> OnIdleTimeout;
+
+		public DynamicScript(MemoryStream Assembly, string[] Tags, TimeSpan IdleTimeout, Action<DynamicScript<T>> OnIdleTimeout)
 		{
 			this.Assembly = Assembly;
 			this.Tags = Tags;
+			this.IdleTimeout = IdleTimeout;
+			this.OnIdleTimeout = OnIdleTimeout;
+
+			IdleTimer = new Timer(static state => {
+				var self = (DynamicScript<T>)state!;
+				self.OnIdleTimeout(self);
+			}, this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
 			Alc = new UnloadableLoadContext();
 			try {
@@ -53,6 +64,8 @@ namespace RTSharp.Daemon.RuntimeCompilation
 				Dispose(true);
 				throw new InterfaceNotFoundException($"No classes implement {typeof(T).Name}");
 			}
+
+			IdleTimer.Change(IdleTimeout, Timeout.InfiniteTimeSpan);
 		}
 
 		public bool TryAddRef()
@@ -62,6 +75,7 @@ namespace RTSharp.Daemon.RuntimeCompilation
 					return false;
 
 				RefCount++;
+				IdleTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 				return true;
 			}
 		}
@@ -69,19 +83,23 @@ namespace RTSharp.Daemon.RuntimeCompilation
 		public void RemoveRef()
 		{
 			lock (DisposeLock) {
-				if (--RefCount <= 0 && !Cached) {
-					Dispose();
+				if (IsDisposed)
+					return;
+
+				if (--RefCount <= 0) {
+					IdleTimer.Change(IdleTimeout, Timeout.InfiniteTimeSpan);
 				}
 			}
 		}
 
-		public void TryExpire()
+		public bool TryExpire()
 		{
 			lock (DisposeLock) {
-				Cached = false;
-				if (RefCount <= 0) {
-					Dispose();
-				}
+				if (IsDisposed || RefCount > 0)
+					return false;
+
+				Dispose();
+				return true;
 			}
 		}
 
@@ -103,6 +121,8 @@ namespace RTSharp.Daemon.RuntimeCompilation
 			lock (DisposeLock) {
 				if (IsDisposed)
 					return;
+
+				IdleTimer.Dispose();
 
 				_classType = null;
 				Alc!.Unload();

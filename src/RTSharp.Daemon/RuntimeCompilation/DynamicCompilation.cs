@@ -16,9 +16,8 @@ namespace RTSharp.Daemon.RuntimeCompilation
 	{
 		private static readonly TimeSpan CompilationCacheIdleTimeout = TimeSpan.FromMinutes(30);
 
-		public static readonly MemoryCache Cache = new(new MemoryCacheOptions {
-			ExpirationScanFrequency = TimeSpan.FromMinutes(1)
-		});
+		public static readonly MemoryCache Cache = new(new MemoryCacheOptions());
+		private static readonly Lock CacheLock = new();
 
 		const string BuiltInUsingsPragma = "#pragma usings";
 
@@ -319,22 +318,30 @@ namespace RTSharp.Daemon.RuntimeCompilation
 			}
 
 			await keyLock.WaitAsync(); try {
+				lock (CacheLock) {
+					if (Cache.TryGetValue(key, out DynamicScript<T>? cached) && cached!.TryAddRef()) {
+						return cached;
+					}
+				}
+
 				var script = Script;
+				var (ms, pragmaTags) = CompileAssembly(ref script, Name, BuiltInAssemblyReferences, BuiltInUsings);
 
-				var compilation = Cache.GetOrCreate(key, entry => {
-					entry.SetSlidingExpiration(CompilationCacheIdleTimeout);
-					entry.RegisterPostEvictionCallback(static (_, value, _, _) => {
-						((DynamicScript<T>)value!).TryExpire();
-					});
-
-					var (ms, pragmaTags) = CompileAssembly(ref script, Name, BuiltInAssemblyReferences, BuiltInUsings);
-
-					return new DynamicScript<T>(ms, pragmaTags);
-				})!;
+				var compilation = new DynamicScript<T>(ms, pragmaTags, CompilationCacheIdleTimeout, self => {
+					lock (CacheLock) {
+						if (self.TryExpire() && Cache.TryGetValue(key, out DynamicScript<T>? current) && ReferenceEquals(current, self)) {
+							Cache.Remove(key);
+						}
+					}
+				});
 
 				if (!compilation.TryAddRef()) {
                     throw new InvalidOperationException();
                 }
+
+				lock (CacheLock) {
+					Cache.Set(key, compilation);
+				}
 
 				return compilation;
 			} finally {
