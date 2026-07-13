@@ -127,7 +127,7 @@ namespace RTSharp.Daemon.GRPCServices
 
                 var task = await Task.WhenAny(session.Execution!, session.EvProgressChanged.WaitAsync(Ctx.CancellationToken));
 
-                Logger.LogInformation($"ScriptStatus: Session {id} progress changed, sending");
+                Logger.LogTrace($"ScriptStatus: Session {id} progress changed, sending");
                 await Res.WriteAsync(MapProgressState(session.Progress, includeChain: true), Ctx.CancellationToken);
 
                 if (task == session.Execution) {

@@ -33,7 +33,7 @@ public class ScriptSession : IScriptSession
     public void ProgressChanged(ScriptProgressState? progress = null, bool chainChanged = false)
     {
         var logger = Scope?.ServiceProvider.GetRequiredService<ILogger<SessionsService>>();
-        logger?.LogInformation($"EV: Script session {Id} progress changed");
+        logger?.LogTrace($"EV: Script session {Id} progress changed");
 
         EvProgressChanged.Set();
         ProgressUpdated?.Invoke(this, progress ?? Progress, chainChanged);
