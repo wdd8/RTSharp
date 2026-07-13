@@ -46,6 +46,9 @@ public class TorrentOpService
     {
         Logger.LogDebug($"{RegisteredDataProvider}: Waiting for torrent {Convert.ToHexString(Hash)} to complete");
 
+        var lastActivity = Stopwatch.StartNew();
+        ulong? lastCompletedSize = null;
+
         while (true) {
             CancellationToken.ThrowIfCancellationRequested();
 
@@ -59,6 +62,13 @@ public class TorrentOpService
 
             if (torrent.CompletedSize >= torrent.WantedSize)
                 return;
+
+            if (torrent.CompletedSize != lastCompletedSize) {
+                lastCompletedSize = torrent.CompletedSize;
+                lastActivity.Restart();
+            } else if (torrent.State.HasFlag(TorrentState.Downloading) && lastActivity.Elapsed >= TimeSpan.FromMinutes(1)) {
+                throw new RpcException(new Grpc.Core.Status(StatusCode.DeadlineExceeded, $"Torrent {Convert.ToHexString(Hash)} made no progress for 1 minute while downloading"));
+            }
 
             var delay = torrent.ETA?.Seconds < 10 ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(5);
             await Task.Delay(delay, CancellationToken);
