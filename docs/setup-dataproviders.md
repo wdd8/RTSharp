@@ -72,6 +72,7 @@ Example:
   "rtorrent": {
     "my rtorrent": {
       "SCGIListen": "127.0.0.1:5000",
+      "SessionDir": "/home/user/.session",
       "LogFile": "/home/user/.session/rtorrent.log" // optional
     }
   },
@@ -122,6 +123,7 @@ After RT# restart & with data providers configured, you should see data provider
 rtorrent implementation uses `xmlrpc` interface. It does not support delta torrent listing changes, therefore requires significant bandwidth throughput to sustain fast updates for large lists of torrents.
 
 * `SCGIListen` is an IP end point pointing to SCGI socket configured by rtorrents `scgi_port` option
+* `SessionDir` is an optional field to override the session directory returned by rtorrent. This is useful in scenarios when rtorrent is hosted in a filesystem not visible to RT#. This impacts the ability to get .torrent files of already added torrents.
 * `LogFile` is an optional field for streaming logs to the client. If you have rtorrent logging enabled, set this field to value of `log.open_file` option.
 
 Example:
@@ -158,7 +160,7 @@ transmission implementation connects to its RPC server using a username and pass
 * `Uri` field must point to transmission RPC path, for example `http://10.0.0.1:40000/transmission/rpc`
 * `Username` field must be filled
 * `Password` field must be filled
-* `ConfigDir` should be filled and accessible if possible. This impacts the ability to get .torrent files of already added torrents.
+* `ConfigDir` is an optional field to override config directory returned by transmission. This is useful in scenarios when transmission is hosted in a filesystem not visible to RT#. This impacts the ability to get .torrent files of already added torrents.
 * `LogFile` is an optional field for streaming logs to the client. If you have transmission logging enabled, set this field to value transmission's log file path.
 
 ```

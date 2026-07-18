@@ -1,5 +1,7 @@
 ﻿using Grpc.Core;
 
+using Microsoft.Extensions.Options;
+
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Shared.Utils;
 
@@ -14,12 +16,14 @@ namespace RTSharp.Daemon.Services.rtorrent
         private SCGICommunication Scgi;
         private SettingsService Settings;
         private V1ToV2InfoHashCache Cache;
+        private ConfigModel Config;
 
-        public RTorrentOpService(IServiceProvider ServiceProvider, [ServiceKey] string InstanceKey)
+        public RTorrentOpService(IServiceProvider ServiceProvider, IOptionsFactory<ConfigModel> Opts, [ServiceKey] string InstanceKey)
         {
             this.Scgi = ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
             this.Settings = ServiceProvider.GetRequiredKeyedService<SettingsService>(InstanceKey);
             this.Cache = ServiceProvider.GetRequiredService<V1ToV2InfoHashCache>();
+            this.Config = Opts.Create(InstanceKey);
         }
 
         private byte[] ToNative(byte[] RTSHash)
@@ -30,7 +34,10 @@ namespace RTSharp.Daemon.Services.rtorrent
         
         public async Task<InfoHashDictionary<string>> GetDotTorrentFilePaths(IEnumerable<byte[]> Hashes)
         {
-            var sessionSetting = (string)(await Settings.GetSettings(SettingsService.SessionPath))[SettingsService.SessionPath.RtorrentSetting];
+            if (String.IsNullOrEmpty(Config.SessionDir))
+                Config.SessionDir = (string)(await Settings.GetSettings(SettingsService.SessionPath))[SettingsService.SessionPath.RtorrentSetting];
+
+            var sessionSetting = Config.SessionDir;
 
             if (String.IsNullOrEmpty(sessionSetting))
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.Internal, "Received empty session path"));
