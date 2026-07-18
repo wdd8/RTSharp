@@ -120,7 +120,7 @@ namespace RTSharp.Shared.Utils
         {
             if (In == TimeSpan.MaxValue)
                 return "∞";
-            if (In == TimeSpan.Zero)
+            if (In <= TimeSpan.Zero)
                 return "0 ms";
 
             var days = (int)In.TotalDays;

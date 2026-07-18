@@ -67,7 +67,7 @@ public class TorrentMapper
         if (External.RateUpload != null)
             Stored.UPSpeed = (ulong)External.RateUpload.Value;
         if (External.Eta != null)
-            Stored.ETA = External.Eta == null || External.Eta == -1 ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(External.Eta.Value));
+            Stored.ETA = External.Eta == null || External.Eta < 0 ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(External.Eta.Value)); // -1 = None, -2 = inf
         if (External.Labels != null) {
             Stored.Labels.Clear();
             Stored.Labels.AddRange(External.Labels);
