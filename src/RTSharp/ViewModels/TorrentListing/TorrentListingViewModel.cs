@@ -620,7 +620,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
 
                 Debug.Assert(TorrentTabsTasks == null);
 
-                Log.Logger.Information("Starting tasks for: " + newTorrent.Name);
+                Log.Logger.Debug("Starting tasks for: " + newTorrent.Name);
                 TorrentTabsTasks = StartTorrentTabTasks(newTorrent, SelectionChange.Token);
             } else {
                 TorrentDetailsTabTaskTarget = null;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using RTSharp.Shared.Abstractions;
@@ -11,6 +12,7 @@ using System.Threading.Channels;
 using RTSharp.Core;
 using RTSharp.Core.Services.Cache.TorrentFileCache;
 using RTSharp.Core.Services.Cache.TorrentPropertiesCache;
+using System.Diagnostics;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
@@ -21,6 +23,11 @@ namespace RTSharp.ViewModels.TorrentListing
         private Channel<FilesUpdate>? FilesChanges;
 
         private Channel<(Models.Torrent, IList<PieceState>)>? PiecesChanges;
+
+#if DEBUG
+        private bool GetFilesChangesRunning = false;
+        private bool GetPiecesChangesRunning = false;
+#endif
 
         private async Task FilesTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
@@ -97,6 +104,11 @@ namespace RTSharp.ViewModels.TorrentListing
             if (FilesChanges == null)
                 throw new NullReferenceException(nameof(FilesChanges));
 
+#if DEBUG
+            Debug.Assert(!GetFilesChangesRunning);
+            GetFilesChangesRunning = true;
+#endif
+
             try {
                 using var scope = Core.ServiceProvider.CreateScope();
                 var config = scope.ServiceProvider.GetRequiredService<Config>();
@@ -105,6 +117,20 @@ namespace RTSharp.ViewModels.TorrentListing
 
                 bool canUseCached = config.Caching.Value.FilesCachingEnabled && !current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) && (current.Done == 0 || current.Done == 100);
                 if (canUseCached) {
+                    using var cachedView = CancellationTokenSource.CreateLinkedTokenSource(selectionChange);
+                    void onTorrentChanged(object? sender, PropertyChangedEventArgs e)
+                    {
+                        if (e.PropertyName != nameof(Models.Torrent.InternalState) && e.PropertyName != nameof(Models.Torrent.Done))
+                            return;
+
+                        if (current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) || (current.Done != 0 && current.Done != 100)) {
+                            canUseCached = false;
+                            cachedView.Cancel();
+                        }
+                    }
+
+                    current.PropertyChanged += onTorrentChanged;
+
                     var cachedFiles = await fileCache.GetCachedFileEntries(current.Hash);
                     var cachedProps = await propertiesCache.GetCachedTorrentProperties(current.Hash);
 
@@ -112,10 +138,15 @@ namespace RTSharp.ViewModels.TorrentListing
                         FilesViewModel.MultiFile = cachedProps.IsMultiFile;
                         var built = Models.File.FromCache(current, cachedProps.IsMultiFile, cachedFiles, current.Done == 100);
                         FilesChanges.Writer.TryWrite(new FilesUpdate(current, built, null));
+
                         try {
-                            await Task.Delay(-1, selectionChange); // TODO: what about state change?
-                        } catch { }
-                        return;
+                            await Task.Delay(-1, cachedView.Token);
+                        } catch {
+                        } finally {
+                            current.PropertyChanged -= onTorrentChanged;
+                        }
+
+                        Log.Logger.Debug("Torrent state changed, switching to live updates");
                     }
                 }
 
@@ -128,6 +159,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 throw;
             } finally {
                 FilesChanges.Writer.Complete();
+                GetFilesChangesRunning = false;
             }
         }
 
@@ -207,6 +239,11 @@ end:
             if (PiecesChanges == null)
                 throw new NullReferenceException(nameof(PiecesChanges));
 
+#if DEBUG
+            Debug.Assert(!GetPiecesChangesRunning);
+            GetPiecesChangesRunning = true;
+#endif
+
             try {
                 while (!selectionChange.IsCancellationRequested) {
                     if (!current.DataOwner.Instance.Capabilities.GetPieces) {
@@ -250,6 +287,7 @@ end:
                 throw;
             } finally {
                 PiecesChanges.Writer.Complete();
+                GetPiecesChangesRunning = false;
             }
         }
     }
