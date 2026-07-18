@@ -21,26 +21,24 @@ public static class TreeBuilder
     public static Node Build(IEnumerable<string> paths)
     {
         var root = new Node("./");
+        var nodes = new Dictionary<string, Node>();
+        var lookup = nodes.GetAlternateLookup<ReadOnlySpan<char>>();
         foreach (var path in paths) {
-            AddNode(root, path.Split('/'), 0, "");
-        }
-        return root;
-    }
+            var parent = root;
+            var startIdx = 0;
+            while (startIdx < path.Length) {
+                var slashIdx = path.IndexOf('/', startIdx);
+                var endIdx = slashIdx == -1 ? path.Length : slashIdx;
 
-    private static void AddNode(Node node, string[] path, int index, string nodePath)
-    {
-        if (index >= path.Length)
-            return;
-
-        var segment = path[index];
-        nodePath = nodePath.Length == 0 ? segment : string.Concat(nodePath, "/", segment);
-
-        foreach (var actual in node.Children) {
-            if (actual.Name == segment) {
-                AddNode(actual, path, index + 1, nodePath);
-                return;
+                if (!lookup.TryGetValue(path.AsSpan(0, endIdx), out var node)) {
+                    node = new Node(path[..endIdx]);
+                    nodes[node.Path] = node;
+                    parent.AddChild(node);
+                }
+                parent = node;
+                startIdx = endIdx + 1;
             }
         }
-        AddNode(node.AddChild(new Node(nodePath)), path, index + 1, nodePath);
+        return root;
     }
 }

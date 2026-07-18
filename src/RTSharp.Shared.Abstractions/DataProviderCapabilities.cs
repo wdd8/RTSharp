@@ -2,6 +2,7 @@
 {
     public record DataProviderCapabilities(
         bool GetFiles,
+        bool GetFileChanges,
         bool GetPeers,
         bool GetTrackers,
         bool GetPieces,

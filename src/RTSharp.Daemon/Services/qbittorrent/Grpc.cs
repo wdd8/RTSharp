@@ -393,53 +393,66 @@ namespace RTSharp.Daemon.Services.qbittorrent
             }
         }
 
-        public async Task<TorrentsFilesReply> GetTorrentsFiles(Torrents Req)
+        private async Task<TorrentsFilesReply.Types.TorrentsFiles> GetTorrentFiles(byte[] Hash)
         {
             var client = await Client.Init();
 
-            var files = Req.Hashes.Select(x => (Hash: x.ToByteArray(), Files: client.GetTorrentContentsAsync(ToNativeHex(x.Span), null))).ToArray();
+            var contents = await client.GetTorrentContentsAsync(ToNativeHex(Hash), null);
 
-            await Task.WhenAll(files.Select(x => x.Files));
-
-            InfoHashDictionary<Protocols.DataProvider.Torrent> torrents;
+            Protocols.DataProvider.Torrent torrent;
             LatestTorrentsLock.EnterReadLock();
-            {
-                torrents = Req.Hashes.Select(x => LatestTorrents[InfoHash.TruncateV2(x.Span)]).ToInfoHashDictionary(x => x.Hash.ToByteArray(), x => x);
+            try {
+                torrent = LatestTorrents[InfoHash.TruncateV2(Hash)];
+            } finally {
+                LatestTorrentsLock.ExitReadLock();
             }
-            LatestTorrentsLock.ExitReadLock();
 
-            return new TorrentsFilesReply {
-                Reply = {
-                    files.Select(x => new TorrentsFilesReply.Types.TorrentsFiles {
-                        InfoHash = x.Hash.ToByteString(),
-                        MultiFile = x.Files.Result == null ? false : x.Files.Result[0].Name.Contains('/'),
-                        Files = {
-                            x.Files.Result == null ? [] : x.Files.Result.Select(i => {
-                                var torrentName = torrents[x.Hash].Name;
+            return new TorrentsFilesReply.Types.TorrentsFiles {
+                InfoHash = Hash.ToByteString(),
+                MultiFile = contents == null ? false : contents[0].Name.Contains('/'),
+                Files = {
+                    contents == null ? [] : contents.Select(i => {
+                        var torrentName = torrent.Name;
 
-                                i.Name = i.Name.StartsWith(torrentName + '/') ? i.Name[(torrentName.Length + 1)..] : i.Name;
-                                return new TorrentsFilesReply.Types.File {
-                                    Path = i.Name,
-                                    Size = (ulong)i.Size,
-                                    DownloadedPieces = (ulong)(i.PieceRange.EndIndex - i.PieceRange.StartIndex * i.Progress),
-                                    Downloaded = (ulong)(i.Progress * i.Size),
-                                    Priority = i.Priority switch {
-                                        TorrentContentPriority.Skip => TorrentsFilesReply.Types.FilePriority.DontDownload,
-                                        TorrentContentPriority.Minimal => TorrentsFilesReply.Types.FilePriority.Normal, // TODO: missing
-                                        TorrentContentPriority.VeryLow => TorrentsFilesReply.Types.FilePriority.Normal, // TODO: missing
-                                        TorrentContentPriority.Low => TorrentsFilesReply.Types.FilePriority.Normal, // TODO: missing
-                                        TorrentContentPriority.Normal => TorrentsFilesReply.Types.FilePriority.Normal,
-                                        TorrentContentPriority.High => TorrentsFilesReply.Types.FilePriority.High,
-                                        TorrentContentPriority.VeryHigh => TorrentsFilesReply.Types.FilePriority.High, // TODO: missing
-                                        TorrentContentPriority.Maximal => TorrentsFilesReply.Types.FilePriority.High, // TODO: missing
-                                        _ => throw new ArgumentOutOfRangeException()
-                                    }
-                                };
-                            })
-                        }
+                        i.Name = i.Name.StartsWith(torrentName + '/') ? i.Name[(torrentName.Length + 1)..] : i.Name;
+                        return new TorrentsFilesReply.Types.File {
+                            Path = i.Name,
+                            Size = (ulong)i.Size,
+                            DownloadedPieces = (ulong)(i.PieceRange.EndIndex - i.PieceRange.StartIndex * i.Progress),
+                            Downloaded = (ulong)(i.Progress * i.Size),
+                            Priority = i.Priority switch {
+                                TorrentContentPriority.Skip => TorrentsFilesReply.Types.FilePriority.DontDownload,
+                                TorrentContentPriority.Minimal => TorrentsFilesReply.Types.FilePriority.Normal, // TODO: missing
+                                TorrentContentPriority.VeryLow => TorrentsFilesReply.Types.FilePriority.Normal, // TODO: missing
+                                TorrentContentPriority.Low => TorrentsFilesReply.Types.FilePriority.Normal, // TODO: missing
+                                TorrentContentPriority.Normal => TorrentsFilesReply.Types.FilePriority.Normal,
+                                TorrentContentPriority.High => TorrentsFilesReply.Types.FilePriority.High,
+                                TorrentContentPriority.VeryHigh => TorrentsFilesReply.Types.FilePriority.High, // TODO: missing
+                                TorrentContentPriority.Maximal => TorrentsFilesReply.Types.FilePriority.High, // TODO: missing
+                                _ => throw new ArgumentOutOfRangeException()
+                            }
+                        };
                     })
                 }
             };
+        }
+
+        public async Task<TorrentsFilesReply> GetTorrentsFiles(Torrents Req)
+        {
+            var tasks = Req.Hashes.Select(x => GetTorrentFiles(x.ToByteArray())).ToArray();
+
+            await Task.WhenAll(tasks);
+
+            return new TorrentsFilesReply {
+                Reply = { tasks.Select(x => x.Result) }
+            };
+        }
+
+        public Task GetTorrentFileUpdates(GetTorrentFileUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsFilesResponse> Res, CancellationToken CancellationToken)
+        {
+            var hash = Req.InfoHash.ToByteArray();
+
+            return TorrentFileUpdatesStreamer.Stream(_ => GetTorrentFiles(hash), Req.Interval.ToTimeSpan(), Res, CancellationToken);
         }
 
         public async Task<TorrentsPeersReply> GetTorrentsPeers(Torrents Req)

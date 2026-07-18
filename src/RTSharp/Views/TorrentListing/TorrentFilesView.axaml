@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:dgh="using:Avalonia.Controls.DataGridHierarchical"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
@@ -40,7 +41,7 @@
             <DataTemplate x:Key="FileNameTemplate" x:DataType="models:File">
               <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                 <Image Source="{Binding IconTask^}"
-                       IsVisible="{Binding !!IconTask^}"
+                       IsVisible="{Binding IconTask^, Converter={x:Static conv:ObjectConverters.IsNotNull}}"
                        Width="16" Height="16"
                        VerticalAlignment="Center" />
                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />

@@ -72,29 +72,51 @@ namespace RTSharp.Models
 
         public ObservableCollection<File> Children { get; set; } = new();
 
-        public void Update(Models.File file)
+        public static string PriorityToString(PRIORITY Priority) => Priority switch {
+            PRIORITY.DONT_DOWNLOAD => "Don't download",
+            PRIORITY.NORMAL => "Normal",
+            PRIORITY.HIGH => "High",
+            PRIORITY.NA => "N/A",
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        public static string StrategyToString(DOWNLOAD_STRATEGY Strategy) => Strategy switch {
+            DOWNLOAD_STRATEGY.NORMAL => "Normal",
+            DOWNLOAD_STRATEGY.PRIORITIZE_FIRST => "Prioritize first",
+            DOWNLOAD_STRATEGY.PRIORITIZE_LAST => "Prioritize last",
+            DOWNLOAD_STRATEGY.NA => "N/A",
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        public void ApplyDelta(Shared.Abstractions.FileDelta Delta)
         {
-            this.DownloadedPieces = file.DownloadedPieces;
-            this.Done = file.Done;
-            this.Downloaded = file.Downloaded;
-            this.Priority = file.Priority;
-            this.PriorityInternal = file.PriorityInternal;
-            this.DownloadStrategy = file.DownloadStrategy;
-            this.DownloadStrategyInternal = file.DownloadStrategyInternal;
+            DownloadedPieces = Delta.DownloadedPieces;
+            Downloaded = Delta.Downloaded;
+            var done = Size == 0 ? 0 : (float)Delta.Downloaded / Size * 100;
+            Done = Math.Clamp(done, 0, 100);
+            Priority = PriorityToString(Delta.Priority);
+            PriorityInternal = Delta.Priority;
+            DownloadStrategy = StrategyToString(Delta.DownloadStrategy);
+            DownloadStrategyInternal = Delta.DownloadStrategy;
         }
 
-        private static File FromModel<T>(string TorrentName, bool MultiFile, IList<T> In, Func<T, File> MapFx, Func<T, string> PathSelector)
+        private static (File Root, File[] Leaves) FromModel<T>(string TorrentName, bool MultiFile, IList<T> In, Func<T, File> MapFx, Func<T, string> PathSelector)
         {
-            var files = In.ToDictionary(x => PathSelector(x), x => x);
-            var tree = TreeBuilder.Build(In.Select(x => PathSelector(x)));
+            var leaves = new File[In.Count];
+            var files = new Dictionary<string, (T Item, int Index)>(In.Count);
+            for (var x = 0; x < In.Count; x++)
+                files[PathSelector(In[x])] = (In[x], x);
+
+            var tree = TreeBuilder.Build(In.Select(PathSelector));
 
             void add(ObservableCollection<File> children, Node node)
             {
                 foreach (var child in node.Children) {
                     File mapped;
                     if (files.TryGetValue(child.Path, out var realFile)) {
-                        mapped = MapFx(realFile);
+                        mapped = MapFx(realFile.Item);
                         mapped.Name = child.Name;
+                        leaves[realFile.Index] = mapped;
                     } else {
                         mapped = new File {
                             Name = child.Name,
@@ -118,53 +140,76 @@ namespace RTSharp.Models
             };
             add(ret.Children, tree);
 
-            void sumForFolder(File file)
+            RecomputeFolders(ret);
+
+            return (ret, leaves);
+        }
+
+        public static void RecomputeFolders(File Root)
+        {
+            zero(Root);
+            sumForFolder(Root);
+            Root.Done = Root.Size == 0 ? 0 : (float)Root.Downloaded / Root.Size * 100;
+
+            static void zero(File dir)
+            {
+                dir.Size = 0;
+                dir.DownloadedPieces = 0;
+                dir.Downloaded = 0;
+                dir.Done = 0;
+                dir.Priority = default!;
+                dir.PriorityInternal = default;
+                dir.DownloadStrategy = default!;
+                dir.DownloadStrategyInternal = default;
+
+                foreach (var child in dir.Children) {
+                    if (child.IsDirectory)
+                        zero(child);
+                }
+            }
+
+            static void sum(File dst, File src)
+            {
+                dst.Size += src.Size;
+                dst.DownloadedPieces += src.DownloadedPieces;
+                dst.Done += src.Done;
+                dst.Downloaded += src.Downloaded;
+                if (dst.Priority == default) {
+                    dst.Priority = src.Priority;
+                    dst.PriorityInternal = src.PriorityInternal;
+                } else if (dst.Priority != src.Priority) {
+                    dst.Priority = "N/A";
+                    dst.PriorityInternal = PRIORITY.NA;
+                }
+                if (dst.DownloadStrategy == default) {
+                    dst.DownloadStrategy = src.DownloadStrategy;
+                    dst.DownloadStrategyInternal = src.DownloadStrategyInternal;
+                } else if (dst.DownloadStrategy != src.DownloadStrategy) {
+                    dst.DownloadStrategy = "N/A";
+                    dst.DownloadStrategyInternal = DOWNLOAD_STRATEGY.NA;
+                }
+            }
+
+            static void sumForFolder(File file)
             {
                 if (!file.IsDirectory)
                     throw new InvalidOperationException("Passed file for folder-only method");
 
-                void sum(File dst, File src)
-                {
-                    dst.Size += src.Size;
-                    dst.DownloadedPieces += src.DownloadedPieces;
-                    dst.Done += src.Done;
-                    dst.Downloaded += src.Downloaded;
-                    if (dst.Priority == default) {
-                        dst.Priority = src.Priority;
-                        dst.PriorityInternal = src.PriorityInternal;
-                    } else if (dst.Priority != src.Priority) {
-                        dst.Priority = "N/A";
-                        dst.PriorityInternal = PRIORITY.NA;
-                    }
-                    if (dst.DownloadStrategy == default) {
-                        dst.DownloadStrategy = src.DownloadStrategy;
-                        dst.DownloadStrategyInternal = src.DownloadStrategyInternal;
-                    } else if (dst.DownloadStrategy != src.DownloadStrategy) {
-                        dst.DownloadStrategy = "N/A";
-                        dst.DownloadStrategyInternal = DOWNLOAD_STRATEGY.NA;
-                    }
-                }
-
                 foreach (var child in file.Children) {
                     if (child.IsDirectory) {
                         sumForFolder(child);
-                        child.Done = (float)child.Downloaded / child.Size * 100;
+                        child.Done = child.Size == 0 ? 0 : (float)child.Downloaded / child.Size * 100;
                     }
                     sum(file, child);
                 }
             }
-
-            sumForFolder(ret);
-            ret.Done = (float)ret.Downloaded / ret.Size * 100;
-
-            return ret;
         }
 
-        public static File FromPluginModel(string TorrentName, Shared.Abstractions.TorrentFiles TorrentFiles)
+        public static (File Root, File[] Leaves) FromPluginModel(string TorrentName, Shared.Abstractions.TorrentFiles TorrentFiles)
         {
             var (MultiFile, In) = TorrentFiles;
 
-            File map(Shared.Abstractions.File In)
+            static File map(Shared.Abstractions.File In)
             {
                 var ret = new File {
                     Path = In.Path,
@@ -173,24 +218,10 @@ namespace RTSharp.Models
                     Done = In.Done,
                     Downloaded = In.Downloaded,
 
-                    Priority = In.Priority switch {
-                        PRIORITY.DONT_DOWNLOAD => "Don't download",
-                        PRIORITY.NORMAL => "Normal",
-                        PRIORITY.HIGH => "High",
-                        PRIORITY.NA => "N/A",
-                        _ => throw new ArgumentOutOfRangeException()
-                    },
-
+                    Priority = PriorityToString(In.Priority),
                     PriorityInternal = In.Priority,
 
-                    DownloadStrategy = In.DownloadStrategy switch {
-                        DOWNLOAD_STRATEGY.NORMAL => "Normal",
-                        DOWNLOAD_STRATEGY.PRIORITIZE_FIRST => "Prioritize first",
-                        DOWNLOAD_STRATEGY.PRIORITIZE_LAST => "Prioritize last",
-                        DOWNLOAD_STRATEGY.NA => "N/A",
-                        _ => throw new ArgumentOutOfRangeException()
-                    },
-
+                    DownloadStrategy = StrategyToString(In.DownloadStrategy),
                     DownloadStrategyInternal = In.DownloadStrategy
                 };
 
@@ -200,7 +231,7 @@ namespace RTSharp.Models
             return FromModel(TorrentName, MultiFile, In, map, x => x.Path);
         }
 
-        public static File FromCache(Models.Torrent torrent, bool IsMultiFile, IList<CachedTorrentPath> In, bool FullyDownloaded)
+        public static (File Root, File[] Leaves) FromCache(Models.Torrent torrent, bool IsMultiFile, IList<CachedTorrentPath> In, bool FullyDownloaded)
         {
             File map(CachedTorrentPath In)
             {

@@ -673,41 +673,56 @@ namespace RTSharp.Daemon.Services.transmission
             return ret;
         }
 
-        public async Task<TorrentsFilesReply> GetTorrentsFiles(Torrents Req)
+        private async Task<TorrentsFilesReply.Types.TorrentsFiles> GetTorrentFiles(byte[] Hash)
         {
             var client = await Client.Init();
 
             // Could also fetch from torrent polling task if its live
-            var torrents = (await client.TorrentGetAsync(ToNativeHashStrings(Req), [ TorrentFields.FILES, TorrentFields.HASH_STRING, TorrentFields.NAME, TorrentFields.FILE_STATS, TorrentFields.PIECE_SIZE ]))!.Torrents;
+            var torrents = (await client.TorrentGetAsync([ ToNativeHashString(Hash) ], [ TorrentFields.FILES, TorrentFields.HASH_STRING, TorrentFields.NAME, TorrentFields.FILE_STATS, TorrentFields.PIECE_SIZE ]))!.Torrents;
+            var x = torrents[0];
 
-            return new TorrentsFilesReply {
-                Reply = {
-                    torrents.Select(x => new TorrentsFilesReply.Types.TorrentsFiles {
-                        InfoHash = ToRTSHash(Convert.FromHexString(x.HashString!)).ToByteString(),
-                        MultiFile = x.Files![0].Name!.Contains('/'),
-                        Files = {
-                            x.Files.Select((i, idx) => {
-                                var torrentName = x.Name!;
+            return new TorrentsFilesReply.Types.TorrentsFiles {
+                InfoHash = ToRTSHash(Convert.FromHexString(x.HashString!)).ToByteString(),
+                MultiFile = x.Files![0].Name!.Contains('/'),
+                Files = {
+                    x.Files.Select((i, idx) => {
+                        var torrentName = x.Name!;
 
-                                i.Name = i.Name!.StartsWith(torrentName + '/') ? i.Name[(torrentName.Length + 1)..] : i.Name;
+                        i.Name = i.Name!.StartsWith(torrentName + '/') ? i.Name[(torrentName.Length + 1)..] : i.Name;
 
-                                return new TorrentsFilesReply.Types.File {
-                                    Path = i.Name,
-                                    Size = (ulong)i.Length!,
-                                    DownloadedPieces = (ulong)(i.BytesCompleted! / (double)x.PieceSize!),
-                                    Downloaded = (ulong)i.BytesCompleted!,
-                                    Priority = !x.FileStats![idx].Wanted ? TorrentsFilesReply.Types.FilePriority.DontDownload : x.FileStats[idx].Priority switch {
-                                        Priority.Low => TorrentsFilesReply.Types.FilePriority.Normal, // TODO: missing
-                                        Priority.Normal => TorrentsFilesReply.Types.FilePriority.Normal,
-                                        Priority.High => TorrentsFilesReply.Types.FilePriority.High,
-                                        _ => throw new NotImplementedException()
-                                    }
-                                };
-                            })
-                        }
+                        return new TorrentsFilesReply.Types.File {
+                            Path = i.Name,
+                            Size = (ulong)i.Length!,
+                            DownloadedPieces = (ulong)(i.BytesCompleted! / (double)x.PieceSize!),
+                            Downloaded = (ulong)i.BytesCompleted!,
+                            Priority = !x.FileStats![idx].Wanted ? TorrentsFilesReply.Types.FilePriority.DontDownload : x.FileStats[idx].Priority switch {
+                                Priority.Low => TorrentsFilesReply.Types.FilePriority.Normal, // TODO: missing
+                                Priority.Normal => TorrentsFilesReply.Types.FilePriority.Normal,
+                                Priority.High => TorrentsFilesReply.Types.FilePriority.High,
+                                _ => throw new NotImplementedException()
+                            }
+                        };
                     })
                 }
             };
+        }
+
+        public async Task<TorrentsFilesReply> GetTorrentsFiles(Torrents Req)
+        {
+            var tasks = Req.Hashes.Select(x => GetTorrentFiles(x.ToByteArray())).ToArray();
+
+            await Task.WhenAll(tasks);
+
+            return new TorrentsFilesReply {
+                Reply = { tasks.Select(x => x.Result) }
+            };
+        }
+
+        public Task GetTorrentFileUpdates(GetTorrentFileUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsFilesResponse> Res, CancellationToken CancellationToken)
+        {
+            var hash = Req.InfoHash.ToByteArray();
+
+            return TorrentFileUpdatesStreamer.Stream(_ => GetTorrentFiles(hash), Req.Interval.ToTimeSpan(), Res, CancellationToken);
         }
 
         public Task<TorrentsReply> RemoveTorrents(Torrents In) => PerformVoidActionObj(In, (client, x) => client.TorrentRemoveAsync(x, false));

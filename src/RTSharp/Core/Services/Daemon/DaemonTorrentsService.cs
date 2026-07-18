@@ -234,33 +234,78 @@ namespace RTSharp.Core.Services.Daemon
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders(), cancellationToken: cancellationToken);
 
             var ret = new InfoHashDictionary<TorrentFiles>();
-            
-            foreach (var torrent in resp.Reply) {
-                var files = new List<File>(torrent.Files.Count);
-                files.AddRange(torrent.Files.Select(x => new File
-                {
-                    Path = x.Path,
-                    Size = x.Size,
-                    DownloadedPieces = x.DownloadedPieces,
-                    Downloaded = x.Downloaded,
-                    DownloadStrategy = x.DownloadStrategy switch {
-                        TorrentsFilesReply.Types.FileDownloadStrategy.Normal => File.DOWNLOAD_STRATEGY.NORMAL,
-                        TorrentsFilesReply.Types.FileDownloadStrategy.PrioritizeFirst => File.DOWNLOAD_STRATEGY.PRIORITIZE_FIRST,
-                        TorrentsFilesReply.Types.FileDownloadStrategy.PrioritizeLast => File.DOWNLOAD_STRATEGY.PRIORITIZE_LAST,
-                        _ => File.DOWNLOAD_STRATEGY.NA
-                    },
-                    Priority = x.Priority switch {
-                        TorrentsFilesReply.Types.FilePriority.DontDownload => File.PRIORITY.DONT_DOWNLOAD,
-                        TorrentsFilesReply.Types.FilePriority.Normal => File.PRIORITY.NORMAL,
-                        TorrentsFilesReply.Types.FilePriority.High => File.PRIORITY.HIGH,
-                        _ => File.PRIORITY.NA
-                    }
-                }));
 
-                ret[torrent.InfoHash.ToByteArray()] = new TorrentFiles(torrent.MultiFile, files);
-            }
+            foreach (var torrent in resp.Reply)
+                ret[torrent.InfoHash.ToByteArray()] = MapTorrentFiles(torrent);
 
             return ret;
+        }
+
+        private static File.DOWNLOAD_STRATEGY MapDownloadStrategy(TorrentsFilesReply.Types.FileDownloadStrategy Strategy) => Strategy switch {
+            TorrentsFilesReply.Types.FileDownloadStrategy.Normal => File.DOWNLOAD_STRATEGY.NORMAL,
+            TorrentsFilesReply.Types.FileDownloadStrategy.PrioritizeFirst => File.DOWNLOAD_STRATEGY.PRIORITIZE_FIRST,
+            TorrentsFilesReply.Types.FileDownloadStrategy.PrioritizeLast => File.DOWNLOAD_STRATEGY.PRIORITIZE_LAST,
+            _ => File.DOWNLOAD_STRATEGY.NA
+        };
+
+        private static File.PRIORITY MapPriority(TorrentsFilesReply.Types.FilePriority Priority) => Priority switch {
+            TorrentsFilesReply.Types.FilePriority.DontDownload => File.PRIORITY.DONT_DOWNLOAD,
+            TorrentsFilesReply.Types.FilePriority.Normal => File.PRIORITY.NORMAL,
+            TorrentsFilesReply.Types.FilePriority.High => File.PRIORITY.HIGH,
+            _ => File.PRIORITY.NA
+        };
+
+        private static TorrentFiles MapTorrentFiles(TorrentsFilesReply.Types.TorrentsFiles Torrent)
+        {
+            var files = new List<File>(Torrent.Files.Count);
+            files.AddRange(Torrent.Files.Select(x => new File {
+                Path = x.Path,
+                Size = x.Size,
+                DownloadedPieces = x.DownloadedPieces,
+                Downloaded = x.Downloaded,
+                DownloadStrategy = MapDownloadStrategy(x.DownloadStrategy),
+                Priority = MapPriority(x.Priority)
+            }));
+
+            return new TorrentFiles(Torrent.MultiFile, files);
+        }
+
+        public Channel<TorrentFilesUpdate> GetFileChanges(byte[] Hash, TimeSpan Interval, CancellationToken CancellationToken)
+        {
+            var updates = TorrentClient.GetTorrentFileUpdates(new GetTorrentFileUpdatesRequest {
+                InfoHash = Hash.ToByteString(),
+                Interval = Duration.FromTimeSpan(Interval)
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
+
+            var channel = Channel.CreateUnbounded<TorrentFilesUpdate>(new UnboundedChannelOptions {
+                SingleReader = true,
+                SingleWriter = true
+            });
+
+            _ = Task.Run(async () => {
+                try {
+                    await foreach (var update in updates.ResponseStream.ReadAllAsync(CancellationToken)) {
+                        TorrentFiles? fullUpdate = update.FullUpdate != null ? MapTorrentFiles(update.FullUpdate) : null;
+
+                        var changes = new List<FileDelta>(update.Changed.Count);
+                        changes.AddRange(update.Changed.Select(x => new FileDelta(
+                            (int)x.Index,
+                            x.DownloadedPieces,
+                            x.Downloaded,
+                            MapPriority(x.Priority),
+                            MapDownloadStrategy(x.DownloadStrategy)
+                        )));
+
+                        await channel.Writer.WriteAsync(new TorrentFilesUpdate(fullUpdate, changes), CancellationToken);
+                    }
+
+                    channel.Writer.Complete();
+                } catch (Exception ex) {
+                    channel.Writer.Complete(ex);
+                }
+            }, CancellationToken);
+
+            return channel;
         }
         
         public async Task<IEnumerable<Shared.Abstractions.Torrent>> GetAllTorrents(CancellationToken cancellationToken)

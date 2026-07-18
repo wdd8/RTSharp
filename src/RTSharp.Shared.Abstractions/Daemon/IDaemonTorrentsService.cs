@@ -18,6 +18,8 @@ public interface IDaemonTorrentsService
     Task<InfoHashDictionary<IList<Peer>>> GetTorrentsPeers(IList<Torrent> In, CancellationToken cancellationToken);
     
     Task<InfoHashDictionary<TorrentFiles>> GetTorrentsFiles(IList<Torrent> In, CancellationToken cancellationToken);
+
+    Channel<TorrentFilesUpdate> GetFileChanges(byte[] Hash, TimeSpan Interval, CancellationToken CancellationToken);
     
     Task<IEnumerable<Torrent>> GetAllTorrents(CancellationToken cancellationToken);
     

@@ -32,6 +32,7 @@ public class DataProvider : IDataProvider
 
     public DataProviderCapabilities Capabilities { get; } = new(
         GetFiles: true,
+        GetFileChanges: true,
         GetPeers: true,
         GetTrackers: true,
         GetPieces: true,
@@ -96,6 +97,16 @@ public class DataProvider : IDataProvider
         var client = Host.AttachedDaemonService.GetTorrentsService(this);
 
         return await client.GetTorrentsFiles(In, cancellationToken);
+    }
+
+    public async Task<System.Threading.Channels.ChannelReader<TorrentFilesUpdate>> GetFileChanges(Torrent Torrent, TimeSpan Interval, CancellationToken CancellationToken)
+    {
+        var client = Host.AttachedDaemonService.GetTorrentsService(this);
+
+        var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
+        combined.Token.Register(combined.Dispose);
+
+        return client.GetFileChanges(Torrent.Hash, Interval, combined.Token);
     }
 
     public async Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken = default)

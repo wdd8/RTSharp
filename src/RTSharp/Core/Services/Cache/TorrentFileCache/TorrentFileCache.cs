@@ -54,20 +54,31 @@ namespace RTSharp.Core.Services.Cache.TorrentFileCache
             return d.ToList();
         }
 
-        public async Task AddCachedFileEntries(byte[] TorrentHash, IEnumerable<Shared.Abstractions.File> In)
+        public async Task AddCachedFileEntries(byte[] TorrentHash, IList<Shared.Abstractions.File> In)
         {
             await using var conn = await New();
+            await using var txn = (SqliteTransaction)await conn.BeginTransactionAsync();
 
-            foreach (var block in In.Select((x, idx) => (idx, x)).Chunk(500))
-            {
-                await conn.ExecuteAsync("insert into FileCache (TorrentHash, OrderId, Path, Size) values (@TorrentHash, @OrderId, @Path, @Size)", block.Select(x => new
-                {
-                    OrderId = x.idx,
-                    TorrentHash,
-                    x.x.Path,
-                    x.x.Size
-                }));
+            await using var cmd = conn.CreateCommand();
+            cmd.Transaction = txn;
+            cmd.CommandText = "insert into FileCache (TorrentHash, OrderId, Path, Size) values (@TorrentHash, @OrderId, @Path, @Size)";
+
+            var pHash = cmd.Parameters.Add("@TorrentHash", SqliteType.Blob);
+            var pOrderId = cmd.Parameters.Add("@OrderId", SqliteType.Integer);
+            var pPath = cmd.Parameters.Add("@Path", SqliteType.Text);
+            var pSize = cmd.Parameters.Add("@Size", SqliteType.Integer);
+
+            pHash.Value = TorrentHash;
+
+            for (var x = 0; x < In.Count; x++) {
+                var file = In[x];
+                pOrderId.Value = x;
+                pPath.Value = file.Path;
+                pSize.Value = file.Size;
+                await cmd.ExecuteNonQueryAsync();
             }
+
+            await txn.CommitAsync();
         }
 
         public async Task<(long Count, long SizeBytes)> GetStats()

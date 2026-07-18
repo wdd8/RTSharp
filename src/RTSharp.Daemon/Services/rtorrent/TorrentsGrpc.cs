@@ -77,5 +77,15 @@ namespace RTSharp.Daemon.Services.rtorrent
                 }
             }
         }
+
+        public Task GetTorrentFileUpdates(GetTorrentFileUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsFilesResponse> Res, CancellationToken CancellationToken)
+        {
+            var hash = Req.InfoHash.ToByteArray();
+
+            return TorrentFileUpdatesStreamer.Stream(async _ => {
+                var reply = await TorrentOpService.GetTorrentsFiles([ hash ]);
+                return reply.Reply[0];
+            }, Req.Interval.ToTimeSpan(), Res, CancellationToken);
+        }
     }
 }

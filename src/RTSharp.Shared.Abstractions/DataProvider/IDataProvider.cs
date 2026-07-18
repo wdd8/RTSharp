@@ -24,6 +24,12 @@ public interface IDataProvider : IDataProviderBase<DataProviderCapabilities>
 
     public Task<InfoHashDictionary<TorrentFiles>> GetFiles(IList<Torrent> In, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Streams file information updates for a single torrent.
+    /// </summary>
+    /// <param name="Interval">Polling interval</param>
+    Task<ChannelReader<TorrentFilesUpdate>> GetFileChanges(Torrent Torrent, TimeSpan Interval, CancellationToken CancellationToken);
+
     public Task<InfoHashDictionary<IList<PieceState>>> GetPieces(IList<Torrent> In, CancellationToken cancellationToken = default);
 
     public Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default);

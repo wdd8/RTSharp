@@ -4,6 +4,7 @@ option csharp_namespace = "RTSharp.Daemon.Protocols.DataProvider";
 
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/duration.proto";
 import "DataProvider/CommandReply.proto";
 import "DataProvider/Types.proto";
 
@@ -19,6 +20,7 @@ service GRPCTorrentService {
     rpc ReannounceToAllTrackers (Torrents) returns (TorrentsReply);
     rpc AddTorrents (stream NewTorrentsData) returns (TorrentsReply);
     rpc GetTorrentsFiles (Torrents) returns (TorrentsFilesReply);
+    rpc GetTorrentFileUpdates (GetTorrentFileUpdatesRequest) returns (stream DeltaTorrentsFilesResponse);
     rpc GetTorrentsPeers (Torrents) returns (TorrentsPeersReply);
     rpc GetTorrentsTrackers (Torrents) returns (TorrentsTrackersReply);
     rpc GetTorrentsPieces (Torrents) returns (TorrentsPiecesReply);
@@ -234,6 +236,27 @@ message TorrentsFilesReply {
     }
 
     repeated TorrentsFiles Reply = 1;
+}
+
+message GetTorrentFileUpdatesRequest {
+    bytes InfoHash = 1;
+    google.protobuf.Duration Interval = 2;
+}
+
+message DeltaTorrentsFilesResponse {
+    // Set on first message and whenever the file set changes structurally (count/paths/sizes).
+    // When present, Changed is empty; the deltas that follow are relative to this snapshot.
+    TorrentsFilesReply.TorrentsFiles FullUpdate = 1;
+    repeated DeltaFileResponse Changed = 2;
+}
+
+message DeltaFileResponse {
+    // Index into the last FullUpdate's Files
+    uint32 Index = 1;
+    uint64 DownloadedPieces = 2;
+    uint64 Downloaded = 3;
+    TorrentsFilesReply.FilePriority Priority = 4;
+    TorrentsFilesReply.FileDownloadStrategy DownloadStrategy = 5;
 }
 
 message TorrentsPiecesReply {
