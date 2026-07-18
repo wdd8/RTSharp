@@ -191,8 +191,8 @@ namespace RTSharp.ViewModels.Tools
             if (res == null)
                 return;
 
-            var trackerUrls = TrackerUrls?.Split(Environment.NewLine);
-            var valid = trackerUrls == null || trackerUrls.All(x => Uri.TryCreate(x, UriKind.Absolute, out var _));
+            var trackerUrls = TrackerUrls?.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+            var valid = trackerUrls == null || trackerUrls.Length == 0 || trackerUrls.All(x => Uri.TryCreate(x, UriKind.Absolute, out var _));
 
             if (!valid) {
                 var msgBox = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
@@ -205,8 +205,8 @@ namespace RTSharp.ViewModels.Tools
                 return;
             }
 
-            var webSeedUrls = WebSeedUrls?.Split(Environment.NewLine);
-            valid = webSeedUrls == null || webSeedUrls.All(x => Uri.TryCreate(x, UriKind.Absolute, out var _));
+            var webSeedUrls = WebSeedUrls?.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+            valid = webSeedUrls == null || webSeedUrls.Length == 0 || webSeedUrls.All(x => Uri.TryCreate(x, UriKind.Absolute, out var _));
 
             if (!valid) {
                 var msgBox = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
