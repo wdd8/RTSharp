@@ -133,7 +133,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 PeersConnected = (uint)PeersConnected,
                 SeedersTotal = seedersTotal,
                 PeersTotal = peersTotal,
-                MagnetDummy = MagnetDummyRegex().IsMatch(decodedName)
+                MagnetDummy = MagnetDummyRegex().IsMatch(decodedName),
+                SequentialDownload = false, // rtorrent doesn't support sequential download??
             };
 
             ParseLabels(Label, torrent.Labels);

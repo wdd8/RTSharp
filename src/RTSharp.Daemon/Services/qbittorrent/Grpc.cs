@@ -402,7 +402,9 @@ namespace RTSharp.Daemon.Services.qbittorrent
             Protocols.DataProvider.Torrent torrent;
             LatestTorrentsLock.EnterReadLock();
             try {
-                torrent = LatestTorrents[InfoHash.TruncateV2(Hash)];
+                if (!LatestTorrents.TryGetValue(InfoHash.TruncateV2(Hash), out torrent)) {
+                    throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
+                }
             } finally {
                 LatestTorrentsLock.ExitReadLock();
             }
@@ -693,10 +695,28 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                         var prevState = internalTorrent.State;
                         var prevSequential = internalTorrent.SequentialDownload;
+                        var prevWantedSize = internalTorrent.WantedSize;
+                        var prevPriority = internalTorrent.Priority;
+                        var prevMagnetDummy = internalTorrent.MagnetDummy;
+                        var prevRemotePath = internalTorrent.RemotePath;
+                        var prevStatusMessage = internalTorrent.StatusMessage;
+                        var prevPrimaryTrackerUri = internalTorrent.PrimaryTracker?.Uri;
+                        var prevFinishedOn = internalTorrent.FinishedOn;
+                        var labelsChanged = changedTorrent.Tags != null && !internalTorrent.Labels.SequenceEqual(changedTorrent.Tags);
+
                         TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
                         updateHashingSpeed(internalTorrent);
 
-                        if (internalTorrent.State != prevState || internalTorrent.SequentialDownload != prevSequential) {
+                        if (internalTorrent.State != prevState ||
+                            internalTorrent.SequentialDownload != prevSequential ||
+                            internalTorrent.WantedSize != prevWantedSize ||
+                            internalTorrent.Priority != prevPriority ||
+                            internalTorrent.MagnetDummy != prevMagnetDummy ||
+                            internalTorrent.RemotePath != prevRemotePath ||
+                            internalTorrent.StatusMessage != prevStatusMessage ||
+                            internalTorrent.PrimaryTracker?.Uri != prevPrimaryTrackerUri ||
+                            !Equals(internalTorrent.FinishedOn, prevFinishedOn) ||
+                            labelsChanged) {
                             delta.FullUpdate.Add(internalTorrent);
                             continue;
                         }
@@ -704,8 +724,6 @@ namespace RTSharp.Daemon.Services.qbittorrent
                         if (internalTorrent.CompletedSize != internalTorrent.WantedSize) {
                             delta.Incomplete.Add(new IncompleteDeltaTorrentResponse {
                                 Hash = internalTorrent.Hash,
-                                State = internalTorrent.State,
-                                WantedSize = internalTorrent.WantedSize,
                                 Downloaded = internalTorrent.Downloaded,
                                 CompletedSize = internalTorrent.CompletedSize,
                                 Uploaded = internalTorrent.Uploaded,
@@ -713,18 +731,11 @@ namespace RTSharp.Daemon.Services.qbittorrent
                                 HashingSpeed = internalTorrent.HashingSpeed,
                                 UPSpeed = internalTorrent.UPSpeed,
                                 ETA = internalTorrent.ETA,
-                                Labels = { internalTorrent.Labels },
-                                RemotePath = internalTorrent.RemotePath,
                                 SeedersConnected = internalTorrent.SeedersConnected,
                                 SeedersTotal = internalTorrent.SeedersTotal,
                                 PeersConnected = internalTorrent.PeersConnected,
                                 PeersTotal = internalTorrent.PeersTotal,
-                                Priority = internalTorrent.Priority,
-                                Wasted = internalTorrent.Wasted,
-                                PrimaryTracker = internalTorrent.PrimaryTracker,
-                                StatusMessage = internalTorrent.StatusMessage,
-                                MagnetDummy = internalTorrent.MagnetDummy,
-                                SequentialDownload = internalTorrent.SequentialDownload
+                                Wasted = internalTorrent.Wasted
                             });
                         } else {
                             if (internalTorrent.State.HasFlag(Protocols.DataProvider.TorrentState.Active)) {
@@ -736,19 +747,11 @@ namespace RTSharp.Daemon.Services.qbittorrent
                                  */
                                 delta.Complete.Add(new CompleteDeltaTorrentResponse {
                                     Hash = internalTorrent.Hash,
-                                    State = internalTorrent.State,
-                                    WantedSize = internalTorrent.WantedSize,
                                     Uploaded = internalTorrent.Uploaded,
                                     UPSpeed = internalTorrent.UPSpeed,
-                                    Labels = { internalTorrent.Labels },
-                                    RemotePath = internalTorrent.RemotePath,
-                                    FinishedOn = internalTorrent.FinishedOn,
                                     SeedersTotal = internalTorrent.SeedersTotal,
                                     PeersTotal = internalTorrent.PeersTotal,
-                                    PeersConnected = internalTorrent.PeersConnected,
-                                    Priority = internalTorrent.Priority,
-                                    PrimaryTracker = internalTorrent.PrimaryTracker,
-                                    StatusMessage = internalTorrent.StatusMessage
+                                    PeersConnected = internalTorrent.PeersConnected
                                 });
                             }
                         }

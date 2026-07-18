@@ -58,7 +58,11 @@ public class App : Application
     static void Main(string[] args)
     {
         var log = new LoggerConfiguration()
+#if DEBUG
             .MinimumLevel.Verbose()
+#else
+            .MinimumLevel.Information()
+#endif
             .WriteTo.Debug()
             .WriteTo.LogWindow()
             .CreateLogger();

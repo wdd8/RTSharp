@@ -27,44 +27,27 @@ message DeltaTorrentsListResponse {
 
 message IncompleteDeltaTorrentResponse {
     bytes Hash = 1;
-    TorrentState State = 2;
-    uint64 Downloaded = 3;
-    uint64 CompletedSize = 4;
-    uint64 Uploaded = 5;
-    uint64 DLSpeed = 6;
-    uint64 UPSpeed = 7;
-    google.protobuf.Duration ETA = 8;
-    repeated string Labels = 9;
-    string RemotePath = 10;
-    uint32 SeedersConnected = 11;
-    uint32 SeedersTotal = 12;
-    uint32 PeersConnected = 13;
-    uint32 PeersTotal = 14;
-    TorrentPriority Priority = 15;
-    uint64 Wasted = 16;
-    TorrentTracker PrimaryTracker = 17;
-    string StatusMessage = 18;
-    bool MagnetDummy = 19;
-    uint64 WantedSize = 20;
-    bool SequentialDownload = 21;
-    uint64 HashingSpeed = 22;
+    uint64 Downloaded = 2;
+    uint64 CompletedSize = 3;
+    uint64 Uploaded = 4;
+    uint64 DLSpeed = 5;
+    uint64 UPSpeed = 6;
+    google.protobuf.Duration ETA = 7;
+    uint32 SeedersConnected = 8;
+    uint32 SeedersTotal = 9;
+    uint32 PeersConnected = 10;
+    uint32 PeersTotal = 11;
+    uint64 Wasted = 12;
+    uint64 HashingSpeed = 13;
 }
 
 message CompleteDeltaTorrentResponse {
     bytes Hash = 1;
-    TorrentState State = 2;
-    uint64 Uploaded = 3;
-    uint64 UPSpeed = 4;
-    repeated string Labels = 5;
-    string RemotePath = 6;
-    google.protobuf.Timestamp FinishedOn = 7;
-    uint32 SeedersTotal = 8;
-    uint32 PeersConnected = 9;
-    uint32 PeersTotal = 10;
-    TorrentPriority Priority = 11;
-    TorrentTracker PrimaryTracker = 12;
-    string StatusMessage = 13;
-    uint64 WantedSize = 14;
+    uint64 Uploaded = 2;
+    uint64 UPSpeed = 3;
+    uint32 SeedersTotal = 4;
+    uint32 PeersConnected = 5;
+    uint32 PeersTotal = 6;
 }
 
 /*

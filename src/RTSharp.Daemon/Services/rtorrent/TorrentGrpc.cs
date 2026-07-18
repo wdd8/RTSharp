@@ -99,8 +99,6 @@ namespace RTSharp.Daemon.Services.rtorrent
                 if (sw.Elapsed < TimeSpan.FromSeconds(5)) {
                     foreach (var torrentResult in res) {
                         var torrentState = changes!.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                        torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                        torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
 
                         if (torrentState == null)
                             continue;
@@ -115,8 +113,6 @@ namespace RTSharp.Daemon.Services.rtorrent
                 if (stateObserved.Count != 0) {
                     foreach (var torrentResult in res) {
                         var torrentState = changes!.FullUpdate.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                        torrentState ??= changes.Complete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
-                        torrentState ??= changes.Incomplete.FirstOrDefault(x => x.Hash.SequenceEqual(torrentResult.InfoHash))?.State;
 
                         if (torrentState == null)
                             continue;

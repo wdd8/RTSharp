@@ -1,9 +1,5 @@
-using Avalonia.Controls;
-using Avalonia.Threading;
-
 using Ben.Collections.Specialized;
 
-using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Utils;
 
@@ -119,10 +115,8 @@ public static class Mapper
     public static void ApplyFromProto(Shared.Abstractions.Torrent Existing, RTSharp.Daemon.Protocols.DataProvider.IncompleteDeltaTorrentResponse In, IDataProvider owner)
     {
         try {
-            Existing.State = MapFromProto(In.State);
-            Existing.WantedSize = In.WantedSize;
             Existing.Wasted = In.Wasted;
-            Existing.Done = (float)In.CompletedSize / In.WantedSize * 100;
+            Existing.Done = (float)In.CompletedSize / Existing.WantedSize * 100;
             Existing.Downloaded = In.Downloaded;
             Existing.CompletedSize = In.CompletedSize;
             Existing.Uploaded = In.Uploaded;
@@ -130,18 +124,11 @@ public static class Mapper
             Existing.HashingSpeed = In.HashingSpeed;
             Existing.UPSpeed = In.UPSpeed;
             Existing.ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan();
-            Existing.Labels = InternLabels(In.Labels);
             Existing.Peers = (In.PeersConnected, In.PeersTotal);
             Existing.Seeders = (In.SeedersConnected, In.SeedersTotal);
-            Existing.Priority = MapFromProto(In.Priority);
-            Existing.RemainingSize = In.WantedSize - In.CompletedSize;
+            Existing.RemainingSize = Existing.WantedSize - In.CompletedSize;
             Existing.FinishedOnDate = null;
             Existing.TimeElapsed = DateTime.UtcNow - Existing.AddedOnDate;
-            Existing.TrackerSingle = In.PrimaryTracker == null ? null : StringCache.Intern(In.PrimaryTracker.Uri);
-            Existing.StatusMessage = StringCache.Intern(In.StatusMessage);
-            Existing.RemotePath = StringCache.Intern(In.RemotePath);
-            Existing.MagnetDummy = In.MagnetDummy;
-            Existing.IsSequentialDownload = In.SequentialDownload;
         } catch {
             throw; // probe point
         }
@@ -150,161 +137,13 @@ public static class Mapper
     public static void ApplyFromProto(Shared.Abstractions.Torrent Existing, RTSharp.Daemon.Protocols.DataProvider.CompleteDeltaTorrentResponse In, IDataProvider owner)
     {
         try {
-            Existing.State = MapFromProto(In.State);
-            Existing.WantedSize = In.WantedSize;
             Existing.Uploaded = In.Uploaded;
             Existing.UPSpeed = In.UPSpeed;
-            Existing.Labels = InternLabels(In.Labels);
             Existing.Peers = (In.PeersConnected, In.PeersTotal);
             Existing.Seeders = (Existing.Seeders.Connected, In.SeedersTotal);
-            Existing.Priority = MapFromProto(In.Priority);
-            Existing.FinishedOnDate = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : In.FinishedOn.ToDateTime();
-            Existing.TimeElapsed = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? TimeSpan.Zero : In.FinishedOn.ToDateTime() - Existing.AddedOnDate;
-            Existing.TrackerSingle = In.PrimaryTracker == null ? null : StringCache.Intern(In.PrimaryTracker.Uri);
-            Existing.StatusMessage = StringCache.Intern(In.StatusMessage);
-            Existing.RemotePath = StringCache.Intern(In.RemotePath);
         } catch {
             throw; // probe point
         }
-    }
-
-    public static Shared.Abstractions.Torrent MapFromProto(RTSharp.Daemon.Protocols.DataProvider.IncompleteDeltaTorrentResponse In, Models.Torrent Torrent)
-    {
-        return new Shared.Abstractions.Torrent(In.Hash.ToByteArray()) {
-            Name = Torrent.Name,
-            DataOwner = Torrent.DataOwner.Instance,
-            State = MapFromProto(In.State),
-            IsPrivate = Torrent.IsPrivate,
-            Size = Torrent.Size,
-            WantedSize = Torrent.WantedSize,
-            PieceSize = Torrent.PieceSize,
-            Wasted = In.Wasted,
-            Done = (float)In.CompletedSize / Torrent.WantedSize * 100,
-            Downloaded = In.Downloaded,
-            CompletedSize = In.CompletedSize,
-            Uploaded = In.Uploaded,
-            DLSpeed = In.DLSpeed,
-            HashingSpeed = In.HashingSpeed,
-            UPSpeed = In.UPSpeed,
-            ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
-            Labels = InternLabels(In.Labels),
-            Peers = (In.PeersConnected, In.PeersTotal),
-            Seeders = (In.SeedersConnected, In.SeedersTotal),
-            Priority = MapFromProto(In.Priority),
-            CreatedOnDate = Torrent.CreatedOnDate,
-            RemainingSize = Torrent.WantedSize - In.CompletedSize,
-            FinishedOnDate = null,
-            TimeElapsed = DateTime.UtcNow - Torrent.AddedOnDate,
-            AddedOnDate = Torrent.AddedOnDate,
-            TrackerSingle = In.PrimaryTracker != null ? In.PrimaryTracker.Uri : null,
-            StatusMessage = StringCache.Intern(In.StatusMessage),
-            Comment = StringCache.Intern(Torrent.Comment ?? "")!,
-            RemotePath = StringCache.Intern(In.RemotePath),
-            MagnetDummy = In.MagnetDummy,
-            IsSequentialDownload = In.SequentialDownload
-        };
-    }
-
-    public static void ApplyFromProto(RTSharp.Daemon.Protocols.DataProvider.IncompleteDeltaTorrentResponse In, Models.Torrent Torrent)
-    {
-        Dispatcher.UIThread.Invoke(() => {
-            var mappedState = MapFromProto(In.State);
-            if (mappedState != Torrent.InternalState) {
-                Torrent.State = Shared.Abstractions.EnumExt.ToString(mappedState);
-                Torrent.InternalState = mappedState;
-            }
-            Torrent.Wasted = In.Wasted;
-            Torrent.Done = (float)In.CompletedSize / Torrent.WantedSize * 100;
-            Torrent.Downloaded = In.Downloaded;
-            Torrent.CompletedSize = In.CompletedSize;
-            Torrent.Uploaded = In.Uploaded;
-            Torrent.DLSpeed = In.DLSpeed;
-            Torrent.HashingSpeed = In.HashingSpeed;
-            Torrent.UPSpeed = In.UPSpeed;
-            Torrent.ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan();
-            ApplyLabels(In.Labels, Torrent);
-            Torrent.Peers = new(In.PeersConnected, In.PeersTotal);
-            Torrent.Seeders = new(In.SeedersConnected, In.SeedersTotal);
-            Torrent.Priority = Shared.Abstractions.EnumExt.ToString(MapFromProto(In.Priority));
-            Torrent.RemainingSize = Torrent.WantedSize - In.CompletedSize;
-            Torrent.FinishedOnDate = null;
-            Torrent.TimeElapsed = DateTime.UtcNow - Torrent.AddedOnDate;
-            var oldTracker = Torrent.TrackerSingle;
-            Torrent.TrackerSingle = In.PrimaryTracker != null ? StringCache.Intern(In.PrimaryTracker.Uri) : null;
-            if (oldTracker != Torrent.TrackerSingle) {
-                Torrent.TrackerDisplayName = null;
-                Torrent.TrackerIcon = null;
-            }
-            Torrent.StatusMsg = StringCache.Intern(In.StatusMessage);
-            Torrent.RemotePath = StringCache.Intern(In.RemotePath);
-            Torrent.MagnetDummy = In.MagnetDummy;
-            Torrent.IsSequentialDownload = In.SequentialDownload;
-        });
-    }
-
-    public static Shared.Abstractions.Torrent MapFromProto(RTSharp.Daemon.Protocols.DataProvider.CompleteDeltaTorrentResponse In, Models.Torrent Torrent)
-    {
-        return new Shared.Abstractions.Torrent(In.Hash.ToByteArray()) {
-            Name = Torrent.Name,
-            DataOwner = Torrent.DataOwner.Instance,
-            State = MapFromProto(In.State),
-            IsPrivate = Torrent.IsPrivate,
-            Size = Torrent.Size,
-            WantedSize = In.WantedSize,
-            PieceSize = Torrent.PieceSize,
-            Wasted = Torrent.Wasted,
-            Done = Torrent.Done,
-            Downloaded = Torrent.Downloaded,
-            CompletedSize = Torrent.CompletedSize,
-            Uploaded = In.Uploaded,
-            DLSpeed = Torrent.DLSpeed,
-            HashingSpeed = Torrent.HashingSpeed,
-            UPSpeed = In.UPSpeed,
-            ETA = Torrent.ETA,
-            Labels = InternLabels(In.Labels),
-            Peers = (In.PeersConnected, In.PeersTotal),
-            Seeders = (Torrent.Seeders.Connected, In.SeedersTotal),
-            Priority = MapFromProto(In.Priority),
-            CreatedOnDate = Torrent.CreatedOnDate,
-            RemainingSize = Torrent.RemainingSize,
-            FinishedOnDate = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : In.FinishedOn.ToDateTime(),
-            TimeElapsed = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? TimeSpan.Zero : In.FinishedOn.ToDateTime() - Torrent.AddedOnDate,
-            AddedOnDate = Torrent.AddedOnDate,
-            TrackerSingle = In.PrimaryTracker != null ? StringCache.Intern(In.PrimaryTracker.Uri) : null,
-            StatusMessage = StringCache.Intern(In.StatusMessage),
-            Comment = StringCache.Intern(Torrent.Comment ?? ""),
-            RemotePath = StringCache.Intern(In.RemotePath),
-            MagnetDummy = Torrent.MagnetDummy,
-            IsSequentialDownload = Torrent.IsSequentialDownload
-        };
-    }
-
-    public static void ApplyFromProto(RTSharp.Daemon.Protocols.DataProvider.CompleteDeltaTorrentResponse In, Models.Torrent Torrent)
-    {
-        Dispatcher.UIThread.Invoke(() => {
-            var mappedState = MapFromProto(In.State);
-            if (mappedState != Torrent.InternalState) {
-                Torrent.State = Shared.Abstractions.EnumExt.ToString(mappedState);
-                Torrent.InternalState = mappedState;
-            }
-            Torrent.WantedSize = In.WantedSize;
-            Torrent.Uploaded = In.Uploaded;
-            Torrent.UPSpeed = In.UPSpeed;
-            ApplyLabels(In.Labels, Torrent);
-            Torrent.Peers = new(In.PeersConnected, In.PeersTotal);
-            Torrent.Seeders = new(Torrent.Seeders.Connected, In.SeedersTotal);
-            Torrent.Priority = Shared.Abstractions.EnumExt.ToString(MapFromProto(In.Priority));
-            Torrent.FinishedOnDate = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? null : In.FinishedOn.ToDateTime();
-            Torrent.TimeElapsed = In.FinishedOn.ToDateTime() == DateTime.UnixEpoch ? TimeSpan.Zero : In.FinishedOn.ToDateTime() - Torrent.AddedOnDate;
-            var oldTracker = Torrent.TrackerSingle;
-            Torrent.TrackerSingle = In.PrimaryTracker != null ? StringCache.Intern(In.PrimaryTracker.Uri) : null;
-            if (oldTracker != Torrent.TrackerSingle) {
-                Torrent.TrackerDisplayName = null;
-                Torrent.TrackerIcon = null;
-            }
-            Torrent.StatusMsg = StringCache.Intern(In.StatusMessage);
-            Torrent.RemotePath = StringCache.Intern(In.RemotePath);
-        });
     }
 
     private static HashSet<string> InternLabels(Google.Protobuf.Collections.RepeatedField<string> In)
@@ -314,30 +153,6 @@ public static class Mapper
             ret.Add(StringCache.Intern(In[i])!);
 
         return ret;
-    }
-
-    private static void ApplyLabels(Google.Protobuf.Collections.RepeatedField<string> In, Models.Torrent Torrent)
-    {
-        var existing = Torrent.Labels;
-
-        // fast path for unchanged delta
-        if (existing != null && existing.Length == In.Count) {
-            var unchanged = true;
-            for (var i = 0; i < In.Count; i++) {
-                if (!ReferenceEquals(existing[i], StringCache.Intern(In[i]))) {
-                    unchanged = false;
-                    break;
-                }
-            }
-
-            if (unchanged)
-                return;
-        }
-
-        var newLabels = new string[In.Count];
-        for (var i = 0; i < In.Count; i++)
-            newLabels[i] = StringCache.Intern(In[i])!;
-        Torrent.SetLabels(newLabels);
     }
 
     public static Shared.Abstractions.File.DOWNLOAD_STRATEGY MapFromProto(RTSharp.Daemon.Protocols.DataProvider.TorrentsFilesReply.Types.FileDownloadStrategy In)
