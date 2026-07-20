@@ -38,13 +38,14 @@ message LinkFilesInput {
 message HashFileBlockInput {
     enum HashAlgorithm {
         HashAlgorithm_SHA1 = 0;
-        HashAlgorithm_SHA256 = 1;
+        HashAlgorithm_SHA256_BT_V2_MERKLE = 1;
     }
 
     string Path = 1;
     uint64 Start = 2;
     uint64 End = 3;
     HashAlgorithm Algorithm = 4;
+    uint32 MerkleHeight = 5;
 }
 
 message AllowedToReadInput {

@@ -424,22 +424,28 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         return reply.Reply.ToDictionary(x => x.Path, x => x.Value);
     }
 
-    public async Task<byte[]> HashFileBlock(string Path, ulong Start, ulong End, HashAlgorithmName HashAlgorithm)
+    public async Task<byte[]> HashFileBlock(string Path, ulong Start, ulong End, FileBlockHashAlgorithm HashAlgorithm)
     {
-        if (HashAlgorithm != HashAlgorithmName.SHA256 && HashAlgorithm != HashAlgorithmName.SHA1)
-            throw new NotSupportedException("Only SHA1 and SHA256 is supported");
-
-        var reply = await FilesClient.HashFileBlockAsync(new HashFileBlockInput
+        var input = new HashFileBlockInput
         {
             Path = Path,
             Start = Start,
-            End = End,
-            Algorithm = HashAlgorithm.Name switch {
-                "SHA1" => HashFileBlockInput.Types.HashAlgorithm.Sha1,
-                "SHA256" => HashFileBlockInput.Types.HashAlgorithm.Sha256,
-                _ => throw new NotSupportedException()
-            }
-        });
+            End = End
+        };
+
+        switch (HashAlgorithm) {
+            case FileBlockHashAlgorithm.Sha1:
+                input.Algorithm = HashFileBlockInput.Types.HashAlgorithm.Sha1;
+                break;
+            case FileBlockHashAlgorithm.Sha256BitTorrentV2Merkle Merkle:
+                input.Algorithm = HashFileBlockInput.Types.HashAlgorithm.Sha256BtV2Merkle;
+                input.MerkleHeight = (uint)Merkle.Height;
+                break;
+            default:
+                throw new NotSupportedException();
+        }
+
+        var reply = await FilesClient.HashFileBlockAsync(input);
         return reply.Value.ToByteArray();
     }
 

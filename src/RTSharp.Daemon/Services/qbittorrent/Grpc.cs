@@ -84,13 +84,15 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 torrent.Data.Position = 0;
 
                 BencodeNET.Torrents.Torrent btorrent;
+                BencodeNET.Objects.BDictionary torrentData;
                 byte[] torrentId;
                 byte[] rtsHash;
                 try {
                     btorrent = parser.Parse(torrent.Data);
 
                     torrent.Data.Position = 0;
-                    var (v1, v2) = BencodeUtils.GetInfoHashes(bencodeParser.Parse<BencodeNET.Objects.BDictionary>(torrent.Data));
+                    torrentData = bencodeParser.Parse<BencodeNET.Objects.BDictionary>(torrent.Data);
+                    var (v1, v2) = BencodeUtils.GetInfoHashes(torrentData);
                     // qbittorrent identifies torrents by the truncated v2 info hash when one exists
                     torrentId = v2 != null ? InfoHash.TruncateV2(v2) : v1!;
                     // RTSHash is the full v2 for hybrids/v2, else v1.
@@ -111,7 +113,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 try {
                     var skipHashChecking = false;
                     if (torrent.FastResume) {
-                        skipHashChecking = await BencodeUtils.FastVerifyFilesOnDisk(btorrent, torrent.Path, Logger);
+                        skipHashChecking = await BencodeUtils.FastVerifyFilesOnDisk(btorrent, torrent.Path, Logger, torrentData);
                         if (!skipHashChecking)
                             Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", Convert.ToHexString(torrentId));
                     }

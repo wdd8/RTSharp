@@ -1,27 +1,21 @@
 using Avalonia.Threading;
 
+using BencodeNET.Parsing;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-
-using Microsoft.Extensions.Configuration;
 
 using MsBox.Avalonia;
 using MsBox.Avalonia.Models;
 
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Controls;
 using RTSharp.Shared.Utils;
 
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 using static RTSharp.AutoIntegrify.Plugin.ViewModels.MainWindowViewModel;
 
@@ -34,6 +28,8 @@ public partial class FileInfo : ObservableObject
     public required BencodeUtils.PieceHash[] PieceHashes { get; init; }
 
     public Range PieceRange { get; init; }
+
+    public required FileBlockHashAlgorithm HashAlgorithm { get; init; }
 
     [ObservableProperty]
     public partial string? ResolvedPath { get; set; }
@@ -424,14 +420,14 @@ done:;
 
     private async Task<bool> VerifyPieces(FileInfo file, string resolvedPath)
     {
-        var startPiece = await Torrent.DataOwner.Host.AttachedDaemonService!.HashFileBlock(resolvedPath, file.PieceHashes[0].Start, file.PieceHashes[0].End, HashAlgorithmName.SHA1);
+        var startPiece = await Torrent.DataOwner.Host.AttachedDaemonService!.HashFileBlock(resolvedPath, file.PieceHashes[0].Start, file.PieceHashes[0].End, file.HashAlgorithm);
         if (!startPiece.SequenceEqual(file.PieceHashes[0].Hash)) {
             return false;
         }
 
         if (file.PieceHashes.Length > 1) {
             var lastPiece = file.PieceHashes.Last();
-            var hash = await Torrent.DataOwner.Host.AttachedDaemonService!.HashFileBlock(resolvedPath, lastPiece.Start, lastPiece.End, HashAlgorithmName.SHA1);
+            var hash = await Torrent.DataOwner.Host.AttachedDaemonService!.HashFileBlock(resolvedPath, lastPiece.Start, lastPiece.End, file.HashAlgorithm);
             if (!hash.SequenceEqual(lastPiece.Hash)) {
                 return false;
             }
@@ -439,7 +435,7 @@ done:;
 
         for (var x = 0; x < Math.Min(RandomPiecesToCheck, file.PieceHashes.Length - 2);x++) {
             var piece = file.PieceHashes[Random.Shared.Next(1, file.PieceHashes.Length - 2)];
-            var hash = await Torrent.DataOwner.Host.AttachedDaemonService!.HashFileBlock(resolvedPath, piece.Start, piece.End, HashAlgorithmName.SHA1);
+            var hash = await Torrent.DataOwner.Host.AttachedDaemonService!.HashFileBlock(resolvedPath, piece.Start, piece.End, file.HashAlgorithm);
             if (!hash.SequenceEqual(piece.Hash)) {
                 return false;
             }
@@ -477,37 +473,51 @@ done:;
 
         var pieces = new List<PieceState>();
 
-        IsMultiFile = btorrent.Files != null;
+        FileInfo[] files;
+        int totalPieces;
 
-        // TODO: SHA-256
-        var fileHashes = BencodeUtils.AssignHashesToPieces(btorrent);
+        if (btorrent.Pieces?.Length > 0) {
+            IsMultiFile = btorrent.Files != null;
 
-        foreach (var fileHash in fileHashes) {
-            var file = new TorrentFile(fileHash.FullPath, fileHash.FileSize);
+            files = [.. BencodeUtils.AssignHashesToPieces(btorrent).Select(x => new FileInfo {
+                File = new TorrentFile(x.FullPath, x.FileSize),
+                PieceHashes = x.PieceHashes,
+                PieceRange = x.PieceRange,
+                HashAlgorithm = new FileBlockHashAlgorithm.Sha1()
+            })];
 
-            if (fileHash.PieceHashes.Length == 0) {
+            totalPieces = (int)Math.Ceiling(files.Sum(x => x.File.FileSize) / (float)btorrent.PieceSize);
+        } else {
+            mem.Position = 0;
+            var torrentData = new BencodeParser().Parse<BencodeNET.Objects.BDictionary>(mem);
+
+            files = [.. BencodeUtils.AssignHashesToPiecesV2(torrentData).Select(x => new FileInfo {
+                File = new TorrentFile(x.FullPath, x.FileSize),
+                PieceHashes = x.PieceHashes,
+                PieceRange = x.PieceRange,
+                HashAlgorithm = new FileBlockHashAlgorithm.Sha256BitTorrentV2Merkle(x.MerkleHeight)
+            })];
+
+            IsMultiFile = files.Length > 1 || files[0].File.FullPath != btorrent.DisplayName;
+
+            totalPieces = files[^1].PieceRange.End.Value;
+        }
+
+        foreach (var file in files) {
+            if (file.PieceHashes.Length == 0) {
                 Dispatcher.UIThread.Invoke(() => {
-                    ProgressText = $"{file}: File too small";
-                    Files.Add(new FileInfo
-                    {
-                        File = file,
-                        PieceHashes = [],
-                        Resolved = RESOLVE_STATE.FILE_TOO_SMALL,
-                        PieceRange = 0..0
-                    });
+                    ProgressText = $"{file.File}: File too small";
+                    file.Resolved = RESOLVE_STATE.FILE_TOO_SMALL;
+                    Files.Add(file);
                 });
                 continue;
             }
 
-            Files.Add(new FileInfo {
-                File = file,
-                PieceHashes = fileHash.PieceHashes,
-                PieceRange = fileHash.PieceRange,
-                Resolved = RESOLVE_STATE.PENDING
-            });
+            file.Resolved = RESOLVE_STATE.PENDING;
+            Files.Add(file);
         }
 
-        pieces.AddRange(Enumerable.Repeat(PieceState.NotDownloaded, (int)Math.Ceiling(fileHashes.Sum(x => x.FileSize) / (float)btorrent.PieceSize)));
+        pieces.AddRange(Enumerable.Repeat(PieceState.NotDownloaded, totalPieces));
 
         Dispatcher.UIThread.Invoke(() => {
             Pieces = pieces;

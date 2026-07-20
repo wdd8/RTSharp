@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 
 namespace RTSharp.Shared.Utils;
 
-public static class BencodeUtils
+public static partial class BencodeUtils
 {
     /// <summary>
     /// Gets info hashes from .torrent bencode root
@@ -171,16 +171,26 @@ public static class BencodeUtils
     /// <param name="BTorrent">.torrent</param>
     /// <param name="BaseDirectory">Target base directory</param>
     /// <param name="Logger"></param>
+    /// <param name="TorrentData">.torrent bencode root, required for v2 only torrents</param>
     /// <returns></returns>
-    public static async Task<bool> FastVerifyFilesOnDisk(Torrent BTorrent, string BaseDirectory, ILogger Logger)
+    public static async Task<bool> FastVerifyFilesOnDisk(Torrent BTorrent, string BaseDirectory, ILogger Logger, BDictionary? TorrentData = null)
     {
-        if (BTorrent.Pieces is not { Length: > 0 }) {
+        /*
+         * Prefer the v2 path whenever v2 metadata is present, even for hybrid torrents
+         * that also carry v1 pieces. The v1 path cannot fast verify a hybrid torrent at
+         * all: BEP 52 requires v1 padding file entries, which have no counterpart on
+         * disk, so its existence check always fails.
+         */
+        if (TorrentData?.Get<BDictionary>(TorrentFields.Info)?.ContainsKey("file tree") == true)
+            return await FastVerifyFilesOnDiskV2(TorrentData, BaseDirectory, Logger);
+
+        if (BTorrent.Pieces == null || BTorrent.Pieces.Length <= 0) {
             Logger.LogWarning("Fast verify unavailable: torrent has no v1 piece hashes");
             return false;
         }
 
         var files = new List<FileWithSize>();
-        if (BTorrent.Files is { Count: > 0 }) {
+        if (BTorrent.Files?.Count > 0) {
             var contentDir = Path.Combine(BaseDirectory, BTorrent.DisplayName);
             foreach (var f in BTorrent.Files)
                 files.Add(new FileWithSize(Path.Combine([contentDir, .. (f.Path ?? f.PathUtf8)]), f.FileSize));
@@ -188,7 +198,20 @@ public static class BencodeUtils
             files.Add(new FileWithSize(Path.Combine(BaseDirectory, BTorrent.DisplayName), BTorrent.File.FileSize));
         }
 
-        foreach (var file in files) {
+        if (!CheckFilesExistWithSize(files, Logger))
+            return false;
+
+        var fileHashes = AssignHashesToPieces(BTorrent);
+        var toVerify = new List<FileToVerify>(Math.Min(fileHashes.Length, files.Count));
+        for (var x = 0;x < toVerify.Capacity;x++)
+            toVerify.Add(new FileToVerify(files[x], fileHashes[x].PieceHashes, static (Data, Expected) => SHA1.HashData(Data.Span).AsSpan().SequenceEqual(Expected)));
+
+        return await VerifyRandomPieces(toVerify, (int)BTorrent.PieceSize, Logger);
+    }
+
+    private static bool CheckFilesExistWithSize(IReadOnlyList<FileWithSize> Files, ILogger Logger)
+    {
+        foreach (var file in Files) {
             var fi = new FileInfo(file.DiskPath);
             if (!fi.Exists || fi.Length != file.Size) {
                 Logger.LogWarning($"Mismatch for \"{file.DiskPath}\" (exists: {fi.Exists}, expected size: {file.Size})");
@@ -196,42 +219,40 @@ public static class BencodeUtils
             }
         }
 
-        return await VerifyRandomPieces(BTorrent, files, BaseDirectory, Logger);
+        return true;
     }
 
-    private static async Task<bool> VerifyRandomPieces(Torrent BTorrent, List<FileWithSize> Files, string BaseDirectory, ILogger Logger)
+    private record FileToVerify(FileWithSize File, PieceHash[] Pieces, Func<ReadOnlyMemory<byte>, byte[], bool> FxHashMatches);
+
+    private static async Task<bool> VerifyRandomPieces(IReadOnlyList<FileToVerify> Files, int BufferSize, ILogger Logger)
     {
-        var fileHashes = AssignHashesToPieces(BTorrent);
-
-        var count = Math.Min(fileHashes.Length, Files.Count);
-
-        var buf = ArrayPool<byte>.Shared.Rent((int)BTorrent.PieceSize);
+        var buf = ArrayPool<byte>.Shared.Rent(BufferSize);
         var verified = 0;
 
         try {
-            for (var x = 0;x < count;x++) {
-                var pieceHashes = fileHashes[x].PieceHashes;
+            foreach (var file in Files) {
+                var pieceHashes = file.Pieces;
                 if (pieceHashes.Length == 0)
                     continue;
 
-                var scaled = 50.0 * Math.Sqrt(Files[x].Size / (1024d * 1024 * 1024));
+                var scaled = 50.0 * Math.Sqrt(file.File.Size / (1024d * 1024 * 1024));
                 var toCheck = Math.Min(Math.Clamp((int)Math.Ceiling(scaled), 1, 200), pieceHashes.Length);
 
                 try {
-                    using var handle = File.OpenHandle(Files[x].DiskPath, FileMode.Open, FileAccess.Read, FileShare.Read, FileOptions.Asynchronous);
+                    using var handle = File.OpenHandle(file.File.DiskPath, FileMode.Open, FileAccess.Read, FileShare.Read, FileOptions.Asynchronous);
 
                     for (var i = 0;i < toCheck;i++) {
                         var piece = pieceHashes[Random.Shared.Next(pieceHashes.Length)];
 
-                        if (!await VerifyPiece(handle, piece.Start, (int)(piece.End - piece.Start), piece.Hash, buf)) {
-                            Logger.LogWarning($"Fast resume: piece hash mismatch in \"{Files[x].DiskPath}\" at offset {piece.Start}");
+                        if (!await VerifyPiece(handle, piece.Start, (int)(piece.End - piece.Start), piece.Hash, buf, file.FxHashMatches)) {
+                            Logger.LogWarning($"Fast resume: piece hash mismatch in \"{file.File.DiskPath}\" at offset {piece.Start}");
                             return false;
                         }
 
                         verified++;
                     }
                 } catch (Exception ex) {
-                    Logger.LogWarning(ex, $"Fast resume: failed to read piece in \"{Files[x].DiskPath}\"");
+                    Logger.LogWarning(ex, $"Fast resume: failed to read piece in \"{file.File.DiskPath}\"");
                     return false;
                 }
             }
@@ -243,7 +264,7 @@ public static class BencodeUtils
         return true;
     }
 
-    private static async Task<bool> VerifyPiece(SafeFileHandle Handle, ulong Start, int Length, byte[] ExpectedHash, Memory<byte> Buf)
+    private static async Task<bool> VerifyPiece(SafeFileHandle Handle, ulong Start, int Length, byte[] ExpectedHash, Memory<byte> Buf, Func<ReadOnlyMemory<byte>, byte[], bool> HashMatches)
     {
         var buffer = Buf[..Length];
         var total = 0;
@@ -254,7 +275,6 @@ public static class BencodeUtils
             total += sz;
         }
 
-        var hash = SHA1.HashData(buffer.Span);
-        return hash.AsSpan().SequenceEqual(ExpectedHash);
+        return HashMatches(buffer, ExpectedHash);
     }
 }

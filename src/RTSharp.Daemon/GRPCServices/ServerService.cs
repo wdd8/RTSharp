@@ -40,7 +40,7 @@ namespace RTSharp.Daemon.GRPCServices
                     Logger.LogInformation("Script ID {id} has finished", session.Id);
                 }, TaskContinuationOptions.OnlyOnRanToCompletion);
                 _ = session.Execution!.ContinueWith(task => {
-                    Logger.LogInformation($"Script ID {{id}} has errored: {task.Exception}", session.Id);
+                    Logger.LogError(task.Exception, "Script ID {id} has errored", session.Id);
                 }, TaskContinuationOptions.OnlyOnFaulted);
                 _ = session.Execution!.ContinueWith(task => {
                     Logger.LogInformation("Script ID {id} was cancelled", session.Id);

@@ -6,9 +6,6 @@ namespace RTSharp.Shared.Utils
 {
     public partial class TorrentCreator
     {
-        private static readonly Lock V2ZeroHashesLock = new();
-        private static readonly List<byte[]> V2ZeroHashes = [new byte[32]];
-
         private static void AddV2Info(BDictionary TorrentDict, BDictionary Info, List<TorrentFileEntry> AllFiles, Dictionary<TorrentFileEntry, V2FileHash> V2Hashes)
         {
             Info.Add("meta version", 2);
@@ -56,7 +53,7 @@ namespace RTSharp.Shared.Utils
 
         private static V2FileHash BuildV2FileHash(ReadOnlySpan<byte> LeafHashes, long FileLength, int PieceLength)
         {
-            int pieceLayerDepth = GetPieceLayerDepth(PieceLength);
+            int pieceLayerDepth = MerkleUtils.GetPieceLayerDepth(PieceLength);
             long pieceLayerHashCount = (FileLength - 1) / PieceLength + 1;
             BString? pieceLayer = null;
             int hashCount = LeafHashes.Length / 32;
@@ -64,7 +61,7 @@ namespace RTSharp.Shared.Utils
 
             while (true) {
                 if (depth == pieceLayerDepth && FileLength > PieceLength) {
-                    int pieceLayerByteLength = GetHashByteLength(pieceLayerHashCount);
+                    int pieceLayerByteLength = MerkleUtils.GetHashByteLength(pieceLayerHashCount);
                     var pieceLayerBytes = new byte[pieceLayerByteLength];
                     LeafHashes[..pieceLayerByteLength].CopyTo(pieceLayerBytes);
                     pieceLayer = new BString(pieceLayerBytes);
@@ -74,61 +71,19 @@ namespace RTSharp.Shared.Utils
                     return new V2FileHash(new BString(LeafHashes[..32].ToArray()), pieceLayer);
 
                 int nextHashCount = (hashCount + 1) / 2;
-                var nextLevel = new byte[GetHashByteLength(nextHashCount)];
-                var zeroHash = hashCount % 2 == 0 ? [] : GetZeroHash(depth);
+                var nextLevel = new byte[MerkleUtils.GetHashByteLength(nextHashCount)];
+                var zeroHash = hashCount % 2 == 0 ? [] : MerkleUtils.GetZeroHash(depth);
 
                 for (var x = 0;x < hashCount;x += 2) {
                     var left = LeafHashes.Slice(x * 32, 32);
                     var right = x + 1 < hashCount ? LeafHashes.Slice((x + 1) * 32, 32) : zeroHash;
-                    HashPair(left, right, nextLevel.AsSpan((x / 2) * 32, 32));
+                    MerkleUtils.HashPair(left, right, nextLevel.AsSpan((x / 2) * 32, 32));
                 }
 
                 LeafHashes = nextLevel;
                 hashCount = nextHashCount;
                 depth++;
             }
-        }
-
-        private static void HashPair(ReadOnlySpan<byte> Left, ReadOnlySpan<byte> Right, Span<byte> Destination)
-        {
-            Span<byte> buffer = stackalloc byte[Left.Length + Right.Length];
-            Left.CopyTo(buffer);
-            Right.CopyTo(buffer[Left.Length..]);
-            SHA256.HashData(buffer, Destination);
-        }
-
-        private static ReadOnlySpan<byte> GetZeroHash(int Depth)
-        {
-            lock (V2ZeroHashesLock) {
-                while (V2ZeroHashes.Count <= Depth) {
-                    var previous = V2ZeroHashes[^1];
-                    var next = new byte[32];
-                    HashPair(previous, previous, next);
-                    V2ZeroHashes.Add(next);
-                }
-
-                return V2ZeroHashes[Depth];
-            }
-        }
-
-        private static int GetHashByteLength(long HashCount)
-        {
-            if (HashCount > int.MaxValue / 32)
-                throw new InvalidOperationException("Torrent metadata is too large to build in memory.");
-
-            return (int)HashCount * 32;
-        }
-
-        private static int GetPieceLayerDepth(int PieceLength)
-        {
-            int leavesPerPiece = PieceLength / MerkleBlockSize;
-            int depth = 0;
-            while (leavesPerPiece > 1) {
-                leavesPerPiece >>= 1;
-                depth++;
-            }
-
-            return depth;
         }
 
         private class V2FileHasher(TorrentCreationProgress TorrentCreationProgress, int PieceLength)
@@ -144,8 +99,8 @@ namespace RTSharp.Shared.Utils
                 LeafBufferOffset = 0;
                 LeafHashes.SetLength(0);
 
-                long leafHashCount = FileLength == 0 ? 0 : (FileLength - 1) / MerkleBlockSize + 1;
-                int capacity = GetHashByteLength(leafHashCount);
+                long leafHashCount = FileLength == 0 ? 0 : (FileLength - 1) / MerkleUtils.BLOCK_SIZE + 1;
+                int capacity = MerkleUtils.GetHashByteLength(leafHashCount);
                 if (LeafHashes.Capacity < capacity)
                     LeafHashes.Capacity = capacity;
             }
@@ -154,24 +109,24 @@ namespace RTSharp.Shared.Utils
             {
                 if (LeafBufferOffset > 0) {
                     var leafBuffer = LeafBuffer!;
-                    int bytesToCopy = Math.Min(MerkleBlockSize - LeafBufferOffset, In.Length);
+                    int bytesToCopy = Math.Min(MerkleUtils.BLOCK_SIZE - LeafBufferOffset, In.Length);
                     In[..bytesToCopy].CopyTo(leafBuffer.AsSpan()[LeafBufferOffset..]);
                     In = In[bytesToCopy..];
                     LeafBufferOffset += bytesToCopy;
 
-                    if (LeafBufferOffset < MerkleBlockSize)
+                    if (LeafBufferOffset < MerkleUtils.BLOCK_SIZE)
                         return;
 
                     AddLeafHash(leafBuffer);
                 }
 
-                while (In.Length >= MerkleBlockSize) {
-                    AddLeafHash(In[..MerkleBlockSize]);
-                    In = In[MerkleBlockSize..];
+                while (In.Length >= MerkleUtils.BLOCK_SIZE) {
+                    AddLeafHash(In[..MerkleUtils.BLOCK_SIZE]);
+                    In = In[MerkleUtils.BLOCK_SIZE..];
                 }
 
                 if (In.Length > 0) {
-                    LeafBuffer ??= new byte[MerkleBlockSize];
+                    LeafBuffer ??= new byte[MerkleUtils.BLOCK_SIZE];
                     In.CopyTo(LeafBuffer);
                     LeafBufferOffset = In.Length;
                 }

@@ -9,6 +9,25 @@ using System.Threading.Channels;
 
 namespace RTSharp.Shared.Abstractions.Daemon;
 
+/// <summary>
+/// Hash to compute over a remote file block, along with any parameters that hash needs
+/// </summary>
+public abstract record FileBlockHashAlgorithm
+{
+    private FileBlockHashAlgorithm() { }
+
+    /// <summary>
+    /// Flat SHA-1 over the block
+    /// </summary>
+    public sealed record Sha1 : FileBlockHashAlgorithm;
+
+    /// <summary>
+    /// BitTorrent v2 merkle root over the block's 16 KiB SHA-256 leaves
+    /// </summary>
+    /// <param name="Height">Height of the merkle subtree from the block's 16 KiB leaves up to the produced root</param>
+    public sealed record Sha256BitTorrentV2Merkle(int Height) : FileBlockHashAlgorithm;
+}
+
 [Singleton]
 public interface IDaemonService
 {
@@ -98,9 +117,9 @@ public interface IDaemonService
     /// <param name="Path">Full remote path</param>
     /// <param name="Start">Start offset</param>
     /// <param name="End">End offset</param>
-    /// <param name="HashAlgorithm">SHA1 or SHA256</param>
+    /// <param name="HashAlgorithm">Flat hash, or a BitTorrent v2 merkle root, carrying its own parameters</param>
     /// <returns></returns>
-    Task<byte[]> HashFileBlock(string Path, ulong Start, ulong End, HashAlgorithmName HashAlgorithm);
+    Task<byte[]> HashFileBlock(string Path, ulong Start, ulong End, FileBlockHashAlgorithm HashAlgorithm);
 
     /// <summary>
     /// Links files from source to destination using either reflink, hardlink, or reflink with hardlink fallback. There is no hardlink with reflink fallback.

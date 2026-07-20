@@ -176,6 +176,17 @@ public static class Program
 
         var app = builder.Build();
 
+        var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Program");
+
+        AppDomain.CurrentDomain.UnhandledException += (sender, e) => {
+            startupLogger.LogCritical(e.ExceptionObject as Exception, "Unhandled exception (terminating: {isTerminating})", e.IsTerminating);
+        };
+
+        TaskScheduler.UnobservedTaskException += (sender, e) => {
+            startupLogger.LogError(e.Exception, "Unobserved task exception");
+            e.SetObserved();
+        };
+
         PosixSignalRegistration.Create(PosixSignal.SIGHUP, context => {
             context.Cancel = true;
             if (!loadConfig()) {

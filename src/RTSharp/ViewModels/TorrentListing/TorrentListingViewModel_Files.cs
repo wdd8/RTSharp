@@ -117,7 +117,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                 bool canUseCached = config.Caching.Value.FilesCachingEnabled && !current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) && (current.Done == 0 || current.Done == 100);
                 if (canUseCached) {
-                    using var cachedView = CancellationTokenSource.CreateLinkedTokenSource(selectionChange);
+                    var cachedView = CancellationTokenSource.CreateLinkedTokenSource(selectionChange);
                     void onTorrentChanged(object? sender, PropertyChangedEventArgs e)
                     {
                         if (e.PropertyName != nameof(Models.Torrent.InternalState) && e.PropertyName != nameof(Models.Torrent.Done))

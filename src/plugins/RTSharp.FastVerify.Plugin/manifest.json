@@ -1,0 +1,4 @@
+{
+    "Module": "RTSharp.FastVerify.Plugin.dll",
+    "Description": "Adds a torrent context menu item that fast-verifies files on disk against piece hashes"
+}

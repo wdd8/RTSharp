@@ -320,11 +320,17 @@ public partial class FilesService(
             // SHA-1 = 20, SHA-256 = 32
             Span<byte> hash = stackalloc byte[32];
 
-            hashLen = Req.Algorithm switch {
-                HashFileBlockInput.Types.HashAlgorithm.Sha1 => SHA1.HashData(buffer.Span, hash),
-                HashFileBlockInput.Types.HashAlgorithm.Sha256 => SHA256.HashData(buffer.Span, hash),
-                _ => throw new RpcException(new Status(StatusCode.InvalidArgument, "Unsupported hash algorithm")),
-            };
+            switch (Req.Algorithm) {
+                case HashFileBlockInput.Types.HashAlgorithm.Sha1:
+                    hashLen = SHA1.HashData(buffer.Span, hash);
+                    break;
+                case HashFileBlockInput.Types.HashAlgorithm.Sha256BtV2Merkle:
+                    MerkleUtils.ComputeBlockMerkleRoot(buffer.Span, (int)Req.MerkleHeight, hash);
+                    hashLen = 32;
+                    break;
+                default:
+                    throw new RpcException(new Status(StatusCode.InvalidArgument, "Unsupported hash algorithm"));
+            }
 
             return new BytesValue {
                 Value = ByteString.CopyFrom(hash[..hashLen])

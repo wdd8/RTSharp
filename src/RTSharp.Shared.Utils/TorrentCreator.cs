@@ -11,7 +11,6 @@ namespace RTSharp.Shared.Utils
 {
     public partial class TorrentCreator
     {
-        private const int MerkleBlockSize = 16 * 1024;
         private const int FileReadBufferSize = 128 * 1024;
 
         public record TorrentFileEntry(FileInfo Info, string[] RelativePath, string DisplayPath)
@@ -381,7 +380,7 @@ namespace RTSharp.Shared.Utils
             if ((PieceLength & (PieceLength - 1)) != 0)
                 throw new ArgumentOutOfRangeException(nameof(PieceLength), "Piece length must be a power of two.");
 
-            if (CreateV2 && PieceLength < MerkleBlockSize)
+            if (CreateV2 && PieceLength < MerkleUtils.BLOCK_SIZE)
                 throw new ArgumentOutOfRangeException(nameof(PieceLength), "V2 torrents require a piece length of at least 16 KiB.");
         }
 
