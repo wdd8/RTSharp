@@ -13,26 +13,25 @@ public static partial class BencodeUtils
     /// Piece hashes of a single BitTorrent v2 file.
     /// </summary>
     /// <param name="MerkleHeight">Height of the merkle subtree from the piece's 16 KiB block leaves up to <see cref="PieceHash.Hash"/>, i.e. how many times those leaves are reduced.</param>
-    public record FilePieceHashesV2(string FullPath, long FileSize, PieceHash[] PieceHashes, Range PieceRange, int MerkleHeight);
+    public record FilePieceHashesV2(TorrentFile File, PieceHash[] PieceHashes, Range PieceRange, int MerkleHeight);
 
     /// <summary>
     /// A file as described by the torrent's "file tree"
     /// </summary>
-    private readonly record struct FileTreeEntry(string[] Components, long Length, BString? PiecesRoot);
+    private readonly record struct FileTreeEntry(TorrentFile File, BString? PiecesRoot);
 
     /// <summary>
     /// For each file in a BitTorrent v2 torrent, computes its piece hashes with byte offsets relative
     /// to the start of the file.
     /// </summary>
-    /// <param name="TorrentData">.torrent bencode root</param>
+    /// <param name="BTorrent">.torrent bencode root</param>
     /// <exception cref="InvalidDataException">Torrent metadata is malformed or unsupported</exception>
-    public static FilePieceHashesV2[] AssignHashesToPiecesV2(BDictionary TorrentData)
+    public static FilePieceHashesV2[] AssignHashesToPiecesV2(BDictionary BTorrent)
     {
-        var info = TorrentData.Get<BDictionary>(TorrentFields.Info)
+        var info = BTorrent.Get<BDictionary>(TorrentFields.Info)
             ?? throw new InvalidDataException("Torrent has no \"info\" dictionary");
 
-        var pieceLength = info.Get<BNumber>("piece length")?.Value
-            ?? throw new InvalidDataException("Torrent has no \"piece length\"");
+        var pieceLength = GetPieceLength(info);
 
         if (pieceLength > Int32.MaxValue || pieceLength < MerkleUtils.BLOCK_SIZE)
             throw new InvalidDataException($"Unsupported v2 piece length {pieceLength}");
@@ -40,7 +39,7 @@ public static partial class BencodeUtils
         var fileTree = info.Get<BDictionary>("file tree")
             ?? throw new InvalidDataException("Torrent has no \"file tree\"");
 
-        var pieceLayers = TorrentData.Get<BDictionary>("piece layers") ?? new BDictionary();
+        var pieceLayers = BTorrent.Get<BDictionary>("piece layers") ?? new BDictionary();
         var pieceLayerDepth = MerkleUtils.GetPieceLayerDepth((int)pieceLength);
 
         var entries = new List<FileTreeEntry>();
@@ -51,11 +50,12 @@ public static partial class BencodeUtils
         Span<byte> root = stackalloc byte[32];
 
         for (var x = 0;x < entries.Count;x++) {
-            var (components, length, piecesRoot) = entries[x];
-            var fullPath = String.Join('/', components);
+            var (file, piecesRoot) = entries[x];
+            var length = file.FileSize;
+            var fullPath = String.Join('/', file.PathComponents);
 
             if (length == 0) {
-                result[x] = new FilePieceHashesV2(fullPath, 0, [], globalPiece..globalPiece, 0);
+                result[x] = new FilePieceHashesV2(file, [], globalPiece..globalPiece, 0);
                 continue;
             }
 
@@ -96,7 +96,7 @@ public static partial class BencodeUtils
                 }
             }
 
-            result[x] = new FilePieceHashesV2(fullPath, length, pieceHashes, globalPiece..(globalPiece + pieceHashes.Length), merkleHeight);
+            result[x] = new FilePieceHashesV2(file, pieceHashes, globalPiece..(globalPiece + pieceHashes.Length), merkleHeight);
             globalPiece += pieceHashes.Length;
         }
 
@@ -111,7 +111,7 @@ public static partial class BencodeUtils
             var length = fileNode.Get<BNumber>("length")?.Value
                 ?? throw new InvalidDataException($"File \"{String.Join('/', Components)}\" has no \"length\"");
 
-            Result.Add(new FileTreeEntry([.. Components], length, fileNode.Get<BString>("pieces root")));
+            Result.Add(new FileTreeEntry(new TorrentFile([.. Components], length), fileNode.Get<BString>("pieces root")));
             return;
         }
 
@@ -129,19 +129,19 @@ public static partial class BencodeUtils
     /// <see cref="FastVerifyFilesOnDisk"/> for v2 only torrents, verifying pieces against the
     /// per file merkle trees instead of the v1 piece hash string
     /// </summary>
-    private static async Task<bool> FastVerifyFilesOnDiskV2(BDictionary TorrentData, string BaseDirectory, ILogger Logger)
+    private static async Task<bool> FastVerifyFilesOnDiskV2(BDictionary BTorrent, string BaseDirectory, ILogger Logger)
     {
         FilePieceHashesV2[] fileHashes;
         int pieceLen;
-        string name;
+        TorrentFile[] files;
 
         try {
-            var info = TorrentData.Get<BDictionary>(TorrentFields.Info)!;
-            name = info.Get<BString>("name")?.ToString()
-                ?? throw new InvalidDataException("Torrent has no \"name\"");
-            pieceLen = (int)info.Get<BNumber>("piece length")!.Value;
+            var info = BTorrent.Get<BDictionary>(TorrentFields.Info)!;
+            pieceLen = (int)GetPieceLength(info);
 
-            fileHashes = AssignHashesToPiecesV2(TorrentData);
+            fileHashes = AssignHashesToPiecesV2(BTorrent);
+            // Same "file tree" walk order as AssignHashesToPiecesV2, so files[x] pairs with fileHashes[x]
+            files = GetFilesOnDisk(info, BaseDirectory);
         } catch (Exception ex) {
             Logger.LogWarning(ex, "Fast verify unavailable: could not read v2 torrent metadata");
             return false;
@@ -152,22 +152,11 @@ public static partial class BencodeUtils
             return false;
         }
 
-        var singleFile = fileHashes.Length == 1 && fileHashes[0].FullPath == name;
-
-        var files = new List<FileWithSize>(fileHashes.Length);
-        foreach (var fileHash in fileHashes) {
-            var diskPath = singleFile
-                ? Path.Combine(BaseDirectory, name)
-                : Path.Combine([BaseDirectory, name, .. fileHash.FullPath.Split('/')]);
-
-            files.Add(new FileWithSize(diskPath, fileHash.FileSize));
-        }
-
         if (!CheckFilesExistWithSize(files, Logger))
             return false;
 
-        var toVerify = new List<FileToVerify>(files.Count);
-        for (var x = 0;x < files.Count;x++) {
+        var toVerify = new List<FileToVerify>(files.Length);
+        for (var x = 0;x < files.Length;x++) {
             var height = fileHashes[x].MerkleHeight;
             toVerify.Add(new FileToVerify(files[x], fileHashes[x].PieceHashes, (Data, Expected) => {
                 Span<byte> root = stackalloc byte[32];

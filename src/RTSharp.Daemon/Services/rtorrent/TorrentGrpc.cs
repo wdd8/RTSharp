@@ -137,16 +137,26 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ToTorrentsReply(await Scgi.XmlActionTorrents(hashes, "d.tracker_announce"));
         }
 
-        private async Task<byte[]?> TryBuildFastResume(BDictionary BTorrentDict, BencodeNET.Torrents.Torrent BTorrent, string BaseDirectory)
+        private async Task<byte[]?> TryBuildFastResume(BDictionary BTorrentDict, string BaseDirectory)
         {
             if (String.IsNullOrEmpty(BaseDirectory))
                 return null;
 
-            if (!await BencodeUtils.FastVerifyFilesOnDisk(BTorrent, BaseDirectory, Logger))
+            var info = BTorrentDict.Get<BDictionary>(TorrentFields.Info);
+
+            /*
+             * rtorrent has no v2/hybrid support. The v1 "files" list of a hybrid torrent
+             * includes BEP 47 padding files that never exist on disk, so fastresume file
+             * would be invalid. Add normally instead.
+             */
+            if (info.ContainsKey("file tree"))
                 return null;
 
-            var pieceLength = BTorrent.PieceSize;
-            var totalChunks = BTorrent.Pieces.Length / 20;
+            if (!await BencodeUtils.FastVerifyFilesOnDisk(BTorrentDict, BaseDirectory, Logger))
+                return null;
+
+            var pieceLength = BencodeUtils.GetPieceLength(info);
+            var totalChunks = BencodeUtils.GetPieces(info)!.Length / 20;
 
             var resumeFiles = new BList();
             long offset = 0;
@@ -172,13 +182,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 offset += Size;
             }
 
-            if (BTorrent.Files is { Count: > 0 }) {
-                var contentDir = Path.Combine(BaseDirectory, BTorrent.DisplayName);
-                foreach (var file in BTorrent.Files)
-                    addResumeFile(Path.Combine([ contentDir, ..(file.Path ?? file.PathUtf8) ]), file.FileSize);
-            } else {
-                addResumeFile(Path.Combine(BaseDirectory, BTorrent.DisplayName), BTorrent.File.FileSize);
-            }
+            foreach (var file in BencodeUtils.GetFilesOnDisk(BTorrentDict.Get<BDictionary>(TorrentFields.Info), BaseDirectory))
+                addResumeFile(file.Path, file.FileSize);
 
             BTorrentDict["libtorrent_resume"] = new BDictionary {
                 { "bitfield", new BNumber(totalChunks) },
@@ -203,7 +208,6 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         private async Task<TorrentsReply> AddTorrents(Dictionary<string, Torrent> Torrents)
         {
-            var parser = new TorrentParser();
             var bencodeParser = new BencodeParser();
             var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             var ret = new TorrentsReply();
@@ -213,12 +217,12 @@ namespace RTSharp.Daemon.Services.rtorrent
             foreach (var (id, torrent) in Torrents) {
                 torrent.Data.Position = 0;
 
-                BencodeNET.Torrents.Torrent btorrent;
                 BDictionary bTorrentDict;
+                byte[]? v1;
+                byte[]? v2;
                 try {
-                    btorrent = parser.Parse(torrent.Data);
-                    torrent.Data.Position = 0;
                     bTorrentDict = bencodeParser.Parse<BDictionary>(torrent.Data);
+                    (v1, v2) = BencodeUtils.GetInfoHashes(bTorrentDict);
                 } catch {
                     ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                         InfoHash = Array.Empty<byte>().ToByteString(),
@@ -231,22 +235,32 @@ namespace RTSharp.Daemon.Services.rtorrent
                     continue;
                 }
 
-                hashes.Add(btorrent.OriginalInfoHash);
+                if (v1 == null) {
+                    ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                        InfoHash = Array.Empty<byte>().ToByteString(),
+                        Status = { new Protocols.DataProvider.Status() {
+                            Command = "",
+                            FaultCode = "1",
+                            FaultString = $"rtorrent does not support v2-only torrents (id {id})"
+                        } }
+                    });
+                    continue;
+                }
 
-                var (v1, v2) = BencodeUtils.GetInfoHashes(bTorrentDict);
-                if (v1 != null)
-                    Cache.Add(v1, v2);
-                var rtsHash = (v2 ?? v1)!;
+                hashes.Add(Convert.ToHexString(v1));
+
+                Cache.Add(v1, v2);
+                var rtsHash = v2 ?? v1;
                 rtsHashes.Add(rtsHash);
 
                 byte[] rawTorrent;
 
                 if (torrent.FastResume) {
-                    var fastResumeTorrent = await TryBuildFastResume(bTorrentDict, btorrent, torrent.Path);
+                    var fastResumeTorrent = await TryBuildFastResume(bTorrentDict, torrent.Path);
                     if (fastResumeTorrent != null)
                         rawTorrent = fastResumeTorrent;
                     else {
-                        Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", btorrent.OriginalInfoHash);
+                        Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", Convert.ToHexString(v1));
                         rawTorrent = torrent.Data.ToArray();
                     }
                 } else
@@ -262,8 +276,9 @@ namespace RTSharp.Daemon.Services.rtorrent
                 if (!String.IsNullOrEmpty(torrent.Path))
                     xml.Append("<value><string>d.directory.set=\"" + XMLUtils.Encode(torrent.Path) + "\"</string></value>");
 
-                if (!String.IsNullOrEmpty(btorrent.Comment))
-                    xml.Append("<value><string>d.custom2.set=\"" + XMLUtils.Encode(btorrent.Comment) + "\"</string></value>");
+                var comment = BencodeUtils.GetComment(bTorrentDict);
+                if (!String.IsNullOrEmpty(comment))
+                    xml.Append("<value><string>d.custom2.set=\"" + XMLUtils.Encode(comment) + "\"</string></value>");
 
                 if (torrent.FastResume) {
                     // soos
@@ -495,7 +510,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 }
             }
 
-            var parser = new TorrentParser();
+            var bencodeParser = new BencodeParser();
 
             foreach (var (hash, torrent) in dotTorrents) {
                 var basePath = basePaths[hash];
@@ -513,10 +528,11 @@ namespace RTSharp.Daemon.Services.rtorrent
                 if (basePath[^1] == '/')
                     basePath = basePath[..^1];
 
-                BencodeNET.Torrents.Torrent btorrent;
+                BDictionary info;
                 try {
                     using (var mem = new MemoryStream(torrent)) {
-                        btorrent = parser.Parse(mem);
+                        info = bencodeParser.Parse<BDictionary>(mem).Get<BDictionary>(TorrentFields.Info)
+                            ?? throw new InvalidDataException("Torrent has no \"info\" dictionary");
                     }
                 } catch {
                     torrentReply.Status.Add(new Protocols.DataProvider.Status() {
@@ -527,7 +543,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                     continue;
                 }
 
-                if (btorrent.File != null) {
+                if (!info.ContainsKey("files")) {
                     if (!File.Exists(basePath)) {
                         torrentReply.Status.Add(new Protocols.DataProvider.Status() {
                             Command = "__file_deletion",
@@ -538,16 +554,14 @@ namespace RTSharp.Daemon.Services.rtorrent
                     }
                     Logger.LogInformation($"Deleting file \"{basePath}\"");
                     System.IO.File.Delete(basePath);
-                }
-
-                if (btorrent.Files != null) {
+                } else {
                     var folders = new HashSet<string>() {
                         basePath
                     };
-                    foreach (var file in btorrent.Files) {
-                        var components = file.Path ?? file.PathUtf8;
+                    foreach (var file in info.Get<BList>("files")!.Cast<BDictionary>()) {
+                        var componentsList = file.Get<BList>("path") ?? file.Get<BList>("path.utf-8");
 
-                        if (components == null) {
+                        if (componentsList == null) {
                             torrentReply.Status.Add(new Protocols.DataProvider.Status() {
                                 Command = "__file_deletion",
                                 FaultCode = "6",
@@ -556,7 +570,9 @@ namespace RTSharp.Daemon.Services.rtorrent
                             continue;
                         }
 
-                        var folder = components.Take(components.Count - 1);
+                        var components = componentsList.AsStrings().ToArray();
+
+                        var folder = components.Take(components.Length - 1);
                         if (folder.Any())
                             folders.Add(Path.Combine([ basePath, ..folder ]));
 

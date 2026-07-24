@@ -533,7 +533,7 @@ namespace RTSharp.Daemon.Services.transmission
 
         public Task<TorrentsReply> ReannounceToAllTrackers(Torrents In) => PerformVoidActionObj(In, (client, obj) => client.TorrentReannounceAsync(obj));
 
-        private async Task<bool> TryWriteFastResume(BencodeNET.Torrents.Torrent BTorrent, byte[] InfoHash, string BaseDirectory)
+        private async Task<bool> TryWriteFastResume(BencodeNET.Objects.BDictionary BTorrent, byte[] InfoHash, string BaseDirectory)
         {
             if (String.IsNullOrEmpty(BaseDirectory) || String.IsNullOrEmpty(Client.ConfigDir))
                 return false;
@@ -541,24 +541,13 @@ namespace RTSharp.Daemon.Services.transmission
             if (!await BencodeUtils.FastVerifyFilesOnDisk(BTorrent, BaseDirectory, Logger))
                 return false;
 
+            var info = BTorrent.Get<BencodeNET.Objects.BDictionary>(BencodeNET.Torrents.TorrentFields.Info);
+
             var mtimes = new BencodeNET.Objects.BList();
-            if (BTorrent.Files != null) {
-                var realDir = Path.Combine(BaseDirectory, BTorrent.DisplayName);
-                foreach (var file in BTorrent.Files) {
-                    mtimes.Add((BencodeNET.Objects.IBObject)new BencodeNET.Objects.BNumber(
-                        new DateTimeOffset(
-                            System.IO.File.GetLastWriteTimeUtc(
-                                Path.Combine([ realDir, ..(file.Path ?? file.PathUtf8) ])
-                            )
-                        ).ToUnixTimeSeconds()
-                    ));
-                }
-            } else {
+            foreach (var file in BencodeUtils.GetFilesOnDisk(info, BaseDirectory)) {
                 mtimes.Add((BencodeNET.Objects.IBObject)new BencodeNET.Objects.BNumber(
                     new DateTimeOffset(
-                        System.IO.File.GetLastWriteTimeUtc(
-                            Path.Combine(BaseDirectory, BTorrent.DisplayName)
-                        )
+                        System.IO.File.GetLastWriteTimeUtc(file.Path)
                     ).ToUnixTimeSeconds()
                 ));
             }
@@ -606,15 +595,18 @@ namespace RTSharp.Daemon.Services.transmission
                 }
             }
 
-            var parser = new BencodeNET.Torrents.TorrentParser();
+            var bencodeParser = new BencodeParser();
             var ret = new TorrentsReply();
 
             foreach (var (id, torrent) in torrents) {
                 torrent.Data.Position = 0;
 
-                BencodeNET.Torrents.Torrent btorrent;
+                BencodeNET.Objects.BDictionary bTorrent;
+                byte[]? v1;
+                byte[]? v2;
                 try {
-                    btorrent = parser.Parse(torrent.Data);
+                    bTorrent = bencodeParser.Parse<BencodeNET.Objects.BDictionary>(torrent.Data);
+                    (v1, v2) = BencodeUtils.GetInfoHashes(bTorrent);
                 } catch (Exception ex) {
                     ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                         InfoHash = Array.Empty<byte>().ToByteString(),
@@ -628,15 +620,24 @@ namespace RTSharp.Daemon.Services.transmission
                     continue;
                 }
 
-                torrent.Data.Position = 0;
-                var (v1, v2) = BencodeUtils.GetInfoHashes(new BencodeParser().Parse<BencodeNET.Objects.BDictionary>(torrent.Data));
-                if (v1 != null)
-                    Cache.Add(v1, v2);
+                if (v1 == null) {
+                    ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                        InfoHash = Array.Empty<byte>().ToByteString(),
+                        Status = { new Protocols.DataProvider.Status() {
+                            Command = "",
+                            FaultCode = "1",
+                            FaultString = $"transmission does not support v2-only torrents (id {id})"
+                        } }
+                    });
+                    continue;
+                }
+
+                Cache.Add(v1, v2);
                 var rtsHash = (v2 ?? v1)!;
 
                 try {
-                    if (torrent.FastResume && v1 != null) {
-                        if (!await TryWriteFastResume(btorrent, v1, torrent.Path))
+                    if (torrent.FastResume) {
+                        if (!await TryWriteFastResume(bTorrent, v1, torrent.Path))
                             Logger.LogWarning($"Fast resume requested but could not be applied for {Convert.ToHexString(v1)}");
                     }
 

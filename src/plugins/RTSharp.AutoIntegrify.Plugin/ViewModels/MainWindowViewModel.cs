@@ -17,9 +17,18 @@ using RTSharp.Shared.Utils;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 
-using static RTSharp.AutoIntegrify.Plugin.ViewModels.MainWindowViewModel;
+using static RTSharp.Shared.Utils.BencodeUtils;
 
 namespace RTSharp.AutoIntegrify.Plugin.ViewModels;
+
+public enum RESOLVE_STATE
+{
+    PENDING,
+    FILE_TOO_SMALL,
+    UNRESOLVED,
+    RESOLVED,
+    RESOLVED_HEURISTICS
+}
 
 public partial class FileInfo : ObservableObject
 {
@@ -57,17 +66,6 @@ public partial class FileInfo : ObservableObject
 
 public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> Host, MainWindow Window, Torrent Torrent) : ObservableViewModel
 {
-    public enum RESOLVE_STATE
-    {
-        PENDING,
-        FILE_TOO_SMALL,
-        UNRESOLVED,
-        RESOLVED,
-        RESOLVED_HEURISTICS
-    }
-
-    public record TorrentFile(string FullPath, long FileSize);
-
     [ObservableProperty]
     public partial ObservableCollection<FileInfo> Files { get; set; } = new();
 
@@ -177,7 +175,7 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
                     await SolveFile(file, x == 0 ? false : true);
 
                     if (file.Resolved == RESOLVE_STATE.RESOLVED || file.Resolved == RESOLVE_STATE.RESOLVED_HEURISTICS) {
-                        var shouldBeAtPath = IsMultiFile ? string.Join('/', Torrent.RemotePath, Torrent.Name, file.File.FullPath) : string.Join('/', Torrent.RemotePath, file.File.FullPath);
+                        var shouldBeAtPath = IsMultiFile ? string.Join('/', Torrent.RemotePath, Torrent.Name, file.File.Path) : string.Join('/', Torrent.RemotePath, file.File.Path);
 
                         if (shouldBeAtPath != file.ResolvedPath) {
                             PendingLinks.Add(file.ResolvedPath!, shouldBeAtPath);
@@ -220,7 +218,7 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
     private async Task<bool> SolveFile(FileInfo File, bool WideSearch)
     {
         Dispatcher.UIThread.Invoke(() => {
-            ProgressText = $"Searching for {File.File.FullPath}{(WideSearch ? " (wide search)" : "")}...";
+            ProgressText = $"Searching for {File.File.Path}{(WideSearch ? " (wide search)" : "")}...";
         });
 
         var remotePathParts = Torrent.RemotePath.Split('/');
@@ -234,6 +232,7 @@ using System.Text;
 using System.Linq;
 using System.IO;
 using System.Text.Json;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 public class Main(ILogger<Main> Logger) : IScript
@@ -261,6 +260,8 @@ public class Main(ILogger<Main> Logger) : IScript
             outp.Append('\x00');
         }
 
+        var progressStopwatch = Stopwatch.StartNew();
+
         bool matchFolder(string path, int recursed = 0) {
             if (recursed >= recurseLimit)
                 return false;
@@ -268,7 +269,10 @@ public class Main(ILogger<Main> Logger) : IScript
             try {
                 var currentDir = new DirectoryInfo(path);
 
-                Session.Progress.Text = path;
+                if (progressStopwatch.ElapsedMilliseconds >= 1000) {
+                    Session.Progress.Text = path;
+                    progressStopwatch.Restart();
+                }
 
                 foreach (var file in currentDir.EnumerateFiles()) {
                     if (file.FullName.EndsWith(filePath)) {
@@ -338,7 +342,7 @@ done:;
 }
 """, "AutoIntegrify", new Dictionary<string, string> {
             ["AdditionalPaths"] = String.Join('\x00', AdditionalPaths),
-            ["FilePath"] = File.File.FullPath,
+            ["FilePath"] = File.File.Path,
             ["Size"] = File.File.FileSize.ToString(),
             ["CurrentPath"] = IsMultiFile ? $"{Torrent.RemotePath}/{Torrent.Name}" : Torrent.RemotePath,
             ["LimitPath"] = string.Join('/', remotePathParts[..^1]),
@@ -352,7 +356,7 @@ done:;
         });
 
         Dispatcher.UIThread.Invoke(() => {
-            ProgressText = $"Searching for {File.File.FullPath}: Script starting";
+            ProgressText = $"Searching for {File.File.Path}: Script starting";
         });
 
         List<string> paths = [];
@@ -361,22 +365,22 @@ done:;
             if (progress.State == TASK_STATE.DONE) {
                 paths = [.. progress.StateData!.Split('\x00', StringSplitOptions.RemoveEmptyEntries)];
                 Dispatcher.UIThread.Invoke(() => {
-                    ProgressText = $"Searching for {File.File.FullPath}{(WideSearch ? " (wide search)" : "")}: Done";
+                    ProgressText = $"Searching for {File.File.Path}{(WideSearch ? " (wide search)" : "")}: Done";
                 });
             } else {
                 Dispatcher.UIThread.Invoke(() => {
-                    ProgressText = $"Searching for {File.File.FullPath}{(WideSearch ? " (wide search)" : "")}: {progress.Text}";
+                    ProgressText = $"Searching for {File.File.Path}{(WideSearch ? " (wide search)" : "")}: {progress.Text}";
                 });
             }
         });
 
         Dispatcher.UIThread.Invoke(() => {
-            ProgressText = $"Searching for {File.File.FullPath}: Script end";
+            ProgressText = $"Searching for {File.File.Path}: Script end";
         });
 
         if (paths.Count == 0) {
             Dispatcher.UIThread.Invoke(() => {
-                ProgressText = $"No files found for {File.File.FullPath}";
+                ProgressText = $"No files found for {File.File.Path}";
                 File.Resolved = RESOLVE_STATE.UNRESOLVED;
                 RefreshPieces(File, SelectedFile);
             });
@@ -388,7 +392,7 @@ done:;
         }
 
         Dispatcher.UIThread.Invoke(() => {
-            ProgressText = $"{File.File.FullPath}: Verifying random pieces...";
+            ProgressText = $"{File.File.Path}: Verifying random pieces...";
         });
 
         foreach (var path in paths) {
@@ -463,42 +467,35 @@ done:;
 
         using var mem = new System.IO.MemoryStream(dotTorrent.Single().Value);
 
-        BencodeNET.Torrents.Torrent btorrent;
-        var parser = new BencodeNET.Torrents.TorrentParser();
-        try {
-            btorrent = parser.Parse(mem);
-        } catch {
-            throw;
-        }
+        var bTorrent = new BencodeParser().Parse<BencodeNET.Objects.BDictionary>(mem);
+        var info = bTorrent.Get<BencodeNET.Objects.BDictionary>("info")
+            ?? throw new System.IO.InvalidDataException("Torrent has no \"info\" dictionary");
 
         var pieces = new List<PieceState>();
 
         FileInfo[] files;
         int totalPieces;
 
-        if (btorrent.Pieces?.Length > 0) {
-            IsMultiFile = btorrent.Files != null;
+        if (!info.ContainsKey("file tree")) {
+            IsMultiFile = info.ContainsKey("files");
 
-            files = [.. BencodeUtils.AssignHashesToPieces(btorrent).Select(x => new FileInfo {
-                File = new TorrentFile(x.FullPath, x.FileSize),
+            files = [.. BencodeUtils.AssignHashesToPieces(bTorrent).Select(x => new FileInfo {
+                File = x.File,
                 PieceHashes = x.PieceHashes,
                 PieceRange = x.PieceRange,
                 HashAlgorithm = new FileBlockHashAlgorithm.Sha1()
             })];
 
-            totalPieces = (int)Math.Ceiling(files.Sum(x => x.File.FileSize) / (float)btorrent.PieceSize);
+            totalPieces = (int)Math.Ceiling(files.Sum(x => x.File.FileSize) / (float)BencodeUtils.GetPieceLength(info));
         } else {
-            mem.Position = 0;
-            var torrentData = new BencodeParser().Parse<BencodeNET.Objects.BDictionary>(mem);
-
-            files = [.. BencodeUtils.AssignHashesToPiecesV2(torrentData).Select(x => new FileInfo {
-                File = new TorrentFile(x.FullPath, x.FileSize),
+            files = [.. BencodeUtils.AssignHashesToPiecesV2(bTorrent).Select(x => new FileInfo {
+                File = x.File,
                 PieceHashes = x.PieceHashes,
                 PieceRange = x.PieceRange,
                 HashAlgorithm = new FileBlockHashAlgorithm.Sha256BitTorrentV2Merkle(x.MerkleHeight)
             })];
 
-            IsMultiFile = files.Length > 1 || files[0].File.FullPath != btorrent.DisplayName;
+            IsMultiFile = files.Length > 1 || files[0].File.Path != BencodeUtils.GetName(info);
 
             totalPieces = files[^1].PieceRange.End.Value;
         }

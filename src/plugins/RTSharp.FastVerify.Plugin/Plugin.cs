@@ -145,13 +145,10 @@ public class Main(ILogger<Main> Logger) : IScript
             var baseDirectory = Variables["BaseDirectory"];
 
             using var mem = new MemoryStream(bytes);
-            var btorrent = new TorrentParser().Parse(mem);
-
-            mem.Position = 0;
-            var torrentData = new BencodeParser().Parse<BDictionary>(mem);
+            var bTorrent = new BencodeParser().Parse<BDictionary>(mem);
 
             var logger = new CapturingLogger();
-            var verified = await BencodeUtils.FastVerifyFilesOnDisk(btorrent, baseDirectory, logger, torrentData);
+            var verified = await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, baseDirectory, logger);
 
             Session.Progress.StateData = $"{(verified ? "1" : "0")}\x00{logger.LastWarning}";
             Session.Progress.State = TASK_STATE.DONE;

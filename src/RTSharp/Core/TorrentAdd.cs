@@ -56,17 +56,15 @@ public class TorrentAdd
 
         var filesByHash = new InfoHashDictionary<(byte[] Content, string Name, AddTorrentsOptions Options)>();
         {
-            var parser = new BencodeNET.Torrents.TorrentParser();
-            var bencodeParser = new BencodeNET.Parsing.BencodeParser();
+            var bencodeParser = new BencodeParser();
             foreach (var (content, _, options) in files) {
                 try {
                     using var ms = new MemoryStream(content);
-                    var parsed = parser.Parse(ms);
+                    var bTorrent = bencodeParser.Parse<BencodeNET.Objects.BDictionary>(ms);
+                    var (v1, v2) = BencodeUtils.GetInfoHashes(bTorrent);
+                    var name = BencodeUtils.GetName(bTorrent.Get<BencodeNET.Objects.BDictionary>("info"));
 
-                    ms.Position = 0;
-                    var (v1, v2) = BencodeUtils.GetInfoHashes(bencodeParser.Parse<BencodeNET.Objects.BDictionary>(ms));
-
-                    filesByHash[(v2 ?? v1)!] = (content, parsed.DisplayName, options);
+                    filesByHash[(v2 ?? v1)!] = (content, name, options);
                 } catch (Exception ex) {
                     plugin.Logger.Error(ex, "Failed to parse a source .torrent for correlation");
                 }
