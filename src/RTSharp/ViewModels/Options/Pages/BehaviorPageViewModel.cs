@@ -55,6 +55,9 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
     public partial bool PollActiveTabOnly { get; set; }
 
     [ObservableProperty]
+    public partial bool AutoStartRecheckedTorrents { get; set; }
+
+    [ObservableProperty]
     public partial string PeerOriginLookupMethodHelpText { get; set; } = "";
 
     public ObservableCollection<WhoisProviderItem> WhoisProviders { get; } = [];
@@ -80,6 +83,7 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
         SearchAsYouGoDelaySeconds = behavior.SearchAsYouGoDelay.TotalSeconds;
         UseFaviconGoogleAPI = behavior.UseFaviconGoogleAPI;
         PollActiveTabOnly = behavior.PollActiveTabOnly;
+        AutoStartRecheckedTorrents = behavior.AutoStartRecheckedTorrents;
 
         var whoisProviders = scope.ServiceProvider.GetRequiredService<IEnumerable<IWhoisProvider>>();
         WhoisProviders.Clear();
@@ -106,6 +110,7 @@ public partial class BehaviorPageViewModel : ObservableObject, ISettingsLoadable
         behavior.SearchAsYouGoDelay = TimeSpan.FromSeconds(SearchAsYouGoDelaySeconds);
         behavior.UseFaviconGoogleAPI = UseFaviconGoogleAPI;
         behavior.PollActiveTabOnly = PollActiveTabOnly;
+        behavior.AutoStartRecheckedTorrents = AutoStartRecheckedTorrents;
         if (SelectedWhoisProvider != null)
             behavior.PeerOriginLookupMethod = SelectedWhoisProvider.Id;
 

@@ -14,6 +14,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Serilog;
+
 using RTSharp.Core.Services.Cache.Images;
 using RTSharp.Core.Services.Database.TrackerDb;
 using RTSharp.Plugin;
@@ -724,10 +726,27 @@ namespace RTSharp.Models
                 Name = changes.Name;
             }
             if (_internalState != changes.State) {
+                var wasHashing = _internalState.HasFlag(TORRENT_STATE.HASHING);
                 State = EnumExt.ToString(changes.State);
                 _internalState = changes.State;
                 OnPropertyChanged(nameof(ShowSequentialDownloadMarker));
                 OnPropertyChanged(nameof(IsHashing));
+
+                if (wasHashing && !changes.State.HasFlag(TORRENT_STATE.HASHING) && changes.IsCompleted) {
+                    using var scope = Core.ServiceProvider.CreateScope();
+                    if (scope.ServiceProvider.GetRequiredService<Core.Config>().Behavior.Value.AutoStartRecheckedTorrents) {
+                        var hash = Hash;
+                        var dataOwner = DataOwner;
+                        var name = _name;
+                        _ = Task.Run(async () => {
+                            try {
+                                await dataOwner.Instance.StartTorrents([ hash ]);
+                            } catch (Exception ex) {
+                                Log.Logger.Error(ex, $"Failed to auto-start torrent {name} after recheck completed");
+                            }
+                        });
+                    }
+                }
             }
             if (_size != changes.Size) {
                 Size = changes.Size;

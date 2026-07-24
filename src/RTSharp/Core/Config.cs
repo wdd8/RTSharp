@@ -42,6 +42,8 @@ public class Config
 
             public bool PollActiveTabOnly { get; set; }
 
+            public bool AutoStartRecheckedTorrents { get; set; }
+
             public string PeerOriginLookupMethod { get; set; } = "RDAP";
         }
 
@@ -167,6 +169,7 @@ public class Config
     "SearchAsYouGoDelay": "00:00:01",
     "UseFaviconGoogleAPI": false,
     "PollActiveTabOnly": false,
+    "AutoStartRecheckedTorrents": false,
     "PeerOriginLookupMethod": "RDAP"
   },
   "Caching": {
