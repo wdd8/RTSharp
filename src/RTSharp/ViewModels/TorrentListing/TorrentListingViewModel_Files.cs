@@ -12,103 +12,84 @@ using System.Threading.Channels;
 using RTSharp.Core;
 using RTSharp.Core.Services.Cache.TorrentFileCache;
 using RTSharp.Core.Services.Cache.TorrentPropertiesCache;
-using System.Diagnostics;
 
 namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
-        private sealed record FilesUpdate(Models.Torrent FetchedFor, (Models.File Root, Models.File[] Leaves)? FullUpdate, IList<FileDelta>? Deltas);
-
-        private Channel<FilesUpdate>? FilesChanges;
-
-        private Channel<(Models.Torrent, IList<PieceState>)>? PiecesChanges;
-
-#if DEBUG
-        private bool GetFilesChangesRunning = false;
-        private bool GetPiecesChangesRunning = false;
-#endif
+        private sealed record FilesUpdate(Models.Torrent FetchedFor, (Models.File Root, Models.File[] Leaves)? FullUpdate, IList<FileDelta>? Deltas, bool? MultiFile);
 
         private async Task FilesTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
-            FilesChanges = Channel.CreateUnbounded<FilesUpdate>(new UnboundedChannelOptions {
+            var filesChanges = Channel.CreateUnbounded<FilesUpdate>(new UnboundedChannelOptions {
                 SingleReader = true,
                 SingleWriter = true
             });
 
-            PiecesChanges = Channel.CreateBounded<(Models.Torrent, IList<PieceState>)>(new BoundedChannelOptions(1) {
+            var piecesChanges = Channel.CreateBounded<(Models.Torrent, IList<PieceState>)>(new BoundedChannelOptions(1) {
                 FullMode = BoundedChannelFullMode.DropOldest,
                 SingleReader = true,
                 SingleWriter = true
             });
 
             await Task.WhenAll(
-                await Task.Factory.StartNew(FilesModelUpdates, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
-                await Task.Factory.StartNew(PiecesModelUpdates, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
-                await Task.Factory.StartNew(() => GetFilesChanges(Torrent, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default),
-                await Task.Factory.StartNew(() => GetPiecesChanges(Torrent, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
+                await Task.Factory.StartNew(() => FilesModelUpdates(filesChanges, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
+                await Task.Factory.StartNew(() => PiecesModelUpdates(piecesChanges, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
+                await Task.Factory.StartNew(() => GetFilesChanges(Torrent, filesChanges, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default),
+                await Task.Factory.StartNew(() => GetPiecesChanges(Torrent, piecesChanges, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
             );
         }
 
-        private async Task PiecesModelUpdates()
+        private async Task PiecesModelUpdates(Channel<(Models.Torrent, IList<PieceState>)> PiecesChanges, CancellationToken SelectionChange)
         {
-            Models.Torrent? lastFetchedFor = null;
-
-            if (PiecesChanges == null)
-                throw new NullReferenceException(nameof(PiecesChanges));
-
-            await foreach (var (fetchedFor, pieces) in PiecesChanges.Reader.ReadAllAsync()) {
-                GeneralInfoViewModel.Pieces = pieces;
-
-                lastFetchedFor = fetchedFor;
+            try {
+                await foreach (var (_, pieces) in PiecesChanges.Reader.ReadAllAsync(SelectionChange)) {
+                    GeneralInfoViewModel.Pieces = pieces;
+                }
+            } catch (OperationCanceledException) {
             }
         }
 
-        private async Task FilesModelUpdates()
+        private async Task FilesModelUpdates(Channel<FilesUpdate> FilesChanges, CancellationToken SelectionChange)
         {
-            if (FilesChanges == null)
-                throw new NullReferenceException(nameof(FilesChanges));
-
             Models.Torrent? lastFetchedFor = null;
             Models.File[]? leaves = null;
             FilesViewModel.ClearRoot();
 
-            await foreach (var update in FilesChanges.Reader.ReadAllAsync()) {
-                if (lastFetchedFor == null || !update.FetchedFor.Hash.SequenceEqual(lastFetchedFor.Hash) || update.FetchedFor.DataOwner != lastFetchedFor.DataOwner) {
-                    FilesViewModel.ClearRoot();
-                    leaves = null;
-                }
-
-                if (update.FullUpdate != null) {
-                    FilesViewModel.SetRoot(update.FullUpdate.Value.Root);
-                    leaves = update.FullUpdate.Value.Leaves;
-                } else if (update.Deltas != null && leaves != null && update.Deltas.Count > 0) {
-                    foreach (var delta in update.Deltas) {
-                        if (delta.Index < 0 || delta.Index >= leaves.Length) {
-                            // TODO: force full update?
-                            continue;
-                        }
-                        leaves[delta.Index]?.ApplyDelta(delta);
+            try {
+                await foreach (var update in FilesChanges.Reader.ReadAllAsync(SelectionChange)) {
+                    if (lastFetchedFor == null || !update.FetchedFor.Hash.SequenceEqual(lastFetchedFor.Hash) || update.FetchedFor.DataOwner != lastFetchedFor.DataOwner) {
+                        FilesViewModel.ClearRoot();
+                        leaves = null;
                     }
 
-                    if (FilesViewModel.File != null)
-                        Models.File.RecomputeFolders(FilesViewModel.File);
-                }
+                    if (update.MultiFile != null)
+                        FilesViewModel.MultiFile = update.MultiFile.Value;
 
-                lastFetchedFor = update.FetchedFor;
+                    if (update.FullUpdate != null) {
+                        FilesViewModel.SetRoot(update.FullUpdate.Value.Root);
+                        leaves = update.FullUpdate.Value.Leaves;
+                    } else if (update.Deltas != null && leaves != null && update.Deltas.Count > 0) {
+                        foreach (var delta in update.Deltas) {
+                            if (delta.Index < 0 || delta.Index >= leaves.Length) {
+                                // TODO: force full update?
+                                continue;
+                            }
+                            leaves[delta.Index]?.ApplyDelta(delta);
+                        }
+
+                        if (FilesViewModel.File != null)
+                            Models.File.RecomputeFolders(FilesViewModel.File);
+                    }
+
+                    lastFetchedFor = update.FetchedFor;
+                }
+            } catch (OperationCanceledException) {
             }
         }
 
-        private async Task GetFilesChanges(Models.Torrent current, CancellationToken selectionChange)
+        private async Task GetFilesChanges(Models.Torrent current, Channel<FilesUpdate> FilesChanges, CancellationToken selectionChange)
         {
-            if (FilesChanges == null)
-                throw new NullReferenceException(nameof(FilesChanges));
-
-#if DEBUG
-            Debug.Assert(!GetFilesChangesRunning);
-            GetFilesChangesRunning = true;
-#endif
-
             try {
                 using var scope = Core.ServiceProvider.CreateScope();
                 var config = scope.ServiceProvider.GetRequiredService<Config>();
@@ -135,9 +116,8 @@ namespace RTSharp.ViewModels.TorrentListing
                     var cachedProps = await propertiesCache.GetCachedTorrentProperties(current.Hash);
 
                     if (cachedFiles.Any() && cachedProps != null) {
-                        FilesViewModel.MultiFile = cachedProps.IsMultiFile;
                         var built = Models.File.FromCache(current, cachedProps.IsMultiFile, cachedFiles, current.IsCompleted);
-                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, built, null));
+                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, built, null, cachedProps.IsMultiFile));
 
                         try {
                             await Task.Delay(-1, cachedView.Token);
@@ -151,19 +131,18 @@ namespace RTSharp.ViewModels.TorrentListing
                 }
 
                 if (current.DataOwner.Instance.Capabilities.GetFileChanges)
-                    await StreamFileChanges(current, config, canUseCached, fileCache, propertiesCache, selectionChange);
+                    await StreamFileChanges(current, FilesChanges, config, canUseCached, fileCache, propertiesCache, selectionChange);
                 else
-                    await PollFileChanges(current, config, canUseCached, fileCache, propertiesCache, selectionChange);
+                    await PollFileChanges(current, FilesChanges, config, canUseCached, fileCache, propertiesCache, selectionChange);
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "GetFilesChanges task has died.");
                 throw;
             } finally {
                 FilesChanges.Writer.Complete();
-                GetFilesChangesRunning = false;
             }
         }
 
-        private async Task StreamFileChanges(Models.Torrent current, Config config, bool canUseCached, TorrentFileCache fileCache, TorrentPropertiesCache propertiesCache, CancellationToken selectionChange)
+        private async Task StreamFileChanges(Models.Torrent current, Channel<FilesUpdate> FilesChanges, Config config, bool canUseCached, TorrentFileCache fileCache, TorrentPropertiesCache propertiesCache, CancellationToken selectionChange)
         {
             ChannelReader<TorrentFilesUpdate> reader;
             try {
@@ -178,10 +157,8 @@ namespace RTSharp.ViewModels.TorrentListing
                     if (update.FullUpdate != null) {
                         var fullUpdate = update.FullUpdate.Value;
 
-                        FilesViewModel.MultiFile = fullUpdate.MultiFile;
-
                         var domain = Models.File.FromPluginModel(current.Name, fullUpdate);
-                        FilesChanges!.Writer.TryWrite(new FilesUpdate(current, domain, null));
+                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, domain, null, fullUpdate.MultiFile));
 
                         if (firstFull && canUseCached) {
                             firstFull = false;
@@ -191,7 +168,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             );
                         }
                     } else {
-                        FilesChanges!.Writer.TryWrite(new FilesUpdate(current, null, update.Changes));
+                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, null, update.Changes, null));
                     }
                 }
             } catch (Exception ex) {
@@ -200,7 +177,7 @@ namespace RTSharp.ViewModels.TorrentListing
             }
         }
 
-        private async Task PollFileChanges(Models.Torrent current, Config config, bool canUseCached, TorrentFileCache fileCache, TorrentPropertiesCache propertiesCache, CancellationToken selectionChange)
+        private async Task PollFileChanges(Models.Torrent current, Channel<FilesUpdate> FilesChanges, Config config, bool canUseCached, TorrentFileCache fileCache, TorrentPropertiesCache propertiesCache, CancellationToken selectionChange)
         {
             while (!selectionChange.IsCancellationRequested) {
                 var delayTask = Task.Delay(config.Behavior.Value.FilesPollingInterval, selectionChange);
@@ -212,10 +189,8 @@ namespace RTSharp.ViewModels.TorrentListing
                     if (files == default)
                         goto end;
 
-                    if (files.Files.Any()) {
-                        FilesViewModel.MultiFile = files.MultiFile;
-                        FilesChanges!.Writer.TryWrite(new FilesUpdate(current, Models.File.FromPluginModel(current.Name, files), null));
-                    }
+                    if (files.Files.Any())
+                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, Models.File.FromPluginModel(current.Name, files), null, files.MultiFile));
                 } catch {
                     return;
                 }
@@ -234,16 +209,8 @@ end:
             }
         }
 
-        private async Task GetPiecesChanges(Models.Torrent current, CancellationToken selectionChange)
+        private async Task GetPiecesChanges(Models.Torrent current, Channel<(Models.Torrent, IList<PieceState>)> PiecesChanges, CancellationToken selectionChange)
         {
-            if (PiecesChanges == null)
-                throw new NullReferenceException(nameof(PiecesChanges));
-
-#if DEBUG
-            Debug.Assert(!GetPiecesChangesRunning);
-            GetPiecesChangesRunning = true;
-#endif
-
             try {
                 while (!selectionChange.IsCancellationRequested) {
                     if (!current.DataOwner.Instance.Capabilities.GetPieces) {
@@ -287,7 +254,6 @@ end:
                 throw;
             } finally {
                 PiecesChanges.Writer.Complete();
-                GetPiecesChangesRunning = false;
             }
         }
     }

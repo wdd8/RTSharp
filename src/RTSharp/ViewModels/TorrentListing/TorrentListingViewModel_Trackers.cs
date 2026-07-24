@@ -19,18 +19,21 @@ namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
-        private Channel<(Models.Torrent, IList<Tracker>)>? TrackersChanges;
-
         private async Task TrackersTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
-            TrackersChanges = Channel.CreateUnbounded<(Models.Torrent, IList<Tracker>)>(new UnboundedChannelOptions() {
+            var trackersChanges = Channel.CreateUnbounded<(Models.Torrent, IList<Tracker>)>(new UnboundedChannelOptions() {
+                SingleReader = true,
+                SingleWriter = true
+            });
+            var trackerInfoFetches = Channel.CreateUnbounded<Models.Tracker>(new UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
 
             await Task.WhenAll(
-                await Task.Factory.StartNew(TrackersModelUpdates, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
-                await Task.Factory.StartNew(() => GetTrackersChanges(Torrent, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
+                await Task.Factory.StartNew(() => TrackerInfoFetch(trackerInfoFetches), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default),
+                await Task.Factory.StartNew(() => TrackersModelUpdates(trackersChanges, trackerInfoFetches, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
+                await Task.Factory.StartNew(() => GetTrackersChanges(Torrent, trackersChanges, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
             );
         }
 
@@ -75,17 +78,14 @@ namespace RTSharp.ViewModels.TorrentListing
             });
         }
 
-        private async Task TrackersModelUpdates()
+        private async Task TrackersModelUpdates(Channel<(Models.Torrent, IList<Tracker>)> TrackersChanges, Channel<Models.Tracker> TrackerInfoFetches, CancellationToken SelectionChange)
         {
             Models.Torrent? lastFetchedFor = null;
-
-            if (TrackersChanges == null)
-                throw new NullReferenceException(nameof(TrackersChanges));
 
             try {
                 TrackersViewModel.Trackers.Clear();
 
-                await foreach (var (fetchedFor, trackers) in TrackersChanges.Reader.ReadAllAsync()) {
+                await foreach (var (fetchedFor, trackers) in TrackersChanges.Reader.ReadAllAsync(SelectionChange)) {
                     bool refresh = false;
 
                     if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner) {
@@ -119,69 +119,75 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     foreach (var tracker in TrackersViewModel.Trackers) {
                         if (tracker.Icon == null) {
-                            using var scope = Core.ServiceProvider.CreateScope();
-                            var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
-                            var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
-
-                            var trackerInfo = await trackerDb.GetTrackerInfo(tracker.Domain);
-                            if (trackerInfo != null) {
-                                tracker.DisplayName = trackerInfo.Name;
-                                tracker.UpdateDisplay();
-
-                                if (trackerInfo.ImageHash != null) {
-                                    var icon = await imageCache.GetCachedImage(trackerInfo.ImageHash);
-                                    tracker.Icon = icon;
-                                }
-                                tracker.Icon ??= DefaultImage;
-                            } else {
-                                tracker.Icon = DefaultImage;
-
-                                _ = Task.Run(async () => {
-                                    using var innerScope = Core.ServiceProvider.CreateScope();
-                                    var favicons = innerScope.ServiceProvider.GetRequiredService<Core.Services.Favicon>();
-                                    var innerTrackerDb = innerScope.ServiceProvider.GetRequiredService<TrackerDb>();
-                                    var innerImageCache = innerScope.ServiceProvider.GetRequiredService<ImageCache>();
-                                    var domainParser = innerScope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>();
-
-                                    System.IO.Stream? favicon = null;
-                                    if (!string.IsNullOrEmpty(UriUtils.GetDomainForTracker(tracker.Uri))) {
-                                        var domainInfo = domainParser.Parse(UriUtils.GetDomainForTracker(tracker.Uri));
-                                        if (domainInfo?.RegistrableDomain != null) {
-                                            favicon = await favicons.GetFavicon(domainInfo.RegistrableDomain);
-                                        }
-                                    }
-
-                                    try {
-                                        byte[]? hash = null;
-                                        if (favicon != null) {
-                                            var img = await innerImageCache.AddImage(favicon);
-                                            if (img != null) {
-                                                hash = img.Value.Hash;
-                                                var icon = img.Value.Image;
-                                                Dispatcher.UIThread.Post(() => tracker.Icon = icon);
-                                            }
-                                        }
-                                        trackerInfo = new TrackerInfo(tracker.Domain, tracker.Domain, hash);
-                                        await innerTrackerDb.AddOrUpdateTrackerInfo(tracker.Domain, trackerInfo);
-
-                                        await UpdateTrackersInTorrents();
-                                    } catch { }
-                                });
-                            }
+                            tracker.Icon = DefaultImage;
+                            TrackerInfoFetches.Writer.TryWrite(tracker);
                         }
                     }
+
                     if (refresh)
                         TrackersViewModel.TrackersView.Refresh();
 
                     lastFetchedFor = fetchedFor;
                 }
+            } catch (OperationCanceledException) {
             } catch (Exception ex) {
-                Log.Logger.Fatal(ex, "GetTrackersChanges task has died.");
-                throw;
+                Log.Logger.Fatal(ex, "TrackersModelUpdates task has exited");
+            } finally {
+                TrackerInfoFetches.Writer.Complete();
             }
         }
 
-        private async Task GetTrackersChanges(Models.Torrent current, CancellationToken SelectionChange)
+        private async Task TrackerInfoFetch(Channel<Models.Tracker> TrackerInfoFetches)
+        {
+            await foreach (var tracker in TrackerInfoFetches.Reader.ReadAllAsync()) {
+                try {
+                    using var scope = Core.ServiceProvider.CreateScope();
+                    var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
+                    var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
+
+                    var trackerInfo = await trackerDb.GetTrackerInfo(tracker.Domain);
+
+                    if (trackerInfo != null) {
+                        var icon = trackerInfo.ImageHash == null ? null : await imageCache.GetCachedImage(trackerInfo.ImageHash);
+
+                        Dispatcher.UIThread.Post(() => {
+                            tracker.DisplayName = trackerInfo.Name;
+                            tracker.UpdateDisplay();
+                            tracker.Icon = (IImage?)icon ?? DefaultImage;
+                        });
+                        continue;
+                    }
+
+                    var favicons = scope.ServiceProvider.GetRequiredService<Core.Services.Favicon>();
+                    var domainParser = scope.ServiceProvider.GetRequiredService<Core.Services.DomainParser>();
+
+                    System.IO.Stream? favicon = null;
+                    var domain = UriUtils.GetDomainForTracker(tracker.Uri);
+                    if (!string.IsNullOrEmpty(domain)) {
+                        var domainInfo = domainParser.Parse(domain);
+                        if (domainInfo?.RegistrableDomain != null)
+                            favicon = await favicons.GetFavicon(domainInfo.RegistrableDomain);
+                    }
+
+                    byte[]? hash = null;
+                    if (favicon != null) {
+                        var img = await imageCache.AddImage(favicon);
+                        if (img != null) {
+                            hash = img.Value.Hash;
+                            var icon = img.Value.Image;
+                            Dispatcher.UIThread.Post(() => tracker.Icon = icon);
+                        }
+                    }
+
+                    await trackerDb.AddOrUpdateTrackerInfo(tracker.Domain, new TrackerInfo(tracker.Domain, tracker.Domain, hash));
+                    await UpdateTrackersInTorrents();
+                } catch (Exception ex) {
+                    Log.Logger.Warning(ex, "Failed to resolve tracker info for {Uri}", tracker.Uri);
+                }
+            }
+        }
+
+        private async Task GetTrackersChanges(Models.Torrent current, Channel<(Models.Torrent, IList<Tracker>)> TrackersChanges, CancellationToken SelectionChange)
         {
             try {
                 while (!SelectionChange.IsCancellationRequested) {
@@ -201,7 +207,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     if (trackers == null)
                         goto end;
 
-                    TrackersChanges!.Writer.TryWrite((current, trackers));
+                    TrackersChanges.Writer.TryWrite((current, trackers));
 
 end:
                     try {
@@ -212,7 +218,7 @@ end:
                 Log.Logger.Fatal(ex, "GetTrackersChanges task has died.");
                 throw;
             } finally {
-                TrackersChanges!.Writer.Complete();
+                TrackersChanges.Writer.Complete();
             }
         }
     }

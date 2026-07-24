@@ -24,33 +24,28 @@ namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
-        private Channel<(Models.Torrent, ListingChanges<Peer, Models.Peer, IPEndPoint>)>? PeersChanges;
-        private Channel<Models.Peer>? PeerInfoFetches;
         static AsyncBulkheadPolicy? PeerInfoFetchQueue;
 
         private async Task PeersTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
-            PeerInfoFetches = Channel.CreateUnbounded<Models.Peer>(new UnboundedChannelOptions() {
+            var peerInfoFetches = Channel.CreateUnbounded<Models.Peer>(new UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
-            PeersChanges = Channel.CreateUnbounded<(Models.Torrent, ListingChanges<Peer, Models.Peer, IPEndPoint>)>(new UnboundedChannelOptions() {
+            var peersChanges = Channel.CreateUnbounded<(Models.Torrent, ListingChanges<Peer, Models.Peer, IPEndPoint>)>(new UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
 
             await Task.WhenAll(
-                await Task.Factory.StartNew(PeerInfoFetch, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default),
-                await Task.Factory.StartNew(PeersModelUpdates, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
-                await Task.Factory.StartNew(() => GetPeersChanges(Torrent, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
+                await Task.Factory.StartNew(() => PeerInfoFetch(peerInfoFetches), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default),
+                await Task.Factory.StartNew(() => PeersModelUpdates(peersChanges, peerInfoFetches, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext()),
+                await Task.Factory.StartNew(() => GetPeersChanges(Torrent, peersChanges, SelectionChange), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
             );
         }
 
-        private async Task PeerInfoFetch()
+        private async Task PeerInfoFetch(Channel<Models.Peer> PeerInfoFetches)
         {
-            if (PeerInfoFetches == null)
-                throw new NullReferenceException(nameof(PeerInfoFetches));
-
             using (var scope = Core.ServiceProvider.CreateScope()) {
                 var config = scope.ServiceProvider.GetRequiredService<Config>();
                 PeerInfoFetchQueue ??= Policy.BulkheadAsync(config.Caching.Value.ConcurrentPeerCachingRequests);
@@ -144,17 +139,14 @@ namespace RTSharp.ViewModels.TorrentListing
             }
         }
 
-        private async Task PeersModelUpdates()
+        private async Task PeersModelUpdates(Channel<(Models.Torrent, ListingChanges<Peer, Models.Peer, IPEndPoint>)> PeersChanges, Channel<Models.Peer> PeerInfoFetches, CancellationToken SelectionChange)
         {
             Models.Torrent? lastFetchedFor = null;
-
-            if (PeersChanges == null)
-                throw new NullReferenceException(nameof(PeersChanges));
 
             try {
                 PeersViewModel.Peers.Clear();
 
-                await foreach (var (fetchedFor, peers) in PeersChanges.Reader.ReadAllAsync()) {
+                await foreach (var (fetchedFor, peers) in PeersChanges.Reader.ReadAllAsync(SelectionChange)) {
                     bool refresh = false;
 
                     if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner) {
@@ -189,7 +181,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         peer.Origin ??= "Loading...";
 
                         if (peer.Origin == "Loading..." && peer.DLSpeed > 0 || peer.UPSpeed > 0) {
-                            PeerInfoFetches!.Writer.TryWrite(peer);
+                            PeerInfoFetches.Writer.TryWrite(peer);
                         }
                     }
                     if (refresh)
@@ -197,14 +189,15 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     lastFetchedFor = fetchedFor;
                 }
+            } catch (OperationCanceledException) {
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "PeersModelUpdates task has exited");
             } finally {
-                PeerInfoFetches!.Writer.Complete();
+                PeerInfoFetches.Writer.Complete();
             }
         }
 
-        private async Task GetPeersChanges(Models.Torrent current, CancellationToken SelectionChange)
+        private async Task GetPeersChanges(Models.Torrent current, Channel<(Models.Torrent, ListingChanges<Peer, Models.Peer, IPEndPoint>)> PeersChanges, CancellationToken SelectionChange)
         {
             try {
                 Dictionary<IPEndPoint, Peer>? previousPeers = null;
@@ -265,7 +258,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         previousPeers = peers.ToDictionary(x => x.IPPort, x => x);
                     }
 
-                    PeersChanges!.Writer.TryWrite((current, changes));
+                    PeersChanges.Writer.TryWrite((current, changes));
 
 end:;
                     try {
@@ -275,7 +268,7 @@ end:;
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "GetPeersChanges task has died.");
             } finally {
-                PeersChanges!.Writer.Complete();
+                PeersChanges.Writer.Complete();
             }
         }
     }

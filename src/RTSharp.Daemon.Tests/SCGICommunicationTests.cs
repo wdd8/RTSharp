@@ -56,7 +56,7 @@ public class SCGICommunicationTests
         var serverTask = RunLoopbackServer(listener, bodyBytes, cts.Token);
 
         var comm = new SCGICommunication(
-            new FixedOptionsFactory<ConfigModel>(new ConfigModel { SCGIListen = $"127.0.0.1:{port}" }),
+            new FixedOptionsFactory<ConfigModel>(new ConfigModel { SCGIListen = $"127.0.0.1:{port}", SessionDir = "" }),
             "test",
             NullLogger<SCGICommunication>.Instance);
 

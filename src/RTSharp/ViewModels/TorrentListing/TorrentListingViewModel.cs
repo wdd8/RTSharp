@@ -31,7 +31,6 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reactive.Linq;
@@ -570,11 +569,29 @@ public partial class TorrentListingViewModel : ObservableViewModel
 
         var newTorrent = NewTorrents[0];
 
+        if (!IsCurrentTabTarget(newTorrent)) {
+            FilesViewModel.ClearRoot();
+            PeersViewModel.Peers.Clear();
+            TrackersViewModel.Trackers.Clear();
+
+            // Others are fine to clear but pieces progress bar is really visible in general view when it gets cleared
+            IList<PieceState> pieces = [];
+            if (newTorrent.DataOwner.Instance.Capabilities.GetPieces) {
+                if (newTorrent.IsCompleted)
+                    pieces = [ PieceState.Downloaded ];
+                else if (newTorrent.CompletedSize == 0)
+                    pieces = [ PieceState.NotDownloaded ];
+            }
+            GeneralInfoViewModel.Pieces = pieces;
+        }
+
         GeneralInfoViewModel.Torrent = newTorrent;
         FilesViewModel.Torrent = newTorrent;
         PeersViewModel.Torrent = newTorrent;
         TrackersViewModel.Torrent = newTorrent;
     }
+
+    private bool IsCurrentTabTarget(Torrent Torrent) => TorrentTabsTarget != null && Torrent.DataOwner == TorrentTabsTarget.DataOwner && Torrent.Hash.SequenceEqual(TorrentTabsTarget.Hash);
 
     private enum TORRENT_DETAILS_TAB
     {
@@ -584,77 +601,86 @@ public partial class TorrentListingViewModel : ObservableViewModel
         TRACKERS = 3
     }
 
+    private static readonly TimeSpan SelectionDebounceInterval = TimeSpan.FromMilliseconds(120);
+
     private Task? TorrentTabsTasks;
-    private SemaphoreSlim TorrentTabsSwitch = new(1, 1);
     private CancellationTokenSource? SelectionChange { get; set; }
+    private Torrent? TorrentTabsTarget;
     private TORRENT_DETAILS_TAB? TorrentDetailsTabTaskTarget;
 
-    private async Task PollTorrentInfo(IReadOnlyList<Torrent> NewTorrents)
+    private void PollTorrentInfo(IReadOnlyList<Torrent> NewTorrents, bool ForceRestart = false)
     {
         var newTorrent = NewTorrents.Count != 1 ? null : NewTorrents[0];
-        try {
-            await TorrentTabsSwitch.WaitAsync();
 
-            if (SelectionChange == null)
-                SelectionChange = new CancellationTokenSource();
-            else {
-                SelectionChange.Cancel();
+        if (!ForceRestart && newTorrent != null && IsCurrentTabTarget(newTorrent)) {
+            return;
+        }
 
-                var sw = Stopwatch.StartNew();
+        if (SelectionChange != null) {
+            SelectionChange.Cancel();
+
+            var oldCts = SelectionChange;
+            var oldTasks = TorrentTabsTasks;
+            _ = Task.Run(async () => {
                 try {
-                    if (TorrentTabsTasks != null) {
-                        await TorrentTabsTasks;
-                    }
-                } catch (TaskCanceledException) {
+                    if (oldTasks != null)
+                        await oldTasks;
+                } catch (OperationCanceledException) {
                 } catch (Exception ex) {
                     Log.Logger.Error(ex, "One of torrent tasks failed");
                 } finally {
-                    TorrentTabsTasks = null;
+                    oldCts.Dispose();
                 }
-                if (sw.Elapsed > TimeSpan.FromMilliseconds(100))
-                    Log.Logger.Warning($"Torrent tasks are taking too long to complete ({Shared.Utils.Converters.ToAgoString(sw.Elapsed)})");
-            }
-
-            if (newTorrent != null) {
-                SelectionChange = new CancellationTokenSource();
-
-                Debug.Assert(TorrentTabsTasks == null);
-
-                Log.Logger.Debug("Starting tasks for: " + newTorrent.Name);
-                TorrentTabsTasks = StartTorrentTabTasks(newTorrent, SelectionChange.Token);
-            } else {
-                TorrentDetailsTabTaskTarget = null;
-            }
-        } finally {
-            TorrentTabsSwitch.Release();
+            });
         }
+
+        SelectionChange = null;
+        TorrentTabsTasks = null;
+        TorrentTabsTarget = newTorrent;
+
+        if (newTorrent == null) {
+            TorrentDetailsTabTaskTarget = null;
+            return;
+        }
+
+        SelectionChange = new CancellationTokenSource();
+        TorrentTabsTasks = StartTorrentTabTasks(newTorrent, SelectionChange.Token);
     }
 
-    private Task StartTorrentTabTasks(Torrent newTorrent, CancellationToken selectionChange)
+    private async Task StartTorrentTabTasks(Torrent NewTorrent, CancellationToken SelectionChange)
     {
+        try {
+            await Task.Delay(SelectionDebounceInterval, SelectionChange);
+        } catch (OperationCanceledException) {
+            return;
+        }
+
+        Log.Logger.Debug("Starting tasks for: " + NewTorrent.Name);
+
         bool pollActiveTabOnly;
         using (var scope = Core.ServiceProvider.CreateScope())
             pollActiveTabOnly = scope.ServiceProvider.GetRequiredService<Config>().Behavior.Value.PollActiveTabOnly;
 
         if (!pollActiveTabOnly) {
             TorrentDetailsTabTaskTarget = null;
-            return Task.WhenAll(
-                FilesTasks(newTorrent, selectionChange),
-                PeersTasks(newTorrent, selectionChange),
-                TrackersTasks(newTorrent, selectionChange)
+            await Task.WhenAll(
+                FilesTasks(NewTorrent, SelectionChange),
+                PeersTasks(NewTorrent, SelectionChange),
+                TrackersTasks(NewTorrent, SelectionChange)
             );
+            return;
         }
 
         var group = (TORRENT_DETAILS_TAB)SelectedTorrentDetailsTabIndex;
         TorrentDetailsTabTaskTarget = group;
 
-        return group switch {
+        await (group switch {
             TORRENT_DETAILS_TAB.GENERAL => throw new InvalidOperationException(),
-            TORRENT_DETAILS_TAB.FILES => FilesTasks(newTorrent, selectionChange),
-            TORRENT_DETAILS_TAB.PEERS => PeersTasks(newTorrent, selectionChange),
-            TORRENT_DETAILS_TAB.TRACKERS => TrackersTasks(newTorrent, selectionChange),
+            TORRENT_DETAILS_TAB.FILES => FilesTasks(NewTorrent, SelectionChange),
+            TORRENT_DETAILS_TAB.PEERS => PeersTasks(NewTorrent, SelectionChange),
+            TORRENT_DETAILS_TAB.TRACKERS => TrackersTasks(NewTorrent, SelectionChange),
             _ => throw new ArgumentOutOfRangeException()
-        };
+        });
     }
 
     partial void OnSelectedTorrentDetailsTabIndexChanged(int value)
@@ -673,7 +699,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
         if (selection.Length != 1)
             return;
 
-        _ = PollTorrentInfo(selection);
+        PollTorrentInfo(selection, ForceRestart: true);
     }
 
     public override void OnContextPopulated()
@@ -689,7 +715,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
     {
         var selection = (IReadOnlyList<Torrent>)e.SelectedItems;
         UpdateTorrentInChildViewModels(selection);
-        _ = PollTorrentInfo(selection);
+        PollTorrentInfo(selection);
 
         this.OnPropertyChanged(nameof(StartTorrentAllowed));
         Dispatcher.UIThread.Post(() => {

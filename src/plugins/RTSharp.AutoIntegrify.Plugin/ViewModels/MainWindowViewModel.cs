@@ -310,7 +310,7 @@ public class Main(ILogger<Main> Logger) : IScript
                 foreach (var info in dir.EnumerateFileSystemInfos()) {
                     if (info.Attributes.HasFlag(FileAttributes.Directory)) {
                         if (info.Name == torrentName || wideSearch) {
-                            Logger.LogInformation($"Considering {info.FullName}...");
+                            Logger.LogTrace($"Considering {info.FullName}...");
                             if (matchFolder(info.FullName)) {
                                 // Got a strong match, I don't think we will need other folders...
                                 goto done;
