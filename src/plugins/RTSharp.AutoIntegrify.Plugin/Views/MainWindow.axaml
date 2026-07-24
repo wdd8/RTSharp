@@ -45,7 +45,7 @@
 						<StackPanel Orientation="Vertical">
 							<StackPanel Orientation="Horizontal">
 								<views:BuiltInIconImage Value="{Binding StatusIcon}" Height="16" />
-								<TextBlock VerticalAlignment="Center" Text="{Binding File.FullPath}" />
+								<TextBlock VerticalAlignment="Center" Text="{Binding File.Path}" />
 							</StackPanel>
 							<StackPanel Orientation="Horizontal">
 								<TextBlock Text="🡺" Padding="0,0,4,0" />
@@ -60,7 +60,7 @@
 				<views:PieceProgressBar Grid.Row="0" Pieces="{Binding Pieces}" Height="20" Margin="-1,0,0,0" BorderThickness="1" BorderBrush="DarkGray" /> <!-- bug? -->
 				<GroupBox Header="File info" Grid.Row="1" Padding="0 8 0 0">
 					<StackPanel>
-						<views:TextBlockWithLabel Label="Path in torrent:" Text="{Binding SelectedFile.File.FullPath}" />
+						<views:TextBlockWithLabel Label="Path in torrent:" Text="{Binding SelectedFile.File.Path}" />
 						<views:TextBlockWithLabel Label="Resolved path:" Text="{Binding SelectedFile.ResolvedPath}" />
 						<views:TextBlockWithLabel Label="State:" Text="{Binding SelectedFile.Resolved}" />
 					</StackPanel>

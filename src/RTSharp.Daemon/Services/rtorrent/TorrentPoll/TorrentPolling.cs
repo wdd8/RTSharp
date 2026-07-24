@@ -357,7 +357,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     var upSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: true);
                     torrent.UPSpeed = upSpeed;
 
-                    if (torrent.CompletedSize >= torrent.WantedSize) {
+                    if (torrent.IsCompleted) {
                         torrent.DLSpeed = 0;
                         torrent.HashingSpeed = 0;
                         torrent.ETA = null;

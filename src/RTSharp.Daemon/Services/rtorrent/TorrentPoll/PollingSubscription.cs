@@ -124,7 +124,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     TrackersChanged(trackers, curPreviousTrackers) ||
                     torrent.PrimaryTracker?.Uri != previous.PrimaryTracker?.Uri)
                     add(true);
-                else if (torrent.CompletedSize == torrent.WantedSize) {
+                else if (torrent.IsCompleted) {
                     // Complete
                     if (torrent.Uploaded != previous.Uploaded ||
                         torrent.UPSpeed != previous.UPSpeed ||

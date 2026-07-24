@@ -69,6 +69,11 @@ public class Torrent
     public required ulong CompletedSize { get; set; }
 
     /// <summary>
+    /// Is torrent fully downloaded?
+    /// </summary>
+    public bool IsCompleted => CompletedSize >= WantedSize;
+
+    /// <summary>
     /// Total uploaded bytes
     /// </summary>
     public required ulong Uploaded { get; set; }

@@ -103,7 +103,7 @@ public class TorrentMapper
         if (External.SequentialDownload != null)
             Stored.SequentialDownload = External.SequentialDownload.Value;
 
-        if (Stored.CompletedSize == Stored.WantedSize) {
+        if (Stored.IsCompleted) {
             /*
              * for some reason qbit still reports some DL speed even though the torrent is
              * already complete, but it doesn't make sense for us to report DL speed for
@@ -165,7 +165,7 @@ public class TorrentMapper
             Stored.MagnetDummy = External.MagnetUri != null;
         Stored.SequentialDownload = External.SequentialDownload;
 
-        if (Stored.CompletedSize == Stored.WantedSize) {
+        if (Stored.IsCompleted) {
             /*
              * for some reason qbit still reports some DL speed even though the torrent is
              * already complete, but it doesn't make sense for us to report DL speed for

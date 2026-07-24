@@ -60,7 +60,7 @@ public class TorrentOpService
                 continue;
             }
 
-            if (torrent.CompletedSize >= torrent.WantedSize)
+            if (torrent.IsCompleted)
                 return;
 
             if (torrent.CompletedSize != lastCompletedSize) {
@@ -121,7 +121,7 @@ public class TorrentOpService
                     torrent = null;
                 }
 
-                if (torrent == null || torrent.WantedSize != torrent.CompletedSize) {
+                if (torrent == null || !torrent.IsCompleted) {
                     await Task.Delay(TimeSpan.FromSeconds(1), CancellationToken);
                     continue;
                 }

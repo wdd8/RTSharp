@@ -168,7 +168,10 @@ namespace RTSharp.Models
         public ulong WantedSize
         {
             get => _wantedSize;
-            set => SetProperty(ref _wantedSize, value);
+            set {
+                if (SetProperty(ref _wantedSize, value))
+                    OnPropertyChanged(nameof(IsCompleted));
+            }
         }
 
         /// <summary>
@@ -228,6 +231,7 @@ namespace RTSharp.Models
                 if (_completedSize == value) return;
                 _completedSize = value;
                 CompletedSizeDisplay = Converters.GetSIDataSize(value);
+                OnPropertyChanged(nameof(IsCompleted));
             }
         }
 
@@ -237,6 +241,11 @@ namespace RTSharp.Models
             get => _completedSizeDisplay;
             set => SetProperty(ref _completedSizeDisplay, value);
         }
+
+        /// <summary>
+        /// Is torrent fully downloaded?
+        /// </summary>
+        public bool IsCompleted => _completedSize >= _wantedSize;
 
         /// <summary>
         /// Uploaded bytes

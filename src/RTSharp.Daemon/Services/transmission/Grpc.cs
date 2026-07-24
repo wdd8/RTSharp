@@ -139,7 +139,7 @@ namespace RTSharp.Daemon.Services.transmission
                     Torrent.HashingSpeed = hashingSpeed;
 
                     // No native ETA for hashing state
-                    if (hashingSpeed == 0 || Torrent.CompletedSize >= Torrent.WantedSize) {
+                    if (hashingSpeed == 0 || Torrent.IsCompleted) {
                         Torrent.ETA = null;
                     } else {
                         var secs = (double)(Torrent.WantedSize - Torrent.CompletedSize) / hashingSpeed;
@@ -268,7 +268,7 @@ namespace RTSharp.Daemon.Services.transmission
                         }
                     }
 
-                    if (internalTorrent.CompletedSize != internalTorrent.WantedSize) {
+                    if (!internalTorrent.IsCompleted) {
                         delta.Incomplete.Add(new IncompleteDeltaTorrentResponse {
                             Hash = internalTorrent.Hash,
                             Downloaded = internalTorrent.Downloaded,

@@ -118,7 +118,7 @@ public class TorrentAdd
             var torrents = await Task.WhenAll(addedHashes.Select(Primary.GetTorrent));
 
             foreach (var torrent in torrents) {
-                if (filesByHash.TryGetValue(torrent.Hash, out var source) && source.Options.FastResume && torrent.WantedSize > 0 && torrent.CompletedSize < torrent.WantedSize) {
+                if (filesByHash.TryGetValue(torrent.Hash, out var source) && source.Options.FastResume && !torrent.IsCompleted) {
                     plugin.Logger.Warning($"Fast resume for {Convert.ToHexString(torrent.Hash)} failed");
                 }
             }

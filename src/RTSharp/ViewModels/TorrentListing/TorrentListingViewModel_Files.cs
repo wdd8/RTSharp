@@ -115,15 +115,15 @@ namespace RTSharp.ViewModels.TorrentListing
                 var fileCache = scope.ServiceProvider.GetRequiredService<TorrentFileCache>();
                 var propertiesCache = scope.ServiceProvider.GetRequiredService<TorrentPropertiesCache>();
 
-                bool canUseCached = config.Caching.Value.FilesCachingEnabled && !current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) && (current.Done == 0 || current.Done == 100);
+                bool canUseCached = config.Caching.Value.FilesCachingEnabled && !current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) && (current.CompletedSize == 0 || current.IsCompleted);
                 if (canUseCached) {
                     var cachedView = CancellationTokenSource.CreateLinkedTokenSource(selectionChange);
                     void onTorrentChanged(object? sender, PropertyChangedEventArgs e)
                     {
-                        if (e.PropertyName != nameof(Models.Torrent.InternalState) && e.PropertyName != nameof(Models.Torrent.Done))
+                        if (e.PropertyName != nameof(Models.Torrent.InternalState) && e.PropertyName != nameof(Models.Torrent.CompletedSize))
                             return;
 
-                        if (current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) || (current.Done != 0 && current.Done != 100)) {
+                        if (current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) || (current.CompletedSize > 0 && !current.IsCompleted)) {
                             canUseCached = false;
                             cachedView.Cancel();
                         }
@@ -136,7 +136,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     if (cachedFiles.Any() && cachedProps != null) {
                         FilesViewModel.MultiFile = cachedProps.IsMultiFile;
-                        var built = Models.File.FromCache(current, cachedProps.IsMultiFile, cachedFiles, current.Done == 100);
+                        var built = Models.File.FromCache(current, cachedProps.IsMultiFile, cachedFiles, current.IsCompleted);
                         FilesChanges.Writer.TryWrite(new FilesUpdate(current, built, null));
 
                         try {
@@ -258,12 +258,12 @@ end:
 
                     IList<PieceState> pieces;
 
-                    if (current.Done == 100) {
+                    if (current.IsCompleted) {
                         pieces = [ PieceState.Downloaded ];
-                        PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to Done% change instead?
-                    } else if (current.Done == 0) {
+                        PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to CompletedSize change instead?
+                    } else if (current.CompletedSize == 0) {
                         pieces = [ PieceState.NotDownloaded ];
-                        PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to Done% change instead?
+                        PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to CompletedSize change instead?
                     } else {
                         try {
                             pieces = (await current!.DataOwner.Instance.GetPieces(new List<Torrent> { current.ToPluginModel() }, selectionChange)).FirstOrDefault().Value;
