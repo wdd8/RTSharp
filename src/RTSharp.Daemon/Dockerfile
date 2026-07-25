@@ -10,7 +10,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY docker-context/${TARGETARCH}/ ./
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY src/RTSharp.Daemon/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
  && mv ./appsettings.json ./appsettings.example.json \
  && mkdir -p /etc/rtsharp-daemon
