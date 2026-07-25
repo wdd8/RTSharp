@@ -86,11 +86,8 @@ namespace RTSharp.ViewModels.TorrentListing
                 TrackersViewModel.Trackers.Clear();
 
                 await foreach (var (fetchedFor, trackers) in TrackersChanges.Reader.ReadAllAsync(SelectionChange)) {
-                    bool refresh = false;
-
                     if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner) {
                         TrackersViewModel.Trackers.Clear();
-                        refresh = true;
                     }
 
                     var existing = TrackersViewModel.Trackers.ToDictionary(x => x.Uri);
@@ -105,7 +102,6 @@ namespace RTSharp.ViewModels.TorrentListing
                         } else {
                             // Add
                             TrackersViewModel.Trackers.Add(Models.Tracker.FromPluginModel(newTracker));
-                            refresh = true;
                         }
                     }
 
@@ -113,7 +109,6 @@ namespace RTSharp.ViewModels.TorrentListing
                         if (!@new.Contains(oldTracker.Uri)) {
                             // Remove
                             TrackersViewModel.Trackers.Remove(oldTracker);
-                            refresh = true;
                         }
                     }
 
@@ -124,8 +119,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
                     }
 
-                    if (refresh)
-                        TrackersViewModel.TrackersView.Refresh();
+                    TrackersViewModel.TrackersView.Refresh();
 
                     lastFetchedFor = fetchedFor;
                 }

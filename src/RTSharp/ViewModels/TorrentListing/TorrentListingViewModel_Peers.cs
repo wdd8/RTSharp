@@ -147,11 +147,8 @@ namespace RTSharp.ViewModels.TorrentListing
                 PeersViewModel.Peers.Clear();
 
                 await foreach (var (fetchedFor, peers) in PeersChanges.Reader.ReadAllAsync(SelectionChange)) {
-                    bool refresh = false;
-
                     if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner) {
                         PeersViewModel.Peers.Clear();
-                        refresh = true;
                     }
 
                     var hs = PeersViewModel.Peers.ToDictionary(x => x.IPPort, x => x);
@@ -160,7 +157,6 @@ namespace RTSharp.ViewModels.TorrentListing
                     foreach (var removed in peers.Removed) {
                         if (hs.TryGetValue(removed, out var removePeer)) {
                             PeersViewModel.Peers.Remove(removePeer);
-                            refresh = true;
                         }
                     }
 
@@ -173,7 +169,6 @@ namespace RTSharp.ViewModels.TorrentListing
                             var peer = Models.Peer.FromPluginModel(changedPeer);
                             peer.Origin = null;
                             PeersViewModel.Peers.Add(peer);
-                            refresh = true;
                         }
                     }
 
@@ -184,8 +179,8 @@ namespace RTSharp.ViewModels.TorrentListing
                             PeerInfoFetches.Writer.TryWrite(peer);
                         }
                     }
-                    if (refresh)
-                        PeersViewModel.PeersView.Refresh();
+
+                    PeersViewModel.PeersView.Refresh();
 
                     lastFetchedFor = fetchedFor;
                 }
