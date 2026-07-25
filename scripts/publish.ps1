@@ -18,7 +18,7 @@ dotnet publish ./src/rtorrent/RTSharp.DataProvider.Rtorrent.Plugin -c Release -r
 dotnet publish ./src/qbittorrent/RTSharp.DataProvider.Qbittorrent.Plugin -c Release -r $Rid --no-self-contained -o "$(Join-Path $pwd $outDir 'plugins/DataProvider.Qbittorrent')" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
 dotnet publish ./src/transmission/RTSharp.DataProvider.Transmission.Plugin -c Release -r $Rid --no-self-contained -o "$(Join-Path $pwd $outDir 'plugins/DataProvider.Transmission')" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
 
-rm "$outDir/*.xml" -ErrorAction SilentlyContinue
+Remove-Item "$outDir/*.xml" -Force -ErrorAction SilentlyContinue
 
-rm "$outDir/plugins/*/*.xml" -ErrorAction SilentlyContinue
-rm "$outDir/plugins/*/*.runtimeconfig.json" -ErrorAction SilentlyContinue
+Remove-Item "$outDir/plugins/*/*.xml" -Force -ErrorAction SilentlyContinue
+Remove-Item "$outDir/plugins/*/*.runtimeconfig.json" -Force -ErrorAction SilentlyContinue
