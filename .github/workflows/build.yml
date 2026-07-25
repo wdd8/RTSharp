@@ -16,10 +16,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Resolve .NET SDK versions
+        id: dotnet
+        run: |
+          {
+            echo "versions<<EOF"
+            for PROJ in src/RTSharp/RTSharp.csproj src/RTSharp.Daemon/RTSharp.Daemon.csproj; do
+              TFM=$(grep -oP '(?<=<TargetFramework>)[^<]+' "$PROJ" | head -1)
+              if [ -z "$TFM" ]; then echo "No <TargetFramework> in $PROJ" >&2; exit 1; fi
+              echo "${TFM#net}.x"
+            done | sort -u
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
       - name: Setup .NET Core SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ steps.dotnet.outputs.versions }}
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
@@ -154,12 +166,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Resolve .NET SDK versions
+        id: dotnet
+        run: |
+          {
+            echo "versions<<EOF"
+            for PROJ in src/RTSharp/RTSharp.csproj src/RTSharp.Daemon/RTSharp.Daemon.csproj; do
+              TFM=$(grep -oP '(?<=<TargetFramework>)[^<]+' "$PROJ" | head -1)
+              if [ -z "$TFM" ]; then echo "No <TargetFramework> in $PROJ" >&2; exit 1; fi
+              echo "${TFM#net}.x"
+            done | sort -u
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
       - name: Setup .NET Core SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ steps.dotnet.outputs.versions }}
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm libarchive-tools zstd
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -169,38 +197,23 @@ jobs:
             echo "Release v${VERSION} already exists, skipping."
             exit 0
           fi
-          LAST_TAG=$(git describe --tags --abbrev=0 "v${VERSION}^" 2>/dev/null || echo "")
-          if [ -z "$LAST_TAG" ]; then
-            git log --format="- %s" HEAD > release_notes.txt
-          else
-            git log --format="- %s" "${LAST_TAG}..HEAD" > release_notes.txt
-          fi
           for RID in linux-x64 linux-arm64 win-x64 win-arm64; do
+            case "$RID" in linux-*) chmod +x "${RID}/RTSharp" "${RID}-self-contained/RTSharp" ;; esac
             (cd "$RID" && zip -r "../RTSharp-${RID}-v${VERSION}.zip" .)
             (cd "${RID}-self-contained" && zip -r "../RTSharp-${RID}-self-contained-v${VERSION}.zip" .)
           done
           for RID in linux-x64 linux-arm64; do
-            dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" client
-            dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" client-self-contained
-            dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" daemon
-            dotnet run scripts/package-deb.cs -- "$RID" "$VERSION" daemon-self-contained
+            chmod +x "${RID}-daemon/RTSharp.Daemon" "${RID}-daemon-self-contained/RTSharp.Daemon"
+            (cd "${RID}-daemon" && zip -r "../RTSharp-Daemon-${RID}-v${VERSION}.zip" .)
+            (cd "${RID}-daemon-self-contained" && zip -r "../RTSharp-Daemon-${RID}-self-contained-v${VERSION}.zip" .)
+            for FORMAT in deb rpm pkg.tar.zst; do
+              for TYPE in client daemon; do
+                dotnet run scripts/package-linux.cs -- "$FORMAT" "$RID" "$VERSION" "$TYPE"
+              done
+            done
           done
+          dotnet run scripts/release-notes.cs -- "$VERSION" "$GITHUB_REPOSITORY"
           gh release create "v${VERSION}" \
             --title "RTSharp v${VERSION}" \
-            --notes-file release_notes.txt \
-            RTSharp-linux-x64-v${VERSION}.zip \
-            RTSharp-linux-x64-self-contained-v${VERSION}.zip \
-            RTSharp-linux-arm64-v${VERSION}.zip \
-            RTSharp-linux-arm64-self-contained-v${VERSION}.zip \
-            RTSharp-win-x64-v${VERSION}.zip \
-            RTSharp-win-x64-self-contained-v${VERSION}.zip \
-            RTSharp-win-arm64-v${VERSION}.zip \
-            RTSharp-win-arm64-self-contained-v${VERSION}.zip \
-            rtsharp_${VERSION}_amd64.deb \
-            rtsharp-self-contained_${VERSION}_amd64.deb \
-            rtsharp_${VERSION}_arm64.deb \
-            rtsharp-self-contained_${VERSION}_arm64.deb \
-            rtsharp-daemon_${VERSION}_amd64.deb \
-            rtsharp-daemon-self-contained_${VERSION}_amd64.deb \
-            rtsharp-daemon_${VERSION}_arm64.deb \
-            rtsharp-daemon-self-contained_${VERSION}_arm64.deb
+            --notes-file release_notes.md \
+            $(cat assets.txt)
