@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using RTSharp.Shared.Abstractions;
 using Settings = RTSharp.DataProvider.Rtorrent.Plugin.Models.Settings;
@@ -9,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Shared.Abstractions.Client;
+using Serilog;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels;
 
@@ -33,7 +32,12 @@ public partial class MainWindowViewModel : ObservableObject
         _ = action.CreateChild("Wait for completion", RUN_MODE.DEPENDS_ON_PARENT, async (parent, action) => {
             SavingSettings = false;
         });
-        await ((IActionQueueRenderer)ThisPlugin.ActionQueue).RunAction(action);
+
+        try {
+            await ((IActionQueueRenderer)ThisPlugin.ActionQueue).RunAction(action);
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Failed to save settings");
+        }
         await PluginHost.SavePluginConfig(cfg => cfg.ListUpdateInterval = TimeSpan.FromSeconds(ListUpdateIntervalSeconds));
     }
 

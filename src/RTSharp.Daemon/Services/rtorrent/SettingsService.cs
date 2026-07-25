@@ -17,7 +17,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         public record SettingSpec(string RtorrentSetting, SCGI_DATA_TYPE DataType, string Property);
 
         public static readonly SettingSpec[] AllSettings = new[] {
-            new SettingSpec("throttle.max_uploads", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.ThrottleMaxUploadsDiv)),
+            new SettingSpec("throttle.max_uploads", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.NumberOfUploadSlots)),
             new SettingSpec("throttle.min_peers.normal", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MinimumNumberOfPeers)),
             new SettingSpec("throttle.max_peers.normal", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumNumberOfPeers)),
             new SettingSpec("throttle.min_peers.seed", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MinimumNumberOfPeersForSeeding)),
@@ -33,8 +33,8 @@ namespace RTSharp.Daemon.Services.rtorrent
             new SettingSpec("throttle.global_up.max_rate", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumUploadRate)),
             new SettingSpec("throttle.global_down.max_rate", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumDownloadRate)),
 
-            new SettingSpec("throttle.max_uploads.global", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.GlobalNumberOfDownloadSlots)),
-            new SettingSpec("throttle.max_downloads.global", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.GlobalNumberOfUploadSlots)),
+            new SettingSpec("throttle.max_uploads.global", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.GlobalNumberOfUploadSlots)),
+            new SettingSpec("throttle.max_downloads.global", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.GlobalNumberOfDownloadSlots)),
             new SettingSpec("pieces.memory.max", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumMemoryUsage)),
             new SettingSpec("network.max_open_files", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumNumberOfOpenFiles)),
             new SettingSpec("network.http.max_open", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumNumberOfOpenHttpConnections)),
@@ -205,7 +205,6 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                 if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
                     //<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Could not set local address: Name or service not known.</string></value></member>\r\n</struct></value>\r\n
-                    XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
                     ret.Response.Add(GrpcExtensions.ToStatus(XMLUtils.GetFaultStruct(ref result, setting.RtorrentSetting)));
                     continue;
                 }
