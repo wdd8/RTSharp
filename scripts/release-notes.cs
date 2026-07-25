@@ -102,7 +102,17 @@ notes.AppendLine();
 
 var previousTag = Capture("git", ["describe", "--tags", "--abbrev=0", $"v{version}^"], AllowFailure: true).Trim();
 var range = String.IsNullOrEmpty(previousTag) ? "HEAD" : $"{previousTag}..HEAD";
-notes.Append(Capture("git", ["log", "--format=- %s", range]));
+
+var log = Capture("git", ["log", "--format=%B%x00", range]);
+foreach (var commit in log.Split('\0')) {
+    var lines = commit.Replace("\r\n", "\n").Split('\n').Select(x => x.TrimEnd()).SkipWhile(String.IsNullOrEmpty).ToArray();
+    if (lines.Length == 0)
+        continue;
+
+    notes.AppendLine($"- {lines[0]}");
+    foreach (var line in lines.Skip(1).Reverse().SkipWhile(String.IsNullOrEmpty).Reverse())
+        notes.AppendLine(String.IsNullOrEmpty(line) ? "" : $"  {line}");
+}
 
 File.WriteAllText("release_notes.md", notes.ToString());
 File.WriteAllLines("assets.txt", assets.Select(A => A.File));

@@ -72,7 +72,7 @@ See [setting up data providers](docs/setup-dataproviders.md)
 |Torrent renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Remote daemon settings|🟢Supported|🟢Supported|🟢Supported|
 |Daemon log inspection|🟡Supported*|🟢Supported|🟡Supported*|
-|Fast recheck|🔴Not implemented|🔴Not implemented|🔴Not implemented|
+|Fast recheck|🟢Supported|🟢Supported|🟢Supported|
 
 _* - not directly supported by torrent daemon_
 
