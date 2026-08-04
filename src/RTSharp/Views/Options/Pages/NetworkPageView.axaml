@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:RTSharp.ViewModels.Options.Pages"
+             xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="300"
+             x:Class="RTSharp.Views.Options.Pages.NetworkPageView"
+             x:DataType="pages:NetworkPageViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0 0 8 0" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="Margin" Value="0 0 0 6" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Margin="8" Spacing="12">
+        <GroupBox Header="Proxy">
+            <StackPanel Spacing="8">
+                <CheckBox IsChecked="{Binding ProxyEnabled}">Use proxy</CheckBox>
+
+                <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" IsEnabled="{Binding ProxyEnabled}">
+                    <TextBlock Grid.Column="0" Grid.Row="0">Address:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="0"
+                             Text="{Binding ProxyAddress}"
+                             Watermark="socks5://127.0.0.1:1080"
+                             ToolTip.Tip="Supported schemes: socks4, socks4a, socks5" />
+
+                    <TextBlock Grid.Column="1" Grid.Row="1" Margin="0 0 0 6" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                               IsVisible="{Binding !ProxyAddressValid}">Invalid proxy address</TextBlock>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2">Username:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding ProxyUsername}" />
+
+                    <TextBlock Grid.Column="0" Grid.Row="3">Password:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding ProxyPassword}" PasswordChar="•"
+                             ToolTip.Tip="Stored in plain text" />
+                </Grid>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
+</UserControl>

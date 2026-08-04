@@ -36,12 +36,14 @@ public partial class OptionsWindowViewModel : ObservableObject
             new OptionsItem("fa7-solid fa7-gears", "Behavior", "Behavior", Array.Empty<OptionsItem>()),
             new OptionsItem("fa7-solid fa7-book-bookmark", "Caching", "Caching", Array.Empty<OptionsItem>()),
             new OptionsItem("fa7-solid fa7-palette", "Look", "Look", Array.Empty<OptionsItem>()),
+            new OptionsItem("fa7-solid fa7-network-wired", "Network", "Network", Array.Empty<OptionsItem>()),
         ];
 
         Pages = new Dictionary<string, ISettingsLoadable> {
             { "Behavior", new BehaviorPageViewModel() },
             { "Caching", new CachingPageViewModel() },
             { "Look", new LookPageViewModel() },
+            { "Network", new NetworkPageViewModel() },
         };
 
         CurrentlySelectedItem = Items[0];
@@ -71,6 +73,9 @@ public partial class OptionsWindowViewModel : ObservableObject
         }
 
         await config.Rewrite();
+
+        Core.GlobalProxy.Instance.Apply(config.Proxy.Value);
+
         await MessageBoxManager.GetMessageBoxStandard("RT# - Options", "Some changes may require a restart of RTSharp to take effect.", ButtonEnum.Ok, Icon.Warning).ShowAsync();
     }
 

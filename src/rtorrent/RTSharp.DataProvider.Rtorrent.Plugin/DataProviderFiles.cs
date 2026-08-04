@@ -15,7 +15,8 @@ public class DataProviderFiles : IDataProviderFiles
     private Plugin ThisPlugin { get; }
 
     public DataProviderFilesCapabilities Capabilities { get; } = new(
-        GetDefaultSavePath: true
+        GetDefaultSavePath: true,
+        SetFilePriority: true
     );
 
     public DataProviderFiles(Plugin ThisPlugin)
@@ -32,5 +33,12 @@ public class DataProviderFiles : IDataProviderFiles
         ThisPlugin.Host.Logger.Verbose($"Default save path: {settings.DefaultDirectoryForDownloads}");
 
         return settings.DefaultDirectoryForDownloads;
+    }
+
+    public async Task SetFilePriority(Torrent Torrent, System.Collections.Generic.IList<int> Indexes, RTSharp.Shared.Abstractions.File.PRIORITY Priority, System.Threading.CancellationToken cancellationToken = default)
+    {
+        var client = ThisPlugin.Host.AttachedDaemonService!.GetTorrentsService(ThisPlugin.Host.Instance);
+
+        await client.SetFilePriority(Torrent.Hash, Indexes, Priority, cancellationToken);
     }
 }

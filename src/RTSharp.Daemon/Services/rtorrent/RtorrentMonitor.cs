@@ -27,6 +27,9 @@ namespace RTSharp.Daemon.Services.rtorrent
             while (!stoppingToken.IsCancellationRequested) {
                 using var scope = ScopeFactory.CreateScope();
                 var scgi = scope.ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
+                var version = scope.ServiceProvider.GetRequiredKeyedService<RtorrentVersionService>(InstanceKey);
+
+                version.Invalidate();
 
                 SCGICommunication.ScgiResponse pidResponse;
                 try {
@@ -66,7 +69,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 }
 
                 try {
-                    await PopulateInfoHashCache(scgi, scope, stoppingToken);
+                    await PopulateInfoHashCache(scgi, scope, await version.IsV16(stoppingToken), stoppingToken);
                 } catch (Exception ex) {
                     Logger.LogWarning(ex, "Failed to populate infohash cache");
                 }
@@ -77,10 +80,12 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
         }
 
-        private async Task PopulateInfoHashCache(SCGICommunication Scgi, IServiceScope Scope, CancellationToken StoppingToken)
+        private async Task PopulateInfoHashCache(SCGICommunication Scgi, IServiceScope Scope, bool IsV16, CancellationToken StoppingToken)
         {
+            var multicall = IsV16 ? "d.multicall" : "d.multicall2";
+
             var allV1 = new List<byte[]>();
-            using (var response = await Scgi.Get("<?xml version=\"1.0\" ?><methodCall><methodName>d.multicall2</methodName><params><param><value><string></string></value></param><param><value><string>main</string></value></param><param><value><string>d.hash=</string></value></param></params></methodCall>", StoppingToken)) {
+            using (var response = await Scgi.Get("<?xml version=\"1.0\" ?><methodCall><methodName>" + multicall + "</methodName><params><param><value><string></string></value></param><param><value><string>main</string></value></param><param><value><string>d.hash=</string></value></param></params></methodCall>", StoppingToken)) {
                 var result = response.Reader();
                 XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
                 XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);

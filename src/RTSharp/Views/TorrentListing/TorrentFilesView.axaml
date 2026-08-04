@@ -56,17 +56,38 @@
             <DataTemplate x:Key="FileDoneTemplate" x:DataType="dgh:HierarchicalNode">
                 <ProgressBar Value="{Binding ((models:File)Item).Done}" ProgressTextFormat="\{0:0.00\} %" ShowProgressText="True" Minimum="0" Maximum="100" VerticalAlignment="Stretch" />
             </DataTemplate>
+            <DataTemplate x:Key="FilePriorityTemplate" x:DataType="dgh:HierarchicalNode">
+                <TextBlock Text="{Binding ((models:File)Item).Priority}" VerticalAlignment="Center" />
+            </DataTemplate>
+            <DataTemplate x:Key="FileDownloadStrategyTemplate" x:DataType="dgh:HierarchicalNode">
+                <TextBlock Text="{Binding ((models:File)Item).DownloadStrategy}" VerticalAlignment="Center" />
+            </DataTemplate>
         </DataGrid.Resources>
         <DataGrid.ContextMenu>
             <ContextMenu>
-                <MenuItem Header="_Mediainfo"
+                <MenuItem Header="Media_info"
                           Command="{Binding MediaInfoCommand}"
                           CommandParameter="{Binding #MainGrid.SelectedItems}"
                         />
-                <MenuItem Header="_Preview with mpv"
+                <MenuItem Header="Preview with _mpv"
                           Command="{Binding PreviewCommand}"
                           CommandParameter="{Binding #MainGrid.SelectedItems}"
                         />
+                <Separator />
+                <MenuItem Header="_Priority">
+                    <MenuItem Header="_Don't download"
+                              Command="{Binding SetPriorityDontDownloadCommand}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
+                            />
+                    <MenuItem Header="_Normal"
+                              Command="{Binding SetPriorityNormalCommand}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
+                            />
+                    <MenuItem Header="_High"
+                              Command="{Binding SetPriorityHighCommand}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
+                            />
+                </MenuItem>
             </ContextMenu>
         </DataGrid.ContextMenu>
     </DataGrid>

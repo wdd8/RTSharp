@@ -177,6 +177,8 @@ public class App : Application
         cfgBuilder.AddJsonFile(RTSharp.Shared.Abstractions.Consts.APP_CONFIG_PATH, false, true);
         var config = cfgBuilder.Build();
 
+        Core.GlobalProxy.Install(config.GetSection(nameof(Config.Models.Proxy)).Get<Config.Models.Proxy>());
+
         await ConfigureServices.GenerateCertificatesIfNeeded();
 
 #pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
@@ -200,7 +202,11 @@ public class App : Application
                 services.AddSingleton<Shared.Abstractions.Client.IWhoisProvider, Core.Services.Whois.RdapWhoisProvider>();
                 services.AddSingleton<Shared.Abstractions.Client.IWhoisProvider, Core.Services.Whois.CaidaTeamCymruWhoisProvider>();
                 services.AddSingleton<Core.Services.MediaPreviewService>();
-                services.AddHttpClient<Core.Services.Favicon>();
+                services.AddHttpClient<Core.Services.Favicon>()
+                    .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.SocketsHttpHandler {
+                        Proxy = Core.GlobalProxy.Instance,
+                        UseProxy = true
+                    });
 
 #pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
                 Plugin.Plugins.ConfigureServices(services);

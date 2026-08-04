@@ -23,10 +23,11 @@ namespace RTSharp.ViewModels
     {
         public List<IDataProvider> DataProviders => [.. Plugins.DataProviders.Items.Select(x => x.Instance).Where(x => x.Capabilities.AddTorrent)];
 
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(ForceStartTorrentOnAdd))]
-        [NotifyCanExecuteChangedFor(nameof(BrowseRemoteDirectoryClickCommand))]
-        public partial IDataProvider? SelectedProvider { get; set; }
+        private IDataProvider? _selectedProvider;
+        public IDataProvider? SelectedProvider {
+            get => _selectedProvider;
+            set => SetSelectedProvider(value, LoadDefaultRemotePath: true);
+        }
 
         [ObservableProperty]
         public partial bool FromFileSelected { get; set; }
@@ -206,25 +207,39 @@ namespace RTSharp.ViewModels
 
             try {
                 await Core.TorrentAdd.AddTorrents(SelectedProvider, input);
-            } catch { }
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, "Failed to add torrent");
+            }
         }
 
-        partial void OnSelectedProviderChanged(IDataProvider? value)
+        public void SetSelectedProvider(IDataProvider? Provider, bool LoadDefaultRemotePath)
         {
-            DuplicationTargetSelector.RefreshDataProviders();
-            if (DuplicationTargetSelector.SelectedProvider == value)
-                DuplicationTargetSelector.SelectedProvider = null;
-
-            if (value == null)
+            if (_selectedProvider == Provider)
                 return;
 
-            _ = LoadDefaultRemoteTargetPath(value);
+            OnPropertyChanging(nameof(SelectedProvider));
+            _selectedProvider = Provider;
+            OnPropertyChanged(nameof(SelectedProvider));
+            OnPropertyChanged(nameof(ForceStartTorrentOnAdd));
+            OnPropertyChanged(nameof(StartTorrent));
+            BrowseRemoteDirectoryClickCommand.NotifyCanExecuteChanged();
+
+            DuplicationTargetSelector.RefreshDataProviders();
+            if (DuplicationTargetSelector.SelectedProvider == Provider)
+                DuplicationTargetSelector.SelectedProvider = null;
+
+            if (Provider == null || !LoadDefaultRemotePath)
+                return;
+
+            _ = LoadDefaultRemoteTargetPath(Provider);
         }
 
-        private async Task LoadDefaultRemoteTargetPath(IDataProvider provider)
+        private async Task LoadDefaultRemoteTargetPath(IDataProvider Provider)
         {
             try {
-                RemoteTargetPath = await provider.Files.GetDefaultSavePath();
+                var path = await Provider.Files.GetDefaultSavePath();
+
+                RemoteTargetPath = path;
             } catch (Exception ex) {
                 Log.Logger.Error(ex, $"Failed to get default save path");
             }

@@ -331,8 +331,8 @@ public partial class TorrentListingViewModel
     private async ValueTask SaveGridState()
     {
         try {
-            string? state = CaptureGridState();
-            double[]? rowHeights = CaptureGridRowHeights();
+            string? state = CaptureGridState?.Invoke();
+            double[]? rowHeights = CaptureGridRowHeights?.Invoke();
 
             if (state != null || rowHeights != null) {
                 using var scope = Core.ServiceProvider.CreateScope();

@@ -3,11 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
-			 xmlns:sharedConverters="using:RTSharp.Shared.Controls.Converters"
+             xmlns:sharedConverters="using:RTSharp.Shared.Controls.Converters"
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:views="using:RTSharp.Shared.Controls.Views"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
-			 x:DataType="torrentListing:GeneralTorrentInfoViewModel"
+             x:DataType="torrentListing:GeneralTorrentInfoViewModel"
              x:Name="Root"
              d:DesignWidth="1500" d:DesignHeight="450">
 
@@ -24,53 +24,99 @@
         <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
     </UserControl.Styles>
 
-    <ContentControl Content="{Binding Torrent}">
-        <ContentControl.ContentTemplate>
-            <DataTemplate x:DataType="models:Torrent">
-                <StackPanel Margin="8 16 8 8">
-                    <TextBlock FontSize="16" Text="{Binding Name}" Margin="0 0 0 8" />
+    <Panel>
+        <ContentControl Content="{Binding Torrent}">
+            <ContentControl.ContentTemplate>
+                <DataTemplate x:DataType="models:Torrent">
+                    <StackPanel Margin="8 16 8 8">
+                        <TextBlock FontSize="16" Text="{Binding Name}" Margin="0 0 0 8" />
 
-                    <Grid ColumnDefinitions="*, Auto" Margin="0 0 0 16">
-                        <Border Grid.Column="0" BorderBrush="DarkGray" BorderThickness="1">
-                            <views:PieceProgressBar Pieces="{Binding #Root.ViewModel.Pieces}" Height="20" />
-                        </Border>
-                        <TextBlock Grid.Column="1" Text="{Binding Done, StringFormat=\{0:0.00\} %}" Padding="8 0 0 0" VerticalAlignment="Center" />
-                    </Grid>
-
-                    <GroupBox Header="Transfer">
-                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*">
-                            <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Time elapsed:" Text="{Binding TimeElapsed, Converter={StaticResource ETATimeSpanConverter}}" />
-                            <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Downloaded:" Text="{Binding DownloadedDisplay}" />
-                            <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Uploaded:" Text="{Binding UploadedDisplay}" />
-                            <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Seeders:" Text="{Binding SeedersDisplay}" />
-
-                            <views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Remaining:" Text="{Binding ETADisplay}" />
-                            <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="DL Speed:" Text="{Binding DLSpeedDisplay}" />
-                            <views:TextBlockWithLabel Grid.Row="2" Grid.Column="1" Label="UP Speed:" Text="{Binding UPSpeedDisplay}" />
-                            <views:TextBlockWithLabel Grid.Row="3" Grid.Column="1" Label="Peers:" Text="{Binding PeersDisplay}" />
-
-                            <views:TextBlockWithLabel Grid.Row="0" Grid.Column="2" Label="Ratio:" Text="{Binding RatioDisplay}" />
-                            <views:TextBlockWithLabel Grid.Row="1" Grid.Column="2" Label="Wasted:" Text="{Binding Wasted, Converter={StaticResource SIDataSizeConverter}}" />
+                        <Grid ColumnDefinitions="*, Auto" Margin="0 0 0 16">
+                            <Border Grid.Column="0" BorderBrush="DarkGray" BorderThickness="1">
+                                <views:PieceProgressBar Pieces="{Binding #Root.ViewModel.Pieces}" Height="20" />
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="{Binding DoneDisplay}" Padding="8 0 0 0" VerticalAlignment="Center" />
                         </Grid>
-                    </GroupBox>
-                    <GroupBox Header="Torrent info">
-                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
-                            <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Remote path:" Text="{Binding RemotePath}" />
-                            <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Created on:" Text="{Binding CreatedOnDateDisplay}" />
-                            <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Added on:" Text="{Binding AddedOnDateDisplay}" />
-                            <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Info hash:" Text="{Binding Hash, Converter={StaticResource ToHexStringConverter}}">
-                                <views:TextBlockWithLabel.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="_Copy" Click="CopyHash_Click" />
-                                    </ContextMenu>
-                                </views:TextBlockWithLabel.ContextMenu>
-                            </views:TextBlockWithLabel>
-                            <views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Comment:" Text="{Binding Comment}" />
-                            <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="Status:" Text="{Binding StatusMsg}" />
+
+                        <GroupBox Header="Transfer">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*">
+                                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Time elapsed:" Text="{Binding TimeElapsed, Converter={StaticResource ETATimeSpanConverter}}" />
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Downloaded:" Text="{Binding DownloadedDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Uploaded:" Text="{Binding UploadedDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Seeders:" Text="{Binding SeedersDisplay}" />
+
+                                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Remaining:" Text="{Binding ETADisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="DL Speed:" Text="{Binding DLSpeedDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="1" Label="UP Speed:" Text="{Binding UPSpeedDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="1" Label="Peers:" Text="{Binding PeersDisplay}" />
+
+                                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="2" Label="Ratio:" Text="{Binding RatioDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="2" Label="Wasted:" Text="{Binding Wasted, Converter={StaticResource SIDataSizeConverter}}" />
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox Header="Torrent info">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
+                                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Remote path:" Text="{Binding RemotePath}" />
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Created on:" Text="{Binding CreatedOnDateDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Added on:" Text="{Binding AddedOnDateDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Info hash:" Text="{Binding Hash, Converter={StaticResource ToHexStringConverter}}">
+                                    <views:TextBlockWithLabel.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="_Copy" Click="CopyHash_Click" />
+                                        </ContextMenu>
+                                    </views:TextBlockWithLabel.ContextMenu>
+                                </views:TextBlockWithLabel>
+                                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Comment:" Text="{Binding Comment}" />
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="Status:" Text="{Binding StatusMsg}" />
+                            </Grid>
+                        </GroupBox>
+                    </StackPanel>
+                </DataTemplate>
+            </ContentControl.ContentTemplate>
+        </ContentControl>
+
+        <ContentControl Content="{Binding Summary}">
+            <ContentControl.ContentTemplate>
+                <DataTemplate x:DataType="models:TorrentSelectionSummary">
+                    <StackPanel Margin="8 16 8 8">
+                        <TextBlock FontSize="16" Text="{Binding CountDisplay}" Margin="0 0 0 8" />
+
+                        <Grid ColumnDefinitions="*, Auto" Margin="0 0 0 16">
+                            <ProgressBar Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding Done}" Height="20" />
+                            <TextBlock Grid.Column="1" Text="{Binding Done, StringFormat=\{0:0.00\} %}" Padding="8 0 0 0" VerticalAlignment="Center" />
                         </Grid>
-                    </GroupBox>
-                </StackPanel>
-            </DataTemplate>
-        </ContentControl.ContentTemplate>
-    </ContentControl>
+
+                        <GroupBox Header="Transfer">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*">
+                                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="0" Label="Downloaded:" Text="{Binding DownloadedDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Uploaded:" Text="{Binding UploadedDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Seeders:" Text="{Binding SeedersDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Wasted:" Text="{Binding WastedDisplay}" />
+
+                                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="1" Label="Remaining:" Text="{Binding RemainingSizeDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="DL Speed:" Text="{Binding DLSpeedDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="1" Label="UP Speed:" Text="{Binding UPSpeedDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="1" Label="Peers:" Text="{Binding PeersDisplay}" />
+
+                                <views:TextBlockWithLabel Grid.Row="0" Grid.Column="2" Label="Ratio:" Text="{Binding RatioDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="2" Label="ETA:" Text="{Binding ETADisplay}" />
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox Header="Torrent info">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" FontWeight="Bold" Text="{Binding StatesDisplay}" />
+
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Wanted Size:" Text="{Binding WantedSizeDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Added on:" Text="{Binding AddedOnDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Connections:" Text="{Binding ConnectionsDisplay}" />
+
+                                <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="Trackers:" Text="{Binding TrackersDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="2" Grid.Column="1" Label="Labels:" Text="{Binding LabelsDisplay}" />
+                            </Grid>
+                        </GroupBox>
+                    </StackPanel>
+                </DataTemplate>
+            </ContentControl.ContentTemplate>
+        </ContentControl>
+    </Panel>
 </UserControl>

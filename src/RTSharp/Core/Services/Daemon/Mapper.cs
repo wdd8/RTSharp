@@ -83,7 +83,7 @@ public static class Mapper
                 WantedSize = In.WantedSize,
                 PieceSize = In.ChunkSize,
                 Wasted = In.Wasted,
-                Done = (float)In.CompletedSize / In.WantedSize * 100,
+                Done = In.WantedSize == 0 ? -1 : (float)In.CompletedSize / In.WantedSize * 100,
                 Downloaded = In.Downloaded,
                 CompletedSize = In.CompletedSize,
                 Uploaded = In.Uploaded,
@@ -116,7 +116,7 @@ public static class Mapper
     {
         try {
             Existing.Wasted = In.Wasted;
-            Existing.Done = (float)In.CompletedSize / Existing.WantedSize * 100;
+            Existing.Done = Existing.WantedSize == 0 ? -1 : (float)In.CompletedSize / Existing.WantedSize * 100;
             Existing.Downloaded = In.Downloaded;
             Existing.CompletedSize = In.CompletedSize;
             Existing.Uploaded = In.Uploaded;
@@ -172,6 +172,16 @@ public static class Mapper
             RTSharp.Daemon.Protocols.DataProvider.TorrentsFilesReply.Types.FilePriority.Normal => Shared.Abstractions.File.PRIORITY.NORMAL,
             RTSharp.Daemon.Protocols.DataProvider.TorrentsFilesReply.Types.FilePriority.High => Shared.Abstractions.File.PRIORITY.HIGH,
             _ => Shared.Abstractions.File.PRIORITY.NA
+        };
+    }
+
+    public static RTSharp.Daemon.Protocols.DataProvider.TorrentsFilesReply.Types.FilePriority MapToProto(Shared.Abstractions.File.PRIORITY In)
+    {
+        return In switch {
+            Shared.Abstractions.File.PRIORITY.DONT_DOWNLOAD => RTSharp.Daemon.Protocols.DataProvider.TorrentsFilesReply.Types.FilePriority.DontDownload,
+            Shared.Abstractions.File.PRIORITY.NORMAL => RTSharp.Daemon.Protocols.DataProvider.TorrentsFilesReply.Types.FilePriority.Normal,
+            Shared.Abstractions.File.PRIORITY.HIGH => RTSharp.Daemon.Protocols.DataProvider.TorrentsFilesReply.Types.FilePriority.High,
+            _ => throw new ArgumentOutOfRangeException(nameof(In))
         };
     }
 

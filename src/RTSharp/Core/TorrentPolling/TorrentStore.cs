@@ -9,7 +9,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 namespace RTSharp.Core.TorrentPolling;
 
@@ -45,6 +47,10 @@ public sealed class TorrentStore
     private List<Models.Torrent> PendingAdded = new();
     private List<Models.Torrent> PendingRefreshed = new();
     private List<Models.Torrent> PendingRemoved = new();
+
+    private readonly Dictionary<Models.Torrent, (ulong DL, ulong UP)> CountedSpeeds = new(ReferenceEqualityComparer.Instance);
+    private ulong TotalDLSpeed;
+    private ulong TotalUPSpeed;
 #if DEBUG
     private bool InEdit;
 #endif
@@ -72,6 +78,89 @@ public sealed class TorrentStore
             return snapshot;
         }
     }
+
+    public (ulong DLSpeed, ulong UPSpeed) GetTotalSpeeds()
+    {
+        lock (Lock) {
+            return (TotalDLSpeed, TotalUPSpeed);
+        }
+    }
+
+    private void ApplyTotals(TorrentStoreChangeSet changes)
+    {
+        lock (Lock) {
+            foreach (var torrent in changes.Removed) {
+                if (CountedSpeeds.Remove(torrent, out var counted)) {
+                    TotalDLSpeed -= counted.DL;
+                    TotalUPSpeed -= counted.UP;
+                }
+            }
+
+            foreach (var torrent in changes.Added)
+                CountTorrent(torrent);
+            foreach (var torrent in changes.Refreshed)
+                CountTorrent(torrent);
+
+#if DEBUG
+            VerifyTotals();
+#endif
+        }
+    }
+
+    private void CountTorrent(Models.Torrent torrent)
+    {
+        var pending = torrent.PendingChanges;
+        var dl = pending == null ? torrent.DLSpeed : pending.DLSpeed;
+        var up = pending == null ? torrent.UPSpeed : pending.UPSpeed;
+
+        ref var counted = ref CollectionsMarshal.GetValueRefOrAddDefault(CountedSpeeds, torrent, out var exists);
+
+        if (exists) {
+            TotalDLSpeed += dl - counted.DL;
+            TotalUPSpeed += up - counted.UP;
+        } else {
+            TotalDLSpeed += dl;
+            TotalUPSpeed += up;
+        }
+
+        counted = (dl, up);
+    }
+
+    private void ResyncTotals()
+    {
+        lock (Lock) {
+            CountedSpeeds.Clear();
+
+            ulong dl = 0, up = 0;
+            foreach (var torrent in InternalDict.Values) {
+                var pending = torrent.PendingChanges;
+                var speeds = pending == null ? (torrent.DLSpeed, torrent.UPSpeed) : (pending.DLSpeed, pending.UPSpeed);
+
+                CountedSpeeds[torrent] = speeds;
+                dl += speeds.DLSpeed;
+                up += speeds.UPSpeed;
+            }
+
+            TotalDLSpeed = dl;
+            TotalUPSpeed = up;
+        }
+    }
+
+#if DEBUG
+    private void VerifyTotals()
+    {
+        ulong dl = 0, up = 0;
+        foreach (var torrent in InternalDict.Values) {
+            var pending = torrent.PendingChanges;
+            dl += pending == null ? torrent.DLSpeed : pending.DLSpeed;
+            up += pending == null ? torrent.UPSpeed : pending.UPSpeed;
+        }
+
+        /*Debug.Assert(TotalDLSpeed == dl, $"Incremental DL total {TotalDLSpeed} != actual {dl}");
+        Debug.Assert(TotalUPSpeed == up, $"Incremental UP total {TotalUPSpeed} != actual {up}");*/
+        Debug.Assert(CountedSpeeds.Count == InternalDict.Count, $"Counted {CountedSpeeds.Count} torrents != stored {InternalDict.Count}");
+    }
+#endif
 
     public bool TryGet(GlobalTorrentKey key, [MaybeNullWhen(false)] out Models.Torrent torrent)
     {
@@ -101,31 +190,31 @@ public sealed class TorrentStore
         InEdit = true;
 #endif
 
-        List<Models.Torrent> added, refreshed, removed;
+        TorrentStoreChangeSet changeSet;
         lock (Lock) {
             Update(this);
 
-            added = PendingAdded;
+            changeSet = new TorrentStoreChangeSet(PendingAdded, PendingRefreshed, PendingRemoved, Dp);
             PendingAdded = [];
-            refreshed = PendingRefreshed;
             PendingRefreshed = [];
-            removed = PendingRemoved;
             PendingRemoved = [];
+
+            ApplyTotals(changeSet);
         }
 #if DEBUG
         InEdit = false;
 #endif
 
-        if (added.Count == 0 && refreshed.Count == 0 && removed.Count == 0)
+        if (changeSet.IsEmpty)
             return;
 
-        var changeSet = new TorrentStoreChangeSet(added, refreshed, removed, Dp);
-
         Dispatcher.UIThread.Post(() => {
-            foreach (var t in changeSet.Added)
-                t.CommitUIChanges();
-            foreach (var t in changeSet.Refreshed)
-                t.CommitUIChanges();
+            lock (Lock) {
+                foreach (var t in changeSet.Added)
+                    t.CommitUIChanges();
+                foreach (var t in changeSet.Refreshed)
+                    t.CommitUIChanges();
+            }
 
             Changed?.Invoke(this, changeSet);
             ApplyChanges(changeSet);
@@ -228,6 +317,8 @@ public sealed class TorrentStore
 
     private void Rebuild()
     {
+        ResyncTotals();
+
         var snapshot = GetSnapshot();
         var visible = new List<Models.Torrent>(snapshot.Count);
         foreach (var item in snapshot) {

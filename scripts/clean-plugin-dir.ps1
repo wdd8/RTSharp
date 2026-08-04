@@ -3,6 +3,11 @@ $pluginDirPath = $args[1];
 
 Write-Output $pluginDirPath
 
+if (-not (Test-Path -Path (Join-Path $mainDirPath "RTSharp.dll"))) {
+    Write-Error "Client not built. Build RTSharp before building plugins";
+    exit 1;
+}
+
 $mainDlls = Get-ChildItem -Path $mainDirPath -Filter "*.dll";
 
 foreach ($pluginFile in Get-ChildItem -Path $pluginDirPath -Filter "*.dll") {

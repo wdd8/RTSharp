@@ -1,43 +1,52 @@
-﻿using RTSharp.Daemon.Protocols.DataProvider.Settings;
-
-using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
+using RTSharp.Daemon.Protocols.DataProvider.Settings;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin.Mappers;
 
 public static class SettingsMapper
 {
-    static readonly string[] AdvancedSettings = new[] {
-        "network_http_cacert",
-        "network_http_capath",
-        "throttle_max_downloads_div",
-        "throttle_max_uploads_div",
-        "system_file_max_size",
-        "pieces_preload_type",
-        "pieces_preload_min_size",
-        "pieces_preload_min_rate",
-        "network_receive_buffer_size",
-        "network_send_buffer_size",
-        "pieces_sync_always_safe",
-        "pieces_sync_timeout_safe",
-        "pieces_sync_timeout",
-        "network_scgi_dont_route",
-        "session_path",
-        "session_use_lock",
-        "session_on_completion",
-        "system_file_split_size",
-        "system_file_split_suffix",
-        "trackers_use_udp",
-        "network_http_proxy_address",
-        "network_proxy_address",
-        "network_bind_address"
-    };
+    private record AdvancedSetting(string Property, Func<RtorrentSettings, string> Get, Action<RtorrentSettings, string> Set);
 
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RtorrentSettings))]
+    private static AdvancedSetting Str(string Property, Func<RtorrentSettings, string> Get, Action<RtorrentSettings, string> Set) =>
+        new(Property, Get, Set);
+
+    private static AdvancedSetting Num(string Property, Func<RtorrentSettings, long> Get, Action<RtorrentSettings, long> Set) =>
+        new(Property, x => Get(x).ToString(), (x, v) => Set(x, Int64.Parse(v)));
+
+    private static AdvancedSetting Bool(string Property, Func<RtorrentSettings, bool> Get, Action<RtorrentSettings, bool> Set) =>
+        new(Property, x => Get(x).ToString(), (x, v) => Set(x, Boolean.Parse(v)));
+
+    private static readonly Dictionary<string, AdvancedSetting> AdvancedSettings = new() {
+        ["network_http_cacert"] = Str(nameof(RtorrentSettings.NetworkHttpCacert), x => x.NetworkHttpCacert, (x, v) => x.NetworkHttpCacert = v),
+        ["network_http_capath"] = Str(nameof(RtorrentSettings.NetworkHttpCapath), x => x.NetworkHttpCapath, (x, v) => x.NetworkHttpCapath = v),
+        ["throttle_max_downloads_div"] = Num(nameof(RtorrentSettings.ThrottleMaxDownloadsDiv), x => x.ThrottleMaxDownloadsDiv, (x, v) => x.ThrottleMaxDownloadsDiv = v),
+        ["throttle_max_uploads_div"] = Num(nameof(RtorrentSettings.ThrottleMaxUploadsDiv), x => x.ThrottleMaxUploadsDiv, (x, v) => x.ThrottleMaxUploadsDiv = v),
+        ["system_file_max_size"] = Num(nameof(RtorrentSettings.SystemFileMaxSize), x => x.SystemFileMaxSize, (x, v) => x.SystemFileMaxSize = v),
+        ["pieces_preload_type"] = Str(nameof(RtorrentSettings.PiecesPreloadType), x => x.PiecesPreloadType, (x, v) => x.PiecesPreloadType = v),
+        ["pieces_preload_min_size"] = Num(nameof(RtorrentSettings.PiecesPreloadMinSize), x => x.PiecesPreloadMinSize, (x, v) => x.PiecesPreloadMinSize = v),
+        ["pieces_preload_min_rate"] = Num(nameof(RtorrentSettings.PiecesPreloadMinRate), x => x.PiecesPreloadMinRate, (x, v) => x.PiecesPreloadMinRate = v),
+        ["network_receive_buffer_size"] = Num(nameof(RtorrentSettings.NetworkReceiveBufferSize), x => x.NetworkReceiveBufferSize, (x, v) => x.NetworkReceiveBufferSize = v),
+        ["network_send_buffer_size"] = Num(nameof(RtorrentSettings.NetworkSendBufferSize), x => x.NetworkSendBufferSize, (x, v) => x.NetworkSendBufferSize = v),
+        ["pieces_sync_always_safe"] = Bool(nameof(RtorrentSettings.PiecesSyncAlwaysSafe), x => x.PiecesSyncAlwaysSafe, (x, v) => x.PiecesSyncAlwaysSafe = v),
+        ["pieces_sync_timeout_safe"] = Num(nameof(RtorrentSettings.PiecesSyncTimeoutSafe), x => x.PiecesSyncTimeoutSafe, (x, v) => x.PiecesSyncTimeoutSafe = v),
+        ["pieces_sync_timeout"] = Num(nameof(RtorrentSettings.PiecesSyncTimeout), x => x.PiecesSyncTimeout, (x, v) => x.PiecesSyncTimeout = v),
+        ["network_scgi_dont_route"] = Bool(nameof(RtorrentSettings.NetworkScgiDontRoute), x => x.NetworkScgiDontRoute, (x, v) => x.NetworkScgiDontRoute = v),
+
+        ["session_path"] = Str(nameof(RtorrentSettings.SessionPath), x => x.SessionPath, (x, v) => x.SessionPath = v),
+        ["session_use_lock"] = Bool(nameof(RtorrentSettings.SessionUseLock), x => x.SessionUseLock, (x, v) => x.SessionUseLock = v),
+        ["session_on_completion"] = Bool(nameof(RtorrentSettings.SessionOnCompletion), x => x.SessionOnCompletion, (x, v) => x.SessionOnCompletion = v),
+        ["system_file_split_size"] = Num(nameof(RtorrentSettings.SystemFileSplitSize), x => x.SystemFileSplitSize, (x, v) => x.SystemFileSplitSize = v),
+        ["system_file_split_suffix"] = Str(nameof(RtorrentSettings.SystemFileSplitSuffix), x => x.SystemFileSplitSuffix, (x, v) => x.SystemFileSplitSuffix = v),
+        ["trackers_use_udp"] = Bool(nameof(RtorrentSettings.TrackersUseUdp), x => x.TrackersUseUdp, (x, v) => x.TrackersUseUdp = v),
+
+        ["network_http_proxy_address"] = Str(nameof(RtorrentSettings.NetworkHttpProxyAddress), x => x.NetworkHttpProxyAddress, (x, v) => x.NetworkHttpProxyAddress = v),
+        ["network_proxy_address"] = Str(nameof(RtorrentSettings.NetworkProxyAddress), x => x.NetworkProxyAddress, (x, v) => x.NetworkProxyAddress = v),
+        ["network_bind_address"] = Str(nameof(RtorrentSettings.NetworkBindAddress), x => x.NetworkBindAddress, (x, v) => x.NetworkBindAddress = v)
+    };
 
     public static Models.Settings MapFromProto(RtorrentSettings In)
     {
+        var unsupported = In.UnsupportedSettings.ToHashSet(StringComparer.Ordinal);
+
         var ret = new Models.Settings() {
             General = new Models.General() {
                 MaximumMemoryUsage = In.MaximumMemoryUsage,
@@ -64,22 +73,30 @@ public static class SettingsMapper
                 MaximumUploadRate = In.MaximumUploadRate,
                 OpenListeningPort = In.OpenListeningPort,
                 PortUsedForIncomingConnections = In.PortUsedForIncomingConnections,
-                RandomizePort = In.RandomizePort
+                RandomizePort = In.RandomizePort,
+
+                SystemSocketsFilesMinAlloc = In.SystemSocketsFilesMinAlloc,
+                SystemSocketsFilesMaxAlloc = In.SystemSocketsFilesMaxAlloc,
+                SystemSocketsHttpMinAlloc = In.SystemSocketsHttpMinAlloc,
+                SystemSocketsHttpMaxAlloc = In.SystemSocketsHttpMaxAlloc,
+
+                OpenListeningPortSupported = !unsupported.Contains(nameof(RtorrentSettings.OpenListeningPort)),
+                LegacyConnectionLimitsSupported = !unsupported.Contains(nameof(RtorrentSettings.MaximumNumberOfOpenFiles)),
+                SocketAllocationSupported = !unsupported.Contains(nameof(RtorrentSettings.SystemSocketsFilesMinAlloc))
             },
             Advanced = new()
         };
 
-        foreach (var setting in AdvancedSettings) {
-            var upperCamel = String.Join("", setting.Split('_').Select(i => Char.ToUpper(i[0]) + i[1..]));
+        foreach (var (key, setting) in AdvancedSettings) {
+            if (unsupported.Contains(setting.Property))
+                continue;
 
-            var val = In.GetType().GetProperty(upperCamel)!.GetValue(In)!;
-            ret.Advanced.Add(new Models.AdvancedSetting(setting, val.ToString()!));
+            ret.Advanced.Add(new Models.AdvancedSetting(key, setting.Get(In)));
         }
 
         return ret;
     }
 
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Models.Settings))]
     public static RtorrentSettings MapToProto(Models.Settings In)
     {
         var ret = new RtorrentSettings() {
@@ -105,21 +122,17 @@ public static class SettingsMapper
             MaximumUploadRate = In.Connection.MaximumUploadRate,
             OpenListeningPort = In.Connection.OpenListeningPort,
             PortUsedForIncomingConnections = In.Connection.PortUsedForIncomingConnections,
-            RandomizePort = In.Connection.RandomizePort
+            RandomizePort = In.Connection.RandomizePort,
+
+            SystemSocketsFilesMinAlloc = In.Connection.SystemSocketsFilesMinAlloc,
+            SystemSocketsFilesMaxAlloc = In.Connection.SystemSocketsFilesMaxAlloc,
+            SystemSocketsHttpMinAlloc = In.Connection.SystemSocketsHttpMinAlloc,
+            SystemSocketsHttpMaxAlloc = In.Connection.SystemSocketsHttpMaxAlloc
         };
 
-        foreach (var setting in AdvancedSettings) {
-            var upperCamel = String.Join("", setting.Split('_').Select(i => Char.ToUpper(i[0]) + i[1..]));
-
-            var val = In.Advanced.First(x => x.Key == setting).Value;
-            var prop = ret.GetType().GetProperty(upperCamel)!;
-            if (prop.PropertyType == typeof(long)) {
-                prop.SetValue(ret, Int64.Parse(val));
-            } else if (prop.PropertyType == typeof(bool)) {
-                prop.SetValue(ret, Boolean.Parse(val));
-            } else {
-                prop.SetValue(ret, val);
-            }
+        foreach (var advanced in In.Advanced) {
+            if (AdvancedSettings.TryGetValue(advanced.Key, out var setting))
+                setting.Set(ret, advanced.Value);
         }
 
         return ret;

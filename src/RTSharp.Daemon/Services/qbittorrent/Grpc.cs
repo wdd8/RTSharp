@@ -15,6 +15,7 @@ using RTSharp.Shared.Utils;
 
 using System.Diagnostics;
 using System.Text;
+using System.Web;
 
 namespace RTSharp.Daemon.Services.qbittorrent
 {
@@ -57,7 +58,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
             return Path.Combine(a, b).Replace("\\", "/");
         }
 
-        record Torrent(string Path, string Filename, MemoryStream Data, bool FastResume = false);
+        record Torrent(string Path, string Filename, MemoryStream Data, bool FastResume, bool Magnet);
 
         public async Task<TorrentsReply> AddTorrents(IAsyncEnumerable<NewTorrentsData> Req)
         {
@@ -67,7 +68,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
             await foreach (var chunk in Req) {
                 switch (chunk.DataCase) {
                     case NewTorrentsData.DataOneofCase.TMetadata:
-                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume);
+                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume, chunk.TMetadata.Magnet);
                         break;
                     case NewTorrentsData.DataOneofCase.TData:
                         torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.ToByteArray());
@@ -82,74 +83,106 @@ namespace RTSharp.Daemon.Services.qbittorrent
             foreach (var (id, torrent) in torrents) {
                 torrent.Data.Position = 0;
 
-                BencodeNET.Objects.BDictionary bTorrent;
                 byte[] torrentId;
                 byte[] rtsHash;
-                try {
-                    bTorrent = bencodeParser.Parse<BencodeNET.Objects.BDictionary>(torrent.Data);
-                    var (v1, v2) = BencodeUtils.GetInfoHashes(bTorrent);
-                    // qbittorrent identifies torrents by the truncated v2 info hash when one exists
-                    torrentId = v2 != null ? InfoHash.TruncateV2(v2) : v1!;
-                    // RTSHash is the full v2 for hybrids/v2, else v1.
-                    rtsHash = (v2 ?? v1)!;
-                } catch (Exception ex) {
-                    ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
-                        InfoHash = Array.Empty<byte>().ToByteString(),
-                        Status = { new Protocols.DataProvider.Status() {
-                            Command = "",
-                            FaultCode = "1",
-                            FaultString = $"Invalid bencode on torrent id {id}"
-                        } }
-                    });
-                    Logger.LogError(ex, "Invalid bencode");
-                    continue;
-                }
+                BencodeNET.Objects.BDictionary? bTorrent = null;
+                Uri? magnetUri = null;
 
-                try {
-                    var skipHashChecking = false;
-                    if (torrent.FastResume) {
-                        skipHashChecking = await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, torrent.Path, Logger);
-                        if (!skipHashChecking)
-                            Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", Convert.ToHexString(torrentId));
+                if (!torrent.Magnet) {
+                    try {
+                        bTorrent = bencodeParser.Parse<BencodeNET.Objects.BDictionary>(torrent.Data);
+                        var (v1, v2) = BencodeUtils.GetInfoHashes(bTorrent);
+                        // qbittorrent identifies torrents by the truncated v2 info hash when one exists
+                        torrentId = v2 != null ? InfoHash.TruncateV2(v2) : v1!;
+                        // RTSHash is the full v2 for hybrids/v2, else v1.
+                        rtsHash = (v2 ?? v1)!;
+                    } catch (Exception ex) {
+                        ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                            InfoHash = Array.Empty<byte>().ToByteString(),
+                            Status = { new Protocols.DataProvider.Status() {
+                                Command = "",
+                                FaultCode = "1",
+                                FaultString = $"Invalid bencode on torrent id {id}"
+                            } }
+                        });
+                        Logger.LogError(ex, "Invalid bencode");
+                        continue;
+                    }
+                } else {
+                    if (!MagnetParser.TryParse(Encoding.UTF8.GetString(torrent.Data.ToArray()), out var magnet)) {
+                        ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                            InfoHash = Array.Empty<byte>().ToByteString(),
+                            Status = { new Protocols.DataProvider.Status() {
+                                Command = "",
+                                FaultCode = "1",
+                                FaultString = $"Invalid magnet URI on torrent id {id}"
+                            } }
+                        });
+
+                        continue;
                     }
 
-                    var path = Path.GetTempFileName();
-                    await System.IO.File.WriteAllBytesAsync(path, torrent.Data.ToArray());
-
-                    Logger.LogInformation($"{InstanceKey}: Adding torrent {Convert.ToHexString(torrentId)}");
-
-                    await client.AddTorrentsAsync(new AddTorrentFilesRequest {
-                        DownloadFolder = torrent.Path,
-                        Paused = true,
-                        SkipHashChecking = skipHashChecking,
-                        TorrentFiles = { path }
-                    });
-
-                    System.IO.File.Delete(path);
-
-                    unaccountedNative.Add(Convert.ToHexStringLower(torrentId));
-                } catch (Exception) {
-                    ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
-                        InfoHash = Array.Empty<byte>().ToByteString(),
-                        Status = { new Protocols.DataProvider.Status() {
-                            Command = "",
-                            FaultCode = "1",
-                            FaultString = $"Invalid bencode on torrent id {id}"
-                        } }
-                    });
-                    continue;
+                    torrentId = magnet.V2InfoHash != null ? InfoHash.TruncateV2(magnet.V2InfoHash) : magnet.V1InfoHash!;
+                    magnetUri = magnet.Uri;
+                    rtsHash = (magnet.V2InfoHash ?? magnet.V1InfoHash)!;
                 }
 
-                ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
-                    InfoHash = rtsHash.ToByteString(),
-                    Status = {
+                try {
+                    if (bTorrent != null) {
+                        var skipHashChecking = false;
+                        if (torrent.FastResume) {
+                            skipHashChecking = await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, torrent.Path, Logger);
+                            if (!skipHashChecking)
+                                Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", Convert.ToHexString(torrentId));
+                        }
+
+                        var path = Path.GetTempFileName();
+                        await System.IO.File.WriteAllBytesAsync(path, torrent.Data.ToArray());
+
+                        Logger.LogInformation($"{InstanceKey}: Adding torrent {Convert.ToHexString(torrentId)}");
+
+                        await client.AddTorrentsAsync(new AddTorrentFilesRequest {
+                            DownloadFolder = torrent.Path,
+                            Paused = true,
+                            SkipHashChecking = skipHashChecking,
+                            TorrentFiles = { path }
+                        });
+
+                        System.IO.File.Delete(path);
+                    } else if (magnetUri != null) {
+                        Logger.LogInformation($"{InstanceKey}: Adding magnet {Convert.ToHexString(torrentId)}");
+
+                        await client.AddTorrentsAsync(new AddTorrentUrlsRequest {
+                            DownloadFolder = torrent.Path,
+                            Paused = true,
+                            SkipHashChecking = false,
+                            TorrentUrls = { magnetUri }
+                        });
+                    }
+
+                    unaccountedNative.Add(Convert.ToHexStringLower(torrentId));
+
+                    ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                        InfoHash = rtsHash.ToByteString(),
+                        Status = {
                         new Protocols.DataProvider.Status() {
                             Command = "",
                             FaultCode = "0",
                             FaultString = ""
                         }
                     }
-                });
+                    });
+                } catch (Exception) {
+                    ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                        InfoHash = Array.Empty<byte>().ToByteString(),
+                        Status = { new Protocols.DataProvider.Status() {
+                            Command = "",
+                            FaultCode = "1",
+                            FaultString = $"Failed to add torrent id {id}"
+                        } }
+                    });
+                    continue;
+                }
             }
 
             if (unaccountedNative.Count > 0) {
@@ -408,9 +441,9 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
             return new TorrentsFilesReply.Types.TorrentsFiles {
                 InfoHash = Hash.ToByteString(),
-                MultiFile = contents == null ? false : contents[0].Name.Contains('/'),
+                MultiFile = contents != null && contents.Count != 0 && contents[0].Name.Contains('/'),
                 Files = {
-                    contents == null ? [] : contents.Select(i => {
+                    contents == null || contents.Count == 0 ? [] : contents.Select(i => {
                         var torrentName = torrent.Name;
 
                         i.Name = i.Name.StartsWith(torrentName + '/') ? i.Name[(torrentName.Length + 1)..] : i.Name;
@@ -1117,6 +1150,22 @@ namespace RTSharp.Daemon.Services.qbittorrent
             var toToggle = torrents.Where(x => x.SequentialDownload != Enabled).Select(x => x.Hash).ToArray();
 
             await client.ToggleSequentialDownloadAsync(toToggle, cancellationToken);
+
+            return new();
+        }
+
+        public async Task<Empty> SetFilePriority(ByteString InfoHash, IEnumerable<uint> Indexes, TorrentsFilesReply.Types.FilePriority Priority, CancellationToken cancellationToken)
+        {
+            var client = await Client.Init();
+
+            var priority = Priority switch {
+                TorrentsFilesReply.Types.FilePriority.DontDownload => TorrentContentPriority.Skip,
+                TorrentsFilesReply.Types.FilePriority.Normal => TorrentContentPriority.Normal,
+                TorrentsFilesReply.Types.FilePriority.High => TorrentContentPriority.High,
+                _ => throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown file priority"))
+            };
+
+            await client.SetFilePriorityAsync(ToNativeHex(InfoHash.Span), Indexes.Select(x => (int)x), priority, cancellationToken);
 
             return new();
         }

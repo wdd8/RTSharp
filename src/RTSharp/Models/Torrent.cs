@@ -153,6 +153,7 @@ namespace RTSharp.Models
                 if (_size == value) return;
                 _size = value;
                 SizeDisplay = Converters.GetSIDataSize(value);
+                OnPropertyChanged(nameof(IsPartial));
             }
         }
 
@@ -171,8 +172,10 @@ namespace RTSharp.Models
         {
             get => _wantedSize;
             set {
-                if (SetProperty(ref _wantedSize, value))
+                if (SetProperty(ref _wantedSize, value)) {
                     OnPropertyChanged(nameof(IsCompleted));
+                    OnPropertyChanged(nameof(IsPartial));
+                }
             }
         }
 
@@ -198,7 +201,16 @@ namespace RTSharp.Models
         public float Done
         {
             get => _done;
-            set => SetProperty(ref _done, value);
+            set {
+                SetProperty(ref _done, value);
+                DoneDisplay = value == -1 ? "?" : value.ToString("0.00'%'", CultureInfo.CurrentCulture);
+            }
+        }
+
+        private string _doneDisplay = null!;
+        public string DoneDisplay {
+            get => _doneDisplay;
+            set => SetProperty(ref _doneDisplay, value);
         }
 
         /// <summary>
@@ -247,7 +259,12 @@ namespace RTSharp.Models
         /// <summary>
         /// Is torrent fully downloaded?
         /// </summary>
-        public bool IsCompleted => _completedSize >= _wantedSize;
+        public bool IsCompleted => _completedSize >= _wantedSize && !(MagnetDummy && _wantedSize == 0);
+
+        /// <summary>
+        /// Are some of the files excluded from download?
+        /// </summary>
+        public bool IsPartial => _wantedSize < _size;
 
         /// <summary>
         /// Uploaded bytes
@@ -638,7 +655,7 @@ namespace RTSharp.Models
 
         public bool IsHashing => _internalState.HasFlag(TORRENT_STATE.HASHING);
 
-        private Shared.Abstractions.Torrent? PendingChanges;
+        internal Shared.Abstractions.Torrent? PendingChanges;
         private (IImage? Icon, string? DisplayName)? ResolvedTracker;
 
         public Torrent(byte[] Hash, Plugin.RTSharpDataProvider Owner)
@@ -848,7 +865,7 @@ namespace RTSharp.Models
                 WantedSize = _wantedSize,
                 PieceSize = PieceSize,
                 Wasted = _wasted,
-                Done = (float)_completedSize / _size * 100, // Maybe get from server?
+                Done = _done,
                 Downloaded = _downloaded,
                 CompletedSize = _completedSize,
                 Uploaded = _uploaded,
@@ -861,7 +878,7 @@ namespace RTSharp.Models
                 Seeders = (_seeders.Connected, _seeders.Total),
                 Priority = InternalPriority,
                 CreatedOnDate = _createdOnDate,
-                RemainingSize = _size - _downloaded,
+                RemainingSize = _remainingSize,
                 FinishedOnDate = _finishedOnDate,
                 TimeElapsed = _timeElapsed,
                 AddedOnDate = _addedOnDate,

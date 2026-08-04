@@ -200,8 +200,6 @@ namespace RTSharp.ViewModels
             };
             var upSpeedFill = new SolidColorPaint(SKColor.Parse("#40D640"));
 
-            var axisPaint = new SolidColorPaint(SKColor.Parse("#00000000"));
-
             SpeedChartSeries = [
                 new LineSeries<DateTimePoint> {
                     Name = "DL",
@@ -210,7 +208,8 @@ namespace RTSharp.ViewModels
                     Stroke = dlSpeedPaint,
                     GeometrySize = 0,
                     LineSmoothness = 1,
-                    AnimationsSpeed = TimeSpan.FromMilliseconds(120),
+                    AnimationsSpeed = TimeSpan.Zero,
+                    EasingFunction = null,
                     DataPadding = new LvcPoint(0, 0)
                 },
                 new LineSeries<DateTimePoint> {
@@ -220,7 +219,8 @@ namespace RTSharp.ViewModels
                     Stroke = upSpeedPaint,
                     GeometrySize = 0,
                     LineSmoothness = 1,
-                    AnimationsSpeed = TimeSpan.FromMilliseconds(120),
+                    AnimationsSpeed = TimeSpan.Zero,
+                    EasingFunction = null,
                     DataPadding = new LvcPoint(0, 0)
                 }
             ];
@@ -232,7 +232,8 @@ namespace RTSharp.ViewModels
                 UnitWidth = TimeSpan.FromSeconds(1).Ticks,
                 MinLimit = (now - SPEED_CHART_WINDOW).Ticks,
                 MaxLimit = now.Ticks,
-                SeparatorsPaint = axisPaint,
+                CustomSeparators = [],
+                ShowSeparatorLines = false,
                 Padding = new Padding(0)
             };
 
@@ -246,7 +247,7 @@ namespace RTSharp.ViewModels
                 MinStep = SpeedChartYAxisTopValue,
                 ForceStepToMin = true,
                 ShowSeparatorLines = false,
-                SeparatorsPaint = axisPaint,
+                CustomSeparators = [],
                 Padding = new Padding(0)
             };
 

@@ -77,7 +77,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 {
                     if (fullUpdate) {
                         ret.FullUpdate.Add(torrent);
-                    } else if (torrent.Downloaded >= torrent.WantedSize) {
+                    } else if (torrent.IsCompleted) {
                         var toAdd = new CompleteDeltaTorrentResponse() {
                             Hash = torrent.Hash,
                             Uploaded = torrent.Uploaded,

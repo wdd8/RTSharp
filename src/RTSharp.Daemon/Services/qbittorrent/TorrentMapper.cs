@@ -45,6 +45,9 @@ public class TorrentMapper
 
     public static void ApplyFromExternal(Protocols.DataProvider.Torrent Stored, QBittorrent.Client.TorrentPartialInfo External)
     {
+        var etaExists = External.EstimatedTime != null && External.EstimatedTime.Value > TimeSpan.Zero && External.EstimatedTime.Value != TimeSpan.FromDays(100) && External.EstimatedTime.Value != TimeSpan.MaxValue;
+        var wasHashing = Stored.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing);
+
         // IsPrivate = ?
         // PieceSize = ?
         // Wasted = ?
@@ -67,8 +70,13 @@ public class TorrentMapper
             Stored.DLSpeed = (ulong)External.DownloadSpeed.Value;
         if (External.UploadSpeed != null)
             Stored.UPSpeed = (ulong)External.UploadSpeed.Value;
+
         if (External.EstimatedTime != null)
-            Stored.ETA = External.EstimatedTime.Value > TimeSpan.Zero && External.EstimatedTime.Value != TimeSpan.FromDays(100) && External.EstimatedTime.Value != TimeSpan.MaxValue ? Duration.FromTimeSpan(External.EstimatedTime.Value) : null;
+            Stored.ETA = etaExists ? Duration.FromTimeSpan(External.EstimatedTime.Value) : null;
+        else if (wasHashing && /* updated > */ !Stored.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing)) {
+            Stored.ETA = null;
+        }
+
         if (External.Tags != null) {
             Stored.Labels.Clear();
             Stored.Labels.AddRange(External.Tags);
@@ -99,7 +107,7 @@ public class TorrentMapper
         if (External.SavePath != null)
             Stored.RemotePath = External.SavePath;
         if (External.MagnetUri != null)
-            Stored.MagnetDummy = External.MagnetUri != null;
+            Stored.MagnetDummy = External.MagnetUri != null && Stored.WantedSize == 0;
         if (External.SequentialDownload != null)
             Stored.SequentialDownload = External.SequentialDownload.Value;
 

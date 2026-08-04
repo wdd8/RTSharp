@@ -5,14 +5,19 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 
 namespace RTSharp.Views.DataGridEx;
 
 public class TorrentProgressCell : Control
 {
+    private static readonly Color DefaultFillColor = Color.FromRgb(76, 148, 255);
     private static readonly IBrush DefaultTrackBrush = new SolidColorBrush(Color.FromRgb(46, 52, 64));
-    private static readonly IBrush DefaultFillBrush = new SolidColorBrush(Color.FromRgb(76, 148, 255));
+    private static readonly IBrush DefaultFillBrush = new SolidColorBrush(DefaultFillColor);
     private static readonly IBrush DefaultTextBrush = Brushes.White;
+
+    private static Color GradientColor;
+    private static IImmutableBrush? GradientBrush;
 
     private float _value;
     private FormattedText? FormattedText;
@@ -167,7 +172,9 @@ public class TorrentProgressCell : Control
 
         var trackBrush = IsHashing ? (HashingTrackBrush ?? TrackBrush ?? DefaultTrackBrush) : (TrackBrush ?? DefaultTrackBrush);
         context.DrawRectangle(trackBrush, null, trackRect, CORNER_RADIUS);
-        if (fillWidth > 0) {
+        if (Value == -1) {
+            context.DrawRectangle(GetGradientBrush(), null, trackRect, CORNER_RADIUS);
+        } else if (fillWidth > 0) {
             using (context.PushClip(new RoundedRect(trackRect, CORNER_RADIUS))) {
                 context.DrawRectangle(FillBrush ?? DefaultFillBrush, null, new Rect(0, 0, fillWidth, trackRect.Height));
             }
@@ -182,6 +189,24 @@ public class TorrentProgressCell : Control
         if (ShowSequentialMarker && bounds.Width >= 8) {
             DrawSequentialMarker(context, bounds);
         }
+    }
+
+    private IBrush GetGradientBrush()
+    {
+        if (GradientBrush != null) {
+            return GradientBrush;
+        }
+
+        var color = (FillBrush as ISolidColorBrush)?.Color ?? DefaultFillColor;
+        return GradientBrush = new LinearGradientBrush {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Absolute),
+            EndPoint = new RelativePoint(6, 6, RelativeUnit.Absolute),
+            SpreadMethod = GradientSpreadMethod.Repeat,
+            GradientStops = {
+                new GradientStop(Color.FromArgb(0, color.R, color.G, color.B), 0),
+                new GradientStop(color, 1)
+            }
+        }.ToImmutable();
     }
 
     private void DrawSequentialMarker(DrawingContext context, Rect bounds)
@@ -215,7 +240,11 @@ public class TorrentProgressCell : Control
 
     private FormattedText GetFormattedText(Size size, out Size textSize)
     {
-        var text = Value.ToString("0.00", CultureInfo.CurrentCulture) + " %";
+        string text;
+        if (Value != -1)
+            text = Value.ToString("0.00'%'", CultureInfo.CurrentCulture);
+        else
+            text = "?";
         if (FormattedText != null && Text == text && TextSize == size) {
             textSize = FormattedTextSize;
             return FormattedText;

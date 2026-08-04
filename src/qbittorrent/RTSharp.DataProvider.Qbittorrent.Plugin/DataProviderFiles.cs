@@ -13,7 +13,8 @@ public class DataProviderFiles : IDataProviderFiles
     public IDataProviderHost<QbittorrentDataProviderInstanceConfig> Host => ThisPlugin.Host;
 
     public DataProviderFilesCapabilities Capabilities { get; } = new(
-        GetDefaultSavePath: true
+        GetDefaultSavePath: true,
+        SetFilePriority: true
     );
 
     public DataProviderFiles(Plugin ThisPlugin)
@@ -26,5 +27,12 @@ public class DataProviderFiles : IDataProviderFiles
         var client = Host.AttachedDaemonService!.GetGrpcService<GRPCQBittorrentSettingsService.GRPCQBittorrentSettingsServiceClient>();
 
         return (await client.GetDefaultSavePathAsync(new Empty(), headers: Host.GetBuiltInDataProviderGrpcHeaders())).Value;
+    }
+
+    public async Task SetFilePriority(Torrent Torrent, IList<int> Indexes, RTSharp.Shared.Abstractions.File.PRIORITY Priority, CancellationToken cancellationToken = default)
+    {
+        var client = Host.AttachedDaemonService!.GetTorrentsService(Host.Instance);
+
+        await client.SetFilePriority(Torrent.Hash, Indexes, Priority, cancellationToken);
     }
 }

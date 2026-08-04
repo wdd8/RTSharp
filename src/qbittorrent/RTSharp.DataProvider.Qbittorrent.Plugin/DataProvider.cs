@@ -71,7 +71,7 @@ public class DataProvider : IDataProvider
         return Path.Combine(a, b).Replace("\\", "/");
     }
 
-    public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
+    public async Task<TorrentStatuses> AddTorrents(IList<(byte[]? Data, string? MagnetUri, string? Filename, AddTorrentsOptions Options)> In)
     {
         var client = Host.AttachedDaemonService!.GetTorrentsService(this);
 
@@ -113,9 +113,17 @@ public class DataProvider : IDataProvider
         var client = Host.AttachedDaemonService!.GetTorrentsService(this);
 
         var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
-        combined.Token.Register(combined.Dispose);
 
-        return client.GetFileChanges(Torrent.Hash, Interval, combined.Token);
+        Channel<TorrentFilesUpdate> channel;
+        try {
+            channel = client.GetFileChanges(Torrent.Hash, Interval, combined.Token);
+        } catch {
+            combined.Dispose();
+            throw;
+        }
+        _ = channel.Reader.Completion.ContinueWith(static (_, state) => ((CancellationTokenSource)state!).Dispose(), combined, TaskScheduler.Default);
+
+        return channel;
     }
 
     public async Task<InfoHashDictionary<IList<Peer>>> GetPeers(IList<Torrent> In, CancellationToken cancellationToken = default)
@@ -139,9 +147,17 @@ public class DataProvider : IDataProvider
         var interval = Host.Config.ListUpdateInterval;
 
         var combined = CancellationTokenSource.CreateLinkedTokenSource(Active, CancellationToken);
-        combined.Token.Register(combined.Dispose);
 
-        return client.GetTorrentChanges(interval, combined.Token);
+        Channel<ListingChanges<Torrent, Torrent, byte[]>> channel;
+        try {
+            channel = client.GetTorrentChanges(interval, combined.Token);
+        } catch {
+            combined.Dispose();
+            throw;
+        }
+        _ = channel.Reader.Completion.ContinueWith(static (_, state) => ((CancellationTokenSource)state!).Dispose(), combined, TaskScheduler.Default);
+
+        return channel;
     }
 
     public async Task<InfoHashDictionary<IList<Tracker>>> GetTrackers(IList<Torrent> In, CancellationToken cancellationToken = default)

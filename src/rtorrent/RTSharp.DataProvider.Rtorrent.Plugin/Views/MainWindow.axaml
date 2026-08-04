@@ -59,31 +59,39 @@
                         <TextBlock Grid.Column="0" Grid.Row="5">Wished Number of Peers:</TextBlock>
                         <TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Settings.Peers.WishedNumberOfPeers}" />
                     </Grid>
-                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*,*,*,*,*,*,*,*,*" IsVisible="{Binding ConnectionSelected}">
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding ConnectionSelected}">
                         <TextBlock Grid.Column="0" Grid.Row="0">Maximum Download Rate</TextBlock>
                         <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Settings.Connection.MaximumDownloadRate}" />
                         <TextBlock Grid.Column="0" Grid.Row="1">Maximum Upload Rate</TextBlock>
                         <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Settings.Connection.MaximumUploadRate}" />
-                        <TextBlock Grid.Column="0" Grid.Row="2">Open Listening Port</TextBlock>
-                        <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Settings.Connection.OpenListeningPort}" />
+                        <TextBlock Grid.Column="0" Grid.Row="2" IsVisible="{Binding Settings.Connection.OpenListeningPortSupported}">Open Listening Port</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="2" IsVisible="{Binding Settings.Connection.OpenListeningPortSupported}" Text="{Binding Settings.Connection.OpenListeningPort}" />
                         <TextBlock Grid.Column="0" Grid.Row="3">Randomize Port</TextBlock>
                         <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Settings.Connection.RandomizePort}" />
-                        <TextBlock Grid.Column="0" Grid.Row="4">Port Used for Incoming Connections</TextBlock>
+                        <TextBlock Grid.Column="0" Grid.Row="4">Listening Port Range</TextBlock>
                         <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding Settings.Connection.PortUsedForIncomingConnections}" />
                         <TextBlock Grid.Column="0" Grid.Row="5">Global Number of Upload Slots</TextBlock>
                         <TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Settings.Connection.GlobalNumberOfUploadSlots}" />
                         <TextBlock Grid.Column="0" Grid.Row="6">Global Number of Download Slots</TextBlock>
                         <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Settings.Connection.GlobalNumberOfDownloadSlots}" />
-                        <TextBlock Grid.Column="0" Grid.Row="7">Maximum Number of Open Files</TextBlock>
-                        <TextBox Grid.Column="1" Grid.Row="7" Text="{Binding Settings.Connection.MaximumNumberOfOpenFiles}" />
-                        <TextBlock Grid.Column="0" Grid.Row="8" Padding="0,0,4,0">Maximum Number of Open HTTP Connections</TextBlock>
-                        <TextBox Grid.Column="1" Grid.Row="8" Text="{Binding Settings.Connection.MaximumNumberOfOpenHttpConnections}" />
-                        <TextBlock Grid.Column="0" Grid.Row="9">DHT Port</TextBlock>
-                        <TextBox Grid.Column="1" Grid.Row="9" Text="{Binding Settings.Connection.DhtPort}" />
-                        <TextBlock Grid.Column="0" Grid.Row="10">Enable PeX</TextBlock>
-                        <TextBox Grid.Column="1" Grid.Row="10" Text="{Binding Settings.Connection.EnablePeerExchange}" />
-                        <TextBlock Grid.Column="0" Grid.Row="11">IP to Report to Tracker</TextBlock>
-                        <TextBox Grid.Column="1" Grid.Row="11" Text="{Binding Settings.Connection.IpToReportToTracker}" />
+                        <TextBlock Grid.Column="0" Grid.Row="7" IsVisible="{Binding Settings.Connection.LegacyConnectionLimitsSupported}">Maximum Number of Open Files</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="7" IsVisible="{Binding Settings.Connection.LegacyConnectionLimitsSupported}" Text="{Binding Settings.Connection.MaximumNumberOfOpenFiles}" />
+                        <TextBlock Grid.Column="0" Grid.Row="8" Padding="0,0,4,0" IsVisible="{Binding Settings.Connection.LegacyConnectionLimitsSupported}">Maximum Number of Open HTTP Connections</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="8" IsVisible="{Binding Settings.Connection.LegacyConnectionLimitsSupported}" Text="{Binding Settings.Connection.MaximumNumberOfOpenHttpConnections}" />
+                        <TextBlock Grid.Column="0" Grid.Row="9" IsVisible="{Binding Settings.Connection.SocketAllocationSupported}">File Sockets, Minimum Allocation</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="9" IsVisible="{Binding Settings.Connection.SocketAllocationSupported}" Text="{Binding Settings.Connection.SystemSocketsFilesMinAlloc}" />
+                        <TextBlock Grid.Column="0" Grid.Row="10" IsVisible="{Binding Settings.Connection.SocketAllocationSupported}">File Sockets, Maximum Allocation</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="10" IsVisible="{Binding Settings.Connection.SocketAllocationSupported}" Text="{Binding Settings.Connection.SystemSocketsFilesMaxAlloc}" />
+                        <TextBlock Grid.Column="0" Grid.Row="11" IsVisible="{Binding Settings.Connection.SocketAllocationSupported}">HTTP Sockets, Minimum Allocation</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="11" IsVisible="{Binding Settings.Connection.SocketAllocationSupported}" Text="{Binding Settings.Connection.SystemSocketsHttpMinAlloc}" />
+                        <TextBlock Grid.Column="0" Grid.Row="12" IsVisible="{Binding Settings.Connection.SocketAllocationSupported}">HTTP Sockets, Maximum Allocation</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="12" IsVisible="{Binding Settings.Connection.SocketAllocationSupported}" Text="{Binding Settings.Connection.SystemSocketsHttpMaxAlloc}" />
+                        <TextBlock Grid.Column="0" Grid.Row="13">DHT Port</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="13" Text="{Binding Settings.Connection.DhtPort}" />
+                        <TextBlock Grid.Column="0" Grid.Row="14">Enable PeX</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="14" Text="{Binding Settings.Connection.EnablePeerExchange}" />
+                        <TextBlock Grid.Column="0" Grid.Row="15">IP to Report to Tracker</TextBlock>
+                        <TextBox Grid.Column="1" Grid.Row="15" Text="{Binding Settings.Connection.IpToReportToTracker}" />
                     </Grid>
                     <DataGrid ItemsSource="{Binding Settings.Advanced}"
                      CanUserSortColumns="True"

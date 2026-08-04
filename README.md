@@ -59,20 +59,21 @@ See [setting up data providers](docs/setup-dataproviders.md)
 |Get .torrent|🟢Supported|🟢Supported|🟡With daemon access to config dir|
 |Prefill default save path|🟢Supported|🟢Supported|🟢Supported|
 |Pieces progress bar|🟢Supported|🟢Supported|🟢Supported|
-|Extended statistics|🔴Not implemented|🔴Not implemented|🔴Not implemented|
-|Partial downloads|🔴Not implemented|🔴Not implemented|🔴Not implemented|
-|Add new tracker|🔴Not implemented|🟢Supported|🟢Supported|
-|Remove tracker|🔴Not implemented|🟢Supported|🟢Supported|
+|Partial downloads|🟢Supported|🟢Supported|🟢Supported|
+|Add new tracker|🔴Unsupported by daemon|🟢Supported|🟢Supported|
+|Remove tracker|🔴Unsupported by daemon|🟢Supported|🟢Supported|
 |Replace tracker|🟡Hacky workaround*|🟢Supported|🟢Supported|
 |Global download statistics|🟡Workaround*|🟢Supported|🟢Supported|
 |Global upload statistics|🟡Workaround*|🟢Supported|🟢Supported|
 |Global ratio statistics|🟡Workaround*|🟢Supported|🟢Supported|
 |Sequential downloads|🔴Unsupported by daemon|🟢Supported|🟢Supported|
+|Extended statistics|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |File renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Torrent renaming|🔴Not implemented|🔴Not implemented|🔴Not implemented|
 |Remote daemon settings|🟢Supported|🟢Supported|🟢Supported|
 |Daemon log inspection|🟡Supported*|🟢Supported|🟡Supported*|
 |Fast recheck|🟢Supported|🟢Supported|🟢Supported|
+|Magnet links|🔴Not implemented|🟢Supported|🔴Not implemented|
 
 _* - not directly supported by torrent daemon_
 

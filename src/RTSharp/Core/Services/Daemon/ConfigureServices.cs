@@ -70,32 +70,37 @@ public static class ConfigureServices
         var x509 = X509Certificate2.CreateFromPemFile(CertPath, KeyPath);
         var pkcs12 = X509CertificateLoader.LoadPkcs12(x509.Export(X509ContentType.Pkcs12), null);
 
-        var handler = new SocketsHttpHandler();
-        handler.InitialHttp2StreamWindowSize = 16 * 1024 * 1024;
-        handler.PlaintextStreamFilter = (context, cancellationToken) => {
-            if (context.PlaintextStream is System.Net.Security.SslStream tlsStm)
-                DaemonService.RemoteCipherSuites[serverId] = tlsStm.NegotiatedCipherSuite.ToString();
-            return ValueTask.FromResult(context.PlaintextStream);
-        };
+        var handler = new SocketsHttpHandler {
+            InitialHttp2StreamWindowSize = 16 * 1024 * 1024,
+            Proxy = GlobalProxy.Instance,
+            UseProxy = true,
+            Properties = {
+                { "__GrpcLoadBalancingDisabled", true }
+            },
+            PlaintextStreamFilter = (context, cancellationToken) => {
+                if (context.PlaintextStream is System.Net.Security.SslStream tlsStm)
+                    DaemonService.RemoteCipherSuites[serverId] = tlsStm.NegotiatedCipherSuite.ToString();
+                return ValueTask.FromResult(context.PlaintextStream);
+            },
 
-        handler.SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
-            ClientCertificates = [ pkcs12 ],
+            SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
+                ClientCertificates = [pkcs12],
 
-            RemoteCertificateValidationCallback = (httpRequestMessage, cert, certChain, policyErrors) => {
-                if (cert == null)
-                    return false;
+                RemoteCertificateValidationCallback = (httpRequestMessage, cert, certChain, policyErrors) => {
+                    if (cert == null)
+                        return false;
 
-                if (fxCustomValidateCert != null)
-                    return cert is X509Certificate2 validatedCert && fxCustomValidateCert(validatedCert);
+                    if (fxCustomValidateCert != null)
+                        return cert is X509Certificate2 validatedCert && fxCustomValidateCert(validatedCert);
 
-                var thumbprint = server.TrustedThumbprint;
+                    var thumbprint = server.TrustedThumbprint;
 
-                if (thumbprint?.Equals(cert.GetCertHashString(HashAlgorithmName.SHA256), StringComparison.OrdinalIgnoreCase) != true) {
-                    var result = Dispatcher.UIThread.InvokeAsync(async () => {
-                        var wnd = MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
-                            Icon = Icon.Warning,
-                            ContentTitle = "RT#",
-                            ContentMessage = (!String.IsNullOrEmpty(thumbprint) ?
+                    if (thumbprint?.Equals(cert.GetCertHashString(HashAlgorithmName.SHA256), StringComparison.OrdinalIgnoreCase) != true) {
+                        var result = Dispatcher.UIThread.InvokeAsync(async () => {
+                            var wnd = MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
+                                Icon = Icon.Warning,
+                                ContentTitle = "RT#",
+                                ContentMessage = (!String.IsNullOrEmpty(thumbprint) ?
 @"```
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
@@ -111,44 +116,45 @@ It is also possible that a host key has just been changed.
 ```
 {cert.ToString(true)}
 ```",
-                            Markdown = true,
-                            ButtonDefinitions = new[] {
-                                new ButtonDefinition() {
-                                    IsDefault = false,
-                                    Name = "Yes"
+                                Markdown = true,
+                                ButtonDefinitions = new[] {
+                                    new ButtonDefinition() {
+                                        IsDefault = false,
+                                        Name = "Yes"
+                                    },
+                                    new ButtonDefinition() {
+                                        IsDefault = true,
+                                        Name = "No"
+                                    },
                                 },
-                                new ButtonDefinition() {
-                                    IsDefault = true,
-                                    Name = "No"
-                                },
-                            },
-                            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                            MaxWidth = 700,
-                            Width = 700
-                        });
+                                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                                MaxWidth = 700,
+                                Width = 700
+                            });
 
-                        var res = await wnd.ShowWindowAsync();
-                        return res == "Yes";
-                    }).GetAwaiter().GetResult();
+                            var res = await wnd.ShowWindowAsync();
+                            return res == "Yes";
+                        }).GetAwaiter().GetResult();
 
-                    if (result) {
-                        server.TrustedThumbprint = cert.GetCertHashString(HashAlgorithmName.SHA256);
+                        if (result) {
+                            server.TrustedThumbprint = cert.GetCertHashString(HashAlgorithmName.SHA256);
 
-                        using var scope = ServiceProvider.CreateScope();
-                        var config = scope.ServiceProvider.GetRequiredService<Config>();
-                        config.Rewrite().GetAwaiter().GetResult();
+                            using var scope = ServiceProvider.CreateScope();
+                            var config = scope.ServiceProvider.GetRequiredService<Config>();
+                            config.Rewrite().GetAwaiter().GetResult();
+                        }
+
+                        if (result && cert is X509Certificate2 acceptedCert)
+                            DaemonService.RemoteCerts[serverId] = acceptedCert;
+
+                        return result;
                     }
 
-                    if (result && cert is X509Certificate2 acceptedCert)
-                        DaemonService.RemoteCerts[serverId] = acceptedCert;
+                    if (cert is X509Certificate2 trustedCert)
+                        DaemonService.RemoteCerts[serverId] = trustedCert;
 
-                    return result;
+                    return true;
                 }
-
-                if (cert is X509Certificate2 trustedCert)
-                    DaemonService.RemoteCerts[serverId] = trustedCert;
-
-                return true;
             }
         };
 

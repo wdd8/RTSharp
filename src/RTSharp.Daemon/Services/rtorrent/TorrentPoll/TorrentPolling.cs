@@ -48,7 +48,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             ForceLoopSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        private readonly record struct SpeedSample(DateTime Date, InfoHashDictionary<(ulong Uploaded, ulong Downloaded)> Values);
+        private readonly record struct SpeedSample(DateTime Date, InfoHashDictionary<(ulong Uploaded, ulong CompletedSize)> Values);
 
         private readonly List<SpeedSample> GlobalHistory = [];
 
@@ -58,7 +58,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             var c = 0;
             foreach (var h in History) {
                 if (h.Values.TryGetValue(Hash, out var t))
-                    buf[c++] = (h.Date, (long)(Uploaded ? t.Uploaded : t.Downloaded));
+                    buf[c++] = (h.Date, (long)(Uploaded ? t.Uploaded : t.CompletedSize));
             }
             return SpeedMovingAverage.CalculateSpeed(buf[..c]);
         }
@@ -75,11 +75,18 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             return ret;
         }
 
-        private readonly string AllTorrentsXml = "<?xml version=\"1.0\" ?><methodCall><methodName>d.multicall2</methodName><params><param><value><string></string></value></param><param><value><string>main</string></value></param><param><value><string>"
+        private static string AllTorrentsXml(bool IsV16) => IsV16 ? AllTorrentsXmlV16 : AllTorrentsXmlOld;
+
+        private static readonly string AllTorrentsXmlOld = BuildAllTorrentsXml("d.multicall2");
+        private static readonly string AllTorrentsXmlV16 = BuildAllTorrentsXml("d.multicall");
+
+        private static string BuildAllTorrentsXml(string MulticallMethod) =>
+                "<?xml version=\"1.0\" ?><methodCall><methodName>" + MulticallMethod + "</methodName><params><param><value><string></string></value></param><param><value><string>main</string></value></param><param><value><string>"
                 + "d.hash=</string></value></param><param><value><string>"
                 + "d.name=</string></value></param><param><value><string>"
                 + "d.size_bytes=</string></value></param><param><value><string>"
                 + "d.completed_bytes=</string></value></param><param><value><string>"
+                + "d.down.total=</string></value></param><param><value><string>"
                 + "d.up.total=</string></value></param><param><value><string>"
                 + "d.down.rate=</string></value></param><param><value><string>"
                 + "d.creation_date=</string></value></param><param><value><string>"
@@ -91,6 +98,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 + "d.directory=</string></value></param><param><value><string>"
                 + "d.priority=</string></value></param><param><value><string>"
                 + "d.chunk_size=</string></value></param><param><value><string>"
+                + "d.complete=</string></value></param><param><value><string>"
+                + "d.wanted_chunks=</string></value></param><param><value><string>"
                 + "d.skip.total=</string></value></param><param><value><string>"
                 + "cat=\"$t.multicall=d.hash=,t.url=,cat=^,t.is_enabled=,cat=^,t.is_usable=,cat=^,t.scrape_complete=,cat=^,t.scrape_incomplete=,cat=^,t.scrape_downloaded=,cat=^,t.scrape_time_last=,cat=^,t.normal_interval=,cat=^,t.latest_event=,cat=|\""
                 + "</string></value></param><param><value><string>"
@@ -109,8 +118,9 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
             using (var scope = ScopeFactory.CreateScope()) {
                 var comm = scope.ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
+                var version = scope.ServiceProvider.GetRequiredKeyedService<RtorrentVersionService>(InstanceKey);
 
-                response = await comm.Get(AllTorrentsXml);
+                response = await comm.Get(AllTorrentsXml(await version.IsV16()));
             }
 
             using (response) {
@@ -133,6 +143,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     var hashRaw = XMLUtils.GetValue<string>(ref xml);
                     var name = XMLUtils.GetValue<string>(ref xml);
                     var totalSize = XMLUtils.GetValue<ulong>(ref xml);
+                    var completedBytes = XMLUtils.GetValue<ulong>(ref xml);
                     var downloaded = XMLUtils.GetValue<ulong>(ref xml);
                     var uploaded = XMLUtils.GetValue<ulong>(ref xml);
 
@@ -150,6 +161,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     var directory = XMLUtils.Decode(XMLUtils.GetValue<string>(ref xml));
                     var priorityRaw = XMLUtils.GetValue<ulong>(ref xml);
                     var chunkSize = XMLUtils.GetValue<ulong>(ref xml);
+                    var isComplete = XMLUtils.GetValue<bool>(ref xml);
+                    var wantedChunks = XMLUtils.GetValue<ulong>(ref xml);
                     var skippedTotal = XMLUtils.GetValue<ulong>(ref xml);
 
                     var trackersRaw = XMLUtils.GetValue<string>(ref xml);
@@ -200,9 +213,9 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     }
 
                     var torrent = Mapper.MapFromRaw(
-                        key, name, totalSize, downloaded, uploaded, downSpeed,
+                        key, name, totalSize, downloaded, completedBytes, uploaded, downSpeed,
                         creationDateRaw, addDateRaw, finishedDateRaw, label, torrentComment,
-                        isMultiFile, directory, priorityRaw, chunkSize, skippedTotal,
+                        isMultiFile, directory, priorityRaw, chunkSize, isComplete, wantedChunks, skippedTotal,
                         statusMessage, isOpenRaw, isActiveRaw, isHashCheckingRaw, isPrivateRaw,
                         seedersConnected, peersConnected, curTrackers);
 
@@ -343,9 +356,9 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
                 var now = DateTime.UtcNow;
 
-                var speedValues = new InfoHashDictionary<(ulong Uploaded, ulong Downloaded)>();
+                var speedValues = new InfoHashDictionary<(ulong Uploaded, ulong CompletedSize)>();
                 foreach (var (hash, torrent) in allTorrents.List)
-                    speedValues[hash] = (torrent.Uploaded, torrent.Downloaded);
+                    speedValues[hash] = (torrent.Uploaded, torrent.CompletedSize);
 
                 GlobalHistory.Add(new SpeedSample(now, speedValues));
                 if (GlobalHistory.Count > SPEED_HISTORY_MAX)

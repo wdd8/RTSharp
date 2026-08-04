@@ -42,11 +42,11 @@ namespace RTSharp.ViewModels.TorrentListing
 
         private async Task PiecesModelUpdates(Channel<(Models.Torrent, IList<PieceState>)> PiecesChanges, CancellationToken SelectionChange)
         {
-            try {
-                await foreach (var (_, pieces) in PiecesChanges.Reader.ReadAllAsync(SelectionChange)) {
-                    GeneralInfoViewModel.Pieces = pieces;
-                }
-            } catch (OperationCanceledException) {
+            await foreach (var (_, pieces) in PiecesChanges.Reader.ReadAllAsync()) {
+                if (SelectionChange.IsCancellationRequested)
+                    break;
+
+                GeneralInfoViewModel.Pieces = pieces;
             }
         }
 
@@ -56,35 +56,35 @@ namespace RTSharp.ViewModels.TorrentListing
             Models.File[]? leaves = null;
             FilesViewModel.ClearRoot();
 
-            try {
-                await foreach (var update in FilesChanges.Reader.ReadAllAsync(SelectionChange)) {
-                    if (lastFetchedFor == null || !update.FetchedFor.Hash.SequenceEqual(lastFetchedFor.Hash) || update.FetchedFor.DataOwner != lastFetchedFor.DataOwner) {
-                        FilesViewModel.ClearRoot();
-                        leaves = null;
-                    }
+            await foreach (var update in FilesChanges.Reader.ReadAllAsync()) {
+                if (SelectionChange.IsCancellationRequested)
+                    break;
 
-                    if (update.MultiFile != null)
-                        FilesViewModel.MultiFile = update.MultiFile.Value;
-
-                    if (update.FullUpdate != null) {
-                        FilesViewModel.SetRoot(update.FullUpdate.Value.Root);
-                        leaves = update.FullUpdate.Value.Leaves;
-                    } else if (update.Deltas != null && leaves != null && update.Deltas.Count > 0) {
-                        foreach (var delta in update.Deltas) {
-                            if (delta.Index < 0 || delta.Index >= leaves.Length) {
-                                // TODO: force full update?
-                                continue;
-                            }
-                            leaves[delta.Index]?.ApplyDelta(delta);
-                        }
-
-                        if (FilesViewModel.File != null)
-                            Models.File.RecomputeFolders(FilesViewModel.File);
-                    }
-
-                    lastFetchedFor = update.FetchedFor;
+                if (lastFetchedFor == null || !update.FetchedFor.Hash.SequenceEqual(lastFetchedFor.Hash) || update.FetchedFor.DataOwner != lastFetchedFor.DataOwner) {
+                    FilesViewModel.ClearRoot();
+                    leaves = null;
                 }
-            } catch (OperationCanceledException) {
+
+                if (update.MultiFile != null)
+                    FilesViewModel.MultiFile = update.MultiFile.Value;
+
+                if (update.FullUpdate != null) {
+                    FilesViewModel.SetRoot(update.FullUpdate.Value.Root);
+                    leaves = update.FullUpdate.Value.Leaves;
+                } else if (update.Deltas != null && leaves != null && update.Deltas.Count > 0) {
+                    foreach (var delta in update.Deltas) {
+                        if (delta.Index < 0 || delta.Index >= leaves.Length) {
+                            // TODO: force full update?
+                            continue;
+                        }
+                        leaves[delta.Index]?.ApplyDelta(delta);
+                    }
+
+                    if (FilesViewModel.File != null)
+                        Models.File.RecomputeFolders(FilesViewModel.File);
+                }
+
+                lastFetchedFor = update.FetchedFor;
             }
         }
 
@@ -96,39 +96,46 @@ namespace RTSharp.ViewModels.TorrentListing
                 var fileCache = scope.ServiceProvider.GetRequiredService<TorrentFileCache>();
                 var propertiesCache = scope.ServiceProvider.GetRequiredService<TorrentPropertiesCache>();
 
-                bool canUseCached = config.Caching.Value.FilesCachingEnabled && !current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) && (current.CompletedSize == 0 || current.IsCompleted);
+                bool canUseCached = config.Caching.Value.FilesCachingEnabled && !current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) && !current.IsPartial && current.IsCompleted;
                 if (canUseCached) {
-                    var cachedView = CancellationTokenSource.CreateLinkedTokenSource(selectionChange);
+                    using var cachedView = CancellationTokenSource.CreateLinkedTokenSource(selectionChange);
                     void onTorrentChanged(object? sender, PropertyChangedEventArgs e)
                     {
-                        if (e.PropertyName != nameof(Models.Torrent.InternalState) && e.PropertyName != nameof(Models.Torrent.CompletedSize))
+                        if (e.PropertyName != nameof(Models.Torrent.InternalState) && e.PropertyName != nameof(Models.Torrent.CompletedSize) && e.PropertyName != nameof(Models.Torrent.IsPartial))
                             return;
 
-                        if (current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) || (current.CompletedSize > 0 && !current.IsCompleted)) {
+                        if (current.InternalState.HasFlag(TORRENT_STATE.ACTIVE) || current.IsPartial || !current.IsCompleted) {
                             canUseCached = false;
-                            cachedView.Cancel();
+                            try {
+                                cachedView.Cancel();
+                            } catch { }
                         }
                     }
 
                     current.PropertyChanged += onTorrentChanged;
 
-                    var cachedFiles = await fileCache.GetCachedFileEntries(current.Hash);
-                    var cachedProps = await propertiesCache.GetCachedTorrentProperties(current.Hash);
+                    try {
+                        var cachedFiles = await fileCache.GetCachedFileEntries(current.Hash);
+                        var cachedProps = await propertiesCache.GetCachedTorrentProperties(current.Hash);
 
-                    if (cachedFiles.Any() && cachedProps != null) {
-                        var built = Models.File.FromCache(current, cachedProps.IsMultiFile, cachedFiles, current.IsCompleted);
-                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, built, null, cachedProps.IsMultiFile));
+                        if (cachedFiles.Any() && cachedProps != null) {
+                            var built = Models.File.FromCache(current, cachedProps.IsMultiFile, cachedFiles, current.IsCompleted);
+                            FilesChanges.Writer.TryWrite(new FilesUpdate(current, built, null, cachedProps.IsMultiFile));
 
-                        try {
-                            await Task.Delay(-1, cachedView.Token);
-                        } catch {
-                        } finally {
-                            current.PropertyChanged -= onTorrentChanged;
+                            await WaitForCancellation(cachedView.Token);
+
+                            if (selectionChange.IsCancellationRequested)
+                                return;
+
+                            Log.Logger.Debug("Torrent state changed, switching to live updates");
                         }
-
-                        Log.Logger.Debug("Torrent state changed, switching to live updates");
+                    } finally {
+                        current.PropertyChanged -= onTorrentChanged;
                     }
                 }
+
+                if (selectionChange.IsCancellationRequested)
+                    return;
 
                 if (current.DataOwner.Instance.Capabilities.GetFileChanges)
                     await StreamFileChanges(current, FilesChanges, config, canUseCached, fileCache, propertiesCache, selectionChange);
@@ -203,9 +210,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 }
 
 end:
-                try {
-                    await delayTask;
-                } catch { }
+                await Task.WhenAny(delayTask);
             }
         }
 
@@ -215,7 +220,8 @@ end:
                 while (!selectionChange.IsCancellationRequested) {
                     if (!current.DataOwner.Instance.Capabilities.GetPieces) {
                         PiecesChanges.Writer.TryWrite((current, []));
-                        await Task.Delay(-1, selectionChange);
+                        await WaitForCancellation(selectionChange);
+                        return;
                     }
 
                     using var scope = Core.ServiceProvider.CreateScope();
@@ -225,12 +231,12 @@ end:
 
                     IList<PieceState> pieces;
 
-                    if (current.IsCompleted) {
+                    if (current.IsCompleted && !current.IsPartial) {
                         pieces = [ PieceState.Downloaded ];
-                        PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to CompletedSize change instead?
-                    } else if (current.CompletedSize == 0) {
-                        pieces = [ PieceState.NotDownloaded ];
-                        PiecesChanges.Writer.TryWrite((current, pieces)); // TODO: listen to CompletedSize change instead?
+                        PiecesChanges.Writer.TryWrite((current, pieces));
+                    } else if (current.MagnetDummy) {
+                        pieces = [ PieceState.Unknown ];
+                        PiecesChanges.Writer.TryWrite((current, pieces));
                     } else {
                         try {
                             pieces = (await current!.DataOwner.Instance.GetPieces(new List<Torrent> { current.ToPluginModel() }, selectionChange)).FirstOrDefault().Value;
@@ -245,9 +251,7 @@ end:
                     }
 
 end:
-                    try {
-                        await delayTask;
-                    } catch { }
+                    await Task.WhenAny(delayTask);
                 }
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "GetPiecesChanges task has died.");

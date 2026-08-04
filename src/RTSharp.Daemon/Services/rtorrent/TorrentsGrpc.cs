@@ -80,10 +80,10 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public Task GetTorrentFileUpdates(GetTorrentFileUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsFilesResponse> Res, CancellationToken CancellationToken)
         {
-            var hash = Req.InfoHash.ToByteArray();
+            var torrents = new Torrents { Hashes = { Req.InfoHash } };
 
             return TorrentFileUpdatesStreamer.Stream(async _ => {
-                var reply = await TorrentOpService.GetTorrentsFiles([ hash ]);
+                var reply = await GetTorrentsFiles(torrents);
                 return reply.Reply[0];
             }, Req.Interval.ToTimeSpan(), Res, CancellationToken);
         }

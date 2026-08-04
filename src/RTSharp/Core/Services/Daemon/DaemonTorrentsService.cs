@@ -14,6 +14,8 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Utils;
+using System.Diagnostics;
+using System.Text;
 
 namespace RTSharp.Core.Services.Daemon
 {
@@ -303,7 +305,7 @@ namespace RTSharp.Core.Services.Daemon
                 } catch (Exception ex) {
                     channel.Writer.Complete(ex);
                 }
-            }, CancellationToken);
+            });
 
             return channel;
         }
@@ -353,7 +355,7 @@ namespace RTSharp.Core.Services.Daemon
             return new Guid(resp.Value.Span);
         }
 
-        public async Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In)
+        public async Task<TorrentStatuses> AddTorrents(IList<(byte[]? Data, string? MagnetUri, string? Filename, AddTorrentsOptions Options)> In)
         {
             var call = TorrentClient.AddTorrents(headers: DataProvider.GetBuiltInDataProviderGrpcHeaders());
             
@@ -363,18 +365,30 @@ namespace RTSharp.Core.Services.Daemon
                         Id = x.ToString(),
                         Path = In[x].Options.RemoteTargetPath,
                         Filename = In[x].Filename ?? "",
-                        FastResume = In[x].Options.FastResume
+                        FastResume = In[x].Options.FastResume,
+                        Magnet = In[x].MagnetUri != null
                     }
                 });
             }
             for (var x = 0;x < In.Count;x++) {
-                foreach (var chunk in In[x].Data.Chunk(65535)) {
+                if (In[x].Data != null) {
+                    foreach (var chunk in In[x].Data!.Chunk(65535)) {
+                        await call.RequestStream.WriteAsync(new NewTorrentsData {
+                            TData = new NewTorrentsData.Types.TorrentData {
+                                Id = x.ToString(),
+                                Chunk = chunk.ToByteString()
+                            }
+                        });
+                    }
+                } else if (In[x].MagnetUri != null) {
                     await call.RequestStream.WriteAsync(new NewTorrentsData {
                         TData = new NewTorrentsData.Types.TorrentData {
                             Id = x.ToString(),
-                            Chunk = chunk.ToByteString()
+                            Chunk = Encoding.UTF8.GetBytes(In[x].MagnetUri!).ToByteString()
                         }
                     });
+                } else {
+                    Debug.Assert(false);
                 }
             }
 
@@ -546,6 +560,15 @@ namespace RTSharp.Core.Services.Daemon
             await TorrentClient.SetSequentialDownloadAsync(new SetSequentialDownloadArgs {
                 InfoHashes = { Hashes.Select(x => x.ToByteString()) },
                 Enabled = Enabled
+            }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders(), cancellationToken: cancellationToken);
+        }
+
+        public async Task SetFilePriority(byte[] Hash, IList<int> Indexes, File.PRIORITY Priority, CancellationToken cancellationToken)
+        {
+            await TorrentClient.SetFilePriorityAsync(new SetFilePriorityArgs {
+                InfoHash = Hash.ToByteString(),
+                Indexes = { Indexes.Select(x => (uint)x) },
+                Priority = Mapper.MapToProto(Priority)
             }, headers: DataProvider.GetBuiltInDataProviderGrpcHeaders(), cancellationToken: cancellationToken);
         }
     }

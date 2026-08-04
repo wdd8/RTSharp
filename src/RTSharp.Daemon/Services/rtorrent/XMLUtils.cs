@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Buffers.Text;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -107,18 +108,34 @@ namespace RTSharp.Daemon.Services.rtorrent
             return slice;
         }
 
+        private const int CONTEXT_CHARS = 1024;
+
+        public static string DescribePosition(SequenceReader<byte> In)
+        {
+            var before = GetUtf8String(In.Sequence.Slice(0, In.Consumed));
+            var after = GetUtf8String(In.Sequence.Slice(In.Consumed));
+
+            return (before.Length > CONTEXT_CHARS ? "[...]" + before[^CONTEXT_CHARS..] : before) +
+                   " >>> " +
+                   (after.Length > CONTEXT_CHARS ? after[..CONTEXT_CHARS] + "[...]" : after);
+        }
+
+        [DoesNotReturn]
+        private static void ThrowUnexpected(SequenceReader<byte> In, string Expected) =>
+            throw new InvalidDataException($"Malformed response at pos {In.Consumed}, expected {Expected}:{Environment.NewLine}{DescribePosition(In)}");
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SeekTo(ref SequenceReader<byte> In, ReadOnlySpan<byte> What)
         {
-            var found = In.TryReadTo(out ReadOnlySequence<byte> _, What, advancePastDelimiter: true);
-            Debug.Assert(found);
+            if (!In.TryReadTo(out ReadOnlySequence<byte> _, What, advancePastDelimiter: true))
+                ThrowUnexpected(In, Encoding.UTF8.GetString(What));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SeekToBefore(ref SequenceReader<byte> In, ReadOnlySpan<byte> What)
         {
-            var found = In.TryReadTo(out ReadOnlySequence<byte> _, What, advancePastDelimiter: false);
-            Debug.Assert(found);
+            if (!In.TryReadTo(out ReadOnlySequence<byte> _, What, advancePastDelimiter: false))
+                ThrowUnexpected(In, Encoding.UTF8.GetString(What));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -130,7 +147,8 @@ namespace RTSharp.Daemon.Services.rtorrent
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SeekFixed(ref SequenceReader<byte> In, ReadOnlySpan<byte> What)
         {
-            Debug.Assert(In.IsNext(What, advancePast: false));
+            if (!In.IsNext(What, advancePast: false))
+                ThrowUnexpected(In, Encoding.UTF8.GetString(What));
             In.Advance(What.Length);
         }
 
@@ -149,11 +167,11 @@ namespace RTSharp.Daemon.Services.rtorrent
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ReadOnlySequence<byte> GetBytesUntilNextTag(ref SequenceReader<byte> In)
         {
-            var found = In.TryReadTo(out ReadOnlySequence<byte> ret, ENDING_TAG, advancePastDelimiter: true);
-            Debug.Assert(found);
+            if (!In.TryReadTo(out ReadOnlySequence<byte> ret, ENDING_TAG, advancePastDelimiter: true))
+                ThrowUnexpected(In, "</");
 
-            found = In.TryAdvanceTo((byte)'>', advancePastDelimiter: true);
-            Debug.Assert(found);
+            if (!In.TryAdvanceTo((byte)'>', advancePastDelimiter: true))
+                ThrowUnexpected(In, ">");
 
             return ret;
         }
@@ -165,8 +183,8 @@ namespace RTSharp.Daemon.Services.rtorrent
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SeekNextTag(ref SequenceReader<byte> In)
         {
-            var found = In.TryAdvanceTo((byte)'>', advancePastDelimiter: true);
-            Debug.Assert(found);
+            if (!In.TryAdvanceTo((byte)'>', advancePastDelimiter: true))
+                ThrowUnexpected(In, ">");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -359,8 +377,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                     buf[len++] = b;
             }
 
-            Debug.Assert(len >= 8);
-            Debug.Assert(buf[..8].SequenceEqual("<value><"u8));
+            if (len < 8 || !buf[..8].SequenceEqual("<value><"u8))
+                ThrowUnexpected(In, "<value><");
 
             if (len < 9)
                 return null;

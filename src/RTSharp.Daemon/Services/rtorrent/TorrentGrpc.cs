@@ -1160,6 +1160,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 ("d.name", []),
                 ("d.size_bytes", []),
                 ("d.completed_bytes", []),
+                ("d.down.total", []),
                 ("d.up.total", []),
                 ("d.down.rate", []),
                 ("d.creation_date", []),
@@ -1171,6 +1172,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 ("d.directory", []),
                 ("d.priority", []),
                 ("d.chunk_size", []),
+                ("d.complete", []),
+                ("d.wanted_chunks", []),
                 ("d.skip.total", []),
                 ("t.multicall", [ "<string></string>", "t.url=", "t.is_enabled=", "t.is_usable=", "t.scrape_complete=", "t.scrape_incomplete=", "t.scrape_downloaded=", "t.scrape_time_last=", "t.normal_interval=", "t.latest_event=" ]),
                 ("d.message", []),
@@ -1201,6 +1204,7 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             var name = ReadEntry<string>(ref result);
             var totalSize = ReadEntry<ulong>(ref result);
+            var completedBytes = ReadEntry<ulong>(ref result);
             var downloaded = ReadEntry<ulong>(ref result);
             var uploaded = ReadEntry<ulong>(ref result);
             var downSpeed = ReadEntry<ulong>(ref result);
@@ -1214,6 +1218,8 @@ namespace RTSharp.Daemon.Services.rtorrent
             var directory = XMLUtils.Decode(ReadEntry<string>(ref result));
             var priorityRaw = ReadEntry<ulong>(ref result);
             var chunkSize = ReadEntry<ulong>(ref result);
+            var isComplete = ReadEntry<bool>(ref result);
+            var wantedChunks = ReadEntry<ulong>(ref result);
             var skippedTotal = ReadEntry<ulong>(ref result);
 
             var curTrackers = new List<TorrentTracker>();
@@ -1250,9 +1256,9 @@ namespace RTSharp.Daemon.Services.rtorrent
             var peersConnected = ReadEntry<ulong>(ref result);
 
             return Mapper.MapFromRaw(
-                hash, name, totalSize, downloaded, uploaded, downSpeed,
+                hash, name, totalSize, downloaded, completedBytes, uploaded, downSpeed,
                 creationDateRaw, addDateRaw, finishedDateRaw, label, torrentComment,
-                isMultiFile, directory, priorityRaw, chunkSize, skippedTotal,
+                isMultiFile, directory, priorityRaw, chunkSize, isComplete, wantedChunks, skippedTotal,
                 statusMessage, isOpen, isActive, isHashChecking, isPrivate,
                 seedersConnected, peersConnected, curTrackers);
         }
@@ -1507,6 +1513,30 @@ namespace RTSharp.Daemon.Services.rtorrent
             xml.Append("</data></array></value></param></params></methodCall>");
 
             using (await Scgi.Get(xml.ToString(), cancellationToken)) { }
+
+            return new();
+        }
+
+        public async Task<Empty> SetFilePriority(ByteString InfoHash, IEnumerable<uint> Indexes, TorrentsFilesReply.Types.FilePriority Priority, CancellationToken cancellationToken)
+        {
+            var sHash = Convert.ToHexString(ToNative(InfoHash.Span));
+
+            var priority = Priority switch {
+                TorrentsFilesReply.Types.FilePriority.DontDownload => 0,
+                TorrentsFilesReply.Types.FilePriority.Normal => 1,
+                TorrentsFilesReply.Types.FilePriority.High => 2,
+                _ => throw new RpcException(new Status(StatusCode.InvalidArgument, "Unknown file priority"))
+            };
+
+            var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
+            foreach (var index in Indexes)
+                xml.Append("<value><struct><member><name>methodName</name><value><string>f.priority.set</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + ":f" + index + "</string></value><value><i4>" + priority + "</i4></value></data></array></value></member></struct></value>");
+            xml.Append("<value><struct><member><name>methodName</name><value><string>d.update_priorities</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value></data></array></value></member></struct></value>");
+            xml.Append("</data></array></value></param></params></methodCall>");
+
+            using (var resp = await Scgi.Get(xml.ToString(), cancellationToken)) {
+                Logger.LogInformation("SetFilePriority: " + XMLUtils.GetUtf8String(resp.Body).Replace("\r", "").Replace("\n", "\\n"));
+            }
 
             return new();
         }

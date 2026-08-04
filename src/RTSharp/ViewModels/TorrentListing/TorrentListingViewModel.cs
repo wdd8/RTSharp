@@ -1,11 +1,10 @@
 using Avalonia.Collections;
 using Avalonia.Controls;
-using Avalonia.Controls.DataGridConditionalFormatting;
 using Avalonia.Controls.DataGridFiltering;
 using Avalonia.Controls.DataGridSearching;
+using Avalonia.Controls.DataGridSelection;
 using Avalonia.Controls.DataGridSorting;
 using Avalonia.Controls.Primitives;
-using Avalonia.Controls.Selection;
 using Avalonia.Media;
 using Avalonia.Threading;
 
@@ -33,6 +32,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -78,7 +78,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
         OwnsViewSorts = true,
         KeepSecondarySorts = true
     };
-    public SelectionModel<Torrent> SelectionModel { get; } = new SelectionModel<Torrent> {
+    public DataGridSelectionModel<Torrent> SelectionModel { get; } = new DataGridSelectionModel<Torrent> {
         SingleSelect = false
     };
     public FilteringModel FilteringModel { get; } = new() {
@@ -119,8 +119,8 @@ public partial class TorrentListingViewModel : ObservableViewModel
 
     public Geometry? Icon => null;
 
-    public Func<string?> CaptureGridState = null!; // view set
-    public Func<double[]?> CaptureGridRowHeights = null!; // view set
+    public Func<string?>? CaptureGridState; // view set
+    public Func<double[]?>? CaptureGridRowHeights; // view set
     public Action<object> ScrollToItem = null!; // view set
 
     static TorrentListingViewModel()
@@ -556,9 +556,32 @@ public partial class TorrentListingViewModel : ObservableViewModel
         }
     }
 
-    private void UpdateTorrentInChildViewModels(IReadOnlyList<Torrent>? NewTorrents)
+    private void ClearSummary()
     {
-        if (NewTorrents?.Count != 1) {
+        GeneralInfoViewModel.Summary = null;
+    }
+
+    private void UpdateSelectionSummary(IReadOnlyList<Torrent>? NewTorrents)
+    {
+        if (NewTorrents == null || NewTorrents.Count < 2) {
+            ClearSummary();
+            return;
+        }
+
+        GeneralInfoViewModel.Summary ??= new TorrentSelectionSummary();
+        GeneralInfoViewModel.Summary.Update(NewTorrents);
+    }
+
+    private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)
+    {
+        UpdateSelectionSummary(SelectionModel.SelectedItems);
+    }
+
+    private void UpdateTorrentInChildViewModels(IReadOnlyList<Torrent>? Selection)
+    {
+        UpdateSelectionSummary(Selection);
+
+        if (Selection?.Count != 1) {
             GeneralInfoViewModel.Torrent = null;
             FilesViewModel.Torrent = null;
             FilesViewModel.ClearRoot();
@@ -567,7 +590,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
             return;
         }
 
-        var newTorrent = NewTorrents[0];
+        var newTorrent = Selection[0];
 
         if (!IsCurrentTabTarget(newTorrent)) {
             FilesViewModel.ClearRoot();
@@ -579,6 +602,8 @@ public partial class TorrentListingViewModel : ObservableViewModel
             if (newTorrent.DataOwner.Instance.Capabilities.GetPieces) {
                 if (newTorrent.IsCompleted)
                     pieces = [ PieceState.Downloaded ];
+                else if (newTorrent.WantedSize == 0)
+                    pieces = [ PieceState.Unknown ];
                 else if (newTorrent.CompletedSize == 0)
                     pieces = [ PieceState.NotDownloaded ];
             }
@@ -608,18 +633,17 @@ public partial class TorrentListingViewModel : ObservableViewModel
     private Torrent? TorrentTabsTarget;
     private TORRENT_DETAILS_TAB? TorrentDetailsTabTaskTarget;
 
-    private void PollTorrentInfo(IReadOnlyList<Torrent> NewTorrents, bool ForceRestart = false)
+    private void PollTorrentInfo(IReadOnlyList<Torrent> Selection, bool ForceRestart = false)
     {
-        var newTorrent = NewTorrents.Count != 1 ? null : NewTorrents[0];
+        var selection = Selection.Count != 1 ? null : Selection[0];
 
-        if (!ForceRestart && newTorrent != null && IsCurrentTabTarget(newTorrent)) {
+        if (!ForceRestart && selection != null && IsCurrentTabTarget(selection)) {
             return;
         }
 
         if (SelectionChange != null) {
             SelectionChange.Cancel();
 
-            var oldCts = SelectionChange;
             var oldTasks = TorrentTabsTasks;
             _ = Task.Run(async () => {
                 try {
@@ -628,32 +652,36 @@ public partial class TorrentListingViewModel : ObservableViewModel
                 } catch (OperationCanceledException) {
                 } catch (Exception ex) {
                     Log.Logger.Error(ex, "One of torrent tasks failed");
-                } finally {
-                    oldCts.Dispose();
                 }
             });
         }
 
         SelectionChange = null;
         TorrentTabsTasks = null;
-        TorrentTabsTarget = newTorrent;
+        TorrentTabsTarget = selection;
 
-        if (newTorrent == null) {
+        if (selection == null) {
             TorrentDetailsTabTaskTarget = null;
             return;
         }
 
         SelectionChange = new CancellationTokenSource();
-        TorrentTabsTasks = StartTorrentTabTasks(newTorrent, SelectionChange.Token);
+        TorrentTabsTasks = StartTorrentTabTasks(selection, SelectionChange.Token);
+    }
+
+    private static async Task WaitForCancellation(CancellationToken Token)
+    {
+        var cancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using (Token.UnsafeRegister(static state => ((TaskCompletionSource)state!).SetResult(), cancelled))
+            await cancelled.Task;
     }
 
     private async Task StartTorrentTabTasks(Torrent NewTorrent, CancellationToken SelectionChange)
     {
-        try {
-            await Task.Delay(SelectionDebounceInterval, SelectionChange);
-        } catch (OperationCanceledException) {
+        await Task.WhenAny(Task.Delay(SelectionDebounceInterval, SelectionChange));
+
+        if (SelectionChange.IsCancellationRequested)
             return;
-        }
 
         Log.Logger.Debug("Starting tasks for: " + NewTorrent.Name);
 
@@ -709,11 +737,14 @@ public partial class TorrentListingViewModel : ObservableViewModel
 
         ContextPopulated = true;
         AddDisposable(TorrentPolling.AllLabelReferencesObservable.Subscribe(UpdateLabelsWithAdd));
+
+        TorrentPolling.Torrents.Changed += TorrentPolling_TorrentBatchChange;
+        AddDisposable(Disposable.Create(() => TorrentPolling.Torrents.Changed -= TorrentPolling_TorrentBatchChange));
     }
 
-    private void CurrentlySelectedTorrentsChanged(object? sender, SelectionModelSelectionChangedEventArgs<Torrent> e)
+    private void CurrentlySelectedTorrentsChanged(object? sender, DataGridSelectionModelChangedEventArgs<Torrent> e)
     {
-        var selection = (IReadOnlyList<Torrent>)e.SelectedItems;
+        var selection = SelectionModel.SelectedItems;
         UpdateTorrentInChildViewModels(selection);
         PollTorrentInfo(selection);
 

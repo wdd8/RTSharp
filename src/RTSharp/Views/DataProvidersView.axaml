@@ -59,7 +59,8 @@
                                                 YAxes="{Binding SpeedChartYAxes}"
                                                 LegendPosition="Hidden"
                                                 TooltipPosition="Hidden"
-                                                AnimationsSpeed="0:0:0.12"
+                                                AnimationsSpeed="0:0:0"
+                                                EasingFunction="{x:Null}"
                                                 HorizontalAlignment="Stretch"
                                                 VerticalAlignment="Stretch" />
                             <Border HorizontalAlignment="Right"

@@ -20,6 +20,7 @@ namespace RTSharp.Core;
 [JsonSerializable(typeof(Config.Models.UIState))]
 [JsonSerializable(typeof(Dictionary<string, Config.Models.Server>))]
 [JsonSerializable(typeof(Config.Models.Look))]
+[JsonSerializable(typeof(Config.Models.Proxy))]
 internal partial class SourceGenerationContext : JsonSerializerContext { }
 
 public class Config
@@ -86,6 +87,17 @@ public class Config
             public string TrustedThumbprint { get; set; } = null!; // set by deserializer
         }
 
+        public class Proxy
+        {
+            public bool Enabled { get; set; }
+
+            public string Address { get; set; } = "";
+
+            public string Username { get; set; } = "";
+
+            public string Password { get; set; } = "";
+        }
+
         public class Look
         {
             public class DataProvidersConfig
@@ -119,6 +131,7 @@ public class Config
         Services.Configure<Models.Caching>(Config.GetSection(nameof(Caching)));
         Services.Configure<Models.UIState>(Config.GetSection(nameof(UIState)));
         Services.Configure<Models.Look>(Config.GetSection(nameof(Look)));
+        Services.Configure<Models.Proxy>(Config.GetSection(nameof(Proxy)));
         Services.Configure<Dictionary<string, Models.Server>>(Config.GetSection(nameof(Servers)));
 
         Services.AddOptions();
@@ -152,6 +165,7 @@ public class Config
             json[nameof(UIState)] = JsonSerializer.SerializeToNode(UIState.Value, SourceGenerationContext.Default.UIState);
             json[nameof(Servers)] = JsonSerializer.SerializeToNode(Servers.Value, SourceGenerationContext.Default.DictionaryStringServer);
             json[nameof(Look)] = JsonSerializer.SerializeToNode(Look.Value, SourceGenerationContext.Default.Look);
+            json[nameof(Proxy)] = JsonSerializer.SerializeToNode(Proxy.Value, SourceGenerationContext.Default.Proxy);
             await File.WriteAllTextAsync(Shared.Abstractions.Consts.APP_CONFIG_PATH, json.ToJsonString(new JsonSerializerOptions() {
                 WriteIndented = true
             }));
@@ -194,6 +208,12 @@ public class Config
       "RowHeight": 21
     }
   },
+  "Proxy": {
+    "Enabled": false,
+    "Address": "",
+    "Username": "",
+    "Password": ""
+  },
   "Servers": {
   }
 }
@@ -208,4 +228,6 @@ public class Config
     public Lazy<Dictionary<string, Models.Server>> Servers => new Lazy<Dictionary<string, Models.Server>>(() => Provider.GetRequiredService<IOptionsMonitor<Dictionary<string, Models.Server>>>().CurrentValue);
 
     public Lazy<Models.Look> Look => new Lazy<Models.Look>(() => Provider.GetRequiredService<IOptionsMonitor<Models.Look>>().CurrentValue);
+
+    public Lazy<Models.Proxy> Proxy => new Lazy<Models.Proxy>(() => Provider.GetRequiredService<IOptionsMonitor<Models.Proxy>>().CurrentValue);
 }

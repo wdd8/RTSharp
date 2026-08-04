@@ -3,6 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RTSharpPluginVersion>$(RTSharpVersion)</RTSharpPluginVersion>
+    <RTSharpPluginReferencesHost>true</RTSharpPluginReferencesHost>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <OutputPath>$(SolutionDir)src\RTSharp\bin\$(Configuration)\$(TargetFramework)\plugins\ColoredRatio</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

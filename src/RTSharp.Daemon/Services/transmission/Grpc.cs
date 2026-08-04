@@ -681,6 +681,11 @@ namespace RTSharp.Daemon.Services.transmission
 
             // Could also fetch from torrent polling task if its live
             var torrents = (await client.TorrentGetAsync([ ToNativeHashString(Hash) ], [ TorrentFields.FILES, TorrentFields.HASH_STRING, TorrentFields.NAME, TorrentFields.FILE_STATS, TorrentFields.PIECE_SIZE ]))!.Torrents;
+
+            if (torrents.Length == 0) {
+                throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "No such torrent exists"));
+            }
+
             var x = torrents[0];
 
             return new TorrentsFilesReply.Types.TorrentsFiles {
@@ -1168,6 +1173,37 @@ namespace RTSharp.Daemon.Services.transmission
                 IDs = InfoHashes.Select(x => ToNativeHashString(x.Span)).ToArray(),
                 SequentialDownload = Enabled
             });
+
+            return new();
+        }
+
+        public async Task<Empty> SetFilePriority(ByteString InfoHash, IEnumerable<uint> Indexes, TorrentsFilesReply.Types.FilePriority Priority, CancellationToken cancellationToken)
+        {
+            var client = await Client.Init();
+
+            var indexes = Indexes.Select(x => (int)x).ToArray();
+
+            var settings = new Transmission.Net.Arguments.TorrentSettings {
+                IDs = new[] { ToNativeHashString(InfoHash.Span) }
+            };
+
+            switch (Priority) {
+                case TorrentsFilesReply.Types.FilePriority.DontDownload:
+                    settings.FilesUnwanted = indexes;
+                    break;
+                case TorrentsFilesReply.Types.FilePriority.Normal:
+                    settings.FilesWanted = indexes;
+                    settings.PriorityNormal = indexes;
+                    break;
+                case TorrentsFilesReply.Types.FilePriority.High:
+                    settings.FilesWanted = indexes;
+                    settings.PriorityHigh = indexes;
+                    break;
+                default:
+                    throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "Unknown file priority"));
+            }
+
+            await client.TorrentSetAsync(settings);
 
             return new();
         }

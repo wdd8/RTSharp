@@ -37,6 +37,13 @@ service GRPCTorrentService {
     rpc AddPeer (SinglePeerArgs) returns (google.protobuf.Empty);
     rpc BanPeer (SinglePeerArgs) returns (google.protobuf.Empty);
     rpc SetSequentialDownload (SetSequentialDownloadArgs) returns (google.protobuf.Empty);
+    rpc SetFilePriority (SetFilePriorityArgs) returns (google.protobuf.Empty);
+}
+
+message SetFilePriorityArgs {
+    bytes InfoHash = 1;
+    repeated uint32 Indexes = 2;
+    TorrentsFilesReply.FilePriority Priority = 3;
 }
 
 message TransmitTorrentDataInput {
@@ -176,6 +183,7 @@ message NewTorrentsData {
         string Path = 2;
         string Filename = 3;
         bool FastResume = 4;
+        bool Magnet = 5;
     }
     message TorrentData {
         string Id = 1;

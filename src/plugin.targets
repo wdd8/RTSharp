@@ -6,6 +6,26 @@
         <InformationalVersion>$(RTSharpPluginVersion)</InformationalVersion>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <!--
+            ""Build acceleration"" fucks up files sometimes
+        -->
+        <AccelerateBuildsInVisualStudio>false</AccelerateBuildsInVisualStudio>
+    </PropertyGroup>
+
+    <!--
+        Ghost reference to main project to enforce build order.
+        To actually refer to main project, RTSharpPluginReferencesHost prop
+        must be used.
+    -->
+    <ItemGroup Condition="'$(RTSharpPluginReferencesHost)' != 'true'">
+        <ProjectReference
+            Include="$(MSBuildThisFileDirectory)RTSharp\RTSharp.csproj"
+            ReferenceOutputAssembly="false"
+            Private="false"
+            ExcludeAssets="all" />
+    </ItemGroup>
+
     <Target Name="EnsureRTSharpPluginVersion" BeforeTargets="GetAssemblyVersion;CoreCompile">
         <Error
             Condition="'$(RTSharpPluginVersion)' == ''"

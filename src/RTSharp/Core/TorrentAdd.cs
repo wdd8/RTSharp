@@ -10,8 +10,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 
 using File = System.IO.File;
 
@@ -35,36 +37,53 @@ public class TorrentAdd
     {
         var plugin = Plugins.GetPluginOrDefault(Primary) ?? throw new NullReferenceException("No plugin corresponding to data provider found");
 
-        var tasks = new List<Task<(string? Filename, byte[] Content)>>();
+        var tasks = new List<Task<(string? Filename, byte[]? Content, string? MagnetUri)>>();
 
-        foreach (var (source, _) in Input.Sources) {
-            Func<Task<(string? Filename, byte[] Content)>> fx;
+        foreach (var (source, opts) in Input.Sources) {
+            Func<Task<(string? Filename, byte[]? Content, string? MagnetUri)>> fx;
 
             if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && !uri.IsFile) {
-                fx = async () => {
-                    var req = await Core.Http.Client.GetAsync(uri);
-                    var content = await req.Content.ReadAsByteArrayAsync();
-                    return (req.Content.Headers.ContentDisposition?.FileNameStar ?? Regex.Replace(req.Content.Headers.ContentDisposition?.FileName ?? "", "^\\\"(.*)\\\"$", "$1"), content);
-                };
+                if (uri.Scheme == "magnet") {
+                    if (opts.FastResume) {
+                        throw new InvalidOperationException("Cannot add magnet torrent with fastresume");
+                    }
+
+                    fx = async () => {
+                        if (!MagnetParser.TryParse(uri.OriginalString, out var magnet)) {
+                            throw new InvalidOperationException("Invalid magnet URI");
+                        }
+
+                        return (magnet.DisplayName ?? null, null, uri.OriginalString);
+                    };
+                } else {
+                    fx = async () => {
+                        var req = await Core.Http.Client.GetAsync(uri);
+                        var content = await req.Content.ReadAsByteArrayAsync();
+                        return (req.Content.Headers.ContentDisposition?.FileNameStar ?? Regex.Replace(req.Content.Headers.ContentDisposition?.FileName ?? "", "^\\\"(.*)\\\"$", "$1"), content, null);
+                    };
+                }
             } else
-                fx = async () => (Path.GetFileName(source), await File.ReadAllBytesAsync(source));
+                fx = async () => (Path.GetFileName(source), await File.ReadAllBytesAsync(source), null);
 
             tasks.Add(fx());
         }
 
-        var files = (await Task.WhenAll(tasks)).Select((data, x) => (data.Content, data.Filename, Input.Sources[x].Options)).ToList();
+        var files = (await Task.WhenAll(tasks)).Select((data, x) => (data.Content, data.MagnetUri, data.Filename, Input.Sources[x].Options)).ToList();
 
-        var filesByHash = new InfoHashDictionary<(byte[] Content, string Name, AddTorrentsOptions Options)>();
+        var filesByHash = new InfoHashDictionary<(byte[]? Content, string? MagnetUri, string Name, AddTorrentsOptions Options)>();
         {
             var bencodeParser = new BencodeParser();
-            foreach (var (content, _, options) in files) {
+            foreach (var (content, magnetUri, _, options) in files) {
+                if (magnetUri != null)
+                    continue;
+
                 try {
-                    using var ms = new MemoryStream(content);
+                    using var ms = new MemoryStream(content!);
                     var bTorrent = bencodeParser.Parse<BencodeNET.Objects.BDictionary>(ms);
                     var (v1, v2) = BencodeUtils.GetInfoHashes(bTorrent);
                     var name = BencodeUtils.GetName(bTorrent.Get<BencodeNET.Objects.BDictionary>("info"));
 
-                    filesByHash[(v2 ?? v1)!] = (content, name, options);
+                    filesByHash[(v2 ?? v1)!] = (content, null, name, options);
                 } catch (Exception ex) {
                     plugin.Logger.Error(ex, "Failed to parse a source .torrent for correlation");
                 }

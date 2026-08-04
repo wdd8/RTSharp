@@ -45,15 +45,10 @@ namespace RTSharp.ViewModels
                 return;
             }
 
-            long totalUPSpeed = 0;
-            long totalDLSpeed = 0;
-            foreach (var torrent in TorrentPolling.Torrents.GetSnapshot()) {
-                totalUPSpeed += (long)torrent.UPSpeed;
-                totalDLSpeed += (long)torrent.DLSpeed;
-            }
+            var (totalDLSpeed, totalUPSpeed) = TorrentPolling.Torrents.GetTotalSpeeds();
 
-            var upSpeed = (string)SIDataSpeedConverterInstance.Convert(totalUPSpeed, typeof(string), null, CultureInfo.InvariantCulture)!;
-            var dlSpeed = (string)SIDataSpeedConverterInstance.Convert(totalDLSpeed, typeof(string), null, CultureInfo.InvariantCulture)!;
+            var upSpeed = (string)SIDataSpeedConverterInstance.Convert((long)totalUPSpeed, typeof(string), null, CultureInfo.InvariantCulture)!;
+            var dlSpeed = (string)SIDataSpeedConverterInstance.Convert((long)totalDLSpeed, typeof(string), null, CultureInfo.InvariantCulture)!;
             TrayIconText = $"RT# - 🠉 {upSpeed} 🠋 {dlSpeed}";
         }
     }

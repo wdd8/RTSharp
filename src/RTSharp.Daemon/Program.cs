@@ -58,6 +58,7 @@ public static class Program
     
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.TorrentPoll.TorrentPolling>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.SCGICommunication>(key);
+            builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.RtorrentVersionService>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.Grpc>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.RTorrentOpService>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.SettingsService>(key);

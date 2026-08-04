@@ -68,6 +68,11 @@ namespace RTSharp.Models
         public partial bool IsExpanded { get; set; }
         public bool IsDirectory { get; set; }
 
+        /// <summary>
+        /// Index into the data provider's file list, <c>-1</c> for directories
+        /// </summary>
+        public int Index { get; set; } = -1;
+
         public Task<Bitmap?> IconTask => FileIconService.GetIconAsync(Name, IsDirectory);
 
         public ObservableCollection<File> Children { get; set; } = new();
@@ -116,6 +121,7 @@ namespace RTSharp.Models
                     if (files.TryGetValue(child.Path, out var realFile)) {
                         mapped = MapFx(realFile.Item);
                         mapped.Name = child.Name;
+                        mapped.Index = realFile.Index;
                         leaves[realFile.Index] = mapped;
                     } else {
                         mapped = new File {

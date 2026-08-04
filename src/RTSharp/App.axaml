@@ -43,7 +43,7 @@
             <Setter Property="MinHeight" Value="0" />
         </Style>
 
-        <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
+        <Style Selector="DataGridCell:current /template/ Border#FocusVisual">
             <Setter Property="IsVisible" Value="False" />
         </Style>
 

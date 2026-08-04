@@ -8,6 +8,8 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Styles.Resources>
     <ResourceDictionary>
+      <Thickness x:Key="SlimDataGridCellFocusBorderThickness">2</Thickness>
+
       <ControlTheme x:Key="SlimDataGridCellTheme" TargetType="DataGridCell">
         <Setter Property="Background" Value="{DynamicResource DataGridCellBackgroundBrush}" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -21,26 +23,17 @@
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
                     CornerRadius="{TemplateBinding CornerRadius}">
-              <Grid x:Name="PART_CellRoot" ColumnDefinitions="*,Auto">
+              <Panel x:Name="PART_CellRoot">
                 <Rectangle x:Name="CurrencyVisual"
                            IsVisible="False"
                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                            Fill="Transparent" IsHitTestVisible="False"
                            Stroke="{DynamicResource DataGridCurrencyVisualPrimaryBrush}"
                            StrokeThickness="{StaticResource DataGridCellValidationStrokeThickness}" />
-                <Grid Grid.Column="0" x:Name="FocusVisual" IsHitTestVisible="False" IsVisible="False">
-                  <Rectangle HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                             Fill="Transparent" IsHitTestVisible="False"
-                             Stroke="{DynamicResource DataGridCellFocusVisualPrimaryBrush}"
-                             StrokeThickness="{StaticResource DataGridCellFocusPrimaryStrokeThickness}" />
-                  <Rectangle Margin="{StaticResource DataGridCellFocusSecondaryMargin}"
-                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                             Fill="Transparent" IsHitTestVisible="False"
-                             Stroke="{DynamicResource DataGridCellFocusVisualSecondaryBrush}"
-                             StrokeThickness="{StaticResource DataGridCellFocusSecondaryStrokeThickness}" />
-                </Grid>
-                <ContentPresenter Grid.Column="0"
-                                  Name="PART_ContentPresenter"
+                <Border x:Name="FocusVisual" IsHitTestVisible="False" IsVisible="False"
+                        BorderBrush="{DynamicResource DataGridCellFocusVisualPrimaryBrush}"
+                        BorderThickness="{StaticResource SlimDataGridCellFocusBorderThickness}" />
+                <ContentPresenter Name="PART_ContentPresenter"
                                   Padding="{TemplateBinding Padding}"
                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -48,19 +41,14 @@
                                   Content="{TemplateBinding Content}"
                                   ContentTemplate="{TemplateBinding ContentTemplate}"
                                   Foreground="{TemplateBinding Foreground}" />
-                <Rectangle Name="PART_RightGridLine"
-                           Grid.Column="1"
-                           Width="{StaticResource DataGridCellGridLineWidth}"
-                           VerticalAlignment="Stretch"
-                           Fill="{DynamicResource DataGridFillerColumnGridLinesBrush}" />
-              </Grid>
+              </Panel>
             </Border>
           </ControlTemplate>
         </Setter>
         <Style Selector="^:current /template/ Rectangle#CurrencyVisual">
           <Setter Property="IsVisible" Value="True" />
         </Style>
-        <Style Selector="^:focus /template/ Grid#FocusVisual">
+        <Style Selector="^:focus /template/ Border#FocusVisual">
           <Setter Property="IsVisible" Value="True" />
         </Style>
         <Style Selector="^:searchmatch">

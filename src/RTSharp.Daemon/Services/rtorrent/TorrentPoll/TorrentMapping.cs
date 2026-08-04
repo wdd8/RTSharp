@@ -58,10 +58,10 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         }
 
         public static Torrent MapFromRaw(
-            byte[] Hash, string NameRaw, ulong TotalSize, ulong Downloaded, ulong Uploaded,
+            byte[] Hash, string NameRaw, ulong TotalSize, ulong Downloaded, ulong CompletedBytes, ulong Uploaded,
             ulong DownSpeed, ulong CreationDateRaw, ulong AddDateRaw, ulong FinishedDateRaw,
             string Label, string TorrentCommentRaw, bool IsMultiFile,
-            string DirectoryDecoded, ulong PriorityRaw, ulong ChunkSize, ulong SkippedTotal,
+            string DirectoryDecoded, ulong PriorityRaw, ulong ChunkSize, bool IsComplete, ulong WantedChunks, ulong SkippedTotal,
             string StatusMessageDecoded, bool IsOpen, bool IsActive, bool IsHashChecking,
             bool IsPrivate, ulong SeedersConnected, ulong PeersConnected,
             IReadOnlyList<TorrentTracker> Trackers)
@@ -75,15 +75,17 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 directory = lastSep <= 0 ? "" : directory[..lastSep];
             }
 
+            var wantedSize = IsComplete ? CompletedBytes : Math.Min(TotalSize, CompletedBytes + WantedChunks * ChunkSize);
+
             TorrentState torrentState;
             if (!IsOpen)
-                torrentState = TotalSize == Downloaded ? TorrentState.Complete : TorrentState.Stopped; // TODO: partial downloads
+                torrentState = IsComplete ? TorrentState.Complete : TorrentState.Stopped;
             else {
                 if (IsHashChecking)
                     torrentState = TorrentState.Hashing;
                 else {
                     if (IsActive)
-                        torrentState = TotalSize == Downloaded ? TorrentState.Seeding : TorrentState.Downloading; // TODO: partial downloads
+                        torrentState = IsComplete ? TorrentState.Seeding : TorrentState.Downloading;
                     else
                         torrentState = TorrentState.Paused;
                 }
@@ -110,11 +112,11 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 Hash = ByteString.CopyFrom(Hash),
                 Name = decodedName,
                 State = torrentState,
-                WantedSize = TotalSize, // TODO: rtorrent supports not downloading specific files, this should account for it
+                WantedSize = wantedSize,
                 IsPrivate = IsPrivate,
                 Size = TotalSize,
                 Downloaded = Downloaded,
-                CompletedSize = Downloaded, // TODO: probably maybe should fix this in future since its possible to download partials with rtorrent
+                CompletedSize = CompletedBytes,
                 Uploaded = Uploaded,
                 DLSpeed = DownSpeed,
                 CreatedOn = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)CreationDateRaw)),

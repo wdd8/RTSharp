@@ -146,7 +146,10 @@ namespace RTSharp.ViewModels.TorrentListing
             try {
                 PeersViewModel.Peers.Clear();
 
-                await foreach (var (fetchedFor, peers) in PeersChanges.Reader.ReadAllAsync(SelectionChange)) {
+                await foreach (var (fetchedFor, peers) in PeersChanges.Reader.ReadAllAsync()) {
+                    if (SelectionChange.IsCancellationRequested)
+                        break;
+
                     if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner) {
                         PeersViewModel.Peers.Clear();
                     }
@@ -184,7 +187,6 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     lastFetchedFor = fetchedFor;
                 }
-            } catch (OperationCanceledException) {
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "PeersModelUpdates task has exited");
             } finally {
@@ -256,9 +258,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     PeersChanges.Writer.TryWrite((current, changes));
 
 end:;
-                    try {
-                        await delayTask;
-                    } catch { }
+                    await Task.WhenAny(delayTask); // doesn't throw
                 }
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "GetPeersChanges task has died.");

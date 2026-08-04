@@ -8,15 +8,19 @@ namespace RTSharp.Daemon.Services.rtorrent
     public class SettingsService
     {
         private readonly SCGICommunication Scgi;
+        private readonly RtorrentVersionService VersionService;
+        private readonly ILogger<SettingsService> Logger;
 
-        public SettingsService(IServiceProvider ServiceProvider, [ServiceKey] string InstanceKey)
+        public SettingsService(IServiceProvider ServiceProvider, [ServiceKey] string InstanceKey, ILogger<SettingsService> Logger)
         {
             this.Scgi = ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
+            this.VersionService = ServiceProvider.GetRequiredKeyedService<RtorrentVersionService>(InstanceKey);
+            this.Logger = Logger;
         }
 
         public record SettingSpec(string RtorrentSetting, SCGI_DATA_TYPE DataType, string Property);
 
-        public static readonly SettingSpec[] AllSettings = new[] {
+        private static readonly SettingSpec[] CommonSettings = new[] {
             new SettingSpec("throttle.max_uploads", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.NumberOfUploadSlots)),
             new SettingSpec("throttle.min_peers.normal", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MinimumNumberOfPeers)),
             new SettingSpec("throttle.max_peers.normal", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumNumberOfPeers)),
@@ -26,20 +30,13 @@ namespace RTSharp.Daemon.Services.rtorrent
             new SettingSpec("pieces.hash.on_completion", SCGI_DATA_TYPE.BOOL_AS_I8, nameof(RtorrentSettings.CheckHashAfterDownload)),
             new SettingSpec("directory.default", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.DefaultDirectoryForDownloads)),
 
-            new SettingSpec("network.port_open", SCGI_DATA_TYPE.BOOL_AS_I8, nameof(RtorrentSettings.OpenListeningPort)),
-            new SettingSpec("network.port_range", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.PortUsedForIncomingConnections)),
-            new SettingSpec("network.port_random", SCGI_DATA_TYPE.BOOL_AS_I8, nameof(RtorrentSettings.RandomizePort)),
-
             new SettingSpec("throttle.global_up.max_rate", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumUploadRate)),
             new SettingSpec("throttle.global_down.max_rate", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumDownloadRate)),
 
             new SettingSpec("throttle.max_uploads.global", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.GlobalNumberOfUploadSlots)),
             new SettingSpec("throttle.max_downloads.global", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.GlobalNumberOfDownloadSlots)),
             new SettingSpec("pieces.memory.max", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumMemoryUsage)),
-            new SettingSpec("network.max_open_files", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumNumberOfOpenFiles)),
-            new SettingSpec("network.http.max_open", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumNumberOfOpenHttpConnections)),
 
-            new SettingSpec("dht.port", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.DhtPort)),
             new SettingSpec("protocol.pex", SCGI_DATA_TYPE.BOOL_AS_I8, nameof(RtorrentSettings.EnablePeerExchange)),
             new SettingSpec("network.local_address", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.IpToReportToTracker)),
 
@@ -70,14 +67,59 @@ namespace RTSharp.Daemon.Services.rtorrent
             new SettingSpec("system.file.split_size", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.SystemFileSplitSize)),
             new SettingSpec("system.file.split_suffix", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.SystemFileSplitSuffix)),
 
-            new SettingSpec("trackers.use_udp", SCGI_DATA_TYPE.BOOL_AS_I8, nameof(RtorrentSettings.TrackersUseUdp)),
-
-            new SettingSpec("network.http.proxy_address", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.NetworkHttpProxyAddress)),
-            new SettingSpec("network.proxy_address", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.NetworkProxyAddress)),
             new SettingSpec("network.bind_address", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.NetworkBindAddress))
         };
 
-        public static readonly SettingSpec SessionPath = new SettingSpec("session.path", SCGI_DATA_TYPE.STRING, "");
+        public static SettingSpec[] GetSettingSpecs(bool IsV16)
+        {
+            var ret = new List<SettingSpec>(CommonSettings);
+
+            if (IsV16) {
+                ret.Add(new SettingSpec("network.listen.port.range", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.PortUsedForIncomingConnections)));
+                ret.Add(new SettingSpec("network.listen.port.random", SCGI_DATA_TYPE.BOOL_AS_I8, nameof(RtorrentSettings.RandomizePort)));
+
+                ret.Add(new SettingSpec("system.sockets.files.min_alloc", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.SystemSocketsFilesMinAlloc)));
+                ret.Add(new SettingSpec("system.sockets.files.max_alloc", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.SystemSocketsFilesMaxAlloc)));
+                ret.Add(new SettingSpec("system.sockets.http.min_alloc", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.SystemSocketsHttpMinAlloc)));
+                ret.Add(new SettingSpec("system.sockets.http.max_alloc", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.SystemSocketsHttpMaxAlloc)));
+
+                ret.Add(new SettingSpec("dht.override_port", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.DhtPort)));
+
+                ret.Add(new SettingSpec("network.proxy.http", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.NetworkHttpProxyAddress)));
+                ret.Add(new SettingSpec("network.proxy.global", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.NetworkProxyAddress)));
+            } else {
+                ret.Add(new SettingSpec("network.port_open", SCGI_DATA_TYPE.BOOL_AS_I8, nameof(RtorrentSettings.OpenListeningPort)));
+                ret.Add(new SettingSpec("network.port_range", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.PortUsedForIncomingConnections)));
+                ret.Add(new SettingSpec("network.port_random", SCGI_DATA_TYPE.BOOL_AS_I8, nameof(RtorrentSettings.RandomizePort)));
+
+                ret.Add(new SettingSpec("network.max_open_files", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumNumberOfOpenFiles)));
+                ret.Add(new SettingSpec("network.http.max_open", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.MaximumNumberOfOpenHttpConnections)));
+
+                ret.Add(new SettingSpec("dht.port", SCGI_DATA_TYPE.I8, nameof(RtorrentSettings.DhtPort)));
+
+                ret.Add(new SettingSpec("trackers.use_udp", SCGI_DATA_TYPE.BOOL_AS_I8, nameof(RtorrentSettings.TrackersUseUdp)));
+                ret.Add(new SettingSpec("network.http.proxy_address", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.NetworkHttpProxyAddress)));
+                ret.Add(new SettingSpec("network.proxy_address", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.NetworkProxyAddress)));
+            }
+
+            return [.. ret];
+        }
+
+        public static string[] GetUnsupportedProperties(bool IsV16)
+        {
+            var supported = GetSettingSpecs(IsV16).Select(x => x.Property).ToHashSet(StringComparer.Ordinal);
+
+            return [.. GetSettingSpecs(true)
+                .Concat(GetSettingSpecs(false))
+                .Select(x => x.Property)
+                .Distinct(StringComparer.Ordinal)
+                .Where(x => !supported.Contains(x))];
+        }
+
+        public async Task<SettingSpec[]> GetConnectedSettingSpecs(CancellationToken CancellationToken = default) =>
+            GetSettingSpecs(await VersionService.IsV16(CancellationToken));
+
+        public static readonly SettingSpec SessionPath = new SettingSpec("session.path", SCGI_DATA_TYPE.STRING, nameof(RtorrentSettings.SessionPath));
 
         public async Task<Dictionary<string, object>> GetSettings(params SettingSpec[] Settings)
         {
@@ -95,25 +137,24 @@ namespace RTSharp.Daemon.Services.rtorrent
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
 
             foreach (var setting in Settings) {
-                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
-                Debug.Assert(XMLUtils.CheckFor(result, "<v"u8));
-
-#if DEBUG
-                switch (setting.DataType) {
-                    case SCGI_DATA_TYPE.I8:
-                    case SCGI_DATA_TYPE.BOOL_AS_I8:
-                        Debug.Assert(XMLUtils.CheckFor(result, "<value><i8>"u8));
-                        break;
-                    case SCGI_DATA_TYPE.STRING:
-                        Debug.Assert(XMLUtils.CheckFor(result, "<value><string>"u8));
-                        break;
+                if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
+                    var fault = XMLUtils.GetFaultStruct(ref result, setting.RtorrentSetting);
+                    Logger.LogWarning($"{setting.RtorrentSetting} was rejected. Leaving {setting.Property} unset: {fault.ToFailureString()}");
+                    continue;
                 }
-#endif
+
+                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+
+                var expectedType = setting.DataType == SCGI_DATA_TYPE.BOOL_AS_I8 ? SCGI_DATA_TYPE.I8 : setting.DataType;
+                var actualType = XMLUtils.GetValueType(result);
+
+                if (actualType != expectedType)
+                    throw new InvalidDataException($"{setting.RtorrentSetting} returned {actualType}, expected {expectedType}:{Environment.NewLine}{XMLUtils.DescribePosition(result)}");
 
                 if (setting.RtorrentSetting == "pieces.preload.type") {
                     var val = XMLUtils.GetValue<long>(ref result);
 
-                    ret[setting.RtorrentSetting] = val switch {
+                    ret[setting.Property] = val switch {
                         0 => "off",
                         1 => "madvise",
                         2 => "direct paging",
@@ -122,29 +163,29 @@ namespace RTSharp.Daemon.Services.rtorrent
                 } else {
                     switch (setting.DataType) {
                         case SCGI_DATA_TYPE.I8:
-                            ret[setting.RtorrentSetting] = XMLUtils.GetValue<long>(ref result);
+                            ret[setting.Property] = XMLUtils.GetValue<long>(ref result);
                             break;
                         case SCGI_DATA_TYPE.BOOL_AS_I8:
-                            ret[setting.RtorrentSetting] = XMLUtils.GetValue<bool>(ref result);
+                            ret[setting.Property] = XMLUtils.GetValue<bool>(ref result);
                             break;
                         case SCGI_DATA_TYPE.STRING:
-                            ret[setting.RtorrentSetting] = XMLUtils.Decode(XMLUtils.GetValue<string>(ref result));
+                            ret[setting.Property] = XMLUtils.Decode(XMLUtils.GetValue<string>(ref result));
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
                 }
 
-                Debug.Assert(XMLUtils.CheckFor(result, "</"u8));
                 XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
             }
 
             return ret;
         }
 
-        public async Task<CommandReply> SetSettings(RtorrentSettings Req)
+        public async Task<CommandReply> SetSettings(RtorrentSettings Req, CancellationToken CancellationToken = default)
         {
-            var currentSettings = await GetSettings(AllSettings);
+            var allSettings = await GetConnectedSettingSpecs(CancellationToken);
+            var currentSettings = await GetSettings(allSettings);
 
             var piecesPreloadType = Req.PiecesPreloadType switch {
                 "off" => 0,
@@ -157,8 +198,10 @@ namespace RTSharp.Daemon.Services.rtorrent
 
             var xml = new StringBuilder();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
-            foreach (var setting in AllSettings) {
-                var currentValue = currentSettings[setting.RtorrentSetting];
+            foreach (var setting in allSettings) {
+                if (!currentSettings.TryGetValue(setting.Property, out var currentValue))
+                    continue;
+
                 var prop = Req.GetType().GetProperty(setting.Property) ?? throw new InvalidOperationException();
                 var newValue = prop.GetValue(Req);
 

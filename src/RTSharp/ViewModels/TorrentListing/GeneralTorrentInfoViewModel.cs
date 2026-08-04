@@ -18,6 +18,9 @@ namespace RTSharp.ViewModels.TorrentListing
         public partial Torrent? Torrent { get; set; }
 
         [ObservableProperty]
+        public partial TorrentSelectionSummary? Summary { get; set; }
+
+        [ObservableProperty]
         public partial IList<Shared.Abstractions.PieceState> Pieces { get; set; }
         public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-circle-info");
 

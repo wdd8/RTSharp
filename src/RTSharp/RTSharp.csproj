@@ -288,7 +288,7 @@
     <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
-    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" Condition="'$(Configuration)' == 'Debug'" />
     <PackageReference Include="Ben.StringIntern" Version="0.1.8" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="ConcurrentHashSet" Version="1.3.0" />
@@ -355,6 +355,9 @@
     </Compile>
     <Compile Update="Views\Options\Pages\LookPageView.axaml.cs">
       <DependentUpon>LookPageView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Options\Pages\NetworkPageView.axaml.cs">
+      <DependentUpon>NetworkPageView.axaml</DependentUpon>
     </Compile>
     <Compile Update="Views\Statistics\StatisticsView.axaml.cs">
       <DependentUpon>StatisticsView.axaml</DependentUpon>

@@ -30,10 +30,12 @@ message RtorrentSettings {
     int64 GlobalNumberOfUploadSlots = 14; // throttle.max_uploads.global
     int64 GlobalNumberOfDownloadSlots = 15; // throttle.max_downloads.global
     int64 MaximumMemoryUsage = 16; // pieces.memory.max
+
+    // < 0.16 only
     int64 MaximumNumberOfOpenFiles = 17; // network.max_open_files
     int64 MaximumNumberOfOpenHttpConnections = 18; // network.http.max_open
 
-    int32 DhtPort = 19; // dht.port
+    int32 DhtPort = 19; // dht.port, or dht.override_port on 0.16+
     bool EnablePeerExchange = 20; // protocol.pex
     string IpToReportToTracker = 21; // network.local_address
 
@@ -56,8 +58,16 @@ message RtorrentSettings {
     bool session_on_completion = 38; // session.on_completion
     int64 system_file_split_size = 39; // system.file.split_size
     string system_file_split_suffix = 40; // system.file.split_suffix
-    bool trackers_use_udp = 41; // trackers.use_udp
-    string network_http_proxy_address = 42; // network.http.proxy_address
-    string network_proxy_address = 43; // network.proxy_address
+    bool trackers_use_udp = 41; // trackers.use_udp, < 0.16 only
+    string network_http_proxy_address = 42; // network.http.proxy_address, or network.proxy.http on 0.16+
+    string network_proxy_address = 43; // network.proxy_address, or network.proxy.global on 0.16+
     string network_bind_address = 44; // network.bind_address
+
+    // 0.16+ only
+    int64 SystemSocketsFilesMinAlloc = 45; // system.sockets.files.min_alloc
+    int64 SystemSocketsFilesMaxAlloc = 46; // system.sockets.files.max_alloc
+    int64 SystemSocketsHttpMinAlloc = 47; // system.sockets.http.min_alloc
+    int64 SystemSocketsHttpMaxAlloc = 48; // system.sockets.http.max_alloc
+
+    repeated string UnsupportedSettings = 49;
 }

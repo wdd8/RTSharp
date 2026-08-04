@@ -35,7 +35,7 @@ namespace RTSharp.Daemon.Services.rtorrent
         public async Task<InfoHashDictionary<string>> GetDotTorrentFilePaths(IEnumerable<byte[]> Hashes)
         {
             if (String.IsNullOrEmpty(Config.SessionDir))
-                Config.SessionDir = (string)(await Settings.GetSettings(SettingsService.SessionPath))[SettingsService.SessionPath.RtorrentSetting];
+                Config.SessionDir = (string)(await Settings.GetSettings(SettingsService.SessionPath))[SettingsService.SessionPath.Property];
 
             var sessionSetting = Config.SessionDir;
 
@@ -102,7 +102,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                         downloadStrategy = TorrentsFilesReply.Types.FileDownloadStrategy.Normal;
                     if (prioritizeFirst)
                         downloadStrategy |= TorrentsFilesReply.Types.FileDownloadStrategy.PrioritizeFirst;
-                    if (prioritizeFirst)
+                    if (prioritizeLast)
                         downloadStrategy |= TorrentsFilesReply.Types.FileDownloadStrategy.PrioritizeLast;
 
                     torrent.Files.Add(new TorrentsFilesReply.Types.File() {

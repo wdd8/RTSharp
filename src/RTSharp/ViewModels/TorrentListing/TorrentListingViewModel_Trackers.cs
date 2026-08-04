@@ -85,7 +85,10 @@ namespace RTSharp.ViewModels.TorrentListing
             try {
                 TrackersViewModel.Trackers.Clear();
 
-                await foreach (var (fetchedFor, trackers) in TrackersChanges.Reader.ReadAllAsync(SelectionChange)) {
+                await foreach (var (fetchedFor, trackers) in TrackersChanges.Reader.ReadAllAsync()) {
+                    if (SelectionChange.IsCancellationRequested)
+                        break;
+
                     if (lastFetchedFor == null || !fetchedFor.Hash.SequenceEqual(lastFetchedFor!.Hash) || fetchedFor.DataOwner != lastFetchedFor.DataOwner) {
                         TrackersViewModel.Trackers.Clear();
                     }
@@ -123,7 +126,6 @@ namespace RTSharp.ViewModels.TorrentListing
 
                     lastFetchedFor = fetchedFor;
                 }
-            } catch (OperationCanceledException) {
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "TrackersModelUpdates task has exited");
             } finally {
@@ -204,9 +206,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     TrackersChanges.Writer.TryWrite((current, trackers));
 
 end:
-                    try {
-                        await delayTask;
-                    } catch { }
+                    await Task.WhenAny(delayTask);
                 }
             } catch (Exception ex) {
                 Log.Logger.Fatal(ex, "GetTrackersChanges task has died.");

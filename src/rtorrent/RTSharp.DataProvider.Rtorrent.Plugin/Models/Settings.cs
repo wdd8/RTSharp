@@ -56,6 +56,24 @@ namespace RTSharp.DataProvider.Rtorrent.Plugin.Models
         public partial bool EnablePeerExchange { get; set; }
         [ObservableProperty]
         public partial string IpToReportToTracker { get; set; }
+
+        [ObservableProperty]
+        public partial long SystemSocketsFilesMinAlloc { get; set; }
+        [ObservableProperty]
+        public partial long SystemSocketsFilesMaxAlloc { get; set; }
+        [ObservableProperty]
+        public partial long SystemSocketsHttpMinAlloc { get; set; }
+        [ObservableProperty]
+        public partial long SystemSocketsHttpMaxAlloc { get; set; }
+
+        [ObservableProperty]
+        public partial bool OpenListeningPortSupported { get; set; } = true;
+
+        [ObservableProperty]
+        public partial bool LegacyConnectionLimitsSupported { get; set; } = true;
+
+        [ObservableProperty]
+        public partial bool SocketAllocationSupported { get; set; }
     }
 
     public class AdvancedSetting : ObservableObject

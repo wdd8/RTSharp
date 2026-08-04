@@ -396,7 +396,7 @@ public static class Plugins
         }
 
         moduleContentsPath = System.IO.Path.IsPathRooted(moduleContentsPath) ? moduleContentsPath : System.IO.Path.GetFullPath(System.IO.Path.Combine(Consts.PLUGINS_PATH, moduleContentsPath));
-        var manifest = GetManifest(moduleContentsPath) ?? throw new PluginLoadException("Plugin {pluginName}: manifest.json does not exist or malformed", null);
+        var manifest = GetManifest(moduleContentsPath) ?? throw new PluginLoadException($"Plugin {pluginName}: manifest.json does not exist or malformed", null);
         var modulePath = System.IO.Path.Combine(moduleContentsPath, manifest.Module);
 
         if (LoadedPlugins.Any(x => x.InstanceId == config.InstanceId)) {

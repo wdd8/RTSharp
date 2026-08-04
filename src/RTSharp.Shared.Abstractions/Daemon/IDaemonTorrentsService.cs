@@ -31,7 +31,7 @@ public interface IDaemonTorrentsService
     
     Task<Guid> ForceRecheckTorrents(IList<byte[]> Hashes);
 
-    Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In);
+    Task<TorrentStatuses> AddTorrents(IList<(byte[]? Data, string? MagnetUri, string? Filename, AddTorrentsOptions Options)> In);
     
     Task<TorrentStatuses> ReannounceToAllTrackers(IList<byte[]> Hashes);
     
@@ -60,4 +60,6 @@ public interface IDaemonTorrentsService
     Task BanPeer(byte[] Hash, System.Net.IPEndPoint Peer, CancellationToken cancellationToken);
 
     Task SetSequentialDownload(IList<byte[]> Hashes, bool Enabled, CancellationToken cancellationToken);
+
+    Task SetFilePriority(byte[] Hash, IList<int> Indexes, File.PRIORITY Priority, CancellationToken cancellationToken);
 }

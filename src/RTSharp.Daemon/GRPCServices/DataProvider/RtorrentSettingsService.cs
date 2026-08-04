@@ -16,11 +16,14 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
                 throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Only applicable to rtorrent data provider"));
 
             var settingsService = dp.Resolve<Services.rtorrent.SettingsService>();
-            var settings = await settingsService.GetSettings(Services.rtorrent.SettingsService.AllSettings);
+            var versionService = dp.Resolve<Services.rtorrent.RtorrentVersionService>();
+
+            var isV16 = await versionService.IsV16(Ctx.CancellationToken);
+            var settings = await settingsService.GetSettings(Services.rtorrent.SettingsService.GetSettingSpecs(isV16));
 
             var ret = new RtorrentSettings();
             foreach (var (k, v) in settings) {
-                var prop = ret.GetType().GetProperty(Services.rtorrent.SettingsService.AllSettings.First(x => x.RtorrentSetting == k).Property);
+                var prop = ret.GetType().GetProperty(k);
 
                 if (prop == null)
                     continue;
@@ -30,6 +33,8 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
                 else
                     prop.SetValue(ret, v);
             }
+
+            ret.UnsupportedSettings.AddRange(Services.rtorrent.SettingsService.GetUnsupportedProperties(isV16));
 
             return ret;
         }
@@ -41,7 +46,7 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
                 throw new RpcException(new Grpc.Core.Status(StatusCode.InvalidArgument, "Only applicable to rtorrent data provider"));
 
             var settingsService = dp.Resolve<Services.rtorrent.SettingsService>();
-            var ret = await settingsService.SetSettings(Req);
+            var ret = await settingsService.SetSettings(Req, Ctx.CancellationToken);
 
             return ret;
         }

@@ -40,7 +40,7 @@ public interface IDataProvider : IDataProviderBase<DataProviderCapabilities>
 
     public Task<TorrentStatuses> StopTorrents(IList<byte[]> In);
 
-    public Task<TorrentStatuses> AddTorrents(IList<(byte[] Data, string? Filename, AddTorrentsOptions Options)> In);
+    public Task<TorrentStatuses> AddTorrents(IList<(byte[]? Data, string? MagnetUri, string? Filename, AddTorrentsOptions Options)> In);
 
     public Task<Guid> ForceRecheck(IList<byte[]> In);
 

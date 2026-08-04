@@ -19,6 +19,7 @@ using RTSharp.Shared.Abstractions;
 using Serilog;
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -105,7 +106,7 @@ public partial class TorrentFilesViewModel : ObservableObject
     public void ClearRoot()
     {
         File = null;
-        Model.SetRoots([]);
+        Model.ClearAll();
     }
 
     public void SetRoot(Models.File Root)
@@ -156,26 +157,71 @@ public partial class TorrentFilesViewModel : ObservableObject
                 ColumnKey = nameof(Models.File.Done),
                 SortMemberPath = nameof(Models.File.Done)
             },
-            new DataGridTextColumnDefinition
+            new DataGridTemplateColumnDefinition
             {
                 Header = "Priority",
-                Binding = CreateNodeBinding("Priority", item => item.Priority),
+                CellTemplateKey = "FilePriorityTemplate",
                 ColumnKey = nameof(Models.File.Priority),
             },
-            new DataGridTextColumnDefinition
+            new DataGridTemplateColumnDefinition
             {
                 Header = "Download strategy",
-                Binding = CreateNodeBinding("DownloadStrategy", item => item.DownloadStrategy),
+                CellTemplateKey = "FileDownloadStrategyTemplate",
                 ColumnKey = nameof(Models.File.DownloadStrategy)
             }
         ]);
 
+        SetPriorityDontDownloadCommand = new AsyncRelayCommand<IList>(In => SetPriority(In, Shared.Abstractions.File.PRIORITY.DONT_DOWNLOAD), CanSetPriority);
+        SetPriorityNormalCommand = new AsyncRelayCommand<IList>(In => SetPriority(In, Shared.Abstractions.File.PRIORITY.NORMAL), CanSetPriority);
+        SetPriorityHighCommand = new AsyncRelayCommand<IList>(In => SetPriority(In, Shared.Abstractions.File.PRIORITY.HIGH), CanSetPriority);
     }
 
     public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-file");
 
+    public IAsyncRelayCommand SetPriorityDontDownloadCommand { get; }
+    public IAsyncRelayCommand SetPriorityNormalCommand { get; }
+    public IAsyncRelayCommand SetPriorityHighCommand { get; }
+
+    private bool CanSetPriority(IList? In) => Torrent?.DataOwner.Instance.Files.Capabilities.SetFilePriority == true;
+
+    partial void OnTorrentChanged(Models.Torrent? value)
+    {
+        SetPriorityDontDownloadCommand.NotifyCanExecuteChanged();
+        SetPriorityNormalCommand.NotifyCanExecuteChanged();
+        SetPriorityHighCommand.NotifyCanExecuteChanged();
+    }
+
+    private async Task SetPriority(IList? In, Shared.Abstractions.File.PRIORITY Priority)
+    {
+        if (In == null || Torrent == null)
+            return;
+
+        var indexes = new HashSet<int>();
+
+        void collect(Models.File File)
+        {
+            if (File.IsDirectory) {
+                foreach (var child in File.Children)
+                    collect(child);
+            } else if (File.Index >= 0)
+                indexes.Add(File.Index);
+        }
+
+        foreach (var file in In.Cast<Models.File>())
+            collect(file);
+
+        if (indexes.Count == 0)
+            return;
+
+        try {
+            await Torrent.DataOwner.Instance.Files.SetFilePriority(Torrent.ToPluginModel(), [.. indexes], Priority);
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Failed to set file priority");
+        }
+    }
+
     [RelayCommand(AllowConcurrentExecutions = true)]
-    public async Task Preview(SelectedItemsView In)
+    public async Task Preview(IList In)
     {
         var file = In.Cast<Models.File>().FirstOrDefault(x => !x.IsDirectory && x.Path != "./");
 
@@ -190,7 +236,7 @@ public partial class TorrentFilesViewModel : ObservableObject
 
     public bool CanExecuteMediaInfo() => true;
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteMediaInfo))]
-    public async Task MediaInfo(SelectedItemsView In)
+    public async Task MediaInfo(IList In)
     {
         var files = In.Cast<Models.File>().Where(x => x.Path != "./");
 
