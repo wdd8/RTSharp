@@ -95,19 +95,24 @@ public sealed class V1ToV2InfoHashCache
     /// <summary>
     /// Records a v1 <-> v2 relation (<paramref name="V2"/> null = known v1-only)
     /// </summary>
-    public void Add(byte[] V1, byte[]? V2)
+    public bool Add(byte[] V1, byte[]? V2)
     {
         ArgumentOutOfRangeException.ThrowIfNotEqual(V1.Length, InfoHash.V1Length, nameof(V1));
         if (V2 != null)
             ArgumentOutOfRangeException.ThrowIfNotEqual(V2.Length, InfoHash.V2Length, nameof(V2));
 
-        if (!V1ToV2.TryAdd(Key20.From(V1), V2))
-            return; // already known
+        var key = Key20.From(V1);
+
+        if (!V1ToV2.TryAdd(key, V2)) {
+            if (V2 == null || !V1ToV2.TryUpdate(key, V2, null))
+                return false;
+        }
 
         if (V2 != null)
             V2ToV1.TryAdd(Key32.From(V2), V1);
 
         Persist(V1, V2);
+        return true;
     }
 
     private void Persist(byte[] V1, byte[]? V2)

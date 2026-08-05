@@ -3,15 +3,10 @@ using Google.Protobuf.WellKnownTypes;
 
 using RTSharp.Daemon.Protocols.DataProvider;
 
-using System.Text.RegularExpressions;
-
 namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 {
-    internal static partial class Mapper
+    internal static class Mapper
     {
-        [GeneratedRegex("magnet:\\?xt=urn:[a-z0-9]+:[a-z0-9]{32,40}&dn=.+&tr=.+")]
-        private static partial Regex MagnetDummyRegex();
-
         private static string TrackerStatusMessage(ReadOnlySpan<char> Raw)
         {
             if (Raw.Length == 1) {
@@ -63,7 +58,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             string Label, string TorrentCommentRaw, bool IsMultiFile,
             string DirectoryDecoded, ulong PriorityRaw, ulong ChunkSize, bool IsComplete, ulong WantedChunks, ulong SkippedTotal,
             string StatusMessageDecoded, bool IsOpen, bool IsActive, bool IsHashChecking,
-            bool IsPrivate, ulong SeedersConnected, ulong PeersConnected,
+            bool IsPrivate, ulong SeedersConnected, ulong PeersConnected, bool IsMeta,
             IReadOnlyList<TorrentTracker> Trackers)
         {
             var priority = (TorrentPriority)PriorityRaw;
@@ -108,6 +103,11 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
             var decodedName = XMLUtils.Decode(NameRaw);
 
+            if (IsMeta) {
+                // for more consistent behavior across daemons
+                ChunkSize = TotalSize = wantedSize = CompletedBytes = 0;
+            }
+
             var torrent = new Torrent() {
                 Hash = ByteString.CopyFrom(Hash),
                 Name = decodedName,
@@ -135,7 +135,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 PeersConnected = (uint)PeersConnected,
                 SeedersTotal = seedersTotal,
                 PeersTotal = peersTotal,
-                MagnetDummy = MagnetDummyRegex().IsMatch(decodedName),
+                MagnetDummy = IsMeta,
                 SequentialDownload = false, // rtorrent doesn't support sequential download??
             };
 

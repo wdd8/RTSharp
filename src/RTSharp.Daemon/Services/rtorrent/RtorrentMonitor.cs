@@ -84,8 +84,9 @@ namespace RTSharp.Daemon.Services.rtorrent
         {
             var multicall = IsV16 ? "d.multicall" : "d.multicall2";
 
-            var allV1 = new List<byte[]>();
-            using (var response = await Scgi.Get("<?xml version=\"1.0\" ?><methodCall><methodName>" + multicall + "</methodName><params><param><value><string></string></value></param><param><value><string>main</string></value></param><param><value><string>d.hash=</string></value></param></params></methodCall>", StoppingToken)) {
+            var total = 0;
+            var candidates = new List<byte[]>();
+            using (var response = await Scgi.Get("<?xml version=\"1.0\" ?><methodCall><methodName>" + multicall + "</methodName><params><param><value><string></string></value></param><param><value><string>main</string></value></param><param><value><string>d.hash=</string></value></param><param><value><string>d.is_meta=</string></value></param></params></methodCall>", StoppingToken)) {
                 var result = response.Reader();
                 XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
                 XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
@@ -93,12 +94,15 @@ namespace RTSharp.Daemon.Services.rtorrent
                 while (!XMLUtils.CheckFor(result, XMLUtils.DATA_TOKEN_END)) {
                     XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
                     var hashRaw = XMLUtils.GetValue<string>(ref result);
+                    var isMeta = XMLUtils.GetValue<bool>(ref result);
                     XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
-                    allV1.Add(Convert.FromHexString(hashRaw));
+                    total++;
+                    if (!isMeta)
+                        candidates.Add(Convert.FromHexString(hashRaw));
                 }
             }
 
-            var unknown = allV1.Where(v1 => !Cache.Contains(v1)).ToList();
+            var unknown = candidates.Where(v1 => !Cache.Contains(v1)).ToList();
             if (unknown.Count == 0)
                 return;
 
@@ -121,7 +125,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 }
             }
 
-            Logger.LogInformation("Infohash cache populated: {Added} added, {Failed} failed, {Total} total", added, failed, allV1.Count);
+            Logger.LogInformation("Infohash cache populated: {Added} added, {Failed} failed, {Total} total", added, failed, total);
         }
     }
 }

@@ -204,7 +204,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             return BTorrentDict.EncodeAsBytes();
         }
 
-        record Torrent(string Path, string Filename, MemoryStream Data, bool FastResume = false);
+        record Torrent(string Path, string Filename, MemoryStream Data, bool FastResume = false, bool Magnet = false);
 
         private async Task<TorrentsReply> AddTorrents(Dictionary<string, Torrent> Torrents)
         {
@@ -217,22 +217,40 @@ namespace RTSharp.Daemon.Services.rtorrent
             foreach (var (id, torrent) in Torrents) {
                 torrent.Data.Position = 0;
 
-                BDictionary bTorrentDict;
+                BDictionary? bTorrentDict = null;
+                string? magnetUri = null;
                 byte[]? v1;
                 byte[]? v2;
-                try {
-                    bTorrentDict = bencodeParser.Parse<BDictionary>(torrent.Data);
-                    (v1, v2) = BencodeUtils.GetInfoHashes(bTorrentDict);
-                } catch {
-                    ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
-                        InfoHash = Array.Empty<byte>().ToByteString(),
-                        Status = { new Protocols.DataProvider.Status() {
-                            Command = "",
-                            FaultCode = "1",
-                            FaultString = $"Invalid bencode on torrent id {id}"
-                        } }
-                    });
-                    continue;
+                if (torrent.Magnet) {
+                    if (!MagnetParser.TryParse(Encoding.UTF8.GetString(torrent.Data.ToArray()), out var magnet)) {
+                        ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                            InfoHash = Array.Empty<byte>().ToByteString(),
+                            Status = { new Protocols.DataProvider.Status() {
+                                Command = "",
+                                FaultCode = "1",
+                                FaultString = $"Invalid magnet URI on torrent id {id}"
+                            } }
+                        });
+                        continue;
+                    }
+
+                    magnetUri = magnet.Uri.OriginalString;
+                    (v1, v2) = (magnet.V1InfoHash, magnet.V2InfoHash);
+                } else {
+                    try {
+                        bTorrentDict = bencodeParser.Parse<BDictionary>(torrent.Data);
+                        (v1, v2) = BencodeUtils.GetInfoHashes(bTorrentDict);
+                    } catch {
+                        ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                            InfoHash = Array.Empty<byte>().ToByteString(),
+                            Status = { new Protocols.DataProvider.Status() {
+                                Command = "",
+                                FaultCode = "1",
+                                FaultString = $"Invalid bencode on torrent id {id}"
+                            } }
+                        });
+                        continue;
+                    }
                 }
 
                 if (v1 == null) {
@@ -249,26 +267,41 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                 hashes.Add(Convert.ToHexString(v1));
 
-                Cache.Add(v1, v2);
-                var rtsHash = v2 ?? v1;
+                byte[] rtsHash;
+                if ((!torrent.Magnet || v2 != null) && Cache.Add(v1, v2))
+                    rtsHash = v2 ?? v1;
+
+                else if (!Cache.TryGetRTSHash(v1, out rtsHash))
+                    rtsHash = v1;
+
                 rtsHashes.Add(rtsHash);
 
-                byte[] rawTorrent;
+                var command = magnetUri == null ? "load.raw" : "load.normal";
 
-                if (torrent.FastResume) {
-                    var fastResumeTorrent = await TryBuildFastResume(bTorrentDict, torrent.Path);
-                    if (fastResumeTorrent != null)
-                        rawTorrent = fastResumeTorrent;
-                    else {
-                        Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", Convert.ToHexString(v1));
+                xml.Append("<value><struct><member><name>methodName</name><value><string>" + command + "</string></value></member><member><name>params</name><value><array><data><value><string></string></value>");
+
+                if (magnetUri == null) {
+                    byte[] rawTorrent;
+
+                    if (torrent.FastResume) {
+                        var fastResumeTorrent = await TryBuildFastResume(bTorrentDict!, torrent.Path);
+                        if (fastResumeTorrent != null)
+                            rawTorrent = fastResumeTorrent;
+                        else {
+                            Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", Convert.ToHexString(v1));
+                            rawTorrent = torrent.Data.ToArray();
+                        }
+                    } else
                         rawTorrent = torrent.Data.ToArray();
-                    }
-                } else
-                    rawTorrent = torrent.Data.ToArray();
 
-                xml.Append("<value><struct><member><name>methodName</name><value><string>load.raw</string></value></member><member><name>params</name><value><array><data><value><string></string></value><value><base64>");
-                xml.Append(Convert.ToBase64String(rawTorrent));
-                xml.Append("</base64></value>");
+                    xml.Append("<value><base64>");
+                    xml.Append(Convert.ToBase64String(rawTorrent));
+                    xml.Append("</base64></value>");
+                } else {
+                    Logger.LogInformation($"{InstanceKey}: Adding magnet {Convert.ToHexString(v1)}");
+
+                    xml.Append("<value><string>" + XMLUtils.Encode(magnetUri) + "</string></value>");
+                }
 
                 if (!String.IsNullOrEmpty(torrent.Filename))
                     xml.Append("<value><string>d.custom.set=x-filename," + XMLUtils.EncodeWithSpaces(torrent.Filename) + "</string></value>");
@@ -276,9 +309,11 @@ namespace RTSharp.Daemon.Services.rtorrent
                 if (!String.IsNullOrEmpty(torrent.Path))
                     xml.Append("<value><string>d.directory.set=\"" + XMLUtils.Encode(torrent.Path) + "\"</string></value>");
 
-                var comment = BencodeUtils.GetComment(bTorrentDict);
-                if (!String.IsNullOrEmpty(comment))
-                    xml.Append("<value><string>d.custom2.set=\"" + XMLUtils.Encode(comment) + "\"</string></value>");
+                if (bTorrentDict != null) {
+                    var comment = BencodeUtils.GetComment(bTorrentDict);
+                    if (!String.IsNullOrEmpty(comment))
+                        xml.Append("<value><string>d.custom2.set=\"" + XMLUtils.Encode(comment) + "\"</string></value>");
+                }
 
                 if (torrent.FastResume) {
                     // soos
@@ -293,7 +328,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 // TODO: move after Scgi.Get
                 ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                     InfoHash = rtsHash.ToByteString(),
-                    Status = { GrpcExtensions.SuccessfulStatus("load_raw") }
+                    Status = { GrpcExtensions.SuccessfulStatus(command) }
                 });
             }
 
@@ -358,7 +393,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             await foreach (var chunk in Req) {
                 switch (chunk.DataCase) {
                     case NewTorrentsData.DataOneofCase.TMetadata:
-                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume);
+                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume, chunk.TMetadata.Magnet);
                         break;
                     case NewTorrentsData.DataOneofCase.TData:
                         torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.ToByteArray());
@@ -383,6 +418,13 @@ namespace RTSharp.Daemon.Services.rtorrent
             foreach (var el in ret.Reply) {
                 var hash = el.InfoHash.ToByteArray();
                 el.MultiFile = basePath[hash].ContainerFolder != null;
+
+                // magnet dummy
+                if (el.Files.Count == 1 && el.Files[0].Path == Convert.ToHexString(ToNative(hash)) + ".meta") {
+                    el.Files.Clear();
+                    continue;
+                }
+
                 foreach (var file in el.Files) {
                     file.Downloaded = file.DownloadedPieces * pieceSizes[hash];
                 }
@@ -1182,7 +1224,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 ("d.is_hash_checking", []),
                 ("d.is_private", []),
                 ("d.peers_complete", []),
-                ("d.peers_accounted", [])
+                ("d.peers_accounted", []),
+                ("d.is_meta", [])
             ];
 
             using var response = await Scgi.XmlActionTorrentsMulti([ (ToNative(hash), actions) ]);
@@ -1254,13 +1297,14 @@ namespace RTSharp.Daemon.Services.rtorrent
             var isPrivate = ReadEntry<bool>(ref result);
             var seedersConnected = ReadEntry<ulong>(ref result);
             var peersConnected = ReadEntry<ulong>(ref result);
+            var isMeta = ReadEntry<bool>(ref result);
 
             return Mapper.MapFromRaw(
                 hash, name, totalSize, downloaded, completedBytes, uploaded, downSpeed,
                 creationDateRaw, addDateRaw, finishedDateRaw, label, torrentComment,
                 isMultiFile, directory, priorityRaw, chunkSize, isComplete, wantedChunks, skippedTotal,
                 statusMessage, isOpen, isActive, isHashChecking, isPrivate,
-                seedersConnected, peersConnected, curTrackers);
+                seedersConnected, peersConnected, isMeta, curTrackers);
         }
 
         public async Task<Empty> EditTracker(ByteString InfoHash, string Existing, string New, CancellationToken cancellationToken)

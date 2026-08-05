@@ -109,7 +109,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 + "d.is_hash_checking=</string></value></param><param><value><string>"
                 + "d.is_private=</string></value></param><param><value><string>"
                 + "d.peers_complete=</string></value></param><param><value><string>"
-                + "d.peers_accounted=</string></value></param>"
+                + "d.peers_accounted=</string></value></param><param><value><string>"
+                + "d.is_meta=</string></value></param>"
                 + "</params></methodCall>";
 
         public async Task<(InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers)> GetAllTorrents()
@@ -176,6 +177,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
                     var seedersConnected = XMLUtils.GetValue<ulong>(ref xml);
                     var peersConnected = XMLUtils.GetValue<ulong>(ref xml);
+                    var isMeta = XMLUtils.GetValue<bool>(ref xml);
 
                     XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
 
@@ -186,8 +188,10 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                         key = rtsHash;
                     else {
                         key = hash;
-                        unknownV1s ??= new List<byte[]>();
-                        unknownV1s.Add(hash);
+                        if (!isMeta) {
+                            unknownV1s ??= new List<byte[]>();
+                            unknownV1s.Add(hash);
+                        }
                     }
 
                     var curTrackers = new List<TorrentTracker>();
@@ -217,7 +221,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                         creationDateRaw, addDateRaw, finishedDateRaw, label, torrentComment,
                         isMultiFile, directory, priorityRaw, chunkSize, isComplete, wantedChunks, skippedTotal,
                         statusMessage, isOpenRaw, isActiveRaw, isHashCheckingRaw, isPrivateRaw,
-                        seedersConnected, peersConnected, curTrackers);
+                        seedersConnected, peersConnected, isMeta, curTrackers);
 
                     trackers[key] = new TorrentsTrackersReply.Types.TorrentsTrackers()
                     {
