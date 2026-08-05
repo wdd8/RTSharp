@@ -101,7 +101,8 @@ public class TorrentMapper
             Stored.Comment = External.Comment;
         if (External.DownloadDir != null)
             Stored.RemotePath = External.DownloadDir;
-        Stored.MagnetDummy = External.MagnetLink != null;
+        if (External.MetadataPercentComplete != null)
+            Stored.MagnetDummy = External.MetadataPercentComplete.Value < 1;
         if (External.SequentialDownload != null)
             Stored.SequentialDownload = External.SequentialDownload.Value;
     }

@@ -51,25 +51,28 @@ namespace RTSharp.Daemon.Services.transmission
         {
             if (!String.IsNullOrEmpty(TorrentFilePath) && System.IO.File.Exists(TorrentFilePath)) {
                 return TorrentFilePath;
-            } else if (String.IsNullOrEmpty(Client.ConfigDir)) {
+            } else if (String.IsNullOrEmpty(Client.ConfigDir) || String.IsNullOrEmpty(HashString)) {
                 return null;
             } else {
                 return Path.Combine(Client.ConfigDir, "torrents", HashString.ToLowerInvariant() + ".torrent");
             }
         }
 
-        private async ValueTask<byte[]> ResolveRTSHash(string HashString, string? TorrentFilePath)
+        private async ValueTask<byte[]> ResolveRTSHash(TorrentView Torrent)
         {
-            var v1 = Convert.FromHexString(HashString);
+            var v1 = Convert.FromHexString(Torrent.HashString!);
             if (Cache.TryGetRTSHash(v1, out var rtsHash))
                 return rtsHash;
+
+            if (Torrent.MetadataPercentComplete < 1)
+                return v1;
 
             var now = DateTime.UtcNow;
             if (ResolveBackoff.TryGetValue(v1, out var b) && now < b.NextTry)
                 return v1;
 
             try {
-                var path = GetTorrentFilePath(HashString, TorrentFilePath);
+                var path = GetTorrentFilePath(Torrent.HashString, Torrent.TorrentFile);
 
                 if (path == null)
                     throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, $".torrent not found"));
@@ -83,7 +86,7 @@ namespace RTSharp.Daemon.Services.transmission
                 ResolveBackoff.TryRemove(v1, out _);
                 return v2 ?? v1;
             } catch (Exception ex) {
-                Logger.LogTrace(ex, "Failed to resolve rtsHash hash for {Hash}", HashString);
+                Logger.LogTrace(ex, "Failed to resolve rtsHash hash for {Hash}", Torrent.HashString);
                 var attempts = ResolveBackoff.TryGetValue(v1, out var bb) ? bb.Attempts + 1 : 1;
                 ResolveBackoff[v1] = (attempts, now.AddSeconds(Math.Min(300, Math.Pow(2, Math.Min(attempts, 8)))));
                 return v1;
@@ -153,7 +156,7 @@ namespace RTSharp.Daemon.Services.transmission
             var all = await client.TorrentGetAsync(null, ALL_FIELDS_EXCEPT_LISTS);
 
             foreach (var externalTorrent in all!.Torrents) {
-                var hash = await ResolveRTSHash(externalTorrent.HashString!, externalTorrent.TorrentFile);
+                var hash = await ResolveRTSHash(externalTorrent);
                 var internalTorrent = new Protocols.DataProvider.Torrent {
                     Hash = hash.ToByteString()
                 };
@@ -222,8 +225,14 @@ namespace RTSharp.Daemon.Services.transmission
                 }
 
                 foreach (var changedTorrent in list!.Torrents) {
-                    var hash = await ResolveRTSHash(changedTorrent.HashString!, changedTorrent.TorrentFile);
+                    var hash = await ResolveRTSHash(changedTorrent);
                     Protocols.DataProvider.Torrent internalTorrent;
+
+                    if (IdToHash.TryGetValue(changedTorrent.Id!.Value, out var previousHash) && !previousHash.AsSpan().SequenceEqual(hash)) {
+                        delta.Removed.Add(previousHash.ToByteString());
+                        LatestTorrents.TryRemove(previousHash, out _);
+                        HashToId.TryRemove(previousHash, out _);
+                    }
 
                     if (!LatestTorrents.TryGetValue(hash, out var torrent)) {
                         fullUpdate(hash, changedTorrent);
@@ -332,7 +341,7 @@ namespace RTSharp.Daemon.Services.transmission
             var ret = new TorrentsListResponse();
             foreach (var x in all!.Torrents) {
                 var internalTorrent = new Protocols.DataProvider.Torrent {
-                    Hash = (await ResolveRTSHash(x.HashString!, x.TorrentFile)).ToByteString()
+                    Hash = (await ResolveRTSHash(x)).ToByteString()
                 };
                 TorrentMapper.ApplyFromExternal(internalTorrent, x);
                 ret.List.Add(internalTorrent);
@@ -577,7 +586,7 @@ namespace RTSharp.Daemon.Services.transmission
             return true;
         }
 
-        record Torrent(string Path, string Filename, MemoryStream Data, bool FastResume = false);
+        record Torrent(string Path, string Filename, MemoryStream Data, bool FastResume, bool Magnet);
 
         public async Task<TorrentsReply> AddTorrents(IAsyncEnumerable<NewTorrentsData> Req)
         {
@@ -587,7 +596,7 @@ namespace RTSharp.Daemon.Services.transmission
             await foreach (var chunk in Req) {
                 switch (chunk.DataCase) {
                     case NewTorrentsData.DataOneofCase.TMetadata:
-                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume);
+                        torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume, chunk.TMetadata.Magnet);
                         break;
                     case NewTorrentsData.DataOneofCase.TData:
                         torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.ToByteArray());
@@ -601,23 +610,41 @@ namespace RTSharp.Daemon.Services.transmission
             foreach (var (id, torrent) in torrents) {
                 torrent.Data.Position = 0;
 
-                BencodeNET.Objects.BDictionary bTorrent;
+                BencodeNET.Objects.BDictionary? bTorrent = null;
+                Uri? magnetUri = null;
                 byte[]? v1;
                 byte[]? v2;
-                try {
-                    bTorrent = bencodeParser.Parse<BencodeNET.Objects.BDictionary>(torrent.Data);
-                    (v1, v2) = BencodeUtils.GetInfoHashes(bTorrent);
-                } catch (Exception ex) {
-                    ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
-                        InfoHash = Array.Empty<byte>().ToByteString(),
-                        Status = { new Protocols.DataProvider.Status() {
-                            Command = "",
-                            FaultCode = "1",
-                            FaultString = $"Invalid bencode on torrent id {id}"
-                        } }
-                    });
-                    Logger.LogError(ex, "Invalid bencode");
-                    continue;
+                if (torrent.Magnet) {
+                    if (!MagnetParser.TryParse(Encoding.UTF8.GetString(torrent.Data.ToArray()), out var magnet)) {
+                        ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                            InfoHash = Array.Empty<byte>().ToByteString(),
+                            Status = { new Protocols.DataProvider.Status() {
+                                Command = "",
+                                FaultCode = "1",
+                                FaultString = $"Invalid magnet URI on torrent id {id}"
+                            } }
+                        });
+                        continue;
+                    }
+
+                    magnetUri = magnet.Uri;
+                    (v1, v2) = (magnet.V1InfoHash, magnet.V2InfoHash);
+                } else {
+                    try {
+                        bTorrent = bencodeParser.Parse<BencodeNET.Objects.BDictionary>(torrent.Data);
+                        (v1, v2) = BencodeUtils.GetInfoHashes(bTorrent);
+                    } catch (Exception ex) {
+                        ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
+                            InfoHash = Array.Empty<byte>().ToByteString(),
+                            Status = { new Protocols.DataProvider.Status() {
+                                Command = "",
+                                FaultCode = "1",
+                                FaultString = $"Invalid bencode on torrent id {id}"
+                            } }
+                        });
+                        Logger.LogError(ex, "Invalid bencode");
+                        continue;
+                    }
                 }
 
                 if (v1 == null) {
@@ -632,29 +659,43 @@ namespace RTSharp.Daemon.Services.transmission
                     continue;
                 }
 
-                Cache.Add(v1, v2);
-                var rtsHash = (v2 ?? v1)!;
+                byte[] rtsHash;
+                if ((!torrent.Magnet || v2 != null) && Cache.Add(v1, v2))
+                    rtsHash = v2 ?? v1;
+
+                else if (!Cache.TryGetRTSHash(v1, out rtsHash))
+                    rtsHash = v1;
 
                 try {
-                    if (torrent.FastResume) {
-                        if (!await TryWriteFastResume(bTorrent, v1, torrent.Path))
-                            Logger.LogWarning($"Fast resume requested but could not be applied for {Convert.ToHexString(v1)}");
+                    if (magnetUri == null) {
+                        if (torrent.FastResume) {
+                            if (!await TryWriteFastResume(bTorrent!, v1, torrent.Path))
+                                Logger.LogWarning($"Fast resume requested but could not be applied for {Convert.ToHexString(v1)}");
+                        }
+
+                        var b64 = Convert.ToBase64String(torrent.Data.ToArray());
+
+                        await client.TorrentAddAsync(new NewTorrent {
+                            DownloadDirectory = torrent.Path,
+                            Metainfo = b64,
+                            Paused = true
+                        });
+                    } else {
+                        Logger.LogInformation($"{InstanceKey}: Adding magnet {Convert.ToHexString(v1)}");
+
+                        await client.TorrentAddAsync(new NewTorrent {
+                            DownloadDirectory = torrent.Path,
+                            Filename = magnetUri.OriginalString,
+                            Paused = true
+                        });
                     }
-
-                    var b64 = Convert.ToBase64String(torrent.Data.ToArray());
-
-                    await client.TorrentAddAsync(new NewTorrent {
-                        DownloadDirectory = torrent.Path,
-                        Metainfo = b64,
-                        Paused = true
-                    });
                 } catch (Exception) {
                     ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                         InfoHash = Array.Empty<byte>().ToByteString(),
                         Status = { new Protocols.DataProvider.Status() {
                             Command = "",
                             FaultCode = "1",
-                            FaultString = $"Invalid bencode on torrent id {id}"
+                            FaultString = $"Failed to add torrent id {id}"
                         } }
                     });
                     continue;
@@ -688,11 +729,13 @@ namespace RTSharp.Daemon.Services.transmission
 
             var x = torrents[0];
 
+            var files = x.Files ?? [];
+
             return new TorrentsFilesReply.Types.TorrentsFiles {
                 InfoHash = ToRTSHash(Convert.FromHexString(x.HashString!)).ToByteString(),
-                MultiFile = x.Files![0].Name!.Contains('/'),
+                MultiFile = files.Length != 0 && files[0].Name!.Contains('/'),
                 Files = {
-                    x.Files.Select((i, idx) => {
+                    files.Select((i, idx) => {
                         var torrentName = x.Name!;
 
                         i.Name = i.Name!.StartsWith(torrentName + '/') ? i.Name[(torrentName.Length + 1)..] : i.Name;
@@ -761,7 +804,7 @@ namespace RTSharp.Daemon.Services.transmission
             var torrents = await client.TorrentGetAsync(ToNativeHashStrings(Req), [ TorrentFields.HASH_STRING, TorrentFields.TORRENT_FILE ]);
 
             for (var x = 0;x < torrents!.Torrents.Length;x++) {
-                var hash = await ResolveRTSHash(torrents!.Torrents[x].HashString!, torrents!.Torrents[x].TorrentFile);
+                var hash = await ResolveRTSHash(torrents!.Torrents[x]);
                 var idx = x.ToString();
 
                 await Res.WriteAsync(new DotTorrentsData {

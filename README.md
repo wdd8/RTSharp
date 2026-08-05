@@ -73,7 +73,7 @@ See [setting up data providers](docs/setup-dataproviders.md)
 |Remote daemon settings|🟢Supported|🟢Supported|🟢Supported|
 |Daemon log inspection|🟡Supported*|🟢Supported|🟡Supported*|
 |Fast recheck|🟢Supported|🟢Supported|🟢Supported|
-|Magnet links|🔴Not implemented|🟢Supported|🔴Not implemented|
+|Magnet links|🟢Supported|🟢Supported|🟢Supported|
 
 _* - not directly supported by torrent daemon_
 
