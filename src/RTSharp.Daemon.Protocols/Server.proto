@@ -8,11 +8,18 @@ import "google/protobuf/empty.proto";
 service GRPCServerService {
     rpc Test (google.protobuf.Empty) returns (google.protobuf.Empty);
 
+    rpc GetServerSettings (google.protobuf.Empty) returns (ServerSettings);
+
     rpc StartScript (StartScriptInput) returns (ScriptSessionReply);
     rpc ScriptStatus (google.protobuf.BytesValue) returns (stream ScriptProgressState);
     rpc ScriptsStatus (ScriptSessionsStatusRequest) returns (stream ScriptSessionUpdate);
     rpc StopScript (google.protobuf.BytesValue) returns (google.protobuf.Empty);
     rpc RemoveScript (google.protobuf.BytesValue) returns (google.protobuf.Empty);
+}
+
+message ServerSettings {
+    optional uint64 DLBandwidth = 1;
+    optional uint64 UPBandwidth = 2;
 }
 
 message StartScriptInput {

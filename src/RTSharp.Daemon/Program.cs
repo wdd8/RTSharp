@@ -49,6 +49,7 @@ public static class Program
         builder.Services.AddSingleton<ChannelsService>();
         builder.Services.AddSingleton<TorrentOpService>();
         builder.Services.AddSingleton<V1ToV2InfoHashCache>();
+        builder.Services.Configure<ServerOptions>(builder.Configuration);
         builder.Services.Configure<RTSharp.Daemon.Services.Prometheus.PrometheusOptions>(builder.Configuration.GetSection("Prometheus"));
         builder.Services.AddSingleton<RTSharp.Daemon.Services.Prometheus.PrometheusMetricsService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<RTSharp.Daemon.Services.Prometheus.PrometheusMetricsService>());

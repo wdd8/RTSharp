@@ -42,8 +42,10 @@ There are multiple options to run `RTSharp.Daemon`:
 3. Modify example configuration at `/etc/rtsharp-daemon/appsettings.json`:
    1. Modify `ListenAddress` to listen on `DaemonPort` of your choosing
    2. Add clients certificate thumbprint you've noted down before to `AllowedClients`.
+
+4. Explore other settings like `Prometheus`. Most of them are optional, like `DLBandwidth` and `UPBandwidth` which enables some visualizations & statistics.
    
-4. Restart the daemon
+5. Restart the daemon
 
 > [!CAUTION]
 > Granting access to `RTSharp.Daemon` is equivalent to granting shell access. Daemon implements a runtime scripting interface that can be used to perform any action. Add clients to `AllowedClients` with caution.

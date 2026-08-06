@@ -3,6 +3,8 @@ using Google.Protobuf.WellKnownTypes;
 
 using Grpc.Core;
 
+using Microsoft.Extensions.Options;
+
 using RTSharp.Daemon.Protocols;
 using RTSharp.Daemon.RuntimeCompilation;
 using RTSharp.Daemon.RuntimeCompilation.Exceptions;
@@ -12,9 +14,22 @@ using RTSharp.Shared.Utils;
 
 namespace RTSharp.Daemon.GRPCServices
 {
-    public class ServerService(ILogger<ServerService> Logger, SessionsService Sessions) : GRPCServerService.GRPCServerServiceBase
+    public class ServerService(ILogger<ServerService> Logger, SessionsService Sessions, IOptionsMonitor<ServerOptions> Options) : GRPCServerService.GRPCServerServiceBase
     {
         public override Task<Empty> Test(Empty request, ServerCallContext context) => Task.FromResult(new Empty());
+
+        public override Task<ServerSettings> GetServerSettings(Empty request, ServerCallContext context)
+        {
+            var options = Options.CurrentValue;
+            var ret = new ServerSettings();
+
+            if (options.DLBandwidth != null)
+                ret.DLBandwidth = options.DLBandwidth.Value;
+            if (options.UPBandwidth != null)
+                ret.UPBandwidth = options.UPBandwidth.Value;
+
+            return Task.FromResult(ret);
+        }
 
         public override async Task<ScriptSessionReply> StartScript(StartScriptInput Req, ServerCallContext context)
         {
