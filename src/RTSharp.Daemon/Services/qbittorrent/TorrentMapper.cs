@@ -47,13 +47,14 @@ public class TorrentMapper
     {
         var etaExists = External.EstimatedTime != null && External.EstimatedTime.Value > TimeSpan.Zero && External.EstimatedTime.Value != TimeSpan.FromDays(100) && External.EstimatedTime.Value != TimeSpan.MaxValue;
         var wasHashing = Stored.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing);
+        var wasErrored = Stored.State.HasFlag(Protocols.DataProvider.TorrentState.Errored);
 
-        // IsPrivate = ?
         // PieceSize = ?
         // Wasted = ?
         // CreatedOnDate = ?
-        // StatusMessage = ?
         // Comment = ?
+        if (External.Private != null)
+            Stored.IsPrivate = External.Private.Value;
         if (External.Name != null)
             Stored.Name = External.Name;
         if (External.State != null)
@@ -111,6 +112,26 @@ public class TorrentMapper
         if (External.SequentialDownload != null)
             Stored.SequentialDownload = External.SequentialDownload.Value;
 
+        if (External.HasTrackerError != null || External.HasOtherAnnounceError != null || External.HasTrackerWarning != null) {
+            if (External.HasTrackerError == true)
+                Stored.StatusMessage = "Tracker: [Announce rejected by tracker]";
+            else if (External.HasOtherAnnounceError == true)
+                Stored.StatusMessage = "Tracker: [Tracker unreachable]";
+            else if (External.HasTrackerWarning == true)
+                Stored.StatusMessage = "Tracker: [Announced with warning]";
+            else
+                Stored.StatusMessage = "";
+        }
+
+        if (External.HasTrackerError == null && External.HasOtherAnnounceError == null) {
+            if (wasErrored)
+                Stored.State |= Protocols.DataProvider.TorrentState.Errored;
+        } else if (Stored.IsPrivate && (External.HasTrackerError == true || External.HasOtherAnnounceError == true)) {
+            Stored.State |= Protocols.DataProvider.TorrentState.Errored;
+        } else {
+            Stored.State &= ~Protocols.DataProvider.TorrentState.Errored;
+        }
+
         if (Stored.IsCompleted) {
             /*
              * for some reason qbit still reports some DL speed even though the torrent is
@@ -132,6 +153,8 @@ public class TorrentMapper
 
     public static void ApplyFromExternal(Protocols.DataProvider.Torrent Stored, QBittorrent.Client.TorrentInfo External)
     {
+        if (External.Private != null)
+            Stored.IsPrivate = External.Private.Value;
         if (External.Name != null)
             Stored.Name = External.Name;
         Stored.State = MapFromExternal(External.State);

@@ -288,6 +288,37 @@ namespace QBittorrent.Client
         public long? TotalSize { get; set; }
 
         /// <summary>
+        /// True if the torrent is private (no DHT/PeX/LSD). Available on qBittorrent 5.0+; null on older
+        /// servers, on torrents whose metadata has not been downloaded yet, and on partial rows that
+        /// don't include it.
+        /// </summary>
+        [JsonProperty("private")]
+        public bool? Private { get; set; }
+
+        /// <summary>
+        /// True if at least one tracker announce returned a warning. Only reported by <c>sync/maindata</c>
+        /// on qBittorrent 5.1+ (WebUI API >= 2.11.7); null otherwise or on partial rows that don't include it.
+        /// </summary>
+        [JsonProperty("has_tracker_warning")]
+        public bool? HasTrackerWarning { get; set; }
+
+        /// <summary>
+        /// True if at least one tracker responded to an announce with an error. Only reported by
+        /// <c>sync/maindata</c> on qBittorrent 5.1+ (WebUI API >= 2.11.7); null otherwise or on partial
+        /// rows that don't include it.
+        /// </summary>
+        [JsonProperty("has_tracker_error")]
+        public bool? HasTrackerError { get; set; }
+
+        /// <summary>
+        /// True if at least one tracker could not be announced to at all (unreachable/not working). Only
+        /// reported by <c>sync/maindata</c> on qBittorrent 5.1+ (WebUI API >= 2.11.7); null otherwise or on
+        /// partial rows that don't include it.
+        /// </summary>
+        [JsonProperty("has_other_announce_error")]
+        public bool? HasOtherAnnounceError { get; set; }
+
+        /// <summary>
         /// Additional properties not handled by this library.
         /// </summary>
         [JsonExtensionData]

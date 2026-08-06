@@ -95,6 +95,12 @@ public class TorrentMapper
                 Uri = tracker.Announce
             };
         }
+        if (External.Error != null) {
+            if (External.Error == Transmission.Net.Core.Enums.TorrentError.LocalError || (Stored.IsPrivate && External.Error == Transmission.Net.Core.Enums.TorrentError.TrackerError))
+                Stored.State |= Protocols.DataProvider.TorrentState.Errored;
+            else
+                Stored.State &= ~Protocols.DataProvider.TorrentState.Errored;
+        }
         if (External.ErrorString != null)
             Stored.StatusMessage = External.ErrorString;
         if (External.Comment != null)

@@ -86,7 +86,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 }
             }
 
-            if (StatusMessageDecoded.Length != 0 && StatusMessageDecoded != "Tracker: [Tried all trackers.]")
+            if (StatusMessageDecoded.Length != 0 && (IsPrivate || StatusMessageDecoded != "Tracker: [Tried all trackers.]"))
                 torrentState |= TorrentState.Errored;
 
             uint seedersTotal = 0, peersTotal = 0;

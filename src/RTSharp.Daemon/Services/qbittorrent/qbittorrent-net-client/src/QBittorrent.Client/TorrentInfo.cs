@@ -291,6 +291,13 @@ namespace QBittorrent.Client
         public string ContentPath { get; set; }
 
         /// <summary>
+        /// True if the torrent is private (no DHT/PeX/LSD). Available on qBittorrent 5.0+; null on older
+        /// servers and on torrents whose metadata has not been downloaded yet.
+        /// </summary>
+        [JsonProperty("private")]
+        public bool? Private { get; set; }
+
+        /// <summary>
         /// Additional properties not handled by this library.
         /// </summary>
         [JsonExtensionData]
