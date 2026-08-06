@@ -336,7 +336,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
     public void EvGridContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e) => ViewModel!.RefreshSequentialDownloadMenuHeader();
 
-    public void EvGridKeyUp(object? sender, Avalonia.Input.KeyEventArgs e) => ViewModel!.EvGridKeyUp(e);
+    public void EvGridTextInput(object? sender, Avalonia.Input.TextInputEventArgs e) => ViewModel!.EvGridTextInput(e);
 
     private void EvGridPointerPressedClearSelection(object? sender, PointerPressedEventArgs e)
     {

@@ -251,12 +251,13 @@ public partial class TorrentListingViewModel
         }
     }
 
-    public void EvGridKeyUp(Avalonia.Input.KeyEventArgs e)
+    public void EvGridTextInput(Avalonia.Input.TextInputEventArgs e)
     {
-        if (e.KeySymbol == null)
+        if (String.IsNullOrEmpty(e.Text))
             return;
 
-        CurrentSearchText += e.KeySymbol;
+        CurrentSearchText += e.Text;
+        e.Handled = true;
         if (CurrentSearchText.Length > 0) {
             SearchModel.SetOrUpdate(new SearchDescriptor(
                 query: "^" + Regex.Escape(CurrentSearchText.Trim()),

@@ -240,7 +240,7 @@
 					  SortingModel="{Binding SortingModel}"
 					  FilteringModel="{Binding FilteringModel}"
 					  SearchModel="{Binding SearchModel}"
-					  KeyUp="EvGridKeyUp"
+					  TextInput="EvGridTextInput"
 					  IsReadOnly="True"
 					  IsMultiSortEnabled="True"
 					  SortCycleMode="AscendingDescendingNone"
