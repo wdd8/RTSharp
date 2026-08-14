@@ -4,6 +4,7 @@ option csharp_namespace = "RTSharp.Daemon.Protocols";
 
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 service GRPCServerService {
     rpc Test (google.protobuf.Empty) returns (google.protobuf.Empty);
@@ -15,6 +16,11 @@ service GRPCServerService {
     rpc ScriptsStatus (ScriptSessionsStatusRequest) returns (stream ScriptSessionUpdate);
     rpc StopScript (google.protobuf.BytesValue) returns (google.protobuf.Empty);
     rpc RemoveScript (google.protobuf.BytesValue) returns (google.protobuf.Empty);
+
+    rpc InstallScript (InstallScriptInput) returns (InstalledScript);
+    rpc UninstallScript (google.protobuf.StringValue) returns (google.protobuf.Empty);
+    rpc ListInstalledScripts (google.protobuf.Empty) returns (InstalledScriptList);
+    rpc AcknowledgeOrphanedScript (google.protobuf.StringValue) returns (InstalledScript);
 }
 
 message ServerSettings {
@@ -60,8 +66,35 @@ message ScriptSessionUpdate {
     string SessionName = 2;
     google.protobuf.BytesValue ParentStateId = 3;
     ScriptProgressState State = 4;
+    google.protobuf.StringValue InstalledScriptId = 5;
 }
 
 message ScriptSessionReply {
     bytes Id = 1;
+}
+
+message InstallScriptInput {
+    string Id = 1;
+    string Name = 2;
+    string OwnerId = 3;
+    string Script = 4;
+    map<string, string> Variables = 5;
+}
+
+message InstalledScript {
+    string Id = 1;
+    string Name = 2;
+    string OwnerId = 3;
+    bytes ScriptHash = 4;
+    bool OrphanAcknowledged = 5;
+    google.protobuf.BytesValue SessionId = 6;
+    TaskState State = 7;
+    string StatusText = 8;
+    string LastError = 9;
+    google.protobuf.Timestamp InstalledAt = 10;
+    google.protobuf.Timestamp StartedAt = 11;
+}
+
+message InstalledScriptList {
+    repeated InstalledScript Scripts = 1;
 }

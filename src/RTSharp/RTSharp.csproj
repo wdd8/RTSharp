@@ -376,4 +376,6 @@
       <Generator>MSBuild:Compile</Generator>
     </AvaloniaXaml>
   </ItemGroup>
+
+  <Import Project="..\daemon-script.targets" />
 </Project>

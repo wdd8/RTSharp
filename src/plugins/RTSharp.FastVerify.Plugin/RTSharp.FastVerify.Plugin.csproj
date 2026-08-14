@@ -33,5 +33,6 @@
   </ItemGroup>
 
   <Import Project="..\..\plugin.targets" />
+  <Import Project="..\..\daemon-script.targets" />
 
 </Project>

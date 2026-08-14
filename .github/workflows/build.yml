@@ -56,6 +56,32 @@ jobs:
           name: ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}
           path: ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}
 
+  verify-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Resolve .NET SDK version
+        id: dotnet
+        run: |
+          TFM=$(grep -oP '(?<=<TargetFramework>)[^<]+' src/RTSharp.Daemon.Scripts/RTSharp.Daemon.Scripts.csproj | head -1)
+          if [ -z "$TFM" ]; then echo "No <TargetFramework> in RTSharp.Daemon.Scripts.csproj" >&2; exit 1; fi
+          echo "version=${TFM#net}.x" >> "$GITHUB_OUTPUT"
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ steps.dotnet.outputs.version }}
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      - name: Verify daemon scripts
+        run: dotnet build ./src/RTSharp.Daemon.Scripts -c Debug -p:DebugType=none
+
   docker:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')

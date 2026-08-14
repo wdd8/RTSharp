@@ -7,14 +7,13 @@ using Microsoft.Extensions.Options;
 
 using RTSharp.Daemon.Protocols;
 using RTSharp.Daemon.RuntimeCompilation;
-using RTSharp.Daemon.RuntimeCompilation.Exceptions;
 using RTSharp.Daemon.Services;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
 namespace RTSharp.Daemon.GRPCServices
 {
-    public class ServerService(ILogger<ServerService> Logger, SessionsService Sessions, IOptionsMonitor<ServerOptions> Options) : GRPCServerService.GRPCServerServiceBase
+    public class ServerService(ILogger<ServerService> Logger, SessionsService Sessions, InstalledScriptsService InstalledScripts, IOptionsMonitor<ServerOptions> Options) : GRPCServerService.GRPCServerServiceBase
     {
         public override Task<Empty> Test(Empty request, ServerCallContext context) => Task.FromResult(new Empty());
 
@@ -37,15 +36,7 @@ namespace RTSharp.Daemon.GRPCServices
                 Logger.LogDebug("Compiling script...");
                 Logger.LogTrace("Script: {script}", Req.Script);
 
-                var script = Req.Script;
-                var hash = System.Security.Cryptography.SHA512.HashData(System.Text.Encoding.UTF8.GetBytes(script));
-
-                var compilation = await DynamicCompilation.Compile<IScript>(
-                    hash,
-                    script,
-                    Req.Name,
-                    [ "RTSharp.Daemon", "RTSharp.Daemon.Protocols", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils", "System.Collections", "System.Linq", "System.Text.Json", "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging", "System.ComponentModel" ],
-                    [ "System", "System.Threading.Tasks", "System.Threading", "System.Collections.Generic", "RTSharp.Daemon", "RTSharp.Shared.Abstractions", "RTSharp.Shared.Utils" ]);
+                var compilation = await DynamicCompilation.Compile<IScript>(Req.Script, Req.Name);
 
                 var session = Sessions.RunScript(Req.Name, compilation, Req.Variables.ToDictionary());
 
@@ -64,21 +55,22 @@ namespace RTSharp.Daemon.GRPCServices
                 return new ScriptSessionReply {
                     Id = session.Id.ToByteString()
                 };
-            } catch (CompilationFailureException ex) {
-                throw new RpcException(new Status(StatusCode.InvalidArgument, string.Join('\n', ex.Message.Split([ "\r\n", "\n" ], StringSplitOptions.None).Where(x => !x.StartsWith("warning")))));
-            } catch (PragmaParsingException ex) {
-                throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
-            } catch (InstantiationException ex) {
-                throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
-            } catch (DllNotFoundException ex) {
-                throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
-            } catch (InterfaceNotFoundException ex) {
-                throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+            } catch (Exception ex) when (DynamicCompilation.TryDescribeAuthoringError(ex, out var message)) {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, message));
             } catch (Exception ex) {
                 Logger.LogError(ex, "Failed to compile script");
                 throw;
             }
         }
+
+        static TaskState MapTaskState(TASK_STATE In) => In switch {
+            TASK_STATE.WAITING => TaskState.Waiting,
+            TASK_STATE.RUNNING => TaskState.Running,
+            TASK_STATE.FAILED => TaskState.Failed,
+            TASK_STATE.DONE => TaskState.Done,
+            TASK_STATE.CANCELLED => TaskState.Cancelled,
+            _ => throw new IndexOutOfRangeException()
+        };
 
         Protocols.ScriptProgressState MapProgressState(Shared.Abstractions.ScriptProgressState In, bool includeChain)
         {
@@ -86,14 +78,7 @@ namespace RTSharp.Daemon.GRPCServices
                 Id = In.Id.ToByteString(),
                 Text = In.Text,
                 Progress = In.Progress ?? -1,
-                State = In.State switch {
-                    TASK_STATE.WAITING => TaskState.Waiting,
-                    TASK_STATE.RUNNING => TaskState.Running,
-                    TASK_STATE.FAILED => TaskState.Failed,
-                    TASK_STATE.DONE => TaskState.Done,
-                    TASK_STATE.CANCELLED => TaskState.Cancelled,
-                    _ => throw new IndexOutOfRangeException()
-                },
+                State = MapTaskState(In.State),
                 Chain = { includeChain ? In.Chain?.Select(x => MapProgressState(x, includeChain: true)) ?? [] : [] },
                 StateData = In.StateData
             };
@@ -104,7 +89,8 @@ namespace RTSharp.Daemon.GRPCServices
             var ret = new Protocols.ScriptSessionUpdate {
                 SessionId = In.SessionId.ToByteString(),
                 SessionName = In.SessionName ?? "",
-                State = MapProgressState(In.State, IncludeChain)
+                State = MapProgressState(In.State, IncludeChain),
+                InstalledScriptId = In.InstalledScriptId
             };
 
             if (In.ParentStateId != null) {
@@ -174,6 +160,81 @@ namespace RTSharp.Daemon.GRPCServices
             }
 
             return Task.FromResult(new Empty());
+        }
+
+        Protocols.InstalledScript MapInstalledScript(Services.InstalledScript In)
+        {
+            var failure = In.Session?.Execution?.Exception?.GetBaseException();
+
+            var lastError = "";
+            if (failure != null) {
+                lastError = DynamicCompilation.TryDescribeAuthoringError(failure, out var message) ? message : failure.Message;
+            }
+
+            var ret = new Protocols.InstalledScript {
+                Id = In.Id,
+                Name = In.Info.Name,
+                OwnerId = In.Info.OwnerId,
+                ScriptHash = ByteString.CopyFrom(In.ScriptHash),
+                OrphanAcknowledged = In.Info.OrphanAcknowledged,
+                State = MapTaskState(In.Session?.Progress.State ?? TASK_STATE.WAITING),
+                StatusText = In.Session?.Progress.Text ?? "",
+                LastError = lastError,
+                InstalledAt = Timestamp.FromDateTimeOffset(In.Info.InstalledAt)
+            };
+
+            if (In.Session != null) {
+                ret.SessionId = In.Session.Id.ToByteString();
+                ret.StartedAt = Timestamp.FromDateTimeOffset(In.Session.StartedAt);
+            }
+
+            return ret;
+        }
+
+        public override async Task<Protocols.InstalledScript> InstallScript(InstallScriptInput Req, ServerCallContext Ctx)
+        {
+            try {
+                var installed = await InstalledScripts.Install(Req.Id, Req.Name, Req.OwnerId, Req.Script, Req.Variables.ToDictionary());
+
+                return MapInstalledScript(installed);
+            } catch (ArgumentException ex) {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+            } catch (Exception ex) when (DynamicCompilation.TryDescribeAuthoringError(ex, out var message)) {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, message));
+            } catch (Exception ex) {
+                Logger.LogError(ex, "Failed to install script {id}", Req.Id);
+                throw;
+            }
+        }
+
+        public override async Task<Empty> UninstallScript(StringValue Req, ServerCallContext Ctx)
+        {
+            try {
+                await InstalledScripts.Uninstall(Req.Value);
+            } catch (KeyNotFoundException ex) {
+                throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+            }
+
+            return new Empty();
+        }
+
+        public override async Task<InstalledScriptList> ListInstalledScripts(Empty Req, ServerCallContext Ctx)
+        {
+            var ret = new InstalledScriptList();
+
+            foreach (var script in await InstalledScripts.List(Ctx.CancellationToken))
+                ret.Scripts.Add(MapInstalledScript(script));
+
+            return ret;
+        }
+
+        public override async Task<Protocols.InstalledScript> AcknowledgeOrphanedScript(StringValue Req, ServerCallContext Ctx)
+        {
+            try {
+                return MapInstalledScript(await InstalledScripts.AcknowledgeOrphaned(Req.Value));
+            } catch (Exception ex) when (ex is KeyNotFoundException or DirectoryNotFoundException or FileNotFoundException) {
+                throw new RpcException(new Status(StatusCode.NotFound, $"No installed script '{Req.Value}'"));
+            }
         }
     }
 }

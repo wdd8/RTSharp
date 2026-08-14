@@ -26,6 +26,10 @@ public class ScriptSession : IScriptSession
 
     public required string Name { get; set; }
 
+    public required string? InstalledScriptId { get; init; }
+
+    public DateTimeOffset StartedAt { get; } = DateTimeOffset.UtcNow;
+
     internal AsyncAutoResetEvent EvProgressChanged = new(false);
 
     internal event Action<ScriptSession, ScriptProgressState, bool>? ProgressUpdated;
@@ -48,7 +52,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
 
     private readonly List<ChannelWriter<(ScriptSessionUpdate Update, bool IncludeChain)>> Subscribers = new();
 
-    public ScriptSession RunScript(string Name, DynamicScript<IScript> DynamicScript, Dictionary<string, string> Variables)
+    public ScriptSession RunScript(string Name, DynamicScript<IScript> DynamicScript, Dictionary<string, string> Variables, string? InstalledScriptId = null)
     {
         var scope = ScopeFactory.CreateScope();
         var cts = new CancellationTokenSource();
@@ -76,6 +80,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         session = new ScriptSession {
             Id = id,
             Name = Name,
+            InstalledScriptId = InstalledScriptId,
             Scope = scope,
             Script = DynamicScript,
             ScriptInstance = instance,
@@ -93,13 +98,14 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         return session;
     }
 
-    internal ScriptSession RunSession(string Name, CancellationTokenSource Cts, Func<ScriptSession, Task> Fx)
+    internal ScriptSession RunSession(string Name, CancellationTokenSource Cts, Func<ScriptSession, Task> Fx, string? InstalledScriptId = null)
     {
         ScriptSession session;
 
         session = new ScriptSession {
             Id = Guid.NewGuid(),
             Name = Name,
+            InstalledScriptId = InstalledScriptId,
             Scope = null,
             Script = null,
             ScriptInstance = null,
@@ -150,6 +156,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
                     channel.Writer.TryWrite((new ScriptSessionUpdate {
                         SessionId = session.Id,
                         SessionName = session.Name,
+                        InstalledScriptId = session.InstalledScriptId,
                         ParentStateId = null,
                         State = session.Progress
                     }, true));
@@ -194,6 +201,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
             var ret = Subscribers[x].TryWrite((new ScriptSessionUpdate {
                 SessionId = Session.Id,
                 SessionName = ParentStateId == null ? Session.Name : null,
+                InstalledScriptId = Session.InstalledScriptId,
                 ParentStateId = ParentStateId,
                 State = State
             }, ChainChanged));
@@ -231,6 +239,13 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         }
     }
 
+    public Dictionary<string, ScriptSession> GetInstalledScriptSessions()
+    {
+        lock (SessionsLock) {
+            return Sessions.Where(x => x.InstalledScriptId != null).ToDictionary(x => x.InstalledScriptId!);
+        }
+    }
+
     public bool QueueScriptCancellation(Guid Id)
     {
         ScriptSession? session;
@@ -251,7 +266,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         ScriptSession? session;
         lock (SessionsLock) {
             session = Sessions.FirstOrDefault(x => x.Id == Id);
-            if (session == null || (session.Progress.State != TASK_STATE.DONE && session.Progress.State != TASK_STATE.FAILED && session.Progress.State != TASK_STATE.CANCELLED)) {
+            if (session == null || (session.Execution?.IsCompleted != true && session.Progress.State != TASK_STATE.DONE && session.Progress.State != TASK_STATE.FAILED && session.Progress.State != TASK_STATE.CANCELLED)) {
                 return false;
             }
 

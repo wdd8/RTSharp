@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using RTSharp.Daemon.Protocols;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Plugin;
+using RTSharp.Scripts;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.DataProvider;
@@ -142,59 +143,7 @@ public class DaemonService : IDaemonService
         var senderServer = config.Servers.Value[SenderServerId].GetUri();
 
         var script = await ServerClient.StartScriptAsync(new StartScriptInput {
-            Script =
-"""
-#pragma usings
-#pragma lib "Microsoft.Extensions.Logging.Abstractions"
-
-using RTSharp.Daemon.Services;
-using System.Text.Json;
-using System.Linq;
-using Microsoft.Extensions.Logging;
-
-public class Main(ChannelsService Channels, FileTransferService FileTransfer, ILogger<Main> Logger) : IScript
-{
-    record Path(string StorePath, string RemoteSourcePath, ulong TotalSize);
-
-    public async Task Execute(Dictionary<string, string> Variables, IScriptSession Session, CancellationToken CancellationToken)
-    {
-        Session.Progress.State = TASK_STATE.RUNNING;
-        var transfer = new ScriptProgressState(Session) {
-            Text = "Transfering files...",
-            Progress = 0f,
-            State = TASK_STATE.WAITING
-        };
-        Session.Progress.Chain = [ transfer ];
-
-        var target = Variables["Uri"];
-        var pathsStr = Variables["Paths"];
-        var paths = JsonSerializer.Deserialize<List<Path>>(pathsStr)!;
-
-        var channel = await Channels.GetFilesClient(target);
-
-        transfer.State = TASK_STATE.RUNNING;
-
-        await FileTransfer.ReceiveFilesFromRemote(channel, paths.Select(x => (x.StorePath, x.RemoteSourcePath)), (FileTransferService.FileTransferSessionProgress progress) => {
-            transfer.Text = progress.Path;
-
-            if (progress.Path == "") {
-                transfer.Text = "";
-                transfer.Progress = 100f;
-                transfer.State = TASK_STATE.DONE;
-                return;
-            }
-
-            Logger.LogInformation($"Looking up path {progress.Path}...");
-
-            var path = paths.First(x => progress.Path.EndsWith(x.StorePath));
-
-            transfer.Progress = progress.BytesReceived / (float)path.TotalSize * 100f;
-        });
-
-        Session.Progress.State = TASK_STATE.DONE;
-    }
-}
-""",
+            Script = DaemonScripts.RequestReceiveFiles,
             Name = "RequestReceiveFiles",
             Variables = {
                 { "Uri", senderServer.ToString() },
@@ -324,6 +273,57 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
         await ServerClient.RemoveScriptAsync(new BytesValue { Value = ByteString.CopyFrom(Id.ToByteArray()) });
     }
 
+    public async Task<Shared.Abstractions.InstalledScript> InstallScript(string Id, string Name, Guid OwnerId, string Script, Dictionary<string, string> Variables)
+    {
+        return MapInstalledScript(await ServerClient.InstallScriptAsync(new InstallScriptInput {
+            Id = Id,
+            Name = Name,
+            OwnerId = OwnerId.ToString(),
+            Script = Script,
+            Variables = { Variables }
+        }));
+    }
+
+    public async Task UninstallScript(string Id)
+    {
+        await ServerClient.UninstallScriptAsync(new StringValue { Value = Id });
+    }
+
+    public async Task<IReadOnlyList<Shared.Abstractions.InstalledScript>> ListInstalledScripts()
+    {
+        var reply = await ServerClient.ListInstalledScriptsAsync(new Empty());
+
+        return [ ..reply.Scripts.Select(MapInstalledScript) ];
+    }
+
+    public async Task AcknowledgeOrphanedScript(string Id)
+    {
+        await ServerClient.AcknowledgeOrphanedScriptAsync(new StringValue { Value = Id });
+    }
+
+    static Shared.Abstractions.InstalledScript MapInstalledScript(RTSharp.Daemon.Protocols.InstalledScript In)
+    {
+        return new Shared.Abstractions.InstalledScript {
+            Id = In.Id,
+            Name = In.Name,
+            OwnerId = Guid.TryParse(In.OwnerId, out var ownerId) ? ownerId : Guid.Empty,
+            ScriptHash = In.ScriptHash.ToByteArray(),
+            OrphanAcknowledged = In.OrphanAcknowledged,
+            State = In.State switch {
+                TaskState.Done => TASK_STATE.DONE,
+                TaskState.Running => TASK_STATE.RUNNING,
+                TaskState.Waiting => TASK_STATE.WAITING,
+                TaskState.Failed => TASK_STATE.FAILED,
+                TaskState.Cancelled => TASK_STATE.CANCELLED,
+                _ => throw new ArgumentOutOfRangeException()
+            },
+            StatusText = In.StatusText,
+            LastError = String.IsNullOrEmpty(In.LastError) ? null : In.LastError,
+            InstalledAt = In.InstalledAt.ToDateTimeOffset(),
+            StartedAt = In.StartedAt?.ToDateTimeOffset()
+        };
+    }
+
     ScriptProgressState MapProgressState(RTSharp.Daemon.Protocols.ScriptProgressState In)
     {
         return new ScriptProgressState {
@@ -349,6 +349,7 @@ public class Main(ChannelsService Channels, FileTransferService FileTransfer, IL
             SessionId = new Guid(In.SessionId.ToByteArray()),
             SessionName = string.IsNullOrWhiteSpace(In.SessionName) ? null : In.SessionName,
             ParentStateId = In.ParentStateId != null ? new Guid(In.ParentStateId.ToByteArray()) : null,
+            InstalledScriptId = In.InstalledScriptId,
             State = MapProgressState(In.State)
         };
     }

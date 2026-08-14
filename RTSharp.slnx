@@ -12,6 +12,9 @@
     <Project Path="src/plugins/RTSharp.FastVerify.Plugin/RTSharp.FastVerify.Plugin.csproj">
       <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
     </Project>
+    <Project Path="src/plugins/RTSharp.ServerScriptPlayground.Plugin/RTSharp.ServerScriptPlayground.Plugin.csproj">
+      <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
+    </Project>
   </Folder>
   <Folder Name="/qbittorrent/">
     <Project Path="src/qbittorrent/RTSharp.DataProvider.Qbittorrent.Plugin/RTSharp.DataProvider.Qbittorrent.Plugin.csproj">
@@ -42,7 +45,9 @@
   <Project Path="src/ProDataGrid/src/ProDataGrid.FormulaEngine.Excel/ProDataGrid.FormulaEngine.Excel.csproj" />
   <Project Path="src/ProDataGrid/src/ProDataGrid.FormulaEngine/ProDataGrid.FormulaEngine.csproj" />
   <Project Path="src/RTSharp.Daemon.Protocols/RTSharp.Daemon.Protocols.csproj" />
+  <Project Path="src/RTSharp.Daemon.Scripts/RTSharp.Daemon.Scripts.csproj" />
   <Project Path="src/RTSharp.Daemon/RTSharp.Daemon.csproj" />
+  <Project Path="src/RTSharp.Scripts.Generator/RTSharp.Scripts.Generator.csproj" />
   <Project Path="src/RTSharp.Shared.Abstractions/RTSharp.Shared.Abstractions.csproj" />
   <Project Path="src/RTSharp.Shared.Abstractions.Client/RTSharp.Shared.Abstractions.Client.csproj" />
   <Project Path="src/RTSharp.Shared.Controls/RTSharp.Shared.Controls.csproj" />

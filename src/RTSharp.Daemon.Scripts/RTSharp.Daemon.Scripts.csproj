@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CS1633</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RTSharp\**\Scripts\**\*.cs" Exclude="..\RTSharp\bin\**;..\RTSharp\obj\**" LinkBase="RTSharp" />
+    <Compile Include="..\plugins\*\**\Scripts\**\*.cs" Exclude="..\plugins\*\bin\**;..\plugins\*\obj\**" LinkBase="plugins" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RTSharp.Daemon\RTSharp.Daemon.csproj" />
+
+    <!-- Turns RTSharp.Daemon's ScriptEnvironment.BuiltInUsingsList into the global usings scripts get at runtime -->
+    <ProjectReference
+      Include="..\RTSharp.Scripts.Generator\RTSharp.Scripts.Generator.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false"
+      Private="false" />
+  </ItemGroup>
+
+</Project>

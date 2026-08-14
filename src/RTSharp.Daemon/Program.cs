@@ -46,6 +46,8 @@ public static class Program
         builder.Services.AddSingleton<RTSharp.Shared.Abstractions.ISpeedMovingAverageService, SpeedMovingAverageService>();
         builder.Services.AddSingleton<FileTransferService>();
         builder.Services.AddSingleton<SessionsService>();
+        builder.Services.AddSingleton<InstalledScriptsService>();
+        builder.Services.AddHostedService(services => services.GetRequiredService<InstalledScriptsService>());
         builder.Services.AddSingleton<ChannelsService>();
         builder.Services.AddSingleton<TorrentOpService>();
         builder.Services.AddSingleton<V1ToV2InfoHashCache>();

@@ -42,7 +42,7 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
                 Header = "Server scripting",
                 Command = new RelayCommand(() => {
                     var wnd = new PlaygroundWindow();
-                    wnd.ViewModel = new ViewModels.PlaygroundWindowViewModel(this.Host, wnd);
+                    wnd.ViewModel = new ViewModels.PlaygroundWindowViewModel(this.Host, wnd, GUID);
                     wnd.Show();
                 })
             });

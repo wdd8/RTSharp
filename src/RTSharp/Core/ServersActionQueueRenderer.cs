@@ -38,6 +38,9 @@ public class ServersActionQueueRenderer(string ServerName, IDaemonService Daemon
 
     private void ApplyUpdate(ScriptSessionUpdate In)
     {
+        if (In.InstalledScriptId != null)
+            return;
+
         var action = FindAction(In.State.Id);
         if (action != null) {
             if (In.ParentStateId == null && In.SessionName != null) {

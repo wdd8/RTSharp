@@ -81,6 +81,29 @@ public interface IDaemonService
 
     Task<Guid> RunCustomScript(string Script, string Name, Dictionary<string, string> Variables);
 
+    /// <summary>
+    /// Installs a script the server keeps and starts again on every restart
+    /// </summary>
+    /// <param name="Id">Constant identifier per unique script</param>
+    /// <param name="OwnerId">GUID of the owning plugin, or <see cref="Guid.Empty"/> for the application</param>
+    Task<InstalledScript> InstallScript(string Id, string Name, Guid OwnerId, string Script, Dictionary<string, string> Variables);
+
+    /// <summary>
+    /// Stops an installed script and removes it from the server
+    /// </summary>
+    Task UninstallScript(string Id);
+
+    /// <summary>
+    /// Lists installed scripts
+    /// </summary>
+    Task<IReadOnlyList<InstalledScript>> ListInstalledScripts();
+
+    /// <summary>
+    /// Records on the server that a user has been asked about this script being orphaned and chose
+    /// to keep it
+    /// </summary>
+    Task AcknowledgeOrphanedScript(string Id);
+
     Task QueueScriptCancellation(Guid Id);
 
     Task RemoveScriptSession(Guid Id);

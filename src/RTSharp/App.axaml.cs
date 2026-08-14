@@ -254,6 +254,8 @@ public class App : Application
             TorrentPolling.Start();
 
             MainWindowViewModel!.PostStartup();
+
+            _ = Core.InstalledScriptsSync.CheckOrphans();
         } catch (Exception ex) {
             var msgbox = MessageBoxManager.GetMessageBoxStandard(
                 title: "RTSharp has crashed",

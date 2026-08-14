@@ -8,5 +8,7 @@ public class ScriptSessionUpdate
 
     public Guid? ParentStateId { get; init; }
 
+    public string? InstalledScriptId { get; init; }
+
     public required ScriptProgressState State { get; init; }
 }

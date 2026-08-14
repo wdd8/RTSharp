@@ -1,0 +1,15 @@
+<Project>
+
+    <ItemGroup>
+        <Compile Remove="**\Scripts\**\*.cs" />
+        <AdditionalFiles Include="**\Scripts\**\*.cs" Exclude="$(DefaultItemExcludes)" ScriptSource="true" />
+        <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ScriptSource" />
+
+        <ProjectReference
+            Include="$(MSBuildThisFileDirectory)RTSharp.Scripts.Generator\RTSharp.Scripts.Generator.csproj"
+            OutputItemType="Analyzer"
+            ReferenceOutputAssembly="false"
+            Private="false" />
+    </ItemGroup>
+
+</Project>

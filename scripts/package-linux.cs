@@ -121,6 +121,7 @@ Group=__CHANGE_ME__
 ExecStart=/usr/lib/rtsharp-daemon/RTSharp.Daemon
 Restart=on-failure
 RestartSec=5
+StateDirectory=rtsharp-daemon
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectKernelTunables=yes
