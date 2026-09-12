@@ -996,16 +996,18 @@ namespace RTSharp.Daemon.Services.transmission
                         try {
                             await client.TorrentSetLocationAsync([ToNativeHashString(req.InfoHash.Span)], req.TargetDirectory, Req.Move);
                         } catch (Exception ex) {
+                            exception = ex;
+
                             progress.State = TASK_STATE.FAILED;
                             progress.Text = $"Failed to set location. {ex.Message}";
-                            progress.StateData = ex.ToString();
                             progress.Progress = 100f;
 
                             session.Progress.State = progress.State;
                             session.Progress.Text = progress.Text;
-                            session.Progress.StateData = progress.StateData;
                             cts.Cancel();
                         }
+
+                        session.Send(new MoveDownloadDirectoryProgress(req.InfoHash.ToByteArray(), req.TargetDirectory, exception?.ToString() ?? "", exception == null));
 
                         progress.Progress = 100f;
                         progress.State = TASK_STATE.DONE;
@@ -1019,7 +1021,6 @@ namespace RTSharp.Daemon.Services.transmission
 
                 session.Progress.Progress = 100f;
                 session.Progress.State = TASK_STATE.DONE;
-                session.Progress.StateData = "";
                 session.Progress.Text = "Done";
             }
 

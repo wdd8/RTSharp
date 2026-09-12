@@ -8,6 +8,7 @@ using MsBox.Avalonia.Dto;
 using MsBox.Avalonia.Enums;
 
 using RTSharp.Scripts;
+using RTSharp.Scripts.FastVerify;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Utils;
@@ -114,28 +115,18 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 
         var dotTorrentBytes = (await torrent.DataOwner.GetDotTorrents([torrent])).Single().Value;
 
-        var scriptId = await daemon.RunCustomScript(DaemonScripts.FastVerify, "FastVerify", new Dictionary<string, string> {
-            ["TorrentEncoded"] = CompactBinaryString.Encode(dotTorrentBytes),
-            ["BaseDirectory"] = torrent.RemotePath
-        });
+        var scriptId = await daemon.RunCustomScript(DaemonScripts.FastVerify, "FastVerify",
+            [ScriptMessage.Of(new FastVerifyInput(dotTorrentBytes, torrent.RemotePath))]);
 
         try {
-            ScriptProgressState? final = null;
-            await daemon.GetScriptProgress(scriptId, progress => final = progress);
+            await using var channel = daemon.OpenScriptChannel(scriptId, CancellationToken.None);
 
-            if (final == null)
+            var result = await channel.Read<FastVerifyResult>();
+
+            if (result == null)
                 return (false, "No response from daemon");
 
-            if (final.State == TASK_STATE.CANCELLED)
-                return (false, "Verification was cancelled");
-
-            var parts = (final.StateData ?? "").Split('\x00', 2);
-            var success = parts.Length > 0 && parts[0] == "1";
-            var detail = parts.Length > 1 && parts[1].Length > 0
-                ? parts[1]
-                : (success ? null : "Verification failed");
-
-            return (success, detail);
+            return (result.Verified, result.Detail ?? (result.Verified ? null : "Verification failed"));
         } finally {
             await daemon.RemoveScriptSession(scriptId);
         }

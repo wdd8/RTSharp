@@ -850,8 +850,9 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                             progress.State = TASK_STATE.FAILED;
                             progress.Text = $"Failed to set location. {ex.Message}";
-                            progress.StateData = ex.ToString();
                         }
+
+                        session.Send(new MoveDownloadDirectoryProgress(req.InfoHash.ToByteArray(), req.TargetDirectory, exception?.ToString() ?? "", exception == null));
 
                         progress.Progress = 100f;
                         progress.State = progress.State == TASK_STATE.FAILED ? TASK_STATE.FAILED : TASK_STATE.DONE;
@@ -865,7 +866,6 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                 session.Progress.Progress = 100f;
                 session.Progress.State = TASK_STATE.DONE;
-                session.Progress.StateData = "";
                 session.Progress.Text = "Done";
             }
 

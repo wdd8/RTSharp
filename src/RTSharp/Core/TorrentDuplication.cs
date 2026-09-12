@@ -1,21 +1,16 @@
 using RTSharp.Scripts;
+using RTSharp.Scripts.DuplicateTorrent;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.DataProvider;
+using RTSharp.Shared.Utils;
 
 using Serilog;
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace RTSharp.Core;
-
-internal record DuplicationScriptTarget(string Provider, string? Uri, string Path);
-
-[JsonSerializable(typeof(List<DuplicationScriptTarget>))]
-internal partial class DuplicationScriptTargetContext : JsonSerializerContext { }
 
 public static class TorrentDuplication
 {
@@ -37,20 +32,18 @@ public static class TorrentDuplication
         var source = Torrent.DataOwner;
         var sourceServerId = source.Host.Config.Plugin.ServerId;
 
-        var scriptTargets = Targets.Select(t => new DuplicationScriptTarget(
-            t.Provider.Host.Config.Plugin.ProviderName,
-            t.Provider.Host.Config.Plugin.ServerId == sourceServerId ? "" : t.Provider.Host.AttachedDaemonService.Uri.AbsoluteUri,
-            t.RemoteTargetPath
-        )).ToList();
+        var input = new DuplicateTorrentInput(
+            Torrent.Hash,
+            source.Host.Config.Plugin.ProviderName,
+            source.Host.AttachedDaemonService.Uri.AbsoluteUri,
+            [.. Targets.Select(t => new DuplicateTorrentTarget(
+                t.Provider.Host.Config.Plugin.ProviderName,
+                t.Provider.Host.Config.Plugin.ServerId == sourceServerId ? "" : t.Provider.Host.AttachedDaemonService.Uri.AbsoluteUri,
+                t.RemoteTargetPath
+            ))]
+        );
 
-        var variables = new Dictionary<string, string> {
-            ["Hash"] = Convert.ToHexString(Torrent.Hash),
-            ["SourceProvider"] = source.Host.Config.Plugin.ProviderName,
-            ["SourceUri"] = source.Host.AttachedDaemonService.Uri.AbsoluteUri,
-            ["Targets"] = JsonSerializer.Serialize(scriptTargets, DuplicationScriptTargetContext.Default.ListDuplicationScriptTarget)
-        };
-
-        _ = source.Host.AttachedDaemonService.RunCustomScript(DaemonScripts.DuplicateTorrent, $"Duplicate '{Torrent.Name}'", variables)
+        _ = source.Host.AttachedDaemonService.RunCustomScript(DaemonScripts.DuplicateTorrent, $"Duplicate '{Torrent.Name}'", [ScriptMessage.Of(input)])
             .ContinueWith(t => {
                 if (t.IsFaulted)
                     Log.Logger.Error(t.Exception, $"Duplication: failed to queue script on {source.Host.Config.Plugin.Name}");

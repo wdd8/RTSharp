@@ -1,4 +1,5 @@
 #pragma usings
+#pragma contract FastVerifyMessages
 
 using System.IO;
 using BencodeNET.Objects;
@@ -25,26 +26,25 @@ public class Main(ILogger<Main> Logger) : IScript
         }
     }
 
-    public async Task Execute(Dictionary<string, string> Variables, IScriptSession Session, CancellationToken CancellationToken)
+    public async Task Execute(IScriptSession Session, CancellationToken CancellationToken)
     {
         Session.Progress.State = TASK_STATE.RUNNING;
         Session.Progress.Text = "Fast verifying...";
 
         try {
-            var bytes = CompactBinaryString.Decode(Variables["TorrentEncoded"]);
-            var baseDirectory = Variables["BaseDirectory"];
+            var input = await Session.Rx<FastVerifyInput>(CancellationToken);
 
-            using var mem = new MemoryStream(bytes);
+            using var mem = new MemoryStream(input.Torrent);
             var bTorrent = new BencodeParser().Parse<BDictionary>(mem);
 
             var logger = new CapturingLogger();
-            var verified = await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, baseDirectory, logger);
+            var verified = await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, input.BaseDirectory, logger);
 
-            Session.Progress.StateData = $"{(verified ? "1" : "0")}\x00{logger.LastWarning}";
+            Session.Send(new FastVerifyResult(verified, logger.LastWarning));
             Session.Progress.State = TASK_STATE.DONE;
         } catch (Exception ex) {
             Logger.LogError(ex, "Fast verify script failed");
-            Session.Progress.StateData = $"0\x00{ex.Message}";
+            Session.Send(new FastVerifyResult(false, ex.Message));
             Session.Progress.State = TASK_STATE.FAILED;
         }
     }

@@ -1,4 +1,5 @@
 #pragma usings
+#pragma contract DuplicateTorrentMessages
 
 using RTSharp.Daemon.Primitives;
 using RTSharp.Daemon.GRPCServices.DataProvider;
@@ -7,23 +8,22 @@ using RTSharp.Daemon.Services;
 using RTSharp.Shared.Utils;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 
 namespace RTSharp.Scripts.DuplicateTorrent;
 
 public class Main(RegisteredDataProviders DataProviders, RTSharp.Daemon.Services.TorrentOpService TorrentOps) : IScript
 {
-    record DuplicationScriptTarget(string Provider, string? Uri, string Path);
-
-    public async Task Execute(Dictionary<string, string> Variables, IScriptSession Session, CancellationToken CancellationToken)
+    public async Task Execute(IScriptSession Session, CancellationToken CancellationToken)
     {
         Session.Progress.State = TASK_STATE.RUNNING;
         Session.Progress.Text = "Waiting for source torrent to complete...";
 
-        var hash = Convert.FromHexString(Variables["Hash"]);
-        var sourceUri = Variables["SourceUri"];
-        var sourceDp = DataProviders.GetDataProvider(Variables["SourceProvider"]) ?? throw new InvalidOperationException($"Unknown source data provider '{Variables["SourceProvider"]}'");
-        var targets = JsonSerializer.Deserialize<DuplicationScriptTarget[]>(Variables["Targets"]) ?? Array.Empty<DuplicationScriptTarget>();
+        var input = await Session.Rx<DuplicateTorrentInput>(CancellationToken);
+
+        var hash = input.Hash;
+        var sourceUri = input.SourceUri;
+        var sourceDp = DataProviders.GetDataProvider(input.SourceProvider) ?? throw new InvalidOperationException($"Unknown source data provider '{input.SourceProvider}'");
+        var targets = input.Targets;
 
         await TorrentOps.WaitForCompletion(sourceDp, hash, CancellationToken);
 

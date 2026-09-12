@@ -38,7 +38,7 @@ namespace RTSharp.Daemon.GRPCServices
 
                 var compilation = await DynamicCompilation.Compile<IScript>(Req.Script, Req.Name);
 
-                var session = Sessions.RunScript(Req.Name, compilation, Req.Variables.ToDictionary());
+                var session = Sessions.RunScript(Req.Name, compilation, Req.Input.Select(x => x.ToScriptMessage()));
 
                 Logger.LogInformation("Script ID {id} is running...", session.Id);
 
@@ -79,8 +79,7 @@ namespace RTSharp.Daemon.GRPCServices
                 Text = In.Text,
                 Progress = In.Progress ?? -1,
                 State = MapTaskState(In.State),
-                Chain = { includeChain ? In.Chain?.Select(x => MapProgressState(x, includeChain: true)) ?? [] : [] },
-                StateData = In.StateData
+                Chain = { includeChain ? In.Chain?.Select(x => MapProgressState(x, includeChain: true)) ?? [] : [] }
             };
         }
 
@@ -137,6 +136,39 @@ namespace RTSharp.Daemon.GRPCServices
             }
         }
 
+        public override async Task ScriptChannel(IAsyncStreamReader<ScriptChannelRequest> Req, IServerStreamWriter<Protocols.ScriptMessage> Res, ServerCallContext Ctx)
+        {
+            if (!await Req.MoveNext(Ctx.CancellationToken))
+                return;
+
+            if (!Req.Current.HasAttach || Req.Current.Attach.Length != 16)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Missing session attach"));
+
+            var id = new Guid(Req.Current.Attach.Span);
+            var session = Sessions.GetScriptSession(id) ?? throw new RpcException(new Status(StatusCode.NotFound, "Script session not found"));
+
+            Logger.LogTrace($"ScriptChannel: attached to session {id}");
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(Ctx.CancellationToken);
+
+            var input = Task.Run(async () => {
+                try {
+                    while (await Req.MoveNext(cts.Token)) {
+                        session.ReceivedMessage(Req.Current.Input.ToScriptMessage());
+                    }
+                } catch (Exception ex) when (ex is OperationCanceledException or RpcException) {
+                }
+            });
+
+            try {
+                await foreach (var message in session.SubscribeOutput(Ctx.CancellationToken).ReadAllAsync(Ctx.CancellationToken))
+                    await Res.WriteAsync(message.ToProtocol(), Ctx.CancellationToken);
+            } finally {
+                await cts.CancelAsync();
+                await input;
+            }
+        }
+
         public override Task<Empty> StopScript(BytesValue Req, ServerCallContext Ctx)
         {
             if (Req.Value.Length != 16)
@@ -173,7 +205,7 @@ namespace RTSharp.Daemon.GRPCServices
 
             var ret = new Protocols.InstalledScript {
                 Id = In.Id,
-                Name = In.Info.Name,
+                Name = In.Start.Name,
                 OwnerId = In.Info.OwnerId,
                 ScriptHash = ByteString.CopyFrom(In.ScriptHash),
                 OrphanAcknowledged = In.Info.OrphanAcknowledged,
@@ -194,7 +226,7 @@ namespace RTSharp.Daemon.GRPCServices
         public override async Task<Protocols.InstalledScript> InstallScript(InstallScriptInput Req, ServerCallContext Ctx)
         {
             try {
-                var installed = await InstalledScripts.Install(Req.Id, Req.Name, Req.OwnerId, Req.Script, Req.Variables.ToDictionary());
+                var installed = await InstalledScripts.Install(Req.Id, Req.OwnerId, Req.Start);
 
                 return MapInstalledScript(installed);
             } catch (ArgumentException ex) {

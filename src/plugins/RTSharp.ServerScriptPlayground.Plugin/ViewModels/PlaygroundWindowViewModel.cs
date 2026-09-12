@@ -59,7 +59,7 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
         }
 
         try {
-            CurrentScriptId = await server.RunCustomScript(Script, $"PlaygroundScript_{DateTime.UtcNow.Ticks}", new Dictionary<string, string> { });
+            CurrentScriptId = await server.RunCustomScript(Script, $"PlaygroundScript_{DateTime.UtcNow.Ticks}", []);
         } catch (Exception ex) {
             await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
 
@@ -80,7 +80,7 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
         }
 
         try {
-            await Host.GetDaemonService(SelectedServer)!.InstallScript(ServiceId, ServiceId, OwnerId, Script, new Dictionary<string, string> { });
+            await Host.GetDaemonService(SelectedServer)!.InstallScript(ServiceId, ServiceId, OwnerId, Script, []);
         } catch (Exception ex) {
             await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
             return;

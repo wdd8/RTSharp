@@ -79,14 +79,19 @@ public interface IDaemonService
 
     Task<MemoryStream> ReceiveFilesInline(string RemotePath);
 
-    Task<Guid> RunCustomScript(string Script, string Name, Dictionary<string, string> Variables);
+    /// <summary>
+    /// Compiles and runs a script on the server
+    /// </summary>
+    /// <param name="Input">Messages to push into the script before it starts</param>
+    Task<Guid> RunCustomScript(string Script, string Name, IReadOnlyList<ScriptMessage> Input);
 
     /// <summary>
     /// Installs a script the server keeps and starts again on every restart
     /// </summary>
     /// <param name="Id">Constant identifier per unique script</param>
     /// <param name="OwnerId">GUID of the owning plugin, or <see cref="Guid.Empty"/> for the application</param>
-    Task<InstalledScript> InstallScript(string Id, string Name, Guid OwnerId, string Script, Dictionary<string, string> Variables);
+    /// <param name="Input">Messages to push into the script before it starts</param>
+    Task<InstalledScript> InstallScript(string Id, string Name, Guid OwnerId, string Script, IReadOnlyList<ScriptMessage> Input);
 
     /// <summary>
     /// Stops an installed script and removes it from the server
@@ -109,6 +114,11 @@ public interface IDaemonService
     Task RemoveScriptSession(Guid Id);
     
     Task GetScriptProgress(Guid Req, Action<ScriptProgressState>? Progress);
+
+    /// <summary>
+    /// Attaches to a script session's message channel
+    /// </summary>
+    IScriptChannel OpenScriptChannel(Guid SessionId, CancellationToken CancellationToken);
 
     /// <summary>
     /// Gets script session updates from the server.

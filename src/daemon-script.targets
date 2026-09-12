@@ -2,8 +2,12 @@
 
     <ItemGroup>
         <Compile Remove="**\Scripts\**\*.cs" />
-        <AdditionalFiles Include="**\Scripts\**\*.cs" Exclude="$(DefaultItemExcludes)" ScriptSource="true" />
+        <Compile Include="**\Scripts\Contracts\**\*.cs" />
+
+        <AdditionalFiles Include="**\Scripts\**\*.cs" Exclude="$(DefaultItemExcludes);**\Scripts\Contracts\**\*.cs" ScriptSource="true" />
+        <AdditionalFiles Include="**\Scripts\Contracts\**\*.cs" Exclude="$(DefaultItemExcludes)" ScriptSource="true" ScriptContract="true" />
         <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ScriptSource" />
+        <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ScriptContract" />
 
         <ProjectReference
             Include="$(MSBuildThisFileDirectory)RTSharp.Scripts.Generator\RTSharp.Scripts.Generator.csproj"

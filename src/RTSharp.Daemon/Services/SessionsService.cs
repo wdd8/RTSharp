@@ -3,6 +3,7 @@ using Nito.AsyncEx;
 using RTSharp.Daemon.RuntimeCompilation;
 using RTSharp.Daemon.RuntimeCompilation.Exceptions;
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Utils;
 
 using System.Threading.Channels;
 
@@ -34,6 +35,85 @@ public class ScriptSession : IScriptSession
 
     internal event Action<ScriptSession, ScriptProgressState, bool>? ProgressUpdated;
 
+    private readonly Channel<ScriptMessage> RxChannel = Channel.CreateUnbounded<ScriptMessage>(new UnboundedChannelOptions {
+        SingleReader = true,
+        SingleWriter = false
+    });
+
+    private readonly List<ScriptMessage> LatestOutput = new();
+
+    private readonly List<ChannelWriter<ScriptMessage>> OutputSubscribers = new();
+
+    private readonly Lock OutputLock = new();
+
+    public async ValueTask<T> Rx<T>(CancellationToken CancellationToken) where T : IScriptMessage<T>
+    {
+        while (true) {
+            var message = await RxChannel.Reader.ReadAsync(CancellationToken);
+
+            if (message.TryUnpack<T>(out var value))
+                return value;
+        }
+    }
+
+    public void Send<T>(T Message) where T : IScriptMessage<T>
+    {
+        var msg = ScriptMessage.Of(Message);
+
+        lock (OutputLock) {
+            LatestOutput.RemoveAll(x => x.Type == msg.Type);
+            LatestOutput.Add(msg);
+
+            for (var x = OutputSubscribers.Count - 1;x >= 0;x--) {
+                if (!OutputSubscribers[x].TryWrite(msg))
+                    OutputSubscribers.RemoveAt(x);
+            }
+        }
+    }
+
+    internal void ReceivedMessage(ScriptMessage Message) => RxChannel.Writer.TryWrite(Message);
+
+    internal ChannelReader<ScriptMessage> SubscribeOutput(CancellationToken CancellationToken)
+    {
+        var channel = Channel.CreateUnbounded<ScriptMessage>(new UnboundedChannelOptions {
+            SingleReader = true,
+            SingleWriter = false
+        });
+
+        lock (OutputLock) {
+            foreach (var message in LatestOutput)
+                channel.Writer.TryWrite(message);
+
+            OutputSubscribers.Add(channel.Writer);
+        }
+
+        CancellationToken.Register(() => Unsubscribe(channel.Writer));
+        Execution?.ContinueWith(_ => Unsubscribe(channel.Writer));
+
+        return channel.Reader;
+    }
+
+    internal void CompleteOutput()
+    {
+        lock (OutputLock) {
+            foreach (var subscriber in OutputSubscribers)
+                subscriber.TryComplete();
+
+            OutputSubscribers.Clear();
+        }
+
+        RxChannel.Writer.TryComplete();
+    }
+
+    private void Unsubscribe(ChannelWriter<ScriptMessage> Writer)
+    {
+        lock (OutputLock) {
+            OutputSubscribers.Remove(Writer);
+        }
+
+        Writer.TryComplete();
+    }
+
     public void ProgressChanged(ScriptProgressState? progress = null, bool chainChanged = false)
     {
         var logger = Scope?.ServiceProvider.GetRequiredService<ILogger<SessionsService>>();
@@ -52,7 +132,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
 
     private readonly List<ChannelWriter<(ScriptSessionUpdate Update, bool IncludeChain)>> Subscribers = new();
 
-    public ScriptSession RunScript(string Name, DynamicScript<IScript> DynamicScript, Dictionary<string, string> Variables, string? InstalledScriptId = null)
+    public ScriptSession RunScript(string Name, DynamicScript<IScript> DynamicScript, IEnumerable<ScriptMessage> Input, string? InstalledScriptId = null)
     {
         var scope = ScopeFactory.CreateScope();
         var cts = new CancellationTokenSource();
@@ -92,7 +172,10 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
         session.Progress = progress;
         RegisterSession(session);
 
-        session.Execution = instance.Execute(Variables, session, cts.Token);
+        foreach (var message in Input)
+            session.ReceivedMessage(message);
+
+        session.Execution = instance.Execute(session, cts.Token);
         BindContinuations(session);
 
         return session;
@@ -141,6 +224,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
             Logger.LogInformation($"Session {Session.Id} was cancelled");
             Session.Progress.State = TASK_STATE.CANCELLED;
         }, TaskContinuationOptions.OnlyOnCanceled);
+        Session.Execution!.ContinueWith(_ => Session.CompleteOutput());
     }
 
     public ChannelReader<(ScriptSessionUpdate Update, bool IncludeChain)> MonitorSessionUpdates(bool IncludeFullUpdate, bool StreamUpdates, CancellationToken CancellationToken)
@@ -274,6 +358,7 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
             Sessions.Remove(session);
         }
 
+        session.CompleteOutput();
         session.Cts.Dispose();
         session.Scope?.Dispose();
         session.Script?.RemoveRef();

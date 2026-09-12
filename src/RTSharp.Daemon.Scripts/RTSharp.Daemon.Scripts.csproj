@@ -16,6 +16,11 @@
   <ItemGroup>
     <Compile Include="..\RTSharp\**\Scripts\**\*.cs" Exclude="..\RTSharp\bin\**;..\RTSharp\obj\**" LinkBase="RTSharp" />
     <Compile Include="..\plugins\*\**\Scripts\**\*.cs" Exclude="..\plugins\*\bin\**;..\plugins\*\obj\**" LinkBase="plugins" />
+
+    <AdditionalFiles Include="..\RTSharp\**\Scripts\Contracts\**\*.cs" Exclude="..\RTSharp\bin\**;..\RTSharp\obj\**" ScriptSource="true" ScriptContract="true" />
+    <AdditionalFiles Include="..\plugins\*\**\Scripts\Contracts\**\*.cs" Exclude="..\plugins\*\bin\**;..\plugins\*\obj\**" ScriptSource="true" ScriptContract="true" />
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ScriptSource" />
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ScriptContract" />
   </ItemGroup>
 
   <ItemGroup>

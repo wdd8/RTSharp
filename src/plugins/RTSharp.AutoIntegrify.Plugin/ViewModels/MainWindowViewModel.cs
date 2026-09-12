@@ -9,6 +9,7 @@ using MsBox.Avalonia;
 using MsBox.Avalonia.Models;
 
 using RTSharp.Scripts;
+using RTSharp.Scripts.SolveFile;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Abstractions.Daemon;
@@ -225,16 +226,16 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
         var remotePathParts = Torrent.RemotePath.Split('/');
 
         var script = await Torrent.DataOwner.Host.AttachedDaemonService!.RunCustomScript(
-            DaemonScripts.SolveFile, "AutoIntegrify", new Dictionary<string, string> {
-            ["AdditionalPaths"] = String.Join('\x00', AdditionalPaths),
-            ["FilePath"] = File.File.Path,
-            ["Size"] = File.File.FileSize.ToString(),
-            ["CurrentPath"] = IsMultiFile ? $"{Torrent.RemotePath}/{Torrent.Name}" : Torrent.RemotePath,
-            ["LimitPath"] = string.Join('/', remotePathParts[..^1]),
-            ["IsMultiFile"] = IsMultiFile ? "1" : "",
-            ["WideSearch"] = WideSearch ? "1" : "",
-            ["RecurseLimit"] = SearchRecursionLimit.ToString()
-});
+            DaemonScripts.SolveFile, "AutoIntegrify", [ScriptMessage.Of(new SolveFileInput(
+                AdditionalPaths: [.. AdditionalPaths],
+                FilePath: File.File.Path,
+                Size: (long)File.File.FileSize,
+                CurrentPath: IsMultiFile ? $"{Torrent.RemotePath}/{Torrent.Name}" : Torrent.RemotePath,
+                LimitPath: string.Join('/', remotePathParts[..^1]),
+                IsMultiFile: IsMultiFile,
+                WideSearch: WideSearch,
+                RecurseLimit: SearchRecursionLimit
+            ))]);
 
         Cancellation.Token.Register(() => {
             _ = Torrent?.DataOwner?.Host?.AttachedDaemonService?.QueueScriptCancellation(script);
@@ -244,20 +245,19 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
             ProgressText = $"Searching for {File.File.Path}: Script starting";
         });
 
-        List<string> paths = [];
+        await using var channel = Torrent.DataOwner.Host.AttachedDaemonService.OpenScriptChannel(script, Cancellation.Token);
+
+        var result = channel.Read<SolveFileResult>(Cancellation.Token).AsTask();
 
         await Torrent.DataOwner.Host.AttachedDaemonService.GetScriptProgress(script, progress => {
-            if (progress.State == TASK_STATE.DONE) {
-                paths = [.. progress.StateData!.Split('\x00', StringSplitOptions.RemoveEmptyEntries)];
-                Dispatcher.UIThread.Invoke(() => {
-                    ProgressText = $"Searching for {File.File.Path}{(WideSearch ? " (wide search)" : "")}: Done";
-                });
-            } else {
-                Dispatcher.UIThread.Invoke(() => {
-                    ProgressText = $"Searching for {File.File.Path}{(WideSearch ? " (wide search)" : "")}: {progress.Text}";
-                });
-            }
+            Dispatcher.UIThread.Invoke(() => {
+                ProgressText = progress.State == TASK_STATE.DONE
+                    ? $"Searching for {File.File.Path}{(WideSearch ? " (wide search)" : "")}: Done"
+                    : $"Searching for {File.File.Path}{(WideSearch ? " (wide search)" : "")}: {progress.Text}";
+            });
         });
+
+        List<string> paths = [.. (await result)?.Paths ?? []];
 
         Dispatcher.UIThread.Invoke(() => {
             ProgressText = $"Searching for {File.File.Path}: Script end";

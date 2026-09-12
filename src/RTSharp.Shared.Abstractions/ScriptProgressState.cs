@@ -70,14 +70,4 @@ public class ScriptProgressState
             this.Base?.ProgressChanged(this);
         }
     }
-    
-    private string? _stateData = null;
-    
-    public string? StateData {
-        get => _stateData;
-        set {
-            _stateData = value;
-            this.Base?.ProgressChanged(this);
-        }
-    }
 }

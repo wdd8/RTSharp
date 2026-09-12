@@ -11,6 +11,7 @@ using RTSharp.Daemon.Protocols;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Plugin;
 using RTSharp.Scripts;
+using RTSharp.Scripts.RequestReceiveFiles;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.DataProvider;
@@ -27,21 +28,14 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
+using ScriptMessage = RTSharp.Shared.Utils.ScriptMessage;
 using ScriptProgressState = RTSharp.Shared.Abstractions.ScriptProgressState;
 
 namespace RTSharp.Core.Services.Daemon;
-
-record RequestReceivePaths(string StorePath, string RemoteSourcePath, ulong TotalSize);
-
-[JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(List<RequestReceivePaths>))]
-internal partial class RequestReceivePathsContext : JsonSerializerContext { }
 
 [Singleton]
 public class DaemonService : IDaemonService
@@ -145,9 +139,11 @@ public class DaemonService : IDaemonService
         var script = await ServerClient.StartScriptAsync(new StartScriptInput {
             Script = DaemonScripts.RequestReceiveFiles,
             Name = "RequestReceiveFiles",
-            Variables = {
-                { "Uri", senderServer.ToString() },
-                { "Paths", JsonSerializer.Serialize(Paths.Select(x => new RequestReceivePaths(x.StoreTo, x.RemoteSource, x.TotalSize)).ToList(), RequestReceivePathsContext.Default.ListRequestReceivePaths) }
+            Input = {
+                ScriptMessage.Of(new RequestReceiveFilesInput(
+                    senderServer.ToString(),
+                    [.. Paths.Select(x => new RequestReceiveFilePath(x.StoreTo, x.RemoteSource, x.TotalSize))]
+                )).ToProtocol()
             }
         });
 
@@ -252,12 +248,12 @@ public class DaemonService : IDaemonService
         return reply.Output;
     }
 
-    public async Task<Guid> RunCustomScript(string Script, string Name, Dictionary<string, string> Variables)
+    public async Task<Guid> RunCustomScript(string Script, string Name, IReadOnlyList<ScriptMessage> Input)
     {
         var session = await ServerClient.StartScriptAsync(new StartScriptInput {
             Script = Script,
             Name = Name,
-            Variables = { Variables }
+            Input = { Input.Select(x => x.ToProtocol()) }
         });
 
         return new Guid(session.Id.Span);
@@ -273,14 +269,16 @@ public class DaemonService : IDaemonService
         await ServerClient.RemoveScriptAsync(new BytesValue { Value = ByteString.CopyFrom(Id.ToByteArray()) });
     }
 
-    public async Task<Shared.Abstractions.InstalledScript> InstallScript(string Id, string Name, Guid OwnerId, string Script, Dictionary<string, string> Variables)
+    public async Task<Shared.Abstractions.InstalledScript> InstallScript(string Id, string Name, Guid OwnerId, string Script, IReadOnlyList<ScriptMessage> Input)
     {
         return MapInstalledScript(await ServerClient.InstallScriptAsync(new InstallScriptInput {
             Id = Id,
-            Name = Name,
             OwnerId = OwnerId.ToString(),
-            Script = Script,
-            Variables = { Variables }
+            Start = new StartScriptInput {
+                Script = Script,
+                Name = Name,
+                Input = { Input.Select(x => x.ToProtocol()) }
+            }
         }));
     }
 
@@ -338,7 +336,6 @@ public class DaemonService : IDaemonService
                 _ => throw new ArgumentOutOfRangeException()
             },
             Text = In.Text,
-            StateData = In.StateData,
             Chain = In.Chain?.Select(MapProgressState).ToArray() ?? []
         };
     }
@@ -367,6 +364,13 @@ public class DaemonService : IDaemonService
                 }
             }
         } catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled) { }
+    }
+
+    public IScriptChannel OpenScriptChannel(Guid SessionId, CancellationToken CancellationToken)
+    {
+        var call = ServerClient.ScriptChannel(cancellationToken: CancellationToken);
+
+        return new ScriptChannel(call, SessionId, CancellationToken);
     }
 
     public ChannelReader<Shared.Abstractions.ScriptSessionUpdate> StreamScriptsStatus(CancellationToken CancellationToken, bool IncludeFullUpdate = true, bool StreamUpdates = true)

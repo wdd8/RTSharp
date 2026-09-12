@@ -1,7 +1,7 @@
-﻿namespace RTSharp.Shared.Abstractions
+namespace RTSharp.Shared.Abstractions
 {
     public interface IScript
     {
-        public Task Execute(Dictionary<string, string> variables, IScriptSession session, CancellationToken cancellationToken);
+        public Task Execute(IScriptSession session, CancellationToken cancellationToken);
     }
 }

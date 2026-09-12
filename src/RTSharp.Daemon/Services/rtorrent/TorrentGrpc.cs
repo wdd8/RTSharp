@@ -24,7 +24,6 @@ using System.IO.Pipelines;
 using System.Net;
 using System.Runtime.Versioning;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 using File = System.IO.File;
@@ -859,20 +858,20 @@ namespace RTSharp.Daemon.Services.rtorrent
                     if (!basePaths.TryGetValue(torrent.InfoHash.ToByteArray(), out var basePath)) {
                         session.Progress.State = TASK_STATE.FAILED;
                         session.Progress.Text = $"Failed to get base directory for {Convert.ToHexString(torrent.InfoHash.Span)}, terminating operation";
-                        session.Progress.StateData = JsonSerializer.Serialize(new { Hash = torrent.InfoHash, File = "", Text = "Failed to get base directory", Success = false });
+                        session.Send(new MoveDownloadDirectoryProgress(torrent.InfoHash.ToByteArray(), "", "Failed to get base directory", false));
                         return;
                     }
 
                     if (!UnixFileSystemInfo.TryGetFileSystemEntry(basePath.Target, out var futureBasePathInfo)) {
                         session.Progress.Text = $"Failed to stat directory of {basePath.Target}";
-                        session.Progress.StateData = JsonSerializer.Serialize(new { Hash = torrent.InfoHash, File = basePath.Target, Text = $"Failed to stat directory", Success = false });
+                        session.Send(new MoveDownloadDirectoryProgress(torrent.InfoHash.ToByteArray(), basePath.Target, "Failed to stat directory", false));
                         continue;
                     }
 
                     if (Req.Move) {
                         if (!UnixFileSystemInfo.TryGetFileSystemEntry(basePath.Current, out var currentBasePathInfo)) {
                             session.Progress.Text = $"Failed to stat directory of {basePath.Current}";
-                            session.Progress.StateData = JsonSerializer.Serialize(new { Hash = torrent.InfoHash, File = basePath.Current, Text = $"Failed to stat directory", Success = false });
+                            session.Send(new MoveDownloadDirectoryProgress(torrent.InfoHash.ToByteArray(), basePath.Current, "Failed to stat directory", false));
                             continue;
                         }
 
@@ -949,7 +948,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                                 if (progressMatch.Groups.TryGetValue("completeCurrent", out var sCompleteCurrent) && UInt32.TryParse(sCompleteCurrent.Value, out var completeCurrent)) {
                                     if (progressMatch.Groups.TryGetValue("completeTotal", out var sCompleteTotal) && UInt32.TryParse(sCompleteTotal.Value, out var completeTotal)) {
                                         moveState.Text = $"{torrent.InfoHash} ({completeCurrent}/{completeTotal}): {currentFile} {speed} ETA {eta}";
-                                        session.Progress.StateData = JsonSerializer.Serialize(new { Hash = torrent.InfoHash, File = currentFile, Text = $"{bytesMoved}", Success = (bool?)null });
+                                        session.Send(new MoveDownloadDirectoryProgress(torrent.InfoHash.ToByteArray(), currentFile, $"{bytesMoved}", null));
                                     }
                                 }
                             } else {

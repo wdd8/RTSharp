@@ -1,9 +1,8 @@
 #pragma usings
+#pragma contract SolveFileMessages
 
-using System.Text;
 using System.Linq;
 using System.IO;
-using System.Text.Json;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
@@ -11,33 +10,22 @@ namespace RTSharp.Scripts.SolveFile;
 
 public class Main(ILogger<Main> Logger) : IScript
 {
-    public async Task Execute(Dictionary<string, string> Variables, IScriptSession Session, CancellationToken CancellationToken)
+    public async Task Execute(IScriptSession Session, CancellationToken CancellationToken)
     {
         Session.Progress.State = TASK_STATE.RUNNING;
         Session.Progress.Text = "Searching...";
 
-        var addPaths = Variables["AdditionalPaths"].Split('\x00');
-        var current = Variables["CurrentPath"];
-        var filePath = Variables["FilePath"];
-        var size = Int64.Parse(Variables["Size"]);
-        var isMultiFile = Variables["IsMultiFile"] == "1";
-        var wideSearch = Variables["WideSearch"] == "1";
-        var recurseLimit = Int32.Parse(Variables["RecurseLimit"]);
+        var input = await Session.Rx<SolveFileInput>(CancellationToken);
 
         // technically not torrent name because it would lack extension on single file torrents but it's more convenient this way
-        var torrentName = isMultiFile ? current.Split('/').Last() : Path.GetFileNameWithoutExtension(filePath);
+        var torrentName = input.IsMultiFile ? input.CurrentPath.Split('/').Last() : Path.GetFileNameWithoutExtension(input.FilePath);
 
-        var outp = new StringBuilder();
-        void append(string inp)
-        {
-            outp.Append(inp);
-            outp.Append('\x00');
-        }
+        var outp = new List<string>();
 
         var progressStopwatch = Stopwatch.StartNew();
 
         bool matchFolder(string path, int recursed = 0) {
-            if (recursed >= recurseLimit)
+            if (recursed >= input.RecurseLimit)
                 return false;
 
             try {
@@ -49,16 +37,16 @@ public class Main(ILogger<Main> Logger) : IScript
                 }
 
                 foreach (var file in currentDir.EnumerateFiles()) {
-                    if (file.FullName.EndsWith(filePath)) {
-                        append(file.FullName);
-                        if (size == file.Length) {
+                    if (file.FullName.EndsWith(input.FilePath)) {
+                        outp.Add(file.FullName);
+                        if (input.Size == file.Length) {
                             // Strong match, signal outside to bail
                             return true;
                         }
                         continue;
                     }
-                    if (size == file.Length) {
-                        append(file.FullName);
+                    if (input.Size == file.Length) {
+                        outp.Add(file.FullName);
                     }
                 }
                 foreach (var dir in currentDir.EnumerateDirectories()) {
@@ -74,16 +62,16 @@ public class Main(ILogger<Main> Logger) : IScript
         }
 
         // First try exact matches in current folder
-        if (matchFolder(current)) {
+        if (matchFolder(input.CurrentPath)) {
             goto done;
         }
 
-        foreach (var path in addPaths) {
+        foreach (var path in input.AdditionalPaths) {
             try {
                 var dir = new DirectoryInfo(path);
                 foreach (var info in dir.EnumerateFileSystemInfos()) {
                     if (info.Attributes.HasFlag(FileAttributes.Directory)) {
-                        if (info.Name == torrentName || wideSearch) {
+                        if (info.Name == torrentName || input.WideSearch) {
                             Logger.LogTrace($"Considering {info.FullName}...");
                             if (matchFolder(info.FullName)) {
                                 // Got a strong match, I don't think we will need other folders...
@@ -91,11 +79,11 @@ public class Main(ILogger<Main> Logger) : IScript
                             }
                         }
                     } else {
-                        if (info.FullName.EndsWith(filePath) || wideSearch) {
+                        if (info.FullName.EndsWith(input.FilePath) || input.WideSearch) {
                             try {
                                 var thisFile = new FileInfo(info.FullName);
-                                if (thisFile.Length == size) {
-                                    append(info.FullName);
+                                if (thisFile.Length == input.Size) {
+                                    outp.Add(info.FullName);
                                     continue;
                                 }
                             } catch {
@@ -110,7 +98,7 @@ public class Main(ILogger<Main> Logger) : IScript
         }
 
 done:;
-        Session.Progress.StateData = outp.ToString().TrimEnd('\x00');
+        Session.Send(new SolveFileResult([.. outp]));
         Session.Progress.State = TASK_STATE.DONE;
     }
 }

@@ -1,5 +1,8 @@
+using Google.Protobuf;
+
 using Microsoft.Extensions.Options;
 
+using RTSharp.Daemon.Protocols;
 using RTSharp.Daemon.RuntimeCompilation;
 using RTSharp.Shared.Abstractions;
 
@@ -14,9 +17,7 @@ using File = System.IO.File;
 namespace RTSharp.Daemon.Services;
 
 public record InstalledScriptInfo(
-    string Name,
     string OwnerId,
-    Dictionary<string, string> Variables,
     DateTimeOffset InstalledAt,
     bool OrphanAcknowledged
 );
@@ -25,7 +26,7 @@ public record InstalledScriptInfo(
 [JsonSerializable(typeof(InstalledScriptInfo))]
 internal partial class InstalledScriptInfoContext : JsonSerializerContext { }
 
-public record InstalledScript(string Id, InstalledScriptInfo Info, byte[] ScriptHash, ScriptSession? Session);
+public record InstalledScript(string Id, InstalledScriptInfo Info, StartScriptInput Start, byte[] ScriptHash, ScriptSession? Session);
 
 public class InstalledScriptsService(
     SessionsService Sessions,
@@ -33,7 +34,7 @@ public class InstalledScriptsService(
     ILogger<InstalledScriptsService> Logger) : IHostedService
 {
     private const string INFO_JSON = "info.json";
-    private const string SCRIPT_CS = "script.cs";
+    private const string START_BIN = "start.bin";
     private static readonly TimeSpan STOP_TIMEOUT = TimeSpan.FromSeconds(10);
 
     private readonly ConcurrentDictionary<string, SemaphoreSlim> IdLocks = new(StringComparer.Ordinal);
@@ -58,20 +59,19 @@ public class InstalledScriptsService(
 
         foreach (var dir in Directory.EnumerateDirectories(store)) {
             var id = Path.GetFileName(dir);
-            InstalledScriptInfo? info = null;
+            StartScriptInput? start = null;
 
             try {
-                info = await ReadInfo(id, CancellationToken);
-                var source = await File.ReadAllTextAsync(Path.Combine(dir, SCRIPT_CS), CancellationToken);
+                start = StartScriptInput.Parser.ParseFrom(await File.ReadAllBytesAsync(Path.Combine(dir, START_BIN), CancellationToken));
 
-                var compilation = await DynamicCompilation.Compile<IScript>(source, info.Name);
-                var session = Sessions.RunScript(info.Name, compilation, info.Variables, id);
+                var compilation = await DynamicCompilation.Compile<IScript>(start.Script, start.Name);
+                var session = Sessions.RunScript(start.Name, compilation, start.Input.Select(x => x.ToScriptMessage()), id);
 
-                Logger.LogInformation($"Installed script {id} ({info.Name}) is running as session {session.Id}");
+                Logger.LogInformation($"Installed script {id} ({start.Name}) is running as session {session.Id}");
             } catch (Exception ex) {
                 Logger.LogError(ex, $"Installed script {id} could not be started");
 
-                Sessions.RunSession(info?.Name ?? id, new CancellationTokenSource(), _ => Task.FromException(ex), id);
+                Sessions.RunSession(start?.Name ?? id, new CancellationTokenSource(), _ => Task.FromException(ex), id);
             }
         }
     }
@@ -84,14 +84,14 @@ public class InstalledScriptsService(
         return Task.CompletedTask;
     }
 
-    public async Task<InstalledScript> Install(string Id, string Name, string OwnerId, string Source, Dictionary<string, string> Variables)
+    public async Task<InstalledScript> Install(string Id, string OwnerId, StartScriptInput Start)
     {
         if (String.IsNullOrWhiteSpace(Id))
             throw new ArgumentException("Installed script id must not be empty", nameof(Id));
         if (Id.AsSpan().ContainsAny([..Path.GetInvalidFileNameChars(), Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) || Id is "." or "..")
             throw new ArgumentException($"Installed script id {Id} is not usable as a directory name", nameof(Id));
 
-        var compilation = await DynamicCompilation.Compile<IScript>(Source, Name);
+        var compilation = await DynamicCompilation.Compile<IScript>(Start.Script, Start.Name);
 
         var idLock = IdLocks.GetOrAdd(Id, _ => new SemaphoreSlim(1, 1));
         await idLock.WaitAsync(); try {
@@ -105,26 +105,24 @@ public class InstalledScriptsService(
                     await Stop(Id, running);
 
                 info = new InstalledScriptInfo(
-                    Name: Name,
                     OwnerId: OwnerId,
-                    Variables: Variables,
                     InstalledAt: previous?.InstalledAt ?? DateTimeOffset.UtcNow,
                     OrphanAcknowledged: false
                 );
 
                 Directory.CreateDirectory(dir);
-                await WriteAtomic(Path.Combine(dir, SCRIPT_CS), Source);
-                await WriteAtomic(Path.Combine(dir, INFO_JSON), JsonSerializer.Serialize(info, InstalledScriptInfoContext.Default.InstalledScriptInfo));
+                await WriteAtomic(Path.Combine(dir, START_BIN), Start.ToByteArray());
+                await WriteAtomic(Path.Combine(dir, INFO_JSON), JsonSerializer.SerializeToUtf8Bytes(info, InstalledScriptInfoContext.Default.InstalledScriptInfo));
             } catch {
                 compilation.RemoveRef();
                 throw;
             }
 
-            var session = Sessions.RunScript(Name, compilation, Variables, Id);
+            var session = Sessions.RunScript(Start.Name, compilation, Start.Input.Select(x => x.ToScriptMessage()), Id);
 
-            Logger.LogInformation($"Installed script {Id} ({Name}) is running as session {session.Id}");
+            Logger.LogInformation($"Installed script {Id} ({Start.Name}) is running as session {session.Id}");
 
-            return new InstalledScript(Id, info, SHA256.HashData(Encoding.UTF8.GetBytes(Source)), session);
+            return new InstalledScript(Id, info, Start, SHA256.HashData(Encoding.UTF8.GetBytes(Start.Script)), session);
         } finally {
             idLock.Release();
         }
@@ -157,7 +155,7 @@ public class InstalledScriptsService(
         try {
             var info = await ReadInfo(Id, CancellationToken.None) with { OrphanAcknowledged = true };
 
-            await WriteAtomic(Path.Combine(StorePath, Id, INFO_JSON), JsonSerializer.Serialize(info, InstalledScriptInfoContext.Default.InstalledScriptInfo));
+            await WriteAtomic(Path.Combine(StorePath, Id, INFO_JSON), JsonSerializer.SerializeToUtf8Bytes(info, InstalledScriptInfoContext.Default.InstalledScriptInfo));
 
             return await Read(Id, info, Sessions.GetInstalledScriptSessions(), CancellationToken.None);
         } finally {
@@ -189,16 +187,16 @@ public class InstalledScriptsService(
 
     private async Task<InstalledScript> Read(string Id, InstalledScriptInfo Info, Dictionary<string, ScriptSession> SessionsById, CancellationToken CancellationToken)
     {
-        var source = await File.ReadAllBytesAsync(Path.Combine(StorePath, Id, SCRIPT_CS), CancellationToken);
+        var start = StartScriptInput.Parser.ParseFrom(await File.ReadAllBytesAsync(Path.Combine(StorePath, Id, START_BIN), CancellationToken));
 
-        return new InstalledScript(Id, Info, SHA256.HashData(source), SessionsById.GetValueOrDefault(Id));
+        return new InstalledScript(Id, Info, start, SHA256.HashData(Encoding.UTF8.GetBytes(start.Script)), SessionsById.GetValueOrDefault(Id));
     }
 
     private async Task<InstalledScriptInfo> ReadInfo(string Id, CancellationToken CancellationToken)
     {
         var path = Path.Combine(StorePath, Id, INFO_JSON);
 
-        return JsonSerializer.Deserialize(await File.ReadAllTextAsync(path, CancellationToken), InstalledScriptInfoContext.Default.InstalledScriptInfo)
+        return JsonSerializer.Deserialize(await File.ReadAllBytesAsync(path, CancellationToken), InstalledScriptInfoContext.Default.InstalledScriptInfo)
             ?? throw new InvalidDataException($"{path} is empty");
     }
 
@@ -214,10 +212,10 @@ public class InstalledScriptsService(
         Sessions.RemoveCompletedScriptSession(Session.Id);
     }
 
-    private static async Task WriteAtomic(string Path, string Contents)
+    private static async Task WriteAtomic(string Path, byte[] Contents)
     {
         var tmp = Path + ".tmp";
-        await File.WriteAllTextAsync(tmp, Contents);
+        await File.WriteAllBytesAsync(tmp, Contents);
         File.Move(tmp, Path, overwrite: true);
     }
 }
