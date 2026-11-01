@@ -104,6 +104,8 @@ static void BuildTree(string Stage, Package Pkg, string Format)
     File.SetUnixFileMode(Path.Combine(Stage, Pkg.InstallDir, Pkg.ExecName), Consts.ExecMode);
     File.CreateSymbolicLink(Path.Combine(Stage, "usr", "bin", Pkg.BinName), $"/{Pkg.InstallDir}/{Pkg.ExecName}");
 
+    Run("dotnet", ["run", "scripts/build-man.cs", "--", Pkg.BinName, Path.Combine(Stage, "usr", "share", "man")]);
+
     if (!Pkg.IsDaemon)
         return;
 
@@ -256,6 +258,7 @@ static void PackRpm(string Stage, Package Pkg, string Version, string Arch, stri
     spec.AppendLine("%files");
     spec.AppendLine($"/{Pkg.InstallDir}");
     spec.AppendLine($"/usr/bin/{Pkg.BinName}");
+    spec.AppendLine($"/usr/share/man/man*/{Pkg.BinName}.*");
     if (Pkg.IsDaemon) {
         spec.AppendLine("%dir /etc/rtsharp-daemon");
         spec.AppendLine($"%config(noreplace) /{Consts.ConfigFile}");

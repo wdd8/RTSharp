@@ -47,9 +47,11 @@
       { "title": "Daemon settings windows", "file": "dpsettings.htm" }
     ] },
     { "title": "Server daemon", "children": [
+      { "title": "Daemon installation", "file": "daemoninstall.htm" },
       { "title": "Daemon configuration", "file": "daemonconfig.htm" },
       { "title": "Data provider configuration", "file": "daemondp.htm" },
-      { "title": "Server scripts", "file": "serverscripts.htm" }
+      { "title": "Server scripts", "file": "serverscripts.htm" },
+      { "title": "Daemon problems", "file": "daemontroubleshooting.htm" }
     ] },
     { "title": "Plugin development", "children": [
       { "title": "Introduction", "file": "devintro.htm" },
@@ -60,5 +62,31 @@
     { "title": "Troubleshooting", "children": [
       { "title": "Common problems", "file": "troubleshooting.htm" }
     ] }
+  ],
+  "man": [
+    {
+      "name": "rtsharp",
+      "section": 1,
+      "summary": "BitTorrent daemon GUI",
+      "synopsis": "rtsharp",
+      "topics": [
+        "welcometopic.htm", "mainfeatures.htm", "daemons.htm",
+        "installation.htm", "mainscreen.htm", "servers.htm", "dataproviders.htm", "addtorrent.htm",
+        "listing.htm", "torrentactions.htm", "labels.htm", "movedir.htm", "duplicate.htm", "tabgeneral.htm", "tabfiles.htm", "tabpeers.htm", "tabtrackers.htm",
+        "dppane.htm", "actionqueue.htm", "logs.htm", "statistics.htm",
+        "torrentcreator.htm", "optbehavior.htm", "optcaching.htm", "optlook.htm", "optnetwork.htm",
+        "plugins.htm", "autointegrify.htm", "masstracker.htm", "coloredratio.htm", "scriptplayground.htm", "dpsettings.htm",
+        "troubleshooting.htm", "daemontroubleshooting.htm"
+      ],
+      "seeAlso": [ "rtsharp-daemon(8)" ]
+    },
+    {
+      "name": "rtsharp-daemon",
+      "section": 8,
+      "summary": "service connecting RTSharp to torrent daemons",
+      "synopsis": "rtsharp-daemon",
+      "topics": [ "daemons.htm", "daemoninstall.htm", "daemonconfig.htm", "daemondp.htm", "serverscripts.htm", "daemontroubleshooting.htm" ],
+      "seeAlso": [ "rtsharp(1)" ]
+    }
   ]
 }

@@ -2,7 +2,7 @@
 <html>
 <head>
    <title>Software installation</title>
-   <meta name="keywords" content="Installation,Requirements,Configuration files,Self-contained,Docker,systemd,mpv">
+   <meta name="keywords" content="Installation,Requirements,Configuration files,Self-contained,mpv">
    <link rel="stylesheet" type="text/css" href="help.css">
 </head>
 <body bgcolor="#FFFFFF">
@@ -35,22 +35,11 @@
 
 <p>The plugins themselves are located in the "plugins" folder of the application folder, each plugin in its own sub folder with its manifest.json file.</p>
 
-<h2>RTSharp.Daemon:</h2>
-<p>There are two ways to run RTSharp.Daemon on your server:</p>
-<div class="list">
-- Systemd service: install the rtsharp-daemon package (.deb, .rpm or .pkg.tar.zst). The package installs the ASP.NET Core .NET 10 runtime as a dependency, and the configuration file is /etc/rtsharp-daemon/appsettings.json. The service is not started or enabled by the installation, so you have to complete these steps:<br>
-&nbsp;&nbsp;1. Set the user and group the daemon runs as: <code>systemctl edit rtsharp-daemon</code>, then add <code>User=</code> and <code>Group=</code> under <code>[Service]</code>. The .deb installer asks for the user and fills it in for you, but check it.<br>
-&nbsp;&nbsp;2. Enable and start the service: <code>systemctl enable --now rtsharp-daemon</code>.<br>
-- Docker container: see the docker-compose.yml file of the daemon for an example configuration. An example configuration will be created upon the first startup.<br>
-</div>
-
-<p>Since RTSharp.Daemon performs the file operations on the torrent data (move, duplicate, remove), we strongly recommend you to run it under the same user as your torrent daemons. The configuration of the daemon is explained in the "Server daemon" chapter.</p>
-
 <h2>Optional programs:</h2>
-<p>RT# can preview the files of a torrent with mpv. If you want to use this feature, mpv must be installed on your computer and available in the PATH. The mediainfo feature uses mediainfo on the server side.</p>
+<p>RT# can preview the files of a torrent with mpv. If you want to use this feature, mpv must be installed on your computer and available in the PATH.</p>
 
 <h2>Help file:</h2>
-<p>This help file (RTSharp.chm) is located in the application folder (/usr/lib/rtsharp for the Linux packages), you can open it at any time with the F1 key or with the "Help/Contents" menu. On Windows it is opened with the standard HTML Help viewer. On Linux and macOS there is no CHM viewer installed by default, RT# will open it with the program associated to .chm files, such as xCHM or KchmViewer.</p>
+<p>This help file (RTSharp.chm) is located in the application folder (/usr/lib/rtsharp for the Linux packages), you can open it at any time with the F1 key or with the "Help/Contents" menu. On Windows it is opened with the standard HTML Help viewer. On Linux and macOS there is no CHM viewer installed by default, RT# will open it with the program associated to .chm files, such as xCHM or KchmViewer. The Linux packages also install this documentation as man pages, except for the plugin development chapter: <code>man rtsharp</code> for the application and <code>man rtsharp-daemon</code> for the daemon.</p>
 
 </body>
 </html>

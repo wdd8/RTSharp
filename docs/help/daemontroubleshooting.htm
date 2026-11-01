@@ -1,0 +1,23 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Daemon problems</title>
+   <meta name="keywords" content="Troubleshooting,Problems,Connection error,Get .torrent,Logs">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<h3>The server cannot be reached:</h3>
+<p>Select the server in the Servers window and read its status. If the connection is refused or times out, check that RTSharp.Daemon is running, that the port matches its ListenAddress setting and that no firewall blocks the connection. If the connection is closed during the handshake, the daemon has probably rejected your client: check that the thumbprint of your client.pem is in the AllowedClients list of the daemon and that you have restarted the daemon after adding it.</p>
+
+<h3>A data provider does not appear:</h3>
+<p>The changes of plugin configuration are only applied after a restart of RT#. Also check that the "Data provider name" of the instance is exactly the name used in the DataProviders section of the daemon configuration, including casing, and that the daemon has been restarted after its configuration has been modified.</p>
+
+<h3>"Get .torrent" fails:</h3>
+<p>The daemon reads the .torrent files from the session directory of rtorrent or from the config directory of Transmission. If the torrent daemon runs in a container or in a file system that is not visible to RTSharp.Daemon, set SessionDir or ConfigDir in the daemon configuration.</p>
+
+<h3>The "Logs" item is missing:</h3>
+<p>Set the LogFile setting of the data provider in the daemon configuration, and make sure that the torrent daemon really writes its log in this file.</p>
+
+</body>
+</html>
