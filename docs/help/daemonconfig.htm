@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Daemon configuration</title>
+   <meta name="keywords" content="RTSharp.Daemon,appsettings.json,ListenAddress,Certificate,AllowedClients,Prometheus,DLBandwidth,UPBandwidth,ScriptStorePath,DatabasePath">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>RTSharp.Daemon reads its configuration from the appsettings.json file located in /etc/rtsharp-daemon if this folder exists, otherwise from the application folder. An example configuration is provided, here is how to set it up:</p>
+
+<h3>1. Generate the server certificate:</h3>
+<p>Type the following command in /etc/rtsharp-daemon to generate a public and a private certificate:</p>
+<pre>openssl req -x509 -newkey rsa:4096 -nodes -keyout private.pem -out public.pem -days 36500</pre>
+
+<h3>2. Note down the thumbprint of the certificate:</h3>
+<pre>openssl x509 -in public.pem -noout -fingerprint -sha256 | sed s/://g | cut -d= -f2</pre>
+<p>This is the thumbprint that you will enter in the Servers window of RT#.</p>
+
+<h3>3. Modify the configuration:</h3>
+<p>Open appsettings.json, set the port in ListenAddress and add the thumbprint of your client certificate to AllowedClients (see the "Connecting to a server" chapter). Then restart the daemon.</p>
+
+<h2>Settings</h2>
+<div class="list">
+<b>ListenAddress</b>: List of addresses and ports the daemon listens to, for example [ "0.0.0.0:1234" ]<br>
+<b>Certificate</b>: PublicPem and PrivatePem, the paths of the server certificate files<br>
+<b>AllowedClients</b>: List of the thumbprints of the clients that are allowed to connect, this includes other servers if you transfer data between servers<br>
+<b>Prometheus</b>: Enabled, Path (default /metrics) and PollInterval, see below<br>
+<b>DLBandwidth / UPBandwidth</b>: Optional download and upload capacity of the server line, in bytes per second. They enable some visualizations and statistics<br>
+<b>ScriptStorePath</b>: Folder where the installed scripts are stored. By default, a "scripts" folder in the state directory<br>
+<b>DatabasePath</b>: Absolute path of the database of the daemon. By default, rtsharp.db in the state directory<br>
+<b>DataProviders</b>: The torrent daemons served by this daemon, see the "Data provider configuration" chapter<br>
+<b>Logging</b>: The standard log levels of the daemon<br>
+</div>
+<p>The state directory is the folder given by systemd in STATE_DIRECTORY, or the application folder otherwise.</p>
+
+<h2>Prometheus metrics</h2>
+<p>Optionally, you can enable Prometheus in appsettings.json to expose the upload and download totals of each tracker at the configured Path (default /metrics). PollInterval controls how often the daemon refreshes these metrics. The following metrics are exposed:</p>
+<div class="list">
+- rtsharp_tracker_uploaded_bytes<br>
+- rtsharp_tracker_downloaded_bytes<br>
+- rtsharp_data_provider_torrent_fetch_duration_seconds<br>
+- rtsharp_tracker_metrics_last_refresh_timestamp_seconds<br>
+</div>
+
+<p class="note">* Granting access to RTSharp.Daemon is equivalent to granting shell access. The daemon implements a runtime scripting interface that can be used to perform any action, so add clients to AllowedClients with caution.</p>
+
+</body>
+</html>

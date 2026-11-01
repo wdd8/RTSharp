@@ -19,7 +19,7 @@ using System.Web;
 
 namespace RTSharp.Daemon.Services.qbittorrent
 {
-    public class Grpc
+    public partial class Grpc
     {
         QbitClient Client;
         SessionsService Sessions;
@@ -36,13 +36,9 @@ namespace RTSharp.Daemon.Services.qbittorrent
             this.Logger = Logger;
         }
 
-        // Keyed by native hash
-        private InfoHashDictionary<Protocols.DataProvider.Torrent> LatestTorrents = new();
-        private ReaderWriterLockSlim LatestTorrentsLock = new();
-
         private static string ToNativeHex(ReadOnlySpan<byte> RTSHash) => Convert.ToHexStringLower(RTSHash[..InfoHash.V1Length]);
 
-        private static byte[] RTSHashFromInfo(string? V1Hex, string? V2Hex, string NativeHex)
+        internal static byte[] RTSHashFromInfo(string? V1Hex, string? V2Hex, string NativeHex)
         {
             if (!String.IsNullOrEmpty(V2Hex))
                 return Convert.FromHexString(V2Hex);
@@ -429,15 +425,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
             var contents = await client.GetTorrentContentsAsync(ToNativeHex(Hash), null);
 
-            Protocols.DataProvider.Torrent torrent;
-            LatestTorrentsLock.EnterReadLock();
-            try {
-                if (!LatestTorrents.TryGetValue(InfoHash.TruncateV2(Hash), out torrent)) {
-                    throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
-                }
-            } finally {
-                LatestTorrentsLock.ExitReadLock();
-            }
+            var torrent = ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey).GetLatestTorrent(Hash) ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
 
             return new TorrentsFilesReply.Types.TorrentsFiles {
                 InfoHash = Hash.ToByteString(),
@@ -496,6 +484,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
             using var scope = ServiceProvider.CreateScope();
             var smas = scope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
+            var polling = ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey);
 
             return new TorrentsPeersReply {
                 Reply = {
@@ -509,11 +498,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
 
                         Debug.Assert(x.Peers.Result.FullUpdate);
 
-                        Protocols.DataProvider.Torrent? torrent;
-
-                        LatestTorrentsLock.EnterReadLock(); {
-                            LatestTorrents.TryGetValue(InfoHash.TruncateV2(x.Hash.Span), out torrent);
-                        } LatestTorrentsLock.ExitReadLock();
+                        var torrent = polling.GetLatestTorrent(x.Hash.Span);
 
                         return new TorrentsPeersReply.Types.TorrentsPeers {
                             InfoHash = x.Hash,
@@ -619,197 +604,8 @@ namespace RTSharp.Daemon.Services.qbittorrent
             }
         }
 
-        public async Task GetTorrentListUpdates(GetTorrentListUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsListResponse> Res, CancellationToken CancellationToken)
-        {
-            var client = await Client.Init();
-
-            // Respond so that client sees we're alive
-            await Res.WriteAsync(new(), CancellationToken);
-
-            int rid = 0;
-
-            var pollInternal = Req.Interval.ToTimeSpan();
-
-            var delta = new DeltaTorrentsListResponse();
-
-            using var smasScope = ServiceProvider.CreateScope();
-            var smas = smasScope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
-
-            void updateHashingSpeed(Protocols.DataProvider.Torrent Torrent)
-            {
-                if (Torrent.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing)) {
-                    var sma = smas.Get(InstanceKey, $"HashingSpeed_{Convert.ToHexString(Torrent.Hash.Span)}");
-                    sma.ValueIfChanged(DateTime.UtcNow, (long)Torrent.CompletedSize);
-                    var hashingSpeed = (ulong)Math.Max(0, sma.CalculateSpeed());
-                    Torrent.HashingSpeed = hashingSpeed;
-
-                    // No native ETA for hashing state
-                    if (hashingSpeed == 0 || Torrent.IsCompleted) {
-                        Torrent.ETA = null;
-                    } else {
-                        var secs = (double)(Torrent.WantedSize - Torrent.CompletedSize) / hashingSpeed;
-                        Torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
-                    }
-                } else {
-                    Torrent.HashingSpeed = 0;
-                }
-            }
-
-            while (!CancellationToken.IsCancellationRequested) {
-                PartialData partialData;
-                try {
-                    partialData = await client.GetPartialDataAsync(rid, CancellationToken);
-                } catch (Exception ex) when (ex.IsConnectionFailure()) {
-                    throw new DataProviderFailure(ex.Message, ex, Client.Uri);
-                }
-
-                rid = partialData.ResponseId;
-
-                delta.FullUpdate.Clear();
-                delta.Incomplete.Clear();
-                delta.Complete.Clear();
-                delta.Removed.Clear();
-
-                async Task<byte[]> resolveRTSHash(string NativeHash, string? V1Hex, string? V2Hex)
-                {
-                    if (!String.IsNullOrEmpty(V2Hex))
-                        return Convert.FromHexString(V2Hex);
-                    if (!String.IsNullOrEmpty(V1Hex))
-                        return Convert.FromHexString(V1Hex);
-
-                    // Partial row or older qbit lacking the infohash fields: one-shot full fetch to recover them.
-                    try {
-                        var full = await client.GetTorrentListAsync(new TorrentListQuery { Hashes = [ NativeHash ] });
-                        var info = full.Count == 0 ? default : full[0];
-                        if (info != null && (!String.IsNullOrEmpty(info.InfoHashV2) || !String.IsNullOrEmpty(info.InfoHashV1)))
-                            return RTSHashFromInfo(info.InfoHashV1, info.InfoHashV2, NativeHash);
-                    } catch (Exception ex) {
-                        Logger.LogTrace(ex, "Failed to resolve rtsHash for {Hash}", NativeHash);
-                    }
-
-                    // qbit < 4.4 (no v2 support anyway) or a torrent that could not be resolved.
-                    return Convert.FromHexString(NativeHash);
-                }
-
-                async Task fullUpdate(string StrHash, TorrentPartialInfo Input)
-                {
-                    var native = Convert.FromHexString(StrHash);
-                    var rtsHash = await resolveRTSHash(StrHash, Input.InfoHashV1, Input.InfoHashV2);
-                    var internalTorrent = new Protocols.DataProvider.Torrent {
-                        Hash = rtsHash.ToByteString()
-                    };
-                    TorrentMapper.ApplyFromExternal(internalTorrent, Input);
-                    updateHashingSpeed(internalTorrent);
-
-                    LatestTorrentsLock.EnterWriteLock();
-                    {
-                        LatestTorrents[native] = internalTorrent;
-                    }
-                    LatestTorrentsLock.ExitWriteLock();
-
-                    delta.FullUpdate.Add(internalTorrent);
-                }
-
-                if (partialData.FullUpdate && partialData.TorrentsChanged != null) {
-                    foreach (var (strHash, changedTorrent) in partialData.TorrentsChanged) {
-                        await fullUpdate(strHash, changedTorrent);
-                    }
-                } else if (partialData.TorrentsChanged != null) {
-                    foreach (var (strHash, changedTorrent) in partialData.TorrentsChanged) {
-                        var native = Convert.FromHexString(strHash);
-
-                        if (!LatestTorrents.TryGetValue(native, out var internalTorrent)) {
-                            await fullUpdate(strHash, changedTorrent);
-                            continue;
-                        }
-
-                        var prevState = internalTorrent.State;
-                        var prevSequential = internalTorrent.SequentialDownload;
-                        var prevWantedSize = internalTorrent.WantedSize;
-                        var prevPriority = internalTorrent.Priority;
-                        var prevMagnetDummy = internalTorrent.MagnetDummy;
-                        var prevRemotePath = internalTorrent.RemotePath;
-                        var prevStatusMessage = internalTorrent.StatusMessage;
-                        var prevPrimaryTrackerUri = internalTorrent.PrimaryTracker?.Uri;
-                        var prevFinishedOn = internalTorrent.FinishedOn;
-                        var labelsChanged = changedTorrent.Tags != null && !internalTorrent.Labels.SequenceEqual(changedTorrent.Tags);
-
-                        TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
-                        updateHashingSpeed(internalTorrent);
-
-                        if (internalTorrent.State != prevState ||
-                            internalTorrent.SequentialDownload != prevSequential ||
-                            internalTorrent.WantedSize != prevWantedSize ||
-                            internalTorrent.Priority != prevPriority ||
-                            internalTorrent.MagnetDummy != prevMagnetDummy ||
-                            internalTorrent.RemotePath != prevRemotePath ||
-                            internalTorrent.StatusMessage != prevStatusMessage ||
-                            internalTorrent.PrimaryTracker?.Uri != prevPrimaryTrackerUri ||
-                            !Equals(internalTorrent.FinishedOn, prevFinishedOn) ||
-                            labelsChanged) {
-                            delta.FullUpdate.Add(internalTorrent);
-                            continue;
-                        }
-
-                        if (!internalTorrent.IsCompleted) {
-                            delta.Incomplete.Add(new IncompleteDeltaTorrentResponse {
-                                Hash = internalTorrent.Hash,
-                                Downloaded = internalTorrent.Downloaded,
-                                CompletedSize = internalTorrent.CompletedSize,
-                                Uploaded = internalTorrent.Uploaded,
-                                DLSpeed = internalTorrent.DLSpeed,
-                                HashingSpeed = internalTorrent.HashingSpeed,
-                                UPSpeed = internalTorrent.UPSpeed,
-                                ETA = internalTorrent.ETA,
-                                SeedersConnected = internalTorrent.SeedersConnected,
-                                SeedersTotal = internalTorrent.SeedersTotal,
-                                PeersConnected = internalTorrent.PeersConnected,
-                                PeersTotal = internalTorrent.PeersTotal,
-                                Wasted = internalTorrent.Wasted
-                            });
-                        } else {
-                            if (internalTorrent.State.HasFlag(Protocols.DataProvider.TorrentState.Active)) {
-                                /*
-                                 * qbit pushes so many seemingly fake peer count updates that just jump
-                                 * up and down for no reason, so lets only push active complete torrents.
-                                 * related? https://github.com/qbittorrent/qBittorrent/issues/22432 ->
-                                 * https://github.com/arvidn/libtorrent/issues/7700
-                                 */
-                                delta.Complete.Add(new CompleteDeltaTorrentResponse {
-                                    Hash = internalTorrent.Hash,
-                                    Uploaded = internalTorrent.Uploaded,
-                                    UPSpeed = internalTorrent.UPSpeed,
-                                    SeedersTotal = internalTorrent.SeedersTotal,
-                                    PeersTotal = internalTorrent.PeersTotal,
-                                    PeersConnected = internalTorrent.PeersConnected
-                                });
-                            }
-                        }
-                    }
-                }
-
-                if (partialData.TorrentsRemoved != null) {
-                    try {
-
-                        LatestTorrentsLock.EnterWriteLock();
-                        foreach (var strHash in partialData.TorrentsRemoved) {
-                            var native = Convert.FromHexString(strHash);
-                            if (LatestTorrents.Remove(native, out var removed)) {
-                                delta.Removed.Add(removed.Hash);
-                            } else {
-                                delta.Removed.Add(native.ToByteString());
-                            }
-                        }
-                    } finally {
-                        LatestTorrentsLock.ExitWriteLock();
-                    }
-                }
-
-                if (delta.Incomplete.Count > 0 || delta.Complete.Count > 0 || delta.Removed.Count > 0 || delta.FullUpdate.Count > 0)
-                    await Res.WriteAsync(delta, CancellationToken);
-                await Task.Delay(pollInternal, CancellationToken);
-            }
-        }
+        public Task GetTorrentListUpdates(GetTorrentListUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsListResponse> Res, CancellationToken CancellationToken)
+            => ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey).Stream(Req, Res, CancellationToken);
 
         public async Task<BytesValue> MoveDownloadDirectory(MoveDownloadDirectoryArgs Req, CancellationToken CancellationToken)
         {

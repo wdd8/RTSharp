@@ -1,4 +1,4 @@
-using Google.Protobuf;
+﻿using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
 using RTSharp.Daemon.Protocols.DataProvider;
@@ -7,6 +7,20 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 {
     internal static class Mapper
     {
+        private static TorrentTracker? GetPrimaryTracker(IReadOnlyList<TorrentTracker>? Trackers)
+        {
+            if (Trackers == null)
+                return null;
+
+            TorrentTracker? best = null;
+            foreach (var tracker in Trackers) {
+                if (best == null || tracker.Peers > best.Peers ||
+                    (tracker.Peers == best.Peers && tracker.Status == TorrentTrackerStatus.Active && best.Status != TorrentTrackerStatus.Active))
+                    best = tracker;
+            }
+            return best;
+        }
+
         private static string TrackerStatusMessage(ReadOnlySpan<char> Raw)
         {
             if (Raw.Length == 1) {
@@ -95,7 +109,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 peersTotal += tracker.Peers;
             }
 
-            var primaryTracker = PollingSubscription.GetPrimaryTracker(Trackers);
+            var primaryTracker = GetPrimaryTracker(Trackers);
 
             var torrentComment = TorrentCommentRaw;
             if (torrentComment.StartsWith("VRS24mrker"))

@@ -1,0 +1,26 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Moving the download directory</title>
+   <meta name="keywords" content="Move download directory,Directory selector,Remote directory,Create directory">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>RT# can move the data of your torrents to another directory of the server, the daemon moves the files and tells the torrent daemon where the data is now located, so you don't have to recheck the torrents.</p>
+
+<p>Select the torrents, right click on them and select "Move download directory...". If the torrents belong to several data providers, RT# will ask you a target directory for each data provider.</p>
+
+<h3>1. Select the target directory:</h3>
+<p>The directory selector displays the folders of the server, it opens on the directory that is common to all the selected torrents. Double click on a folder to open it, or on ".." to go to the parent folder. You can create a new directory with "Create directory", or remove an empty directory with a right click. When you are in the right folder, click on "Select".</p>
+
+<h3>2. Confirm the move:</h3>
+<p>RT# then displays the current location of each file on the left and its future location on the right, with the number of files and the total size. Check that everything is correct and click on "Confirm".</p>
+
+<h3>3. Follow the progress:</h3>
+<p>The move is performed by the server and its progress is displayed in the action queue. The time needed depends on the destination: a move on the same file system is almost instant while a move to another disk needs to copy all the data.</p>
+
+<p>If all the files already exist in the destination directory, rtorrent and Transmission data providers will ask you if you want to proceed without moving the files. This is useful when you have already copied the data yourself and you only want the torrent daemon to use the new location.</p>
+
+</body>
+</html>

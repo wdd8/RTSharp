@@ -1,0 +1,65 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RTSharp.PeerReputation.Plugin.ViewModels"
+        x:Class="RTSharp.PeerReputation.Plugin.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="1200" Height="760"
+        Title="Peer Reputation"
+        MinWidth="900" MinHeight="580">
+    <Grid Margin="16">
+        <Grid ColumnDefinitions="3*,8,2*" RowDefinitions="Auto,Auto,*">
+            <DockPanel Grid.ColumnSpan="3" Margin="0,0,0,12">
+                <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshCommand}" />
+                <TextBlock Text="Loading peer ASNs…" IsVisible="{Binding IsLoading}" VerticalAlignment="Center" />
+            </DockPanel>
+            <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextWrapping="Wrap" Margin="0,0,0,12" />
+            <Grid Grid.Row="2" MinWidth="480">
+                <DataGrid ItemsSource="{Binding PeerAsns}"
+                          SelectedItem="{Binding SelectedPeerAsn, Mode=TwoWay}"
+                          AutoGenerateColumns="False" IsReadOnly="True"
+                          SelectionMode="Single" CanUserSortColumns="True"
+                          CanUserResizeColumns="True" GridLinesVisibility="Horizontal"
+                          AutomationProperties.Name="Peer ASNs">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Daemon" Width="*" x:DataType="vm:PeerAsnViewModel" Binding="{Binding Daemon}" SortMemberPath="Daemon" />
+                        <DataGridTextColumn Header="Peer ASN" Width="*" x:DataType="vm:PeerAsnViewModel" Binding="{Binding PeerAsn, StringFormat='AS{0}'}" SortMemberPath="PeerAsn" />
+                        <DataGridTextColumn Header="Avg DL speed" Width="*" x:DataType="vm:PeerAsnViewModel" Binding="{Binding AverageDownloadSpeedDisplay}" SortMemberPath="AverageDownloadSpeed" />
+                        <DataGridTextColumn Header="Avg UP speed" Width="*" x:DataType="vm:PeerAsnViewModel" Binding="{Binding AverageUploadSpeedDisplay}" SortMemberPath="AverageUploadSpeed" />
+                        <DataGridTextColumn Header="Peers seen" Width="*" x:DataType="vm:PeerAsnViewModel" Binding="{Binding PeerOccurrenceCount, StringFormat='{}{0:N0}'}" SortMemberPath="PeerOccurrenceCount" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Text="No peer ASN data available" IsVisible="{Binding ShowEmptyState}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Grid>
+            <GridSplitter Grid.Row="2" Grid.Column="1" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
+            <Grid Grid.Row="2" Grid.Column="2" Margin="12,0,0,0" MinWidth="320">
+                <Grid IsVisible="{Binding HasSelection}" RowDefinitions="Auto,Auto,Auto,*">
+                    <StackPanel Spacing="4" Margin="0,0,0,16">
+                        <TextBlock Text="{Binding SelectedPeerAsn.PeerAsn, StringFormat='AS{0}'}" FontSize="22" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding SelectedPeerAsn.Daemon}" />
+                    </StackPanel>
+                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,16">
+                        <TextBlock Text="Avg DL speed" Margin="0,0,0,8" />
+                        <TextBlock Grid.Column="1" Text="{Binding SelectedPeerAsn.AverageDownloadSpeedDisplay}" />
+                        <TextBlock Grid.Row="1" Text="Avg UP speed" Margin="0,0,0,8" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPeerAsn.AverageUploadSpeedDisplay}" />
+                        <TextBlock Grid.Row="2" Text="Peers seen" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedPeerAsn.PeerOccurrenceCount, StringFormat='{}{0:N0}'}" />
+                    </Grid>
+                    <TextBlock Grid.Row="2" Text="Tracker distribution" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <Grid Grid.Row="3">
+                        <DataGrid ItemsSource="{Binding SelectedPeerAsn.TrackerDistribution}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeColumns="True"
+                                  CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                                  AutomationProperties.Name="Tracker distribution">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Tracker" Width="*" x:DataType="vm:TrackerDistributionViewModel" Binding="{Binding Tracker}" SortMemberPath="Tracker" />
+                                <DataGridTextColumn Header="Peers" x:DataType="vm:TrackerDistributionViewModel" Binding="{Binding PeerCount, StringFormat='{}{0:N0}'}" SortMemberPath="PeerCount" />
+                                <DataGridTextColumn Header="Share" x:DataType="vm:TrackerDistributionViewModel" Binding="{Binding Share, StringFormat='{}{0:0.0}%'}" SortMemberPath="Share" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

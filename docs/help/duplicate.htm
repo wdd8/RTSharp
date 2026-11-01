@@ -1,0 +1,28 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Duplicating torrents</title>
+   <meta name="keywords" content="Duplicate,Duplication,Transfer between servers,Hardlink,Cross-seeding">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>Duplicating a torrent means adding the same torrent with its data to another data provider. This can be useful if you want to seed the same torrent from several servers, or if you want to move a torrent from one torrent daemon to another.</p>
+
+<p>Select the torrents, right click on them and select "Duplicate torrent &amp; data to...". For each torrent, you will be asked to select the target data provider and the remote directory where the data will be saved, then click on "Confirm". You can also duplicate a torrent at the same time you add it, as explained in the "Adding torrents" chapter.</p>
+
+<p>The duplication is performed by a script that runs on the source server:</p>
+<div class="list">
+1. The script waits until the source torrent is completely downloaded<br>
+2. If the target is on the same server, the files are linked into the target directory, so the data does not take any extra space. Otherwise the files are transmitted directly from the source server to the target server<br>
+3. The torrent is added to the target data provider<br>
+4. The torrent is started on the target data provider<br>
+</div>
+<p>The progress of the duplication is displayed in the action queue.</p>
+
+<p>Since the data never goes through your computer, the duplication between two servers is as fast as the connection between these servers. However, the servers must trust each other: each server acts as a client of the other one, so you have to add the thumbprint of the first server certificate to the AllowedClients of the second server and the thumbprint of the second server certificate to the AllowedClients of the first server. Also make sure that the firewall allows direct communication between the servers on the RTSharp.Daemon ports.</p>
+
+<p class="note">* This function is only available when the data providers of the selected torrents support adding, rechecking and starting torrents.</p>
+
+</body>
+</html>

@@ -1,8 +1,22 @@
 <Project>
 
+    <PropertyGroup Condition="'$(DesignTimeBuild)' == 'true'">
+        <!-- Script bodies use custom pragmas that the runtime compiler preprocesses. -->
+        <NoWarn>$(NoWarn);CS1633</NoWarn>
+    </PropertyGroup>
+
     <ItemGroup>
         <Compile Remove="**\Scripts\**\*.cs" />
         <Compile Include="**\Scripts\Contracts\**\*.cs" />
+
+        <!--
+            Keep script bodies out of normal project compilation.
+            Include them for Visual Studio's design-time compilation so
+            the editable source files get C# IntelliSense.
+        -->
+        <Compile Include="**\Scripts\**\*.cs"
+                 Exclude="$(DefaultItemExcludes);**\Scripts\Contracts\**\*.cs"
+                 Condition="'$(DesignTimeBuild)' == 'true'" />
 
         <AdditionalFiles Include="**\Scripts\**\*.cs" Exclude="$(DefaultItemExcludes);**\Scripts\Contracts\**\*.cs" ScriptSource="true" />
         <AdditionalFiles Include="**\Scripts\Contracts\**\*.cs" Exclude="$(DefaultItemExcludes)" ScriptSource="true" ScriptContract="true" />
@@ -14,6 +28,11 @@
             OutputItemType="Analyzer"
             ReferenceOutputAssembly="false"
             Private="false" />
+
+        <!-- Runtime script APIs and built-in usings are needed only by the editor context. -->
+        <ProjectReference
+            Include="$(MSBuildThisFileDirectory)RTSharp.Daemon\RTSharp.Daemon.csproj"
+            Condition="'$(DesignTimeBuild)' == 'true'" />
     </ItemGroup>
 
 </Project>

@@ -253,33 +253,61 @@ public partial class TorrentListingViewModel
 
     public void EvGridTextInput(Avalonia.Input.TextInputEventArgs e)
     {
-        if (String.IsNullOrEmpty(e.Text))
+        // Win32 delivers Backspace, Escape, Enter, Tab and Ctrl+letter as control characters
+        if (String.IsNullOrEmpty(e.Text) || e.Text.Any(Char.IsControl))
             return;
 
-        CurrentSearchText += e.Text;
+        if (!IsSearching && String.IsNullOrWhiteSpace(e.Text))
+            return;
+
         e.Handled = true;
-        if (CurrentSearchText.Length > 0) {
-            SearchModel.SetOrUpdate(new SearchDescriptor(
-                query: "^" + Regex.Escape(CurrentSearchText.Trim()),
-                matchMode: SearchMatchMode.Regex,
-                termMode: SearchTermCombineMode.All,
-                scope: SearchScope.ExplicitColumns,
-                columnIds: [
-                    NameColumn,
-                    LabelsColumn,
-                    TrackerColumn
-                ],
-                comparison: StringComparison.OrdinalIgnoreCase,
-                wholeWord: false
-            ));
-            Debug.WriteLine("Search: " + CurrentSearchText.Trim());
+        SetSearchText(CurrentSearchText + e.Text);
+    }
 
-            if (SearchModel.CurrentResult != null)
-                ScrollToItem(SearchModel.CurrentResult.Item);
-            SearchModel.Clear();
+    public void EvGridKeyDown(Avalonia.Input.KeyEventArgs e)
+    {
+        if (!IsSearching)
+            return;
+
+        switch (e.Key) {
+            case Avalonia.Input.Key.Back:
+                e.Handled = true;
+                SetSearchText(CurrentSearchText[..^1]);
+                break;
+            case Avalonia.Input.Key.Escape:
+                e.Handled = true;
+                SetSearchText("");
+                break;
         }
+    }
 
+    private void SetSearchText(string text)
+    {
+        CurrentSearchText = text;
         SearchClearTimer.Stop();
+
+        if (text.Length == 0)
+            return;
+
+        // StartsWith tokenizes the query on spaces, so an anchored regex is the only whole-prefix match
+        SearchModel.SetOrUpdate(new SearchDescriptor(
+            query: "^" + Regex.Escape(text),
+            matchMode: SearchMatchMode.Regex,
+            termMode: SearchTermCombineMode.All,
+            scope: SearchScope.ExplicitColumns,
+            columnIds: [
+                NameColumn,
+                LabelsColumn,
+                TrackerColumn
+            ],
+            comparison: StringComparison.OrdinalIgnoreCase,
+            wholeWord: false
+        ));
+
+        if (SearchModel.CurrentResult != null)
+            ScrollToItem(SearchModel.CurrentResult.Item);
+        SearchModel.Clear();
+
         SearchClearTimer.Start();
     }
 

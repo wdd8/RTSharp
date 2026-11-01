@@ -1,0 +1,36 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Auto integrify</title>
+   <meta name="keywords" content="Auto integrify,Align file integrity,Search paths,Hardlink,Reflink,Random pieces">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>Have you ever added a torrent of files that you already have on your server, but in another folder or with other names? The auto integrify plugin automatically searches and verifies these files, then links them where the torrent expects them, so the torrent can seed without downloading anything again.</p>
+
+<p>To start, select one torrent in the listing, right click on it and select "Align file integrity &amp; recheck" (just below "Force recheck"). A new Auto integrify window will open and the plugin will:</p>
+<div class="list">
+1. Read the .torrent file and process the torrent pieces<br>
+2. Search each file on the server, in the current remote path of the torrent and in the additional search paths<br>
+3. Verify some random pieces of each file found, to make sure this is really the same file<br>
+4. Prepare the links from the files found to the location expected by the torrent<br>
+</div>
+
+<p>The window displays the list of files with an icon representing their state: waiting, resolved, resolved without piece verification, unresolved, or too small to be verified. Select one file to see its path in the torrent, the path where it has been found and its state. The pieces of the torrent are displayed with a color depending on the state of their files.</p>
+
+<p>When all the files are resolved, click on "Perform pending hardlinks" to create the links, then on "Force recheck" to recheck the torrent. If some files cannot be found, click on "Retry" after you have fixed the problem, for example by adding a search path.</p>
+
+<h2>Settings</h2>
+<p>Select the auto integrify instance in the Plugins window and click on the settings button:</p>
+<div class="list">
+- Search paths: Additional folders of the server where the files will be searched. By default, only the current remote path of the torrent is searched<br>
+- Random pieces to check: Number of pieces verified for each file found. The more pieces you verify, the more you are sure, but the longer it takes<br>
+- Search recursion limit: Number of sub folder levels searched in each path<br>
+- Links: "Reflink with hardlink fallback", "Reflink" or "Hardlink". A reflink is a copy that shares the data on the disk until one of the files is modified, it is only supported by some file systems (Btrfs, XFS...). A hardlink is a second name for the same file<br>
+</div>
+
+<p class="note">* qBittorrent has a bug that can make some torrents impossible to recheck. If the plugin detects it, it tells you to remove the torrent, add it again and force a recheck yourself.</p>
+
+</body>
+</html>

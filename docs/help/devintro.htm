@@ -1,0 +1,66 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Introduction</title>
+   <meta name="keywords" content="Plugin development,manifest.json,EnableDynamicLoading,plugin.targets,RTSharpPluginVersion,Plugin configuration file">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>This chapter is for the developers who want to write their own plugins. A plugin is a .NET 10 class library that RT# loads at runtime, it can use everything that the plugin contracts offer: the torrents, the menus of the main window, the servers and their scripts, and much more. The complete list of these contracts is given in the "Plugin API reference" which is generated automatically from the source code.</p>
+
+<h3>1. The assemblies:</h3>
+<p>There are two assemblies that a plugin references:</p>
+<div class="list">
+<b>RTSharp.Shared.Abstractions</b>: The headless contracts, such as IPlugin, Torrent, IDataProvider, IDaemonService, IScript...<br>
+<b>RTSharp.Shared.Abstractions.Client</b>: The contracts related to the user interface, such as IPluginHost, BasePlugin, VmWindow...<br>
+</div>
+<p>RT# is built with Avalonia, so the windows of a plugin are Avalonia windows.</p>
+
+<h3>2. The project:</h3>
+<p>The project of a plugin must enable the dynamic loading and declare its version, then import plugin.targets which removes the redundant files from the build output:</p>
+<pre>&lt;Project Sdk="Microsoft.NET.Sdk"&gt;
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net10.0&lt;/TargetFramework&gt;
+    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
+    &lt;RTSharpPluginVersion&gt;0.0.1&lt;/RTSharpPluginVersion&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;ProjectReference Include="..\..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj" /&gt;
+    &lt;ProjectReference Include="..\..\RTSharp.Shared.Abstractions.Client\RTSharp.Shared.Abstractions.Client.csproj" /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;None Update="manifest.json" CopyToOutputDirectory="PreserveNewest" /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;Import Project="..\..\plugin.targets" /&gt;
+&lt;/Project&gt;</pre>
+<p>If the plugin needs to access the internals of RT# itself (for example RTSharp.Models.Torrent in a cell hook), set RTSharpPluginReferencesHost to true and reference the RTSharp project. Be careful: this kind of access can break with any new version of RT#.</p>
+
+<h3>3. The manifest:</h3>
+<p>Each plugin is located in its own folder inside the "plugins" folder of RT#, together with a manifest.json file:</p>
+<pre>{
+    "Module": "MyCompany.MyPlugin.dll",
+    "Description": "Does something very useful"
+}</pre>
+<p>Data providers also add "Type": "DATA_PROVIDER", this way RT# knows that it must ask a server and a data provider name when you configure them.</p>
+
+<h3>4. The configuration file:</h3>
+<p>Each instance of a plugin has its own configuration file in the "plugins" folder of the configuration folder. The "Plugin" section is managed by RT# (path of the module, name and id of the instance, and for data providers the server, the data provider name and the color), the other settings at the root of the file belong to the plugin:</p>
+<pre>{
+  "Plugin": {
+    "Path": "MyPlugin/MyCompany.MyPlugin.dll",
+    "Name": "My plugin",
+    "InstanceId": "6c3f4a4e-...."
+  },
+  "MySetting": 42
+}</pre>
+<p>The plugin describes its own settings with a class deriving from PluginConfigContainer&lt;PluginInstanceConfig&gt; (or PluginConfigContainer&lt;DataProviderInstanceConfig&gt; for a data provider), RT# reads the file into this class and gives it to the plugin through Host.Config. To save the settings, call Host.SavePluginConfig.</p>
+
+<h3>5. Loading:</h3>
+<p>At startup, RT# reads all the configuration files, loads each module in its own load context, then calls ConfigureServices and Init on each plugin. If Init fails, RT# displays the error and continues with the other plugins. When RT# exits, it calls Unload. A plugin must declare the major version of RT# it has been made for in CompatibleMajorVersion.</p>
+
+</body>
+</html>

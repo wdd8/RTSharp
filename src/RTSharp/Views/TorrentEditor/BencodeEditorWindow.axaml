@@ -1,0 +1,101 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:dgh="using:Avalonia.Controls.DataGridHierarchical"
+        xmlns:vm="using:RTSharp.ViewModels.TorrentEditor"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        Width="800" Height="600"
+        MinWidth="600" MinHeight="400"
+        WindowStartupLocation="CenterOwner"
+        x:Class="RTSharp.Views.TorrentEditor.BencodeEditorWindow"
+        x:DataType="vm:BencodeEditorWindowViewModel"
+        Title="RT# - Edit bencode">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="8">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="0 0 0 8">
+            <Button Command="{Binding AddClickCommand}" CommandParameter="{Binding #Grid.SelectedItems}">Add</Button>
+            <Button Command="{Binding DeleteClickCommand}" CommandParameter="{Binding #Grid.SelectedItems}">Delete</Button>
+            <Button Command="{Binding DuplicateClickCommand}" CommandParameter="{Binding #Grid.SelectedItems}">Duplicate</Button>
+            <Button Command="{Binding MoveUpClickCommand}" CommandParameter="{Binding #Grid.SelectedItems}">Move up</Button>
+            <Button Command="{Binding MoveDownClickCommand}" CommandParameter="{Binding #Grid.SelectedItems}">Move down</Button>
+            <Button Command="{Binding EditBytesClickCommand}"
+                    CommandParameter="{Binding SelectedNode}"
+                    IsEnabled="{Binding SelectedNode.IsString, FallbackValue=False}">Edit bytes...</Button>
+        </StackPanel>
+
+        <DataGrid Grid.Row="1"
+                  Name="Grid"
+                  AutoGenerateColumns="False"
+                  HierarchicalModel="{Binding Model}"
+                  HierarchicalRowsEnabled="True"
+                  ColumnDefinitionsSource="{Binding ColumnDefinitions}"
+                  SelectedItem="{Binding SelectedNode}"
+                  SelectionMode="Extended"
+                  UseLogicalScrollable="True"
+                  HeadersVisibility="All"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  CanUserReorderColumns="False"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="False">
+            <DataGrid.Resources>
+                <DataTemplate x:Key="KeyTemplate" x:DataType="vm:BencodeNode">
+                    <TextBox Text="{Binding Key}"
+                             IsReadOnly="{Binding Parent, Converter={x:Static ObjectConverters.IsNull}}"
+                             FontSize="12"
+                             MinHeight="0"
+                             Padding="4 2"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             VerticalAlignment="Center" />
+                </DataTemplate>
+                <DataTemplate x:Key="KindTemplate" x:DataType="dgh:HierarchicalNode">
+                    <ComboBox SelectedItem="{Binding ((vm:BencodeNode)Item).Kind}"
+                              IsEnabled="{Binding ((vm:BencodeNode)Item).Parent, Converter={x:Static ObjectConverters.IsNotNull}}"
+                              FontSize="12"
+                              MinHeight="0"
+                              Padding="6 2"
+                              VerticalAlignment="Center">
+                        <vm:BencodeKind>Dictionary</vm:BencodeKind>
+                        <vm:BencodeKind>List</vm:BencodeKind>
+                        <vm:BencodeKind>Integer</vm:BencodeKind>
+                        <vm:BencodeKind>String</vm:BencodeKind>
+                    </ComboBox>
+                </DataTemplate>
+                <DataTemplate x:Key="ValueTemplate" x:DataType="dgh:HierarchicalNode">
+                    <Panel>
+                        <TextBlock IsVisible="{Binding ((vm:BencodeNode)Item).IsContainer}"
+                                   Text="{Binding ((vm:BencodeNode)Item).Children.Count, StringFormat='{}{0} entries'}"
+                                   Foreground="Gray"
+                                   VerticalAlignment="Center" />
+                        <TextBox IsVisible="{Binding ((vm:BencodeNode)Item).IsTextEditable}"
+                                 Text="{Binding ((vm:BencodeNode)Item).Value}"
+                                 FontFamily="monospace"
+                                 FontSize="12"
+                                 MinHeight="0"
+                                 Padding="4 2"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 VerticalAlignment="Center" />
+                        <Button IsVisible="{Binding ((vm:BencodeNode)Item).IsLarge}"
+                                Command="{Binding $parent[Window].((vm:BencodeEditorWindowViewModel)DataContext).EditBytesClickCommand}"
+                                CommandParameter="{Binding Item}"
+                                ToolTip.Tip="{Binding ((vm:BencodeNode)Item).Value}"
+                                FontSize="12"
+                                MinHeight="0"
+                                Padding="8 2"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center">Edit bytes...</Button>
+                    </Panel>
+                </DataTemplate>
+            </DataGrid.Resources>
+        </DataGrid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4" Margin="0 8 0 0">
+            <Button Command="{Binding OkClickCommand}">OK</Button>
+            <Button Command="{Binding CancelClickCommand}">Cancel</Button>
+        </StackPanel>
+    </Grid>
+</Window>

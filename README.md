@@ -81,6 +81,7 @@ _* - not directly supported by torrent daemon_
 
 |Feature|Support|
 |-|-|
+|Edit torrent|🟢Supported|
 |V2/Hybrid torrent creation|🟢Supported|
 |File previews|🟡mpv only|
 |File icons (as determined by OS)|🟡Not on macOS|

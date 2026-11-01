@@ -1,0 +1,4 @@
+{
+    "Module": "RTSharp.PeerReputation.Plugin.dll",
+    "Description": "Tracks connectivity to peers"
+}

@@ -83,6 +83,8 @@ namespace RTSharp.Core.Services.Cache.ASCache
             return d!;
         }
 
+        // https://github.com/DapperLib/DapperAOT/issues/226
+        [DapperAot(false)]
         public async Task AddCachedAS(IPAddressRange Range, CachedAS In)
         {
             await using var conn = await New();

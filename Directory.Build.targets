@@ -1,0 +1,25 @@
+<Project>
+  <!--
+    Consolidate SkiaSharp dep, probably won't need it after everyone transitions to v4
+  -->
+  <Target Name="CheckSkiaPackageVersions"
+          AfterTargets="ResolvePackageAssets"
+          Condition="'$(DesignTimeBuild)' != 'true' And !$(MSBuildProjectDirectory.Contains('ProDataGrid'))">
+    <ItemGroup>
+      <_CheckedPackageAsset Include="@(ResolvedCompileFileDefinitions);@(RuntimeCopyLocalItems);@(RuntimeTargetsCopyLocalItems);@(NativeCopyLocalItems)" />
+      <_MisalignedSkiaPackage Include="%(_CheckedPackageAsset.NuGetPackageId) %(_CheckedPackageAsset.NuGetPackageVersion)"
+                              Condition="$([System.String]::Copy('%(_CheckedPackageAsset.NuGetPackageId)').StartsWith('SkiaSharp')) And '%(_CheckedPackageAsset.NuGetPackageVersion)' != '$(SkiaSharpVersion)'" />
+      <_HarfBuzzPackage Include="%(_CheckedPackageAsset.NuGetPackageId) %(_CheckedPackageAsset.NuGetPackageVersion)"
+                        Condition="$([System.String]::Copy('%(_CheckedPackageAsset.NuGetPackageId)').StartsWith('HarfBuzzSharp'))" />
+      <_HarfBuzzVersion Include="%(_CheckedPackageAsset.NuGetPackageVersion)"
+                        Condition="$([System.String]::Copy('%(_CheckedPackageAsset.NuGetPackageId)').StartsWith('HarfBuzzSharp'))" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_HarfBuzzVersionCount>@(_HarfBuzzVersion->Distinct()->Count())</_HarfBuzzVersionCount>
+    </PropertyGroup>
+    <Error Condition="'@(_MisalignedSkiaPackage)' != ''"
+           Text="SkiaSharp packages must resolve to $(SkiaSharpVersion), but found: @(_MisalignedSkiaPackage->Distinct(), ', ')" />
+    <Error Condition="'$(_HarfBuzzVersionCount)' &gt; '1'"
+           Text="HarfBuzzSharp packages must all resolve to one version, but found: @(_HarfBuzzPackage->Distinct(), ', ')" />
+  </Target>
+</Project>

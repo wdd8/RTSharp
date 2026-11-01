@@ -1,4 +1,5 @@
 ﻿<Window x:Class="RTSharp.Views.MainWindow"
+        x:Name="Root"
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -20,6 +21,10 @@
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
+    <Window.KeyBindings>
+        <KeyBinding Gesture="F1" Command="{Binding #Root.OpenHelpCommand}" />
+    </Window.KeyBindings>
+
     <Window.Resources>
         <MenuItem x:Key="FileMenu" Header="_File">
             <MenuItem Header="_Add torrent..." Command="{Binding AddTorrentClickCommand}" />
@@ -38,6 +43,9 @@
         </MenuItem>
         <MenuItem x:Key="ServersMenu" Header="_Servers" Command="{Binding ServersClickCommand}" />
         <MenuItem x:Key="PluginsMenu" Header="_Plugins" Command="{Binding PluginsClickCommand}" />
+        <MenuItem x:Key="HelpMenu" Header="_Help">
+            <MenuItem Header="_Contents" InputGesture="F1" Command="{Binding #Root.OpenHelpCommand}" />
+        </MenuItem>
     </Window.Resources>
 
     <Grid RowDefinitions="Auto, *">

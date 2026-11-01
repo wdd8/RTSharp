@@ -10,6 +10,11 @@ public record InstalledScript
     public required string Name { get; init; }
 
     /// <summary>
+    /// The running session to which commands can be sent, if the script is active
+    /// </summary>
+    public Guid? SessionId { get; init; }
+
+    /// <summary>
     /// GUID of the plugin the script belongs to, or <see cref="Guid.Empty"/> for the application
     /// itself
     /// </summary>

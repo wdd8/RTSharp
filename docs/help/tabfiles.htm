@@ -1,0 +1,32 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Files tab</title>
+   <meta name="keywords" content="Files tab,File priority,Don't download,Mediainfo,Preview,mpv,Download strategy">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>The Files tab displays the files of the selected torrent with their folders as a tree. For each file, RT# displays the following columns:</p>
+<div class="list">
+<b>Name</b>: Name of the file or of the folder, with an icon depending on the type of file<br>
+<b>Size</b>: Size of the file<br>
+<b>Downloaded</b>: Amount of data already downloaded<br>
+<b>Done</b>: Progress of the file<br>
+<b>Priority</b>: Download priority of the file<br>
+<b>Download strategy</b>: How the pieces of the file are downloaded<br>
+</div>
+<p>The files are refreshed automatically while the tab is visible, the refresh interval can be adjusted in the Behavior options. Since the list of files of a torrent never changes, RT# keeps it in a local cache so it does not need to be fetched again from the server (see the Caching options).</p>
+
+<p>Select one or several files and right click on them to get the files menu:</p>
+<div class="list">
+- Mediainfo: Run mediainfo on the server for the selected files and display the result in a new window. This gives you all the details about a video or an audio file without downloading it<br>
+- Preview with mpv: Play the file with mpv directly from the server<br>
+- Priority: Set the priority of the selected files to "Don't download", "Normal" or "High"<br>
+</div>
+
+<h3>Preview with mpv:</h3>
+<p>For direct file previews, RT# starts a small private web server on your computer that streams the file from RTSharp.Daemon, and mpv simply plays this local address. Moreover mpv can seek in the file, so you can jump anywhere in a video. mpv must be installed on your computer and available in the PATH, otherwise RT# will tell you that it has not been found. The preview stops as soon as you close mpv.</p>
+
+</body>
+</html>

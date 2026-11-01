@@ -1,4 +1,5 @@
-﻿using BencodeNET.Objects;
+﻿using RTSharp.Daemon.Services.TorrentPoll;
+using BencodeNET.Objects;
 using BencodeNET.Parsing;
 
 using Google.Protobuf;
@@ -14,39 +15,99 @@ using System.Diagnostics;
 
 namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 {
-    public partial class TorrentPolling : BackgroundService
+    public partial class TorrentPolling : TorrentPollingService
     {
+        protected internal override DeltaTorrentsListResponse BuildChanges(HistoryEntry? Previous, HistoryEntry Current)
+        {
+            var delta = new DeltaTorrentsListResponse();
+            foreach (var (hash, torrent) in Current.List) {
+                if (Previous == null || !Previous.List.TryGetValue(hash, out var old)) {
+                    delta.FullUpdate.Add(torrent.Clone());
+                    continue;
+                }
+
+                Current.Trackers.TryGetValue(hash, out var trackers);
+                Previous.Trackers.TryGetValue(hash, out var oldTrackers);
+
+                if (torrent.Name != old.Name ||
+                    torrent.Size != old.Size ||
+                    torrent.IsCompleted != old.IsCompleted ||
+                    torrent.IsPrivate != old.IsPrivate ||
+                    torrent.ChunkSize != old.ChunkSize ||
+                    torrent.State != old.State ||
+                    torrent.WantedSize != old.WantedSize ||
+                    torrent.Priority != old.Priority ||
+                    torrent.MagnetDummy != old.MagnetDummy ||
+                    torrent.SequentialDownload != old.SequentialDownload ||
+                    torrent.RemotePath != old.RemotePath ||
+                    torrent.StatusMessage != old.StatusMessage ||
+                    !Equals(torrent.FinishedOn, old.FinishedOn) ||
+                    !torrent.Labels.SequenceEqual(old.Labels) ||
+                    TrackersChanged(trackers, oldTrackers) ||
+                    torrent.PrimaryTracker?.Uri != old.PrimaryTracker?.Uri) {
+                    delta.FullUpdate.Add(torrent.Clone());
+                } else if (torrent.IsCompleted) {
+                    if (torrent.Uploaded != old.Uploaded ||
+                        torrent.UPSpeed != old.UPSpeed ||
+                        torrent.SeedersTotal != old.SeedersTotal ||
+                        torrent.PeersTotal != old.PeersTotal ||
+                        torrent.PeersConnected != old.PeersConnected)
+                        delta.Complete.Add(TorrentDeltaMessages.Complete(torrent));
+                } else if (torrent.Uploaded != old.Uploaded ||
+                    torrent.Downloaded != old.Downloaded ||
+                    torrent.CompletedSize != old.CompletedSize ||
+                    torrent.DLSpeed != old.DLSpeed ||
+                    torrent.HashingSpeed != old.HashingSpeed ||
+                    torrent.UPSpeed != old.UPSpeed ||
+                    torrent.SeedersConnected != old.SeedersConnected ||
+                    torrent.SeedersTotal != old.SeedersTotal ||
+                    torrent.PeersConnected != old.PeersConnected ||
+                    torrent.PeersTotal != old.PeersTotal ||
+                    torrent.Wasted != old.Wasted ||
+                    !Equals(torrent.ETA, old.ETA)) {
+                    delta.Incomplete.Add(TorrentDeltaMessages.Incomplete(torrent));
+                }
+            }
+
+            if (Previous != null) {
+                foreach (var (hash, torrent) in Previous.List) {
+                    if (!Current.List.ContainsKey(hash))
+                        delta.Removed.Add(torrent.Hash);
+                }
+            }
+            return delta;
+        }
+
+        private static bool TrackersChanged(TorrentsTrackersReply.Types.TorrentsTrackers? Current,
+            TorrentsTrackersReply.Types.TorrentsTrackers? Previous)
+        {
+            if (Current == null || Previous == null)
+                return Current != Previous;
+            if (Current.Trackers.Count != Previous.Trackers.Count)
+                return true;
+            foreach (var tracker in Current.Trackers) {
+                var old = Previous.Trackers.FirstOrDefault(x => x.Uri == tracker.Uri);
+                if (old == null || tracker.Status != old.Status ||
+                    tracker.StatusMessage != old.StatusMessage || tracker.LastUpdated != old.LastUpdated)
+                    return true;
+            }
+            return false;
+        }
+
         private string InstanceKey { get; }
         private IServiceScopeFactory ScopeFactory { get; }
         private V1ToV2InfoHashCache Cache { get; }
         private ILogger<TorrentPolling> Logger { get; }
-        private ILogger<PollingSubscription> PollingSubscriptionLogger { get; }
 
-        public TorrentPolling(IServiceScopeFactory ScopeFactory, [ServiceKey] string InstanceKey, V1ToV2InfoHashCache Cache, ILogger<TorrentPolling> Logger, ILogger<PollingSubscription> PollingSubscriptionLogger)
+        public TorrentPolling(IServiceScopeFactory ScopeFactory, [ServiceKey] string InstanceKey, V1ToV2InfoHashCache Cache, ILogger<TorrentPolling> Logger, EventsService Events) : base(Logger, Events)
         {
             this.InstanceKey = InstanceKey;
             this.ScopeFactory = ScopeFactory;
             this.Cache = Cache;
             this.Logger = Logger;
-            this.PollingSubscriptionLogger = PollingSubscriptionLogger;
         }
 
         private readonly InfoHashDictionary<(int Attempts, DateTime NextTry)> ResolveBackoff = new();
-
-        internal List<PollingSubscription> Subscribers = [];
-        internal Lock SubscribersLock = new();
-
-        private TaskCompletionSource ForceLoopSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        internal void ForceLoop() => ForceLoopSignal.TrySetResult();
-
-        private async Task WaitForNextCycle(TimeSpan Delay, CancellationToken StoppingToken)
-        {
-            var forceLoopTask = ForceLoopSignal.Task;
-            var delayTask = Delay == TimeSpan.MaxValue ? Task.Delay(-1, StoppingToken) : Task.Delay(Delay, StoppingToken);
-            await Task.WhenAny(delayTask, forceLoopTask);
-            ForceLoopSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        }
 
         private readonly record struct SpeedSample(DateTime Date, InfoHashDictionary<(ulong Uploaded, ulong CompletedSize)> Values);
 
@@ -61,18 +122,6 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     buf[c++] = (h.Date, (long)(Uploaded ? t.Uploaded : t.CompletedSize));
             }
             return SpeedMovingAverage.CalculateSpeed(buf[..c]);
-        }
-
-        public PollingSubscription Subscribe(TimeSpan Interval)
-        {
-            var ret = new PollingSubscription(Interval, this, PollingSubscriptionLogger);
-
-            lock (SubscribersLock) {
-                Subscribers.Add(ret);
-            }
-
-            ForceLoop();
-            return ret;
         }
 
         private static string AllTorrentsXml(bool IsV16) => IsV16 ? AllTorrentsXmlV16 : AllTorrentsXmlOld;
@@ -113,7 +162,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 + "d.is_meta=</string></value></param>"
                 + "</params></methodCall>";
 
-        public async Task<(InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers)> GetAllTorrents()
+        public async Task<(InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers)> GetAllTorrents(CancellationToken CancellationToken = default)
         {
             SCGICommunication.ScgiResponse response;
 
@@ -121,7 +170,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 var comm = scope.ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
                 var version = scope.ServiceProvider.GetRequiredKeyedService<RtorrentVersionService>(InstanceKey);
 
-                response = await comm.Get(AllTorrentsXml(await version.IsV16()));
+                response = await comm.Get(AllTorrentsXml(await version.IsV16()), CancellationToken);
             }
 
             using (response) {
@@ -298,124 +347,57 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             }
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task<HistoryEntry> PollAsync(CancellationToken CancellationToken)
         {
-            while (!stoppingToken.IsCancellationRequested) {
-                TimeSpan delay = TimeSpan.MaxValue;
+            var allTorrents = await GetAllTorrents(CancellationToken);
+            const int SPEED_HISTORY_MAX = 5;
 
-                PollingSubscription[] subs;
+            var now = DateTime.UtcNow;
 
-                lock (SubscribersLock) {
-                    subs = [.. Subscribers];
-                }
+            var speedValues = new InfoHashDictionary<(ulong Uploaded, ulong CompletedSize)>();
+            foreach (var (hash, torrent) in allTorrents.List)
+                speedValues[hash] = (torrent.Uploaded, torrent.CompletedSize);
 
-                if (subs.Length > 0) {
-                    static TimeSpan GCD(IList<TimeSpan> Input)
-                    {
-                        static TimeSpan GCDInner(TimeSpan a, TimeSpan b)
-                        {
-                            var aTicks = a.Ticks;
-                            var bTicks = b.Ticks;
+            GlobalHistory.Add(new SpeedSample(now, speedValues));
+            if (GlobalHistory.Count > SPEED_HISTORY_MAX)
+                GlobalHistory.RemoveAt(0);
 
-                            while (bTicks != 0) {
-                                var remainder = aTicks % bTicks;
-                                aTicks = bTicks;
-                                bTicks = remainder;
-                            }
+            var entry = new HistoryEntry(now, allTorrents.List, allTorrents.Trackers);
 
-                            return new TimeSpan(aTicks);
-                        }
+            foreach (var (hash, torrent) in allTorrents.List) {
+                var upSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: true);
+                torrent.UPSpeed = upSpeed;
 
-                        TimeSpan res = Input[0];
-                        for (int i = 1;i < Input.Count;i++) {
-                            res = GCDInner(res, Input[i]);
-                        }
-
-                        return res;
-                    }
-
-                    delay = GCD([.. subs.Select(x => x.Interval)]);
-                }
-
-                Logger.LogTrace("Sleeping for {delay} for torrent poll", delay);
-                await WaitForNextCycle(delay, stoppingToken);
-
-                (InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers) allTorrents;
-                try {
-                    allTorrents = await GetAllTorrents();
-                } catch (Exception ex) {
-                    if (ex is DataProviderFailure dpf)
-                        Logger.LogConnectionFailure(dpf);
-                    else
-                        Logger.LogError(ex, "Torrent poll failed");
-                    await WaitForNextCycle(TimeSpan.FromSeconds(1), stoppingToken);
-                    continue;
-                }
-
-                if (delay == TimeSpan.MaxValue)
-                    continue;
-
-                const int SPEED_HISTORY_MAX = 5;
-                const int SUBSCRIBER_HISTORY_MAX = 2;
-
-                var now = DateTime.UtcNow;
-
-                var speedValues = new InfoHashDictionary<(ulong Uploaded, ulong CompletedSize)>();
-                foreach (var (hash, torrent) in allTorrents.List)
-                    speedValues[hash] = (torrent.Uploaded, torrent.CompletedSize);
-
-                GlobalHistory.Add(new SpeedSample(now, speedValues));
-                if (GlobalHistory.Count > SPEED_HISTORY_MAX)
-                    GlobalHistory.RemoveAt(0);
-
-                var entry = new HistoryEntry(now, allTorrents.List, allTorrents.Trackers);
-
-                foreach (var (hash, torrent) in allTorrents.List) {
-                    var upSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: true);
-                    torrent.UPSpeed = upSpeed;
-
-                    if (torrent.IsCompleted) {
-                        torrent.DLSpeed = 0;
-                        torrent.HashingSpeed = 0;
+                if (torrent.IsCompleted) {
+                    torrent.DLSpeed = 0;
+                    torrent.HashingSpeed = 0;
+                    torrent.ETA = null;
+                } else if (torrent.State.HasFlag(TorrentState.Hashing)) {
+                    var hashingSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: false);
+                    torrent.HashingSpeed = hashingSpeed;
+                    if (hashingSpeed == 0) {
                         torrent.ETA = null;
-                    } else if (torrent.State.HasFlag(TorrentState.Hashing)) {
-                        var hashingSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: false);
-                        torrent.HashingSpeed = hashingSpeed;
-                        if (hashingSpeed == 0) {
-                            torrent.ETA = null;
-                        } else {
-                            var secs = (double)(torrent.WantedSize - torrent.CompletedSize) / hashingSpeed;
-                            torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
-                        }
                     } else {
-                        torrent.HashingSpeed = 0;
-                        var dlSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: false);
-                        torrent.DLSpeed = dlSpeed;
-                        if (dlSpeed == 0) {
-                            torrent.ETA = null;
-                        } else {
-                            var secs = (double)(torrent.WantedSize - torrent.CompletedSize) / dlSpeed;
-                            torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
-                        }
+                        var secs = (double)(torrent.WantedSize - torrent.CompletedSize) / hashingSpeed;
+                        torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
                     }
-
-                    if (torrent.UPSpeed > 0 || torrent.DLSpeed > 0 || torrent.HashingSpeed > 0)
-                        torrent.State |= TorrentState.Active;
+                } else {
+                    torrent.HashingSpeed = 0;
+                    var dlSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: false);
+                    torrent.DLSpeed = dlSpeed;
+                    if (dlSpeed == 0) {
+                        torrent.ETA = null;
+                    } else {
+                        var secs = (double)(torrent.WantedSize - torrent.CompletedSize) / dlSpeed;
+                        torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
+                    }
                 }
 
-                PollingSubscription.LatestHistory = entry;
-
-                foreach (var sub in subs) {
-                    if (sub.History.Count != 0 && sub.History.Last().Date + sub.Interval >= DateTime.UtcNow)
-                        continue;
-
-                    sub.History.Add(entry);
-                    if (sub.History.Count > SUBSCRIBER_HISTORY_MAX)
-                        sub.History.RemoveAt(0);
-
-                    sub.EvNewDelta.Set();
-                }
+                if (torrent.UPSpeed > 0 || torrent.DLSpeed > 0 || torrent.HashingSpeed > 0)
+                    torrent.State |= TorrentState.Active;
             }
+
+            return entry;
         }
     }
 }

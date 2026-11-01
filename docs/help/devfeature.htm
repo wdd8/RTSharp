@@ -1,0 +1,68 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Writing a plugin</title>
+   <meta name="keywords" content="BasePlugin,IPluginHost,RegisterToolsMenuItem,RegisterTorrentContextMenuItem,HookTorrentListingEvLoadingCell,Plugin example">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>Let's start with a basic plugin. The easiest way is to derive from BasePlugin&lt;TConfig&gt;, where TConfig is the configuration class of the plugin. If the plugin has no settings, just use PluginConfigContainer&lt;PluginInstanceConfig&gt;:</p>
+
+<pre>public class Plugin : BasePlugin&lt;PluginConfigContainer&lt;PluginInstanceConfig&gt;&gt;
+{
+    public override string Name =&gt; "Hello";
+    public override string Description =&gt; "Says hello";
+    public override string Author =&gt; "Me";
+    public override int CompatibleMajorVersion =&gt; 0;
+    public override Guid GUID { get; } = new Guid("00000000-0000-0000-0000-000000000000"); // generate your own!
+    public override PluginCapabilities Capabilities =&gt; new(HasSettingsWindow: false);
+
+    IDisposable? MenuItem;
+
+    public override Task&lt;IPlugin&gt; Init(IPluginHost&lt;PluginConfigContainer&lt;PluginInstanceConfig&gt;&gt; Host, Action&lt;(string Status, float Percentage)&gt; Progress)
+    {
+        Progress(("Initializing...", 0f));
+
+        Dispatcher.UIThread.Invoke(() =&gt; {
+            MenuItem = Host.RegisterToolsMenuItem(new MenuItem {
+                Header = "Say hello",
+                Command = new RelayCommand(() =&gt; Host.ShowTrayMessage("Hello", $"{Host.Torrents.Count} torrents"))
+            });
+        });
+
+        Progress(("Done", 100f));
+        return Task.FromResult((IPlugin)this);
+    }
+
+    public override Task Unload()
+    {
+        MenuItem?.Dispose();
+        return Task.CompletedTask;
+    }
+}</pre>
+
+<p>Each Register and Hook function of the host returns an IDisposable, dispose it in Unload to remove what you have registered. Since menu items are Avalonia controls, create them on the UI thread.</p>
+
+<h3>What can a plugin do?</h3>
+<div class="list">
+- RegisterRootMenuItem: Add a menu to the main menu bar<br>
+- RegisterToolsMenuItem: Add an item to the Tools menu<br>
+- RegisterTorrentContextMenuItem: Add an item to the torrent menu of the listing, the command receives the selected torrents<br>
+- HookTorrentListingEvLoadingRow / HookTorrentListingEvLoadingCell: Change the appearance of the lines or of the cells of one column of the listing (this is how the colored ratio plugin works)<br>
+- HookAddTorrentEvDragDrop: Modify the Add torrent window when a file is dropped<br>
+- RegisterActionQueue: Display your own action queue<br>
+- RegisterDataProvider: Register a torrent data provider, see the next chapter<br>
+- Torrents / GetDaemonServices: Access all the torrents and all the servers<br>
+- ShowPluginSettings: Display a settings window, set HasSettingsWindow to true in the capabilities<br>
+- CustomAccess: Exchange data with another plugin<br>
+- ConfigureServices: Register your own services in the dependency injection of RT#<br>
+</div>
+
+<h3>Running code on the server:</h3>
+<p>IDaemonService gives access to everything the server offers: file system information, mediainfo, file transfers, and of course the scripts. A plugin can run a script with RunCustomScript, wait for its result with GetScriptProgress and exchange messages with it, or install it permanently with InstallScript. The format of the scripts is described in the "Server scripts" chapter. The auto integrify plugin is a good example, it runs a script on the server to search the files.</p>
+
+<p class="note">* The IPluginHost.MainWindow property can be used to make direct modifications to the main window, but this might break on any version update.</p>
+
+</body>
+</html>

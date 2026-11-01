@@ -1,0 +1,62 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Data provider configuration</title>
+   <meta name="keywords" content="DataProviders,SCGIListen,SessionDir,LogFile,Uri,ApiKey,Username,Password,ConfigDir">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>The torrent daemons are configured in the DataProviders section of appsettings.json. There are currently 3 supported daemon types, so there are at most 3 keys in DataProviders: "rtorrent", "qbittorrent" and "transmission". Each type contains one entry for each daemon instance, where the key is the name of the instance. This is the name that you will enter as "Data provider name" when you configure the data provider in RT#.</p>
+
+<pre>"DataProviders": {
+  "rtorrent": {
+    "my rtorrent": {
+      "SCGIListen": "127.0.0.1:5000",
+      "SessionDir": "/home/user/.session",
+      "LogFile": "/home/user/.session/rtorrent.log"
+    }
+  },
+  "qbittorrent": {
+    "my qbittorrent": {
+      "Uri": "http://127.0.0.1:1234/",
+      "ApiKey": "api-key"
+    }
+  },
+  "transmission": {
+    "my transmission": {
+      "Uri": "http://127.0.0.1:1234/transmission/rpc",
+      "Username": "transmission",
+      "Password": "changeme"
+    }
+  }
+}</pre>
+<p>Restart the daemon after any change of this section.</p>
+
+<h3>1. rtorrent:</h3>
+<div class="list">
+- SCGIListen: The IP end point of the SCGI socket, as configured by the scgi_port option of rtorrent<br>
+- SessionDir: Optional, overrides the session directory returned by rtorrent. This is useful when rtorrent runs in a file system that is not visible to the daemon (ie. in a container). It impacts the ability to get the .torrent files of the torrents<br>
+- LogFile: Optional, the log file of rtorrent, for streaming the logs to RT#. If you have rtorrent logging enabled, set this to the value of the log.open_file option<br>
+</div>
+
+<h3>2. qBittorrent:</h3>
+<div class="list">
+- Uri: The address of the qBittorrent WebUI, for example http://10.0.0.1:40000/<br>
+- ApiKey: The API key generated from the qBittorrent WebUI<br>
+- Username / Password: The credentials of the WebUI, if you don't use an API key<br>
+</div>
+<p>The API key is superior to the username and password, we recommend you to use it whenever possible.</p>
+
+<h3>3. Transmission:</h3>
+<div class="list">
+- Uri: The address of the RPC path, for example http://10.0.0.1:40000/transmission/rpc<br>
+- Username / Password: The credentials of the RPC server<br>
+- ConfigDir: Optional, overrides the config directory returned by Transmission, for the same reason as SessionDir of rtorrent<br>
+- LogFile: Optional, the log file of Transmission, for streaming the logs to RT#<br>
+</div>
+
+<p class="note">* RTSharp.Daemon accesses the torrent data directly, so it should be run under the same user as your torrent daemons.</p>
+
+</body>
+</html>

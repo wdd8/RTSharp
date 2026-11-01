@@ -26,6 +26,7 @@
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.v2.xaml" />
         <StyleInclude Source="avares://RTSharp/Themes/SlimDataGridThemes.axaml" />
         <StyleInclude Source="avares://MsBox.Avalonia.Markdown/Controls/MarkdownView.axaml" />
+        <StyleInclude Source="avares://AvaloniaHex/Themes/Fluent/AvaloniaHex.axaml" />
 
         <Style Selector="TextBlock">
             <Setter Property="FontSize" Value="12" />
@@ -49,6 +50,11 @@
 
         <Style Selector="ScrollBar">
             <Setter Property="AllowAutoHide" Value="False" />
+        </Style>
+
+        <Style Selector="ScrollViewer[AllowAutoHide=True] /template/ ScrollContentPresenter#PART_ContentPresenter">
+            <Setter Property="Grid.RowSpan" Value="1" />
+            <Setter Property="Grid.ColumnSpan" Value="1" />
         </Style>
 
         <Style Selector="TabItem">

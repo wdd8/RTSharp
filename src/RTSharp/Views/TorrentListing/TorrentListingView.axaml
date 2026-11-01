@@ -54,7 +54,6 @@
 				Header="Reannounce to all trackers"
 				Command="{Binding ReannounceToAllTrackersCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
-			<MenuItem Header="_Add peer..." IsEnabled="False" />
 			<Separator />
 			<MenuItem
 				Header="Set _label..."
@@ -87,7 +86,10 @@
 				Header="Get .torrent"
 				Command="{Binding GetDotTorrentsCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
-			<MenuItem Header="Edit torrent..." IsEnabled="False" />
+			<MenuItem
+				Header="Edit torrent..."
+				Command="{Binding EditTorrentCommand}"
+				CommandParameter="{Binding #grid.SelectedItems}" />
 			<MenuItem
 				Header="Duplicate torrent &amp; data to..."
 				Command="{Binding DuplicateTorrentToCommand}"

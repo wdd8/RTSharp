@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Connecting to a server</title>
+   <meta name="keywords" content="Servers,Certificate,Thumbprint,Server ID,Test connection,Latency,client.pem">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>Each data provider must be attached to a server, so the first thing to do is to tell RT# where your servers are. A server is a machine where RTSharp.Daemon is running and configured, as explained in the "Daemon configuration" chapter.</p>
+
+<h3>1. Note down your client thumbprint:</h3>
+<p>The server only accepts the clients that it knows, so you have to give the thumbprint of your client certificate to the server. This certificate has been generated the first time you started RT# and is saved as client.pem in the configuration folder. If you are running RT# on Linux, or if you have bash on Windows, type the following command:</p>
+<pre>openssl x509 -in client.pem -noout -fingerprint -sha256 | sed s/://g | cut -d= -f2</pre>
+<p>Otherwise, run the following in a PowerShell window:</p>
+<pre>[System.BitConverter]::ToString(([System.Security.Cryptography.SHA256]::Create()).ComputeHash((New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @("client.pem")).RawData)).Replace("-", "")</pre>
+<p>Then add this thumbprint to the AllowedClients list of the daemon and restart it.</p>
+
+<h3>2. Add the server:</h3>
+<p>Click on the "Servers" menu, the Servers window will open. Click on the "Add" button and fill in the details about the server:</p>
+<div class="list">
+- Server ID: Unique name of the server, this is the name that you will select when you configure a data provider<br>
+- Host: Name or IP address of the server<br>
+- Port: The port that RTSharp.Daemon listens to, as set in its ListenAddress setting<br>
+- Trusted certificate thumbprint (SHA-256): The thumbprint of the server certificate (public.pem on the server)<br>
+</div>
+<p>Click on the "Test" button to check that everything is correct, you will get "OK" and the latency of the server, otherwise you will get the error message. Then click on "Add" to save the server. You don't need to restart RT#, the server is available immediately.</p>
+
+<p>The Server ID, the Host and the thumbprint are mandatory, the "Add" button stays disabled until they are filled in. If the certificate of the server does not match the trusted thumbprint when RT# connects, RT# will display the certificate of the server and ask you if you trust it. If you answer "Yes", the thumbprint is memorized and you won't be asked again. Be careful: if a server you were already connected to suddenly presents a different certificate, RT# displays a big "REMOTE HOST IDENTIFICATION HAS CHANGED" warning. It is possible that the certificate of the server has just been changed, but it is also possible that someone is doing something nasty, so never answer "Yes" without checking.</p>
+
+<h3>3. Check the connection:</h3>
+<p>Select one server in the list and RT# automatically tests the connection. The right side of the window displays:</p>
+<div class="list">
+- Endpoint: The host and the port of the server<br>
+- Status: "OK" or the error message<br>
+- Latency: The time needed for a round trip to the server<br>
+- Thumbprint, Not before, Not after: Details about the certificate of the server<br>
+- TLS algorithm: The cipher suite negotiated with the server<br>
+</div>
+<p>You can test the connection again at any time with the "Test Connection" button. Use the "Edit" button (or double click on a server) to modify it, and the "Delete" button to remove it.</p>
+
+</body>
+</html>

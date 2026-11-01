@@ -106,6 +106,8 @@ namespace RTSharp.Core.Services.Cache.Images
             return Image;
         }
 
+        // https://github.com/DapperLib/DapperAOT/issues/226
+        [DapperAot(false)]
         public async ValueTask<Bitmap?> GetCachedImage(byte[] ImageHash)
         {
             lock (ImagesLock) {
@@ -154,6 +156,8 @@ namespace RTSharp.Core.Services.Cache.Images
             }
         }
 
+        // https://github.com/DapperLib/DapperAOT/issues/226
+        [DapperAot(false)]
         public async Task<(byte[] Hash, Bitmap Image)?> AddImage(Stream Image)
         {
             await using var conn = await New();

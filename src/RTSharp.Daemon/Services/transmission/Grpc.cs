@@ -14,7 +14,6 @@ using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
@@ -26,7 +25,7 @@ using Transmission.Net.Core.Enums;
 
 namespace RTSharp.Daemon.Services.transmission
 {
-    public class Grpc
+    public partial class Grpc
     {
         TransmissionClient Client;
         SessionsService Sessions;
@@ -58,7 +57,7 @@ namespace RTSharp.Daemon.Services.transmission
             }
         }
 
-        private async ValueTask<byte[]> ResolveRTSHash(TorrentView Torrent)
+        internal async ValueTask<byte[]> ResolveRTSHash(TorrentView Torrent)
         {
             var v1 = Convert.FromHexString(Torrent.HashString!);
             if (Cache.TryGetRTSHash(v1, out var rtsHash))
@@ -101,13 +100,7 @@ namespace RTSharp.Daemon.Services.transmission
             return v1;
         }
 
-        private ConcurrentInfoHashDictionary<Protocols.DataProvider.Torrent> LatestTorrents = new();
-
-        private ConcurrentInfoHashDictionary<int> HashToId { get; } = new();
-        private ConcurrentDictionary<int, byte[]> IdToHash { get; } = new();
-        private ConcurrentQueue<byte[]> FullUpdateQueue = new();
-
-        private string ToNativeHashString(ReadOnlySpan<byte> RTSHash) => Convert.ToHexStringLower(ToNative(RTSHash));
+        internal string ToNativeHashString(ReadOnlySpan<byte> RTSHash) => Convert.ToHexStringLower(ToNative(RTSHash));
 
         private string[] ToNativeHashStrings(Torrents In)
         {
@@ -120,217 +113,8 @@ namespace RTSharp.Daemon.Services.transmission
             return ret;
         }
 
-        private readonly string[] ALL_FIELDS_EXCEPT_LISTS = TorrentFields.ALL_FIELDS.Except([TorrentFields.FILES, TorrentFields.FILE_STATS, TorrentFields.PEERS, TorrentFields.TRACKER_STATS, TorrentFields.TRACKER_LIST, TorrentFields.PIECES]).ToArray();
-
-        public async Task GetTorrentListUpdates(GetTorrentListUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsListResponse> Res, CancellationToken CancellationToken)
-        {
-            var client = await Client.Init();
-
-            var pollInternal = Req.Interval.ToTimeSpan();
-
-            var delta = new DeltaTorrentsListResponse();
-
-            using var smasScope = ServiceProvider.CreateScope();
-            var smas = smasScope.ServiceProvider.GetRequiredService<ISpeedMovingAverageService>();
-
-            void updateHashingSpeed(Protocols.DataProvider.Torrent Torrent)
-            {
-                if (Torrent.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing)) {
-                    var sma = smas.Get(InstanceKey, $"HashingSpeed_{Convert.ToHexString(Torrent.Hash.Span)}");
-                    sma.ValueIfChanged(DateTime.UtcNow, (long)Torrent.CompletedSize);
-                    var hashingSpeed = (ulong)Math.Max(0, sma.CalculateSpeed());
-                    Torrent.HashingSpeed = hashingSpeed;
-
-                    // No native ETA for hashing state
-                    if (hashingSpeed == 0 || Torrent.IsCompleted) {
-                        Torrent.ETA = null;
-                    } else {
-                        var secs = (double)(Torrent.WantedSize - Torrent.CompletedSize) / hashingSpeed;
-                        Torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
-                    }
-                } else {
-                    Torrent.HashingSpeed = 0;
-                }
-            }
-
-            var all = await client.TorrentGetAsync(null, ALL_FIELDS_EXCEPT_LISTS);
-
-            foreach (var externalTorrent in all!.Torrents) {
-                var hash = await ResolveRTSHash(externalTorrent);
-                var internalTorrent = new Protocols.DataProvider.Torrent {
-                    Hash = hash.ToByteString()
-                };
-                TorrentMapper.ApplyFromExternal(internalTorrent, externalTorrent);
-                updateHashingSpeed(internalTorrent);
-
-                delta.FullUpdate.Add(internalTorrent);
-                LatestTorrents[hash] = internalTorrent;
-                HashToId[hash] = externalTorrent.Id!.Value;
-                IdToHash[externalTorrent.Id!.Value] = hash;
-            }
-
-            await Res.WriteAsync(delta, CancellationToken);
-
-            var reportedRemovedIds = new HashSet<int>();
-
-            while (!CancellationToken.IsCancellationRequested) {
-                delta.FullUpdate.Clear();
-                delta.Incomplete.Clear();
-                delta.Complete.Clear();
-                delta.Removed.Clear();
-
-                void fullUpdate(byte[] Hash, TorrentView Input)
-                {
-                    var internalTorrent = new Protocols.DataProvider.Torrent {
-                        Hash = Hash.ToByteString()
-                    };
-                    TorrentMapper.ApplyFromExternal(internalTorrent, Input);
-                    updateHashingSpeed(internalTorrent);
-
-                    LatestTorrents[Hash] = internalTorrent;
-                    HashToId[Hash] = Input.Id!.Value;
-                    IdToHash[Input.Id!.Value] = Hash;
-                    delta.FullUpdate.Add(internalTorrent);
-                }
-
-                List<string>? fullUpdateQueue = null;
-                while (FullUpdateQueue.TryDequeue(out var toFullUpdate)) {
-                    fullUpdateQueue ??= new();
-                    fullUpdateQueue.Add(ToNativeHashString(toFullUpdate));
-                }
-
-                Task<TorrentsResult?>? fullUpdateResultTask = null;
-                TorrentsResult? list;
-                try {
-                    if (fullUpdateQueue != null) {
-                        fullUpdateResultTask = client.TorrentGetAsync([.. fullUpdateQueue], ALL_FIELDS_EXCEPT_LISTS);
-                    }
-                    list = await client.TorrentGetRecentyActiveAsync(ALL_FIELDS_EXCEPT_LISTS);
-                } catch (Exception ex) when (ex.IsConnectionFailure()) {
-                    throw new DataProviderFailure(ex.Message, ex, Client.Uri);
-                }
-
-                if (fullUpdateResultTask != null) {
-                    TorrentsResult? fullUpdateResult;
-                    try {
-                        fullUpdateResult = await fullUpdateResultTask;
-                    } catch (Exception ex) when (ex.IsConnectionFailure()) {
-                        throw new DataProviderFailure(ex.Message, ex, Client.Uri);
-                    }
-                    list!.Torrents = [.. list!.Torrents, .. fullUpdateResult!.Torrents.ExceptBy(list!.Torrents.Select(x => x.Id), x => x.Id)];
-                    if (fullUpdateResult.Removed != null) {
-                        list!.Removed ??= [];
-                        list!.Removed = [.. list!.Removed, .. fullUpdateResult.Removed.Except(list!.Removed)];
-                    }
-                }
-
-                foreach (var changedTorrent in list!.Torrents) {
-                    var hash = await ResolveRTSHash(changedTorrent);
-                    Protocols.DataProvider.Torrent internalTorrent;
-
-                    if (IdToHash.TryGetValue(changedTorrent.Id!.Value, out var previousHash) && !previousHash.AsSpan().SequenceEqual(hash)) {
-                        delta.Removed.Add(previousHash.ToByteString());
-                        LatestTorrents.TryRemove(previousHash, out _);
-                        HashToId.TryRemove(previousHash, out _);
-                    }
-
-                    if (!LatestTorrents.TryGetValue(hash, out var torrent)) {
-                        fullUpdate(hash, changedTorrent);
-                        continue;
-                    } else {
-                        internalTorrent = torrent;
-
-                        var prevState = internalTorrent.State;
-                        var prevSequential = internalTorrent.SequentialDownload;
-                        var prevWantedSize = internalTorrent.WantedSize;
-                        var prevPriority = internalTorrent.Priority;
-                        var prevMagnetDummy = internalTorrent.MagnetDummy;
-                        var prevRemotePath = internalTorrent.RemotePath;
-                        var prevStatusMessage = internalTorrent.StatusMessage;
-                        var prevPrimaryTrackerUri = internalTorrent.PrimaryTracker?.Uri;
-                        var prevFinishedOn = internalTorrent.FinishedOn;
-                        var labelsChanged = changedTorrent.Labels != null && !internalTorrent.Labels.SequenceEqual(changedTorrent.Labels);
-
-                        TorrentMapper.ApplyFromExternal(internalTorrent, changedTorrent);
-                        updateHashingSpeed(internalTorrent);
-
-                        if (internalTorrent.State != prevState ||
-                            internalTorrent.SequentialDownload != prevSequential ||
-                            internalTorrent.WantedSize != prevWantedSize ||
-                            internalTorrent.Priority != prevPriority ||
-                            internalTorrent.MagnetDummy != prevMagnetDummy ||
-                            internalTorrent.RemotePath != prevRemotePath ||
-                            internalTorrent.StatusMessage != prevStatusMessage ||
-                            internalTorrent.PrimaryTracker?.Uri != prevPrimaryTrackerUri ||
-                            !Equals(internalTorrent.FinishedOn, prevFinishedOn) ||
-                            labelsChanged) {
-                            LatestTorrents[hash] = internalTorrent;
-                            HashToId[hash] = changedTorrent.Id!.Value;
-                            IdToHash[changedTorrent.Id!.Value] = hash;
-
-                            delta.FullUpdate.Add(internalTorrent);
-                            continue;
-                        } else {
-                            LatestTorrents[hash] = internalTorrent;
-                            HashToId[hash] = changedTorrent.Id!.Value;
-                            IdToHash[changedTorrent.Id!.Value] = hash;
-                        }
-                    }
-
-                    if (!internalTorrent.IsCompleted) {
-                        delta.Incomplete.Add(new IncompleteDeltaTorrentResponse {
-                            Hash = internalTorrent.Hash,
-                            Downloaded = internalTorrent.Downloaded,
-                            CompletedSize = internalTorrent.CompletedSize,
-                            Uploaded = internalTorrent.Uploaded,
-                            DLSpeed = internalTorrent.DLSpeed,
-                            HashingSpeed = internalTorrent.HashingSpeed,
-                            UPSpeed = internalTorrent.UPSpeed,
-                            ETA = internalTorrent.ETA,
-                            SeedersConnected = internalTorrent.SeedersConnected,
-                            SeedersTotal = internalTorrent.SeedersTotal,
-                            PeersConnected = internalTorrent.PeersConnected,
-                            PeersTotal = internalTorrent.PeersTotal,
-                            Wasted = internalTorrent.Wasted
-                        });
-                    } else {
-                        delta.Complete.Add(new CompleteDeltaTorrentResponse {
-                            Hash = internalTorrent.Hash,
-                            Uploaded = internalTorrent.Uploaded,
-                            UPSpeed = internalTorrent.UPSpeed,
-                            SeedersTotal = internalTorrent.SeedersTotal,
-                            PeersTotal = internalTorrent.PeersTotal,
-                            PeersConnected = internalTorrent.PeersConnected
-                        });
-                    }
-                }
-
-                if (list.Removed != null) {
-                    foreach (var id in list.Removed) {
-                        if (!IdToHash.TryGetValue(id, out var hash))
-                            continue;
-
-                        // Same torrent was removed and readded
-                        if (HashToId.TryGetValue(hash, out var currentId) && currentId != id)
-                            continue;
-
-                        // transmission keeps reporting the same removal for ~1 min
-                        if (!reportedRemovedIds.Add(id))
-                            continue;
-
-                        delta.Removed.Add(hash.ToByteString());
-                        LatestTorrents.TryRemove(hash, out _);
-                        HashToId.TryRemove(hash, out _);
-                    }
-
-                    reportedRemovedIds.IntersectWith(list.Removed);
-                }
-
-                if (delta.Incomplete.Count > 0 || delta.Complete.Count > 0 || delta.Removed.Count > 0 || delta.FullUpdate.Count > 0)
-                    await Res.WriteAsync(delta, CancellationToken);
-                await Task.Delay(pollInternal, CancellationToken);
-            }
-        }
+        public Task GetTorrentListUpdates(GetTorrentListUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsListResponse> Res, CancellationToken CancellationToken)
+            => ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey).Stream(Req, Res, CancellationToken);
 
         public async Task<TorrentsListResponse> GetTorrentList()
         {
@@ -1119,9 +903,9 @@ namespace RTSharp.Daemon.Services.transmission
 
         public Task<Empty> QueueTorrentUpdate(Torrents Req)
         {
-            foreach (var hash in Req.Hashes) {
-                FullUpdateQueue.Enqueue(hash.ToByteArray());
-            }
+            var polling = ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey);
+            foreach (var hash in Req.Hashes)
+                polling.RequestFullUpdate(hash.Span);
 
             return Task.FromResult(new Empty());
         }

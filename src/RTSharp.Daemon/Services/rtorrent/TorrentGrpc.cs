@@ -409,7 +409,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             var ret = await TorrentOpService.GetTorrentsFiles(Req.Hashes.Select(x => x.ToByteArray()));
             
             var pieceSizes = Req.Hashes.ToInfoHashDictionary(x => x.ToByteArray(), x => {
-                var entry = PollingSubscription.GetLatestHistoryEntry(x.ToByteArray()) ?? throw new InvalidOperationException("No polling history entries");
+                var entry = TorrentPolling.GetLatestHistoryEntry(x.ToByteArray()) ?? throw new InvalidOperationException("No polling history entries");
 
                 return entry.Torrent.ChunkSize;
             });
@@ -1181,7 +1181,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             var ret = new TorrentsTrackersReply();
         
             foreach (var hash in Req.Hashes) {
-                var trackers = PollingSubscription.GetTorrentTrackers(hash.ToByteArray());
+                var trackers = TorrentPolling.GetTorrentTrackers(hash.ToByteArray());
                 
                 ret.Reply.Add(new TorrentsTrackersReply.Types.TorrentsTrackers
                 {

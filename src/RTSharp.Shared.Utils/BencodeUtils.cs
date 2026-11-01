@@ -36,35 +36,6 @@ public static partial class BencodeUtils
     }
 
     /// <summary>
-    /// Torrent display name
-    /// </summary>
-    public static string GetName(BDictionary Info) =>
-        Info.Get<BString>("name")?.ToString()
-        ?? Info.Get<BString>("name.utf-8")?.ToString()
-        ?? throw new InvalidDataException("Torrent has no \"name\"");
-
-    /// <summary>
-    /// The piece length (bytes per piece).
-    /// </summary>
-    public static long GetPieceLength(BDictionary Info) =>
-        Info.Get<BNumber>("piece length")?.Value
-        ?? throw new InvalidDataException("Torrent has no \"piece length\"");
-
-    /// <summary>
-    /// The raw concatenated v1 SHA-1 piece hashes ("pieces"), or <c>null</c> when the
-    /// info dictionary carries no v1 metadata (a v2-only torrent).
-    /// </summary>
-    public static byte[]? GetPieces(BDictionary Info) =>
-        Info.Get<BString>("pieces")?.Value.ToArray();
-
-    /// <summary>
-    /// The optional free-text "comment" from the .torrent root, or <c>null</c> if absent.
-    /// </summary>
-    public static string? GetComment(BDictionary BTorrent) =>
-        BTorrent.Get<BString>("comment")?.ToString()
-        ?? BTorrent.Get<BString>("comment.utf-8")?.ToString();
-
-    /// <summary>
     /// A single file in a torrent
     /// </summary>
     public readonly record struct TorrentFile(string[] PathComponents, long FileSize)

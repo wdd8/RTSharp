@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>The main screen</title>
+   <meta name="keywords" content="Main window,Menu,Tool bar,Torrent listing,Details tabs,Data providers pane,Action queue,Log">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<h2>The menu</h2>
+<p>The menu is located on top of the main window and gives you a quick access to all the windows of RT#. From left to right:</p>
+<div class="list">
+<b>File</b>: Add torrent..., About, About framework, Exit<br>
+<b>View</b>: Statistics<br>
+<b>Tools</b>: Torrent Creator, Options... and the tools added by the plugins<br>
+<b>Plugins</b>: Display the loaded plugins and manage their configuration<br>
+<b>Servers</b>: Add, edit or remove the servers running RTSharp.Daemon<br>
+<b>Help</b>: Contents (F1)<br>
+</div>
+<p>Some plugins can also add their own menu, for example the server script playground adds a "Server scripting" menu.</p>
+
+<h2>The tool bar</h2>
+<p>The tool bar just above the torrent listing gives you a quick access to the most important actions. From left to right:</p>
+<div class="list">
+<b>Start</b>: Start the selected torrents<br>
+<b>Pause</b>: Pause the selected torrents<br>
+<b>Stop</b>: Stop the selected torrents<br>
+<b>Options</b>: Open the options window<br>
+</div>
+
+<h2>The torrent listing</h2>
+<p>It displays all the torrents of all your data providers in a single list, one line for each torrent. The background color of each line is the color of the data provider the torrent belongs to, if any. This is explained in detail in the "Torrent listing" chapter.</p>
+
+<h2>The details tabs</h2>
+<p>When you select one torrent in the listing, RT# displays its details in the four tabs below the listing: General, Files, Peers and Trackers. If you select several torrents, the General tab displays a summary of the selection. You can adjust the height of the listing and of the tabs with the splitter between them.</p>
+
+<h2>The data providers pane</h2>
+<p>The pane on the right side displays each data provider with its state, its latency to the server, the number of active torrents, the total download and upload speed and a speed chart.</p>
+
+<h2>The action queue and the log</h2>
+<p>Next to the torrent listing there are two more tabs: the action queue, which displays the progress of every action sent to the servers, and the log, which displays the messages of the application.</p>
+
+<h2>Arranging the windows</h2>
+<p>All the tabs and panes can be moved: just drag a tab by its title and drop it to another side of the window, or outside of the main window to make it a floating window. RT# memorizes the position and the size of the main window, the layout of the tabs, the columns of the listing and the height of the splitter, they will be restored the next time you start RT#.</p>
+
+<p>While RT# is running, the title of the main window and the tooltip of the tray icon display the total upload and download speed of all your data providers. The tray icon menu has an "Exit" item to close the application.</p>
+
+</body>
+</html>

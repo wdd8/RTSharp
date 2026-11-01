@@ -1,0 +1,40 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Peers tab</title>
+   <meta name="keywords" content="Peers tab,Origin,Country flag,Add peer,Ban peer,Whois,RDAP">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>The Peers tab displays the peers connected to the selected torrent, with the following columns:</p>
+<div class="list">
+<b>Icon</b>: Flag of the country of the peer<br>
+<b>Origin</b>: Name of the company that owns the network of the peer, followed by its domain in brackets<br>
+<b>IP:Port</b>: Address of the peer<br>
+<b>Client</b>: Torrent client of the peer<br>
+<b>Flags</b>: Connection flags reported by the torrent daemon<br>
+<b>Done</b>: How much of the torrent the peer has<br>
+<b>DL Speed / UP Speed</b>: Current speeds between you and the peer<br>
+<b>Downloaded / Uploaded</b>: Amount of data transferred with this peer<br>
+<b>Peer DL Speed</b>: Estimated download speed of the peer<br>
+</div>
+
+<h3>Peer origin:</h3>
+<p>Each time a new peer appears, RT# looks up the owner of its IP address. While the lookup is in progress or is not needed, the origin is displayed as "Loading...", and if nothing can be found it is displayed as "Unknown". There are two lookup methods that you can select in the Behavior options:</p>
+<div class="list">
+- RDAP (via ARIN): A direct query that returns whois data. The name is then resolved from the whois data, which can lead to some inaccuracies<br>
+- CAIDA + Team Cymru: Maps the IP to its network (ASN) via whois.cymru.com, then resolves the network to a company name using the CAIDA dataset. This produces more accurate company names but requires a dataset download and queries an API for every lookup<br>
+</div>
+<p>The results are saved in the AS cache, so a network is only looked up once. Some domains are not very meaningful, you can replace them with your own text with the peer origin replacements of the Behavior options.</p>
+
+<h3>Peers menu:</h3>
+<div class="list">
+- Add peer...: Enter the address of a peer as IP:Port and press Enter, the torrent daemon will try to connect to it<br>
+- Ban peer: Ban the selected peer<br>
+</div>
+
+<p class="note">* Transmission does not support adding or banning peers.</p>
+
+</body>
+</html>

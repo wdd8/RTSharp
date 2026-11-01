@@ -304,6 +304,7 @@ public class DaemonService : IDaemonService
         return new Shared.Abstractions.InstalledScript {
             Id = In.Id,
             Name = In.Name,
+            SessionId = In.SessionId is { Length: 16 } ? new Guid(In.SessionId.Span) : null,
             OwnerId = Guid.TryParse(In.OwnerId, out var ownerId) ? ownerId : Guid.Empty,
             ScriptHash = In.ScriptHash.ToByteArray(),
             OrphanAcknowledged = In.OrphanAcknowledged,

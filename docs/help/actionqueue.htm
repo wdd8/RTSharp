@@ -1,0 +1,21 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Action queue</title>
+   <meta name="keywords" content="Action queue,Progress,Cancel action,Errors">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>Each time you perform an action on some torrents (start, recheck, move, add...), RT# puts the action in the action queue in the background. The "Action queue" tab displays all these actions, grouped by server.</p>
+
+<p>On top of each server, the queue displays the name of the server and the number of actions waiting in a blue bubble. For each action, the queue displays its name, its progress bar and a short text about what is being done. Some actions are made of several steps, for example adding a torrent that must be rechecked and started is made of an "Add" step, a "Recheck" step and a "Start torrents" step, each step starts only when the previous one has succeeded.</p>
+
+<p>If some actions fail, a red bubble with an exclamation mark and the number of failed actions appears next to the name of the server. The detailed error is written in the log.</p>
+
+<p>Right click on an action and select "Cancel" to stop it, this is only possible for the actions that can be cancelled.</p>
+
+<p>Plugins can register their own queues and display them in a different way.</p>
+
+</body>
+</html>

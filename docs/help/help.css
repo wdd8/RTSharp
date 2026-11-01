@@ -1,0 +1,82 @@
+/* Look of the help pages. The cyan title bar with Previous / Top / Next links is injected by scripts/build-help.cs */
+
+body {
+    background-color: #FFFFFF;
+    color: #000000;
+    font-family: Helvetica, Arial;
+    font-size: 10pt;
+}
+
+p, td, li, div {
+    font-family: Helvetica, Arial;
+    font-size: 10pt;
+    color: #000000;
+}
+
+/* Regular paragraph, followed by an empty line */
+p {
+    margin: 0 0 1.2em 14px;
+}
+
+/* Black section title, ie. "The tool bar" */
+h2 {
+    font-family: Helvetica, Arial;
+    font-size: 12pt;
+    font-weight: bold;
+    color: #000000;
+    margin: 1.6em 0 0.3em 0;
+}
+
+/* Blue feature title, ie. "1. rtorrent:" */
+h3 {
+    font-family: Helvetica, Arial;
+    font-size: 12pt;
+    font-weight: bold;
+    color: #0000FF;
+    margin: 1.4em 0 0.3em 14px;
+}
+
+/* "- Option: description" lines without empty lines between them */
+div.list {
+    margin: 0 0 1.2em 12px;
+}
+
+/* Small bold italic remark at the bottom of a page */
+p.note {
+    font-size: 8pt;
+    font-weight: bold;
+    font-style: italic;
+}
+
+pre, code {
+    font-family: "Courier New", Courier;
+    font-size: 9pt;
+}
+
+pre {
+    margin: 0 0 1.2em 14px;
+    padding: 4px;
+    background-color: #F0F0F0;
+}
+
+img {
+    margin: 0 0 1.2em 14px;
+    border: 0;
+}
+
+table.grid {
+    margin: 0 0 1.2em 14px;
+    border-collapse: collapse;
+}
+
+table.grid td, table.grid th {
+    font-family: Helvetica, Arial;
+    font-size: 9pt;
+    border: 1px solid #808080;
+    padding: 2px 6px;
+    text-align: left;
+}
+
+table.grid th {
+    background-color: #80FFFF;
+}

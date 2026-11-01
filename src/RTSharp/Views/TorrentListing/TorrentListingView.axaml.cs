@@ -80,6 +80,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         };
         grid.CopyingRowClipboardContent += (_, e) => ViewModel!.EvCopyingRowClipboardContent(e);
         grid.PointerPressed += EvGridPointerPressedClearSelection;
+        grid.AddHandler(KeyDownEvent, (_, e) => ViewModel!.EvGridKeyDown(e), Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
         RowHeight = config.Look.Value.TorrentListing?.RowHeight ?? 20;
         grid.RowHeight = RowHeight;

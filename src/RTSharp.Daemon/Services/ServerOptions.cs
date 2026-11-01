@@ -7,4 +7,6 @@ public class ServerOptions
     public ulong? UPBandwidth { get; set; }
 
     public string? ScriptStorePath { get; set; }
+
+    public string? DatabasePath { get; set; }
 }

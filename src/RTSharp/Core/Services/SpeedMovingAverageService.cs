@@ -16,6 +16,7 @@ public class SpeedMovingAverage : ISpeedMovingAverage
     private int ItemsMax;
     private LinkedList<(DateTime TimeUtc, long TotalBytes)> Items = new();
     private double Alpha;
+    private readonly object ItemsLock = new();
 
     public SpeedMovingAverage(int ItemsMax, double Alpha = 0.8)
     {
@@ -27,9 +28,11 @@ public class SpeedMovingAverage : ISpeedMovingAverage
 
     public void Value(DateTime Time, long TotalBytes)
     {
-        Items.AddLast((Time, TotalBytes));
-        if (Items.Count > ItemsMax) {
-            Items.RemoveFirst();
+        lock (ItemsLock) {
+            Items.AddLast((Time, TotalBytes));
+            if (Items.Count > ItemsMax) {
+                Items.RemoveFirst();
+            }
         }
     }
 
@@ -37,12 +40,14 @@ public class SpeedMovingAverage : ISpeedMovingAverage
 
     public void ValueIfChanged(DateTime Time, long TotalBytes)
     {
-        if (Items.Last?.Value.TotalBytes == TotalBytes)
-            return;
+        lock (ItemsLock) {
+            if (Items.Last?.Value.TotalBytes == TotalBytes)
+                return;
 
-        Items.AddLast((Time, TotalBytes));
-        if (Items.Count > ItemsMax) {
-            Items.RemoveFirst();
+            Items.AddLast((Time, TotalBytes));
+            if (Items.Count > ItemsMax) {
+                Items.RemoveFirst();
+            }
         }
     }
 
@@ -67,21 +72,23 @@ public class SpeedMovingAverage : ISpeedMovingAverage
 
     public double CalculateSpeed()
     {
-        if (Items.Count < 2) {
-            return 0;
+        lock (ItemsLock) {
+            if (Items.Count < 2) {
+                return 0;
+            }
+
+            var deltas = new List<double>(Items.Count - 1);
+            var item = Items.First;
+            while (item?.Next != null) {
+                var (timeUtc, totalBytes) = item.Next.Value;
+                var time = timeUtc - item.Value.TimeUtc;
+
+                deltas.Add((totalBytes - item.Value.TotalBytes) / time.TotalSeconds);
+                item = item.Next;
+            }
+
+            return CalculateAvg(deltas, Alpha);
         }
-
-        var deltas = new List<double>(Items.Count - 1);
-        var item = Items.First;
-        while (item?.Next != null) {
-            var (timeUtc, totalBytes) = item.Next.Value;
-            var time = timeUtc - item.Value.TimeUtc;
-
-            deltas.Add((totalBytes - item.Value.TotalBytes) / time.TotalSeconds);
-            item = item.Next;
-        }
-
-        return CalculateAvg(deltas, Alpha);
     }
 
     private static double CalculateAvg(IEnumerable<double> Deltas, double Alpha = 0.8)

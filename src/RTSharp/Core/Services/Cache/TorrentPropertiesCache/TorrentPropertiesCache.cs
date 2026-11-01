@@ -42,6 +42,8 @@ namespace RTSharp.Core.Services.Cache.TorrentPropertiesCache
             runner.MigrateUp();
         }
 
+        // https://github.com/DapperLib/DapperAOT/issues/226
+        [DapperAot(false)]
         public async Task<CachedTorrentProperties?> GetCachedTorrentProperties(byte[] TorrentHash)
         {
             await using var conn = await New();
@@ -54,6 +56,8 @@ namespace RTSharp.Core.Services.Cache.TorrentPropertiesCache
             return d;
         }
 
+        // https://github.com/DapperLib/DapperAOT/issues/226
+        [DapperAot(false)]
         public async Task AddCachedTorrentProperties(byte[] TorrentHash, bool IsMultiFile)
         {
             await using var conn = await New();

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 
 using RTSharp.Daemon.Protocols;
 using RTSharp.Daemon.RuntimeCompilation;
+using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Abstractions;
 
 using System.Collections.Concurrent;
@@ -31,6 +32,7 @@ public record InstalledScript(string Id, InstalledScriptInfo Info, StartScriptIn
 public class InstalledScriptsService(
     SessionsService Sessions,
     IOptions<ServerOptions> Options,
+    IHostEnvironment HostEnvironment,
     ILogger<InstalledScriptsService> Logger) : IHostedService
 {
     private const string INFO_JSON = "info.json";
@@ -39,14 +41,7 @@ public class InstalledScriptsService(
 
     private readonly ConcurrentDictionary<string, SemaphoreSlim> IdLocks = new(StringComparer.Ordinal);
 
-    private string StorePath => String.IsNullOrEmpty(Options.Value.ScriptStorePath) ? DefaultStorePath() : Options.Value.ScriptStorePath;
-
-    private static string DefaultStorePath()
-    {
-        var stateDirectory = Environment.GetEnvironmentVariable("STATE_DIRECTORY")?.Split(':', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-
-        return Path.Combine(String.IsNullOrEmpty(stateDirectory) ? AppContext.BaseDirectory : stateDirectory, "scripts");
-    }
+    private string StorePath => Paths.ResolveStatePath(Options.Value.ScriptStorePath, HostEnvironment.ContentRootPath, "scripts");
 
     public async Task StartAsync(CancellationToken CancellationToken)
     {

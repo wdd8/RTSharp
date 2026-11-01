@@ -1,0 +1,38 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Behavior options</title>
+   <meta name="keywords" content="Options,Behavior,Polling intervals,Search-as-you-go delay,Auto start,Favicons,Peer origin lookup,Peer origin replacements">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>Select "Options..." in the Tools menu (or click on the gear button of the tool bar) to open the options window. The options are organized in four pages: Behavior, Caching, Look and Network. Click on "Apply" to save your changes, on "OK" to save them and close the window, or on "Cancel" to close the window without saving.</p>
+
+<h3>Polling intervals:</h3>
+<div class="list">
+- Files polling interval: How often the Files tab is refreshed, in seconds<br>
+- Peers polling interval: How often the Peers tab is refreshed, in seconds<br>
+- Trackers polling interval: How often the Trackers tab is refreshed, in seconds<br>
+- Search-as-you-go delay: How long the search text of the listing is kept after you stop typing, in seconds<br>
+- Poll selected torrent's active detail tab only: When this option is checked, only the details tab currently in view (Files, Peers or Trackers) is refreshed, instead of all of them at once. This reduces the load on the servers<br>
+</div>
+
+<h3>Torrents:</h3>
+<div class="list">
+- Automatically start torrents after a recheck: When this option is checked, a torrent that finishes rechecking and is fully complete will be started automatically<br>
+</div>
+
+<h3>Favicons:</h3>
+<div class="list">
+- Use Google favicon API: Fetching the tracker icons via Google is more stable, but it sends the domain you're looking up to Google<br>
+</div>
+
+<h3>Peer origin lookup:</h3>
+<p>Select the method used to find the origin of the peers, "RDAP (via ARIN)" or "CAIDA + Team Cymru". Move the mouse over the list to get a description of each method, they are also described in the "Peers tab" chapter.</p>
+
+<h3>Peer origin replacements:</h3>
+<p>This list allows you to replace the domain displayed in brackets in the Origin column by your own text. Click on "Add", enter the exact domain as the pattern and the text to display as the replacement, then press Enter. To remove a replacement, select it and click on "Remove".</p>
+
+</body>
+</html>

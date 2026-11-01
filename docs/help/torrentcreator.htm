@@ -1,0 +1,39 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Torrent Creator</title>
+   <meta name="keywords" content="Torrent Creator,Create torrent,Piece size,V1,V2,Hybrid,Private torrent,Entropy,Alignment,Web seed">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>The torrent creator creates .torrent files from the files of your computer. Select "Torrent Creator" in the Tools menu, here is how it works:</p>
+
+<h3>1. Select file/folder:</h3>
+<p>Drag and drop a file or a folder on the drag and drop area, or click on "Select file" or on "Select folder". You can also type the path directly.</p>
+
+<h3>2. Settings:</h3>
+<div class="list">
+- Piece size: Size of the pieces, from 16 KiB to 32 MiB. "Auto" selects a size depending on the total size of the data. Click on "Calculate number of pieces" to know how many pieces the torrent will have<br>
+- Private torrent: The torrent won't be distributed on the DHT network, the peers will only come from the trackers<br>
+- Add entropy: Add some random data to the torrent so it is unique, even if somebody else creates a torrent from the same files<br>
+- Emit creation date: Save the creation date in the torrent<br>
+- Version: V1, V2 or Hybrid. Hybrid torrents work with both V1 and V2 clients<br>
+- Optimise alignment: Align the files larger than the given size to the piece boundaries, this way each of these files starts with a new piece.<br>
+</div>
+
+<h3>3. Fields:</h3>
+<div class="list">
+- Tracker URLs: The addresses of the trackers, one per line<br>
+- Web seed URLs: The addresses of web servers hosting the same files, one per line<br>
+- Comments: A comment displayed by the torrent clients<br>
+- Source: A source tag, optional<br>
+</div>
+
+<h3>4. Create:</h3>
+<p>Click on "Create Torrent" and select where the .torrent file must be saved. RT# then reads and hashes all the files, the progress window displays the progress of the current file, of the read buffer and of the hashing. You can click on "Cancel" at any time.</p>
+
+<p class="note">* Remember that V2-only torrents are only accepted by qBittorrent, if you want to add the torrent to rtorrent or Transmission, create a V1 or a hybrid torrent.</p>
+
+</body>
+</html>

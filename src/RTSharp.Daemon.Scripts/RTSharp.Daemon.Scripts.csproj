@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -27,11 +27,15 @@
     <ProjectReference Include="..\RTSharp.Daemon\RTSharp.Daemon.csproj" />
 
     <!-- Turns RTSharp.Daemon's ScriptEnvironment.BuiltInUsingsList into the global usings scripts get at runtime -->
-    <ProjectReference
-      Include="..\RTSharp.Scripts.Generator\RTSharp.Scripts.Generator.csproj"
-      OutputItemType="Analyzer"
-      ReferenceOutputAssembly="false"
-      Private="false" />
+    <ProjectReference Include="..\RTSharp.Scripts.Generator\RTSharp.Scripts.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
 
+  <Import Project="../daemon-database.props" />
+
+  <ItemGroup>
+    <PackageReference Update="Dapper" Version="2.1.89" />
+    <PackageReference Update="Dapper.AOT" Version="1.1.0" />
+    <PackageReference Update="Microsoft.Data.Sqlite" Version="10.0.14" />
+    <PackageReference Update="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
+  </ItemGroup>
 </Project>

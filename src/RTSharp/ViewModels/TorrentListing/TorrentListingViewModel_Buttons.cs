@@ -11,7 +11,9 @@ using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.DataProvider;
 using RTSharp.Shared.Utils;
+using RTSharp.ViewModels.TorrentEditor;
 using RTSharp.Views;
+using RTSharp.Views.TorrentEditor;
 
 using Serilog;
 
@@ -73,6 +75,7 @@ public partial class TorrentListingViewModel
         { "Remove torrent", x => x.Capabilities.RemoveTorrent },
         { "Remove torrent & data", x => x.Capabilities.RemoveTorrentAndData },
         { "Get .torrent", x => x.Capabilities.GetDotTorrent },
+        { "Edit torrent", x => x.Capabilities.GetDotTorrent },
         { "Add label", x => x.Capabilities.AddLabel },
         { "Download sequentially", x => x.Capabilities.SetSequentialDownload },
         { "Duplicate torrent to", x => x.Capabilities.AddTorrent && x.Capabilities.ForceRecheckTorrent && x.Capabilities.StartTorrent }
@@ -379,6 +382,27 @@ public partial class TorrentListingViewModel
                 }
             }));
         }));
+    }
+
+    public bool CanExecuteEditTorrent() => SelectedItems.Count == 1 && CanExecuteAction("Edit torrent");
+    [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanExecuteEditTorrent))]
+    public async Task EditTorrent(IReadOnlyList<Torrent> In)
+    {
+        var torrent = In[0];
+
+        TorrentEditorWindowViewModel viewModel;
+        try {
+            var dotTorrent = (await torrent.DataOwner.Instance.GetDotTorrents([torrent.ToPluginModel()])).Single().Value;
+            viewModel = new TorrentEditorWindowViewModel(torrent, dotTorrent);
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Failed to load .torrent for editing");
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit torrent", "Failed to load .torrent:\n" + ex.Message, MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error).ShowWindowAsync();
+            return;
+        }
+
+        await new TorrentEditorWindow {
+            ViewModel = viewModel
+        }.ShowDialog(App.MainWindow);
     }
 
     public bool CanExecuteAddLabel() => CanExecuteAction("Add label");

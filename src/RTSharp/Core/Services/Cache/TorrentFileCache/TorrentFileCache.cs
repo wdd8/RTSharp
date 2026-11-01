@@ -42,6 +42,8 @@ namespace RTSharp.Core.Services.Cache.TorrentFileCache
             runner.MigrateUp();
         }
 
+        // https://github.com/DapperLib/DapperAOT/issues/226
+        [DapperAot(false)]
         public async Task<IList<CachedTorrentPath>> GetCachedFileEntries(byte[] TorrentHash)
         {
             await using var conn = await New();

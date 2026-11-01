@@ -29,8 +29,10 @@ var pkg = type switch {
         InstallDir: "usr/lib/rtsharp",
         ExecName: "RTSharp",
         BinName: "rtsharp",
-        Recommends: "mpv",
-        RecommendsReason: "media player used to preview torrent contents",
+        Recommends: [
+            new("mpv", "media player used to preview torrent contents"),
+            new("xchm", "viewer for the RTSharp.chm help file opened with F1")
+        ],
         Description: "RTSharp client GUI",
         Csproj: "src/RTSharp/RTSharp.csproj",
         IsDaemon: false
@@ -41,8 +43,7 @@ var pkg = type switch {
         InstallDir: "usr/lib/rtsharp-daemon",
         ExecName: "RTSharp.Daemon",
         BinName: "rtsharp-daemon",
-        Recommends: "",
-        RecommendsReason: "",
+        Recommends: [],
         Description: "RTSharp daemon service",
         Csproj: "src/RTSharp.Daemon/RTSharp.Daemon.csproj",
         IsDaemon: true
@@ -149,8 +150,8 @@ static void PackDeb(string Stage, Package Pkg, string Version, string Arch, stri
     control.AppendLine($"Maintainer: {Consts.Maintainer}");
     control.AppendLine($"Installed-Size: {InstalledSize(Stage) / 1024}");
     control.AppendLine($"Depends: {RuntimeDep}");
-    if (!String.IsNullOrEmpty(Pkg.Recommends))
-        control.AppendLine($"Recommends: {Pkg.Recommends}");
+    if (Pkg.Recommends.Length != 0)
+        control.AppendLine($"Recommends: {String.Join(", ", Pkg.Recommends.Select(x => x.Name))}");
     control.AppendLine("Section: utils");
     control.AppendLine("Priority: optional");
     control.AppendLine($"Homepage: {Consts.Url}");
@@ -241,8 +242,8 @@ static void PackRpm(string Stage, Package Pkg, string Version, string Arch, stri
     spec.AppendLine($"URL:            {Consts.Url}");
     spec.AppendLine("AutoReqProv:    no");
     spec.AppendLine($"Requires:       {RuntimeDep}");
-    if (!String.IsNullOrEmpty(Pkg.Recommends))
-        spec.AppendLine($"Recommends:     {Pkg.Recommends}");
+    foreach (var recommendation in Pkg.Recommends)
+        spec.AppendLine($"Recommends:     {recommendation.Name}");
     if (Pkg.IsDaemon)
         spec.AppendLine("Requires:       systemd");
     spec.AppendLine();
@@ -303,8 +304,8 @@ static void PackPkgTarZst(string Stage, Package Pkg, string Version, string Arch
     info.AppendLine($"arch = {Arch}");
     info.AppendLine($"license = {Consts.License}");
     info.AppendLine($"depend = {RuntimeDep}");
-    if (!String.IsNullOrEmpty(Pkg.Recommends))
-        info.AppendLine($"optdepend = {Pkg.Recommends}: {Pkg.RecommendsReason}");
+    foreach (var recommendation in Pkg.Recommends)
+        info.AppendLine($"optdepend = {recommendation.Name}: {recommendation.Reason}");
     if (Pkg.IsDaemon)
         info.AppendLine($"backup = {Consts.ConfigFile}");
 
@@ -415,12 +416,13 @@ record Package(
     string InstallDir,
     string ExecName,
     string BinName,
-    string Recommends,
-    string RecommendsReason,
+    Recommendation[] Recommends,
     string Description,
     string Csproj,
     bool IsDaemon
 );
+
+record Recommendation(string Name, string Reason);
 
 static class Consts
 {

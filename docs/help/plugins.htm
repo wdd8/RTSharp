@@ -1,0 +1,37 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Introduction</title>
+   <meta name="keywords" content="Plugins,Plugins window,Plugin settings,Manage plugins,Instance GUID,Incompatible plugin">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>This chapter covers all the plugins that are included with RT#. Basically these plugins allow you to add some features to RT# in 3 different ways:</p>
+<div class="list">
+- Data providers: Plugins that connect RT# to a torrent daemon (rtorrent, qBittorrent, Transmission)<br>
+- Tools: Plugins that add their own menu items and windows, such as the auto integrify, the mass tracker rewrite and the server script playground<br>
+- Looks: Plugins that change the appearance of the listing, such as the colored ratio<br>
+</div>
+
+<p>A plugin can be loaded several times, each loaded plugin is called an instance and has its own configuration file. For example you will have one instance of the rtorrent data provider for each rtorrent daemon you want to control. The configuration of the instances is explained in the "Adding a data provider" chapter.</p>
+
+<h2>The Plugins window</h2>
+<p>Click on the "Plugins" menu to display all the loaded plugin instances. When you select one instance, RT# displays its information:</p>
+<div class="list">
+- Instance GUID: Unique identifier of this instance<br>
+- Display name: Name of the instance<br>
+- Description: Description of the plugin<br>
+- Author: Author of the plugin<br>
+- Version: Version of the plugin<br>
+- Guid: Unique identifier of the plugin itself, it is the same for all the instances of a plugin<br>
+</div>
+<p>Some plugins have their own settings, in this case the settings button is enabled and opens the settings window of the plugin. Click on "Manage..." to add, edit or remove plugin instances.</p>
+
+<h2>Plugin compatibility</h2>
+<p>Each plugin declares the major version of RT# it has been made for. If you load a plugin that has been made for a different major version, RT# tells you that the plugin is incompatible and asks you if you want to load it anyway. Answering "Yes" may work, but the plugin can also crash or behave in a strange way, so we recommend you to get an updated version of the plugin instead.</p>
+
+<p class="note">* Plugins run inside RT# with the same access as RT# itself, only install plugins from sources you trust.</p>
+
+</body>
+</html>

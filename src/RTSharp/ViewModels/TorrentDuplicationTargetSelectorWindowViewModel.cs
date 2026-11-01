@@ -14,11 +14,11 @@ namespace RTSharp.ViewModels
     {
         public DuplicationTargetSelectorViewModel Selector { get; } = new();
 
-        public Torrent SourceTorrent { get; }
+        public Models.Torrent SourceTorrent { get; }
 
         public Action<bool> CloseDialog { get; set; } = null!; // view set
 
-        public TorrentDuplicationTargetSelectorWindowViewModel(Torrent SourceTorrent)
+        public TorrentDuplicationTargetSelectorWindowViewModel(Models.Torrent SourceTorrent)
         {
             this.SourceTorrent = SourceTorrent;
 

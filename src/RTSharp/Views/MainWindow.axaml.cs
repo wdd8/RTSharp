@@ -2,7 +2,11 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 
+using CommunityToolkit.Mvvm.Input;
+
 using Microsoft.Extensions.DependencyInjection;
+
+using MsBox.Avalonia;
 
 using RTSharp.Core;
 using RTSharp.Shared.Abstractions.Client;
@@ -11,13 +15,19 @@ using RTSharp.ViewModels;
 using Serilog;
 
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
+using File = System.IO.File;
 
 namespace RTSharp.Views;
 
 public partial class MainWindow : VmWindow<MainWindowViewModel>
 {
+    private static readonly string HelpFile = Path.Combine(AppContext.BaseDirectory, "RTSharp.chm");
+
     private Avalonia.PixelPoint RestorePosition;
     private Avalonia.Size? RestoreSize;
 
@@ -78,12 +88,14 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         var toolsMenu = (MenuItem)Resources["ToolsMenu"]!;
         var pluginsMenu = (MenuItem)Resources["PluginsMenu"]!;
         var serversMenu = (MenuItem)Resources["ServersMenu"]!;
+        var helpMenu = (MenuItem)Resources["HelpMenu"]!;
 
         this.ViewModel!.MenuItems.Add(fileMenu);
         this.ViewModel!.MenuItems.Add(viewMenu);
         this.ViewModel!.MenuItems.Add(toolsMenu);
         this.ViewModel!.MenuItems.Add(pluginsMenu);
         this.ViewModel!.MenuItems.Add(serversMenu);
+        this.ViewModel!.MenuItems.Add(helpMenu);
 
         App.RegisterOnExit($"{nameof(MainWindow)}_{nameof(SaveState)}", SaveState);
     }
@@ -117,6 +129,42 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         await config.Rewrite();
     }
 
+    [RelayCommand]
+    private async Task OpenHelp(string? Topic)
+    {
+        if (!File.Exists(HelpFile)) {
+            var msgbox = MessageBoxManager.GetMessageBoxStandard(
+                title: "RTSharp",
+                text: $"Help file not found at {HelpFile}",
+                @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
+                icon: MsBox.Avalonia.Enums.Icon.Error);
+            await msgbox.ShowAsync();
+            return;
+        }
+
+        try {
+            if (OperatingSystem.IsWindows()) {
+                // Extracting a downloaded release zip tags the .chm with Mark of the Web, which makes hh.exe refuse to render any page
+                try {
+                    File.Delete(HelpFile + ":Zone.Identifier");
+                } catch (Exception ex) {
+                    Log.Logger.Warning(ex, "Failed to remove Mark of the Web from {HelpFile}", HelpFile);
+                }
+
+                var psi = new ProcessStartInfo("hh.exe");
+                psi.ArgumentList.Add(Topic == null ? HelpFile : $"{HelpFile}::/{Topic}");
+                Process.Start(psi)?.Dispose();
+            } else {
+                // No CHM viewer ships with Linux/macOS, defer to whatever the user has associated (xchm, kchmviewer, ...)
+                Process.Start(new ProcessStartInfo(HelpFile) {
+                    UseShellExecute = true
+                })?.Dispose();
+            }
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Failed to open help file {HelpFile}", HelpFile);
+        }
+    }
+
     private async Task ShowPluginsDialogAsync()
     {
         var dialog = new PluginsView();
@@ -130,7 +178,7 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
 
     private async Task EvDragDrop(object? sender, DragEventArgs e)
     {
-        var files = e.DataTransfer.TryGetFiles();
+        var files = e.DataTransfer.TryGetFiles()?.Where(x => !x.Path.OriginalString.StartsWith("virtual-file://"));
         var uri = e.DataTransfer.TryGetText();
 
         AddTorrentViewModel vm;

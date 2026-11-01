@@ -23,20 +23,37 @@
 
   <ItemGroup>
     <PackageReference Include="BencodeNET" Version="5.0.0" />
-    <PackageReference Include="CliWrap" Version="3.10.2" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.80.0" />
+    <PackageReference Include="CliWrap" Version="3.10.5" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.84.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.6.0" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
   </ItemGroup>
 
+  <Import Project="../daemon-database.props" />
+
   <ItemGroup>
+    <Reference Include="Dapper.AOT.Analyzers">
+      <HintPath>$(PkgDapper_AOT)/analyzers/dotnet/Dapper.AOT.Analyzers.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.SqlServer.TransactSql.ScriptDom">
+      <HintPath>$(PkgDapper_AOT)/analyzers/dotnet/Microsoft.SqlServer.TransactSql.ScriptDom.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
     <ProjectReference Include="..\RTSharp.Daemon.Protocols\RTSharp.Daemon.Protocols.csproj" />
     <ProjectReference Include="..\RTSharp.Shared.Abstractions\RTSharp.Shared.Abstractions.csproj" />
     <ProjectReference Include="..\RTSharp.Shared.Utils\RTSharp.Shared.Utils.csproj" />
     <ProjectReference Include="Services\qbittorrent\qbittorrent-net-client\src\QBittorrent.Client\QBittorrent.Client.csproj" />
     <ProjectReference Include="Services\transmission\Transmission.Net\Transmission.Net\Transmission.Net.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="Dapper" Version="2.1.89" />
+    <PackageReference Update="Dapper.AOT" Version="1.1.0" />
+    <PackageReference Update="Microsoft.Data.Sqlite" Version="10.0.14" />
+    <PackageReference Update="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
   </ItemGroup>
 
 </Project>

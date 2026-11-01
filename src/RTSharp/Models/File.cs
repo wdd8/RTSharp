@@ -260,6 +260,26 @@ namespace RTSharp.Models
             return FromModel(torrent.Name, IsMultiFile, In, map, x => x.Path);
         }
 
+        public static (File Root, File[] Leaves) FromBencode(string TorrentName, bool IsMultiFile, IList<BencodeUtils.TorrentFile> In)
+        {
+            static File map(BencodeUtils.TorrentFile In)
+            {
+                var ret = new File {
+                    Path = String.Join('/', In.PathComponents),
+                    Size = (ulong)In.FileSize,
+                    Priority = "N/A",
+                    PriorityInternal = PRIORITY.NA,
+
+                    DownloadStrategy = "N/A",
+                    DownloadStrategyInternal = DOWNLOAD_STRATEGY.NA
+                };
+
+                return ret;
+            }
+
+            return FromModel(TorrentName, IsMultiFile, In, map, x => String.Join('/', x.PathComponents));
+        }
+
         public string GetRemotePath(string RemoteBasePath, string TorrentName, bool IsMultiFile)
         {
             return System.IO.Path.Combine(IsMultiFile ? System.IO.Path.Combine(RemoteBasePath, TorrentName) : RemoteBasePath, Path).Replace("\\", "/");

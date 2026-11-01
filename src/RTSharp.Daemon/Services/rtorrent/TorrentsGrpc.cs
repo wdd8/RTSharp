@@ -53,30 +53,8 @@ namespace RTSharp.Daemon.Services.rtorrent
             return ret;
         }
 
-        public async Task GetTorrentListUpdates(GetTorrentListUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsListResponse> Res, CancellationToken CancellationToken)
-        {
-            var interval = Req.Interval.ToTimeSpan();
-
-            if (interval < TimeSpan.FromMilliseconds(10))
-                throw new RpcException(new global::Grpc.Core.Status(StatusCode.InvalidArgument, "Interval cannot be lower than 10ms"));
-
-            using (var sub = TorrentPolling.Subscribe(interval)) {
-                Logger.LogDebug("Waiting for updates with interval {interval}...", interval);
-
-                // Respond so that client sees we're alive
-                await Res.WriteAsync(new(), CancellationToken);
-
-                while (!CancellationToken.IsCancellationRequested) {
-                    var changes = await sub.GetChanges(false, CancellationToken);
-
-                    if (changes == null)
-                        return;
-
-                    if (changes.Incomplete.Count > 0 || changes.Complete.Count > 0 || changes.Removed.Count > 0 || changes.FullUpdate.Count > 0)
-                        await Res.WriteAsync(changes, CancellationToken);
-                }
-            }
-        }
+        public Task GetTorrentListUpdates(GetTorrentListUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsListResponse> Res, CancellationToken CancellationToken)
+            => TorrentPolling.Stream(Req, Res, CancellationToken);
 
         public Task GetTorrentFileUpdates(GetTorrentFileUpdatesRequest Req, IServerStreamWriter<DeltaTorrentsFilesResponse> Res, CancellationToken CancellationToken)
         {

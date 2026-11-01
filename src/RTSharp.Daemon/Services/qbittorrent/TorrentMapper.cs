@@ -57,6 +57,7 @@ public class TorrentMapper
             Stored.IsPrivate = External.Private.Value;
         if (External.Name != null)
             Stored.Name = External.Name;
+        // The shared poller emits state events after the complete snapshot is mapped
         if (External.State != null)
             Stored.State = MapFromExternal(External.State.Value);
         if (External.TotalSize != null)

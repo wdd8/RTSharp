@@ -1,0 +1,63 @@
+<Project>
+
+    <!--
+        chmcmd (Free Pascal CHM compiler) must be on PATH, or set through
+        the ChmCmd property.
+    -->
+    <PropertyGroup>
+        <HelpRepoDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</HelpRepoDir>
+        <ChmCmd Condition="'$(ChmCmd)' == ''">chmcmd</ChmCmd>
+        <HelpContinueOnError Condition="'$(Configuration)' == 'Release'">ErrorAndStop</HelpContinueOnError>
+        <HelpContinueOnError Condition="'$(HelpContinueOnError)' == ''">WarnAndContinue</HelpContinueOnError>
+        <!-- Not per configuration/TFM, so the (design-time) up to date check can name it before IntermediateOutputPath exists -->
+        <HelpFile>$(BaseIntermediateOutputPath)RTSharp.chm</HelpFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <UpToDateCheckInput Include="$(HelpRepoDir)docs\help\**" />
+        <UpToDateCheckInput Include="$(HelpRepoDir)scripts\build-help.cs;$(HelpRepoDir)scripts\generate-api-help.cs" />
+        <UpToDateCheckBuilt Include="$(HelpFile)" />
+    </ItemGroup>
+
+    <Target Name="_CollectApiHelpSource" Condition="'$(DesignTimeBuild)' != 'true'">
+        <ItemGroup>
+            <_ApiHelpSource Include="$(HelpRepoDir)src\RTSharp.Shared.Abstractions\**\*.cs;$(HelpRepoDir)src\RTSharp.Shared.Abstractions.Client\**\*.cs"
+                            Exclude="$(HelpRepoDir)src\*\bin\**;$(HelpRepoDir)src\*\obj\**" />
+            <_ApiHelpSource Include="$(HelpRepoDir)scripts\generate-api-help.cs" />
+        </ItemGroup>
+    </Target>
+
+    <Target Name="_GenerateApiHelp"
+            Condition="'$(DesignTimeBuild)' != 'true'"
+            DependsOnTargets="_CollectApiHelpSource"
+            Inputs="@(_ApiHelpSource)"
+            Outputs="$(HelpRepoDir)docs\help\api\toc.json">
+        <Exec Command="dotnet run &quot;$(HelpRepoDir)scripts\generate-api-help.cs&quot;"
+              WorkingDirectory="$(HelpRepoDir)" />
+    </Target>
+
+    <Target Name="_CollectHelpSource" DependsOnTargets="_GenerateApiHelp" Condition="'$(DesignTimeBuild)' != 'true'">
+        <ItemGroup>
+            <_HelpSource Include="$(HelpRepoDir)docs\help\**" />
+            <_HelpSource Include="$(HelpRepoDir)scripts\build-help.cs" />
+        </ItemGroup>
+    </Target>
+
+    <Target Name="BuildHelp"
+            BeforeTargets="AssignTargetPaths"
+            Condition="'$(DesignTimeBuild)' != 'true'"
+            DependsOnTargets="_CollectHelpSource"
+            Inputs="@(_HelpSource)"
+            Outputs="$(HelpFile)">
+        <Exec Command="dotnet run &quot;$(HelpRepoDir)scripts\build-help.cs&quot; -- &quot;$([System.IO.Path]::GetFullPath('$(HelpFile)'))&quot; &quot;$(ChmCmd)&quot;"
+              WorkingDirectory="$(HelpRepoDir)"
+              ContinueOnError="$(HelpContinueOnError)" />
+    </Target>
+
+    <Target Name="_IncludeHelpFile" AfterTargets="BuildHelp" Condition="'$(DesignTimeBuild)' != 'true' And Exists('$(HelpFile)')">
+        <ItemGroup>
+            <Content Include="$(HelpFile)" Link="RTSharp.chm" CopyToOutputDirectory="PreserveNewest" />
+        </ItemGroup>
+    </Target>
+
+</Project>

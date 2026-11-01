@@ -1,0 +1,64 @@
+{
+  "title": "RTSharp Help",
+  "defaultTopic": "welcometopic.htm",
+  "contents": [
+    { "title": "Introduction", "children": [
+      { "title": "What is RT#?", "file": "welcometopic.htm" },
+      { "title": "Main features", "file": "mainfeatures.htm" },
+      { "title": "Torrent daemons", "file": "daemons.htm" }
+    ] },
+    { "title": "Quick Start", "children": [
+      { "title": "Software installation", "file": "installation.htm" },
+      { "title": "The main screen", "file": "mainscreen.htm" },
+      { "title": "Connecting to a server", "file": "servers.htm" },
+      { "title": "Adding a data provider", "file": "dataproviders.htm" },
+      { "title": "Adding torrents", "file": "addtorrent.htm" }
+    ] },
+    { "title": "Torrent listing", "children": [
+      { "title": "Browsing the listing", "file": "listing.htm" },
+      { "title": "Torrent actions", "file": "torrentactions.htm" },
+      { "title": "Labels", "file": "labels.htm" },
+      { "title": "Moving the download directory", "file": "movedir.htm" },
+      { "title": "Duplicating torrents", "file": "duplicate.htm" },
+      { "title": "General tab", "file": "tabgeneral.htm" },
+      { "title": "Files tab", "file": "tabfiles.htm" },
+      { "title": "Peers tab", "file": "tabpeers.htm" },
+      { "title": "Trackers tab", "file": "tabtrackers.htm" }
+    ] },
+    { "title": "Panes", "children": [
+      { "title": "Data providers pane", "file": "dppane.htm" },
+      { "title": "Action queue", "file": "actionqueue.htm" },
+      { "title": "Log and daemon logs", "file": "logs.htm" },
+      { "title": "Statistics", "file": "statistics.htm" }
+    ] },
+    { "title": "Tools and Options", "children": [
+      { "title": "Torrent Creator", "file": "torrentcreator.htm" },
+      { "title": "Behavior options", "file": "optbehavior.htm" },
+      { "title": "Caching options", "file": "optcaching.htm" },
+      { "title": "Look options", "file": "optlook.htm" },
+      { "title": "Network options", "file": "optnetwork.htm" }
+    ] },
+    { "title": "Plugins", "children": [
+      { "title": "Introduction", "file": "plugins.htm" },
+      { "title": "Auto integrify", "file": "autointegrify.htm" },
+      { "title": "Mass tracker rewrite", "file": "masstracker.htm" },
+      { "title": "Colored ratio", "file": "coloredratio.htm" },
+      { "title": "Server script playground", "file": "scriptplayground.htm" },
+      { "title": "Daemon settings windows", "file": "dpsettings.htm" }
+    ] },
+    { "title": "Server daemon", "children": [
+      { "title": "Daemon configuration", "file": "daemonconfig.htm" },
+      { "title": "Data provider configuration", "file": "daemondp.htm" },
+      { "title": "Server scripts", "file": "serverscripts.htm" }
+    ] },
+    { "title": "Plugin development", "children": [
+      { "title": "Introduction", "file": "devintro.htm" },
+      { "title": "Writing a plugin", "file": "devfeature.htm" },
+      { "title": "Writing a data provider", "file": "devdataprovider.htm" },
+      { "title": "Plugin API reference", "file": "api/index.htm", "include": "api/toc.json" }
+    ] },
+    { "title": "Troubleshooting", "children": [
+      { "title": "Common problems", "file": "troubleshooting.htm" }
+    ] }
+  ]
+}

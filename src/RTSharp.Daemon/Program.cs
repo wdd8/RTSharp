@@ -10,19 +10,9 @@ public static class Program
 {
     public static volatile ReloadableServerCertificate ServerCertificate = null!; // set later
 
-    private static string ResolveDaemonConfigPath()
-    {
-        if (OperatingSystem.IsLinux()) {
-            const string etcPath = "/etc/rtsharp-daemon";
-            if (Directory.Exists(etcPath))
-                return etcPath;
-        }
-        return AppContext.BaseDirectory;
-    }
-
     public static void Main(string[] args)
     {
-        var daemonConfigPath = ResolveDaemonConfigPath();
+        var daemonConfigPath = Paths.GetConfigPath();
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
             Args = args,
@@ -46,11 +36,16 @@ public static class Program
         builder.Services.AddSingleton<RTSharp.Shared.Abstractions.ISpeedMovingAverageService, SpeedMovingAverageService>();
         builder.Services.AddSingleton<FileTransferService>();
         builder.Services.AddSingleton<SessionsService>();
+        builder.Services.AddSingleton(services => {
+            var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<ServerOptions>>().Value;
+            return new DaemonDatabase(Paths.ResolveStatePath(options.DatabasePath, builder.Environment.ContentRootPath, "rtsharp.db"));
+        });
         builder.Services.AddSingleton<InstalledScriptsService>();
         builder.Services.AddHostedService(services => services.GetRequiredService<InstalledScriptsService>());
         builder.Services.AddSingleton<ChannelsService>();
         builder.Services.AddSingleton<TorrentOpService>();
         builder.Services.AddSingleton<V1ToV2InfoHashCache>();
+        builder.Services.AddSingleton<EventsService>();
         builder.Services.Configure<ServerOptions>(builder.Configuration);
         builder.Services.Configure<RTSharp.Daemon.Services.Prometheus.PrometheusOptions>(builder.Configuration.GetSection("Prometheus"));
         builder.Services.AddSingleton<RTSharp.Daemon.Services.Prometheus.PrometheusMetricsService>();
@@ -67,7 +62,9 @@ public static class Program
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.SettingsService>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.rtorrent.RtorrentMonitor>(key);
             builder.Services.AddHostedService(services => services.GetRequiredKeyedService<RTSharp.Daemon.Services.rtorrent.RtorrentMonitor>(key));
-            builder.Services.AddHostedService(services => services.GetRequiredKeyedService<RTSharp.Daemon.Services.rtorrent.TorrentPoll.TorrentPolling>(key));
+            builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.TorrentPoll.TorrentPollingService>(key,
+                (services, _) => services.GetRequiredKeyedService<RTSharp.Daemon.Services.rtorrent.TorrentPoll.TorrentPolling>(key));
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredKeyedService<RTSharp.Daemon.Services.rtorrent.TorrentPoll.TorrentPolling>(key));
     
             Console.WriteLine($"Registered data provider '{key}'");
     
@@ -78,6 +75,10 @@ public static class Program
             builder.Services.Configure<RTSharp.Daemon.Services.qbittorrent.ConfigModel>(key, builder.Configuration.GetSection("DataProviders:qbittorrent:" + key));
 
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.qbittorrent.Grpc>(key);
+            builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.qbittorrent.TorrentPolling>(key);
+            builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.TorrentPoll.TorrentPollingService>(key,
+                (services, _) => services.GetRequiredKeyedService<RTSharp.Daemon.Services.qbittorrent.TorrentPolling>(key));
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredKeyedService<RTSharp.Daemon.Services.qbittorrent.TorrentPolling>(key));
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.qbittorrent.SettingsGrpc>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.qbittorrent.QbitClient>(key);
 
@@ -90,6 +91,10 @@ public static class Program
             builder.Services.Configure<RTSharp.Daemon.Services.transmission.ConfigModel>(key, builder.Configuration.GetSection("DataProviders:transmission:" + key));
 
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.transmission.Grpc>(key);
+            builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.transmission.TorrentPolling>(key);
+            builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.TorrentPoll.TorrentPollingService>(key,
+                (services, _) => services.GetRequiredKeyedService<RTSharp.Daemon.Services.transmission.TorrentPolling>(key));
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredKeyedService<RTSharp.Daemon.Services.transmission.TorrentPolling>(key));
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.transmission.SettingsGrpc>(key);
             builder.Services.AddKeyedSingleton<RTSharp.Daemon.Services.transmission.TransmissionClient>(key);
 
@@ -179,6 +184,8 @@ public static class Program
         });
 
         var app = builder.Build();
+
+        _ = app.Services.GetRequiredService<DaemonDatabase>();
 
         var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Program");
 

@@ -1,14 +1,11 @@
-using Google.Protobuf.Collections;
-
 using Microsoft.Extensions.Options;
 
 using RTSharp.Daemon.Exceptions;
 using RTSharp.Daemon.GRPCServices.DataProvider;
-using RTSharp.Daemon.Protocols.DataProvider;
+using RTSharp.Daemon.Services.TorrentPoll;
 using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Utils;
 
-using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -26,13 +23,74 @@ public class PrometheusMetricsService(
     {
         while (!stoppingToken.IsCancellationRequested) {
             var options = Options.CurrentValue;
-            var interval = options.PollInterval <= TimeSpan.Zero ? TimeSpan.FromMinutes(10) : options.PollInterval;
+            var interval = ResolveInterval(options.PollInterval);
 
-            if (options.Enabled)
-                await Refresh(stoppingToken);
+            if (!options.Enabled) {
+                await Task.Delay(interval, stoppingToken);
+                continue;
+            }
 
-            await Task.Delay(interval, stoppingToken);
+            var subscriptions = new List<(RegisteredDataProvider DataProvider, PollingSubscription Subscription)>();
+            try {
+                foreach (var dataProvider in RegisteredDataProviders.GetDataProviders())
+                    subscriptions.Add((dataProvider, dataProvider.TorrentPolling.Subscribe(interval)));
+
+                if (subscriptions.Count == 0) {
+                    MetricsText = Render(Array.Empty<DataProviderMetrics>(), DateTimeOffset.UtcNow);
+                    await Task.Delay(interval, stoppingToken);
+                    continue;
+                }
+
+                using var iterationCancellation = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                using var optionsChanged = Options.OnChange((_, _) => iterationCancellation.Cancel());
+                var latestMetrics = new DataProviderMetrics?[subscriptions.Count];
+                var metricsGate = new Lock();
+                var consumers = new Task[subscriptions.Count];
+                for (var x = 0; x < subscriptions.Count; x++) {
+                    var (dataProvider, subscription) = subscriptions[x];
+                    consumers[x] = ConsumeMetrics(x, dataProvider, subscription, latestMetrics, metricsGate, iterationCancellation.Token);
+                }
+
+                try {
+                    await Task.WhenAll(consumers);
+                } catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested) {
+                    // Restart subscriptions when Prometheus options are reloaded.
+                }
+            } finally {
+                foreach (var (_, subscription) in subscriptions)
+                    subscription.Dispose();
+            }
         }
+    }
+
+    private async Task ConsumeMetrics(int idx, RegisteredDataProvider dataProvider, PollingSubscription subscription,
+        DataProviderMetrics?[] latestMetrics, Lock metricsGate, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested) {
+            var metrics = await GetMetrics(dataProvider, subscription, cancellationToken);
+            lock (metricsGate) {
+                latestMetrics[idx] = metrics;
+                var currentMetrics = new List<DataProviderMetrics>(latestMetrics.Length);
+                foreach (var current in latestMetrics) {
+                    if (current.HasValue)
+                        currentMetrics.Add(current.Value);
+                }
+
+                currentMetrics.Sort(static (x, y) => string.CompareOrdinal(x.DataProvider, y.DataProvider));
+                MetricsText = Render([.. currentMetrics], DateTimeOffset.UtcNow);
+            }
+        }
+    }
+
+    private static TimeSpan ResolveInterval(TimeSpan interval)
+    {
+        if (interval <= TimeSpan.Zero)
+            return TimeSpan.FromMinutes(10);
+        if (interval < TimeSpan.FromMilliseconds(10))
+            return TimeSpan.FromMilliseconds(10);
+
+        var maxInterval = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+        return interval > maxInterval ? maxInterval : interval;
     }
 
     public string Render()
@@ -87,40 +145,28 @@ public class PrometheusMetricsService(
         return sb.ToString();
     }
 
-    private async Task Refresh(CancellationToken cancellationToken)
+    private async Task<DataProviderMetrics> GetMetrics(RegisteredDataProvider dataProvider, PollingSubscription subscription, CancellationToken cancellationToken)
     {
-        var metricTasks = new List<Task<DataProviderMetrics>>();
-        foreach (var dataProvider in RegisteredDataProviders.GetDataProviders())
-            metricTasks.Add(GetMetrics(dataProvider, cancellationToken));
-
-        var results = await Task.WhenAll(metricTasks);
-        Array.Sort(results, static (x, y) => string.CompareOrdinal(x.DataProvider, y.DataProvider));
-
-        MetricsText = Render(results, DateTimeOffset.UtcNow);
-    }
-
-    private async Task<DataProviderMetrics> GetMetrics(RegisteredDataProvider dataProvider, CancellationToken cancellationToken)
-    {
-        var stopwatch = Stopwatch.StartNew();
-
         try {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var torrents = await GetTorrents(dataProvider);
+            var changes = await subscription.GetChanges(true, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
 
             var trackerDomains = new Dictionary<string, string>(StringComparer.Ordinal);
             var trafficByTracker = new Dictionary<string, TorrentStats>(StringComparer.Ordinal);
 
-            foreach (var torrent in torrents) {
-                var tracker = GetDomain(torrent.PrimaryTracker?.Uri, trackerDomains);
-                ref var traffic = ref CollectionsMarshal.GetValueRefOrAddDefault(trafficByTracker, tracker, out var exists);
-                if (exists) {
-                    traffic.Uploaded += torrent.Uploaded;
-                    traffic.Downloaded += torrent.Downloaded;
-                } else {
-                    traffic = new TorrentStats(torrent.Uploaded, torrent.Downloaded);
+            if (changes is not null) {
+                foreach (var torrent in changes.FullUpdate) {
+                    var tracker = GetDomain(torrent.PrimaryTracker?.Uri, trackerDomains);
+                    ref var traffic = ref CollectionsMarshal.GetValueRefOrAddDefault(trafficByTracker, tracker, out var exists);
+                    if (exists) {
+                        traffic.Uploaded += torrent.Uploaded;
+                        traffic.Downloaded += torrent.Downloaded;
+                    } else {
+                        traffic = new TorrentStats(torrent.Uploaded, torrent.Downloaded);
+                    }
                 }
             }
 
@@ -135,7 +181,7 @@ public class PrometheusMetricsService(
             return new DataProviderMetrics(
                 dataProvider.InstanceKey,
                 metrics,
-                stopwatch.Elapsed
+                dataProvider.TorrentPolling.LastPollDuration
             );
         } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
@@ -145,28 +191,16 @@ public class PrometheusMetricsService(
             return new DataProviderMetrics(
                 dataProvider.InstanceKey,
                 Array.Empty<TrackerStats>(),
-                stopwatch.Elapsed
+                dataProvider.TorrentPolling.LastPollDuration
             );
         } catch (Exception ex) {
             Logger.LogError(ex, "Failed to refresh metrics for data provider {DataProvider}", dataProvider.InstanceKey);
             return new DataProviderMetrics(
                 dataProvider.InstanceKey,
                 Array.Empty<TrackerStats>(),
-                stopwatch.Elapsed
+                dataProvider.TorrentPolling.LastPollDuration
             );
         }
-    }
-
-    private static async Task<RepeatedField<Torrent>> GetTorrents(RegisteredDataProvider dataProvider)
-    {
-        var response = dataProvider.Type switch {
-            DataProviderType.rtorrent => await dataProvider.Resolve<RTSharp.Daemon.Services.rtorrent.Grpc>().GetTorrentList(),
-            DataProviderType.qbittorrent => await dataProvider.Resolve<RTSharp.Daemon.Services.qbittorrent.Grpc>().GetTorrentList(),
-            DataProviderType.transmission => await dataProvider.Resolve<RTSharp.Daemon.Services.transmission.Grpc>().GetTorrentList(),
-            _ => throw new InvalidOperationException($"Unknown data provider type {dataProvider.Type}")
-        };
-
-        return response.List;
     }
 
     private static string GetDomain(string? uri, Dictionary<string, string> cache)

@@ -6,4 +6,8 @@
     <FileVersion>$(RTSharpVersion)</FileVersion>
     <InformationalVersion>$(RTSharpVersion)</InformationalVersion>
   </PropertyGroup>
+  <PropertyGroup>
+    <!-- Must match the SkiaSharp version Avalonia.Skia declares. Enforced by Directory.Build.targets. -->
+    <SkiaSharpVersion>3.119.4</SkiaSharpVersion>
+  </PropertyGroup>
 </Project>

@@ -1,0 +1,179 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:dgh="using:Avalonia.Controls.DataGridHierarchical"
+        xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+        xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
+        xmlns:models="clr-namespace:RTSharp.Models"
+        xmlns:vm="using:RTSharp.ViewModels.TorrentEditor"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+        Width="900" Height="700"
+        MinWidth="700" MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        x:Class="RTSharp.Views.TorrentEditor.TorrentEditorWindow"
+        x:DataType="vm:TorrentEditorWindowViewModel"
+        Title="RT# - Edit torrent">
+
+    <Window.Resources>
+        <converters:SIDataSizeConverter x:Key="SIDataSizeConverter" />
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="TabItem Grid.Fields > TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0 0 8 0" />
+        </Style>
+        <Style Selector="TabItem Grid.Fields > TextBox">
+            <Setter Property="Margin" Value="0 0 0 4" />
+        </Style>
+        <Style Selector="TextBlock.Warning">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="Orange" />
+            <Setter Property="Margin" Value="0 0 0 4" />
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="8" IsEnabled="{Binding !IsBusy}">
+        <StackPanel Grid.Row="0">
+            <TextBlock Classes="Warning"
+                       Text="{Binding HashWarning}"
+                       IsVisible="{Binding HashWarning, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="Warning"
+                       Text="{Binding FilesWarning}"
+                       IsVisible="{Binding FilesWarning, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+        </StackPanel>
+
+        <TabControl Grid.Row="1">
+            <TabItem Header="General">
+                <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="8">
+                    <TextBlock Grid.Column="0" Grid.Row="0">Name:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Name}"
+                             ToolTip.Tip="Changes the info hash" />
+
+                    <TextBlock Grid.Column="0" Grid.Row="1">Source:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Source}"
+                             ToolTip.Tip="Changes the info hash" />
+
+                    <TextBlock Grid.Column="0" Grid.Row="2">Private:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="2" IsChecked="{Binding IsPrivate}"
+                              ToolTip.Tip="Changes the info hash">Private torrent (won't distribute on DHT network)</CheckBox>
+
+                    <TextBlock Grid.Column="0" Grid.Row="3">Comment:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="3" AcceptsReturn="True" Height="100" Text="{Binding Comment}" />
+
+                    <TextBlock Grid.Column="0" Grid.Row="4">Created by:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding CreatedBy}" />
+
+                    <TextBlock Grid.Column="0" Grid.Row="5">Creation date:</TextBlock>
+                    <Grid Grid.Column="1" Grid.Row="5" ColumnDefinitions="*,Auto" Margin="0 0 0 4">
+                        <TextBox Grid.Column="0"
+                                 Watermark="yyyy-MM-dd HH:mm:ss (UTC)"
+                                 Text="{Binding CreationDate, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
+                        <Button Grid.Column="1" Margin="4 0 0 0" Command="{Binding SetCreationDateNowClickCommand}">Now</Button>
+                    </Grid>
+
+                    <TextBlock Grid.Column="0" Grid.Row="6">Encoding:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Encoding}" />
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Trackers">
+                <Grid RowDefinitions="Auto,*" Margin="8">
+                    <TextBlock Grid.Row="0" Margin="0 0 0 4" TextWrapping="Wrap">One URL per line. Separate tiers with a blank line.</TextBlock>
+                    <TextBox Grid.Row="1" AcceptsReturn="True" FontFamily="monospace" Text="{Binding TrackersText}" />
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Seeds &amp; nodes">
+                <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="*,*,*" Margin="8">
+                    <TextBlock Grid.Column="0" Grid.Row="0">Web seeds (url-list):</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="0" AcceptsReturn="True" FontFamily="monospace" Text="{Binding WebSeedsText}" />
+
+                    <TextBlock Grid.Column="0" Grid.Row="1">HTTP seeds (httpseeds):</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="1" AcceptsReturn="True" FontFamily="monospace" Text="{Binding HttpSeedsText}" />
+
+                    <TextBlock Grid.Column="0" Grid.Row="2">DHT nodes (IP:port):</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="2" AcceptsReturn="True" FontFamily="monospace" Text="{Binding NodesText}" />
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Files">
+                <DataGrid
+                    AutoGenerateColumns="False"
+                    HierarchicalModel="{Binding FilesModel}"
+                    HierarchicalRowsEnabled="True"
+                    ColumnDefinitionsSource="{Binding ColumnDefinitions}"
+                    SelectionMode="Extended"
+                    UseLogicalScrollable="True"
+                    HeadersVisibility="All"
+                    IsReadOnly="True"
+                    CanUserAddRows="False"
+                    CanUserDeleteRows="False"
+                    CanUserReorderColumns="True"
+                    CanUserResizeColumns="True"
+                    CanUserSortColumns="True">
+                    <DataGrid.Resources>
+                        <DataTemplate x:Key="FileNameTemplate" x:DataType="models:File">
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Image Source="{Binding IconTask^}"
+                                       IsVisible="{Binding IconTask^, Converter={x:Static conv:ObjectConverters.IsNotNull}}"
+                                       Width="16" Height="16"
+                                       VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                        <DataTemplate x:Key="FileSizeTemplate" x:DataType="dgh:HierarchicalNode">
+                            <TextBlock Text="{Binding ((models:File)Item).Size, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </DataGrid.Resources>
+                </DataGrid>
+            </TabItem>
+
+            <TabItem Header="Info">
+                <ScrollViewer>
+                    <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="8">
+                        <TextBlock Grid.Column="0" Grid.Row="0" FontWeight="SemiBold">Version:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="0" Text="{Binding InfoVersion}" />
+
+                        <TextBlock Grid.Column="0" Grid.Row="1" FontWeight="SemiBold">Piece length:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="1" Text="{Binding InfoPieceLength}" />
+
+                        <TextBlock Grid.Column="0" Grid.Row="2" FontWeight="SemiBold">Pieces:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="2" Text="{Binding InfoPieceCount}" />
+
+                        <TextBlock Grid.Column="0" Grid.Row="3" FontWeight="SemiBold">Total size:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="3" Text="{Binding InfoTotalSize}" />
+
+                        <TextBlock Grid.Column="0" Grid.Row="4" FontWeight="SemiBold">Files:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="4" Text="{Binding InfoFileCount}" />
+
+                        <TextBlock Grid.Column="0" Grid.Row="5" FontWeight="SemiBold">Info size:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="5" Text="{Binding InfoMetadataSize}" />
+
+                        <TextBlock Grid.Column="0" Grid.Row="6" FontWeight="SemiBold">Current hash:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="6" FontFamily="monospace" Text="{Binding InfoOriginalHash}" />
+
+                        <TextBlock Grid.Column="0" Grid.Row="7" FontWeight="SemiBold">Edited v1 hash:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="7" FontFamily="monospace" Text="{Binding InfoCurrentV1Hash}" />
+
+                        <TextBlock Grid.Column="0" Grid.Row="8" FontWeight="SemiBold">Edited v2 hash:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="8" FontFamily="monospace" Text="{Binding InfoCurrentV2Hash}" />
+
+                        <TextBlock Grid.Column="0" Grid.Row="9" FontWeight="SemiBold">Other keys:</TextBlock>
+                        <SelectableTextBlock Grid.Column="1" Grid.Row="9" TextWrapping="Wrap" Text="{Binding InfoOtherKeys}" />
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="0 8 0 0">
+            <Button Grid.Column="0" Margin="0 0 4 0" Command="{Binding AdvancedClickCommand}">Advanced...</Button>
+            <Button Grid.Column="1" Command="{Binding RevertClickCommand}">Revert</Button>
+            <Button Grid.Column="3" Margin="0 0 4 0" Command="{Binding SaveAsClickCommand}">Save as...</Button>
+            <Button Grid.Column="4" Margin="0 0 4 0" Command="{Binding ApplyClickCommand}"
+                    Content="{Binding Torrent.DataOwner.Config.Plugin.Name, StringFormat='Apply to {0}'}" />
+            <Button Grid.Column="5" Command="{Binding CancelClickCommand}">Cancel</Button>
+        </Grid>
+    </Grid>
+</Window>

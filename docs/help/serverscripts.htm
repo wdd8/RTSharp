@@ -1,0 +1,51 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Server scripts</title>
+   <meta name="keywords" content="Server scripts,IScript,IScriptSession,pragma usings,Installed scripts,Script messages,Orphan scripts">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>RTSharp.Daemon can compile and run C# scripts at runtime. RT# itself uses scripts for some of its features (duplication, file transfers...), plugins can send their own scripts, and you can run yours with the server script playground.</p>
+
+<h3>1. Script format:</h3>
+<p>A script is a regular C# file that contains a class implementing the IScript interface, by convention it is named Main. The dependencies of the class (the daemon services, a logger...) are given to its constructor by the daemon. The first lines of the file are pragmas:</p>
+<div class="list">
+- #pragma usings: Mandatory, adds the built-in usings to the script (System, System.Threading, System.Threading.Tasks, System.Collections.Generic, Dapper, Microsoft.Data.Sqlite, RTSharp.Daemon, RTSharp.Daemon.Services, RTSharp.Shared.Abstractions, RTSharp.Shared.Utils)<br>
+- #pragma tag xxx: Gives a tag to the script<br>
+- #pragma sourcegen "assembly": Runs the source generators of this assembly on the script<br>
+</div>
+
+<pre>#pragma usings
+
+using Microsoft.Extensions.Logging;
+
+namespace MyScripts.Hello;
+
+public class Main(ILogger&lt;Main&gt; Logger) : IScript
+{
+    public async Task Execute(IScriptSession Session, CancellationToken CancellationToken)
+    {
+        Session.Progress.State = TASK_STATE.RUNNING;
+        Session.Progress.Text = "Saying hello...";
+
+        Logger.LogInformation("Hello from the server!");
+
+        Session.Progress.State = TASK_STATE.DONE;
+    }
+}</pre>
+
+<h3>2. Progress:</h3>
+<p>The session of the script has a Progress object with a State, a Text and a Progress percentage, they are displayed in RT# while the script runs. A script can also add sub steps in Progress.Chain, each step with its own progress, this is how the action queue displays the steps of a duplication.</p>
+
+<h3>3. Messages:</h3>
+<p>A script can receive messages from RT# with Session.Rx and send messages with Session.Send. The messages are records shared between the script and the plugin that runs it, this is how a plugin gives its input to a script and gets its results back.</p>
+
+<h3>4. Installed scripts:</h3>
+<p>A script can be run once, or installed on the server: an installed script is started again every time the server launches, which is useful for background services. Each installed script belongs to a plugin, or to RT# itself. When RT# starts and finds installed scripts whose plugin is not loaded anymore, it displays the list of these orphaned scripts and asks you if you want to remove them from the server. If you answer "No, do not ask again", the scripts stay installed and you won't be asked again for them.</p>
+
+<p class="note">* Scripts run with the rights of the daemon user and can do anything this user is allowed to do on the server.</p>
+
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Server script playground</title>
+   <meta name="keywords" content="Server script playground,Server scripting,Run script,Install as service,Uninstall">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>The server script playground allows you to write C# scripts and run them directly on one of your servers. Click on the "Server scripting" menu to open the Script playground window.</p>
+
+<p>Select the server, type or paste your script in the editor and click on "Run". The script is compiled and executed by RTSharp.Daemon, its progress is displayed while it runs. While the script is running, the "Run" button becomes "Stop", click on it to stop the script. If the script cannot be compiled or fails, the error is displayed in a message box.</p>
+
+<h3>Installing a script as a service:</h3>
+<p>A script can also be installed permanently on the server: the server will start it again every time it launches. Enter a service id and click on "Install as service". The "Installed services" list displays all the scripts installed on the selected server, with their state. Click on "Uninstall" to remove a script, and on "Refresh" to update the list.</p>
+
+<p>The format of the scripts is explained in the "Server scripts" chapter.</p>
+
+<p class="note">* Remember that a script can do anything the daemon user is allowed to do on the server. Never run a script that you don't understand.</p>
+
+</body>
+</html>

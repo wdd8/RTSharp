@@ -39,6 +39,10 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
+      - name: Install CHM compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fp-utils
       - name: Publish ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
         run: pwsh scripts/publish.ps1 ${{ matrix.rid }}${{ matrix.self_contained == true && ' -SelfContained' || '' }}
       - name: Publish daemon ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}

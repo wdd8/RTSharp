@@ -759,6 +759,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
             RemoveTorrentsCommand.NotifyCanExecuteChanged();
             RemoveTorrentsAndDataCommand.NotifyCanExecuteChanged();
             GetDotTorrentsCommand.NotifyCanExecuteChanged();
+            EditTorrentCommand.NotifyCanExecuteChanged();
             AddLabelCommand.NotifyCanExecuteChanged();
         });
 

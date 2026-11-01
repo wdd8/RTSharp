@@ -1,0 +1,31 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Adding a data provider</title>
+   <meta name="keywords" content="Data providers,Manage plugins,Instance name,Data provider name,Color,Plugin configuration">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>Each data provider is a plugin. Plugins are enabled by their configuration files, so you can have multiple instances of the same data provider running for different torrent daemons.</p>
+
+<p>Before you start, make sure that the torrent daemon is declared in the DataProviders section of the daemon configuration (see the "Data provider configuration" chapter) and that the server has been added in the Servers window.</p>
+
+<p>Click on the "Plugins" menu, then click on "Manage...". The Manage Plugins window is divided in two parts: the available plugins on the left and the configured plugins on the right. Select the data provider corresponding to your torrent daemon in the available plugins, for example "RTSharp.DataProvider.Qbittorrent.Plugin", and click on the "&gt;" button. You will then be asked to enter some information about this new instance:</p>
+<div class="list">
+- Instance name: Unique name for this data provider instance, as it will be displayed in the GUI (ie. in the Connection column)<br>
+- Server: One of the servers you have configured before<br>
+- Data provider name (on daemon): The name of the torrent daemon as specified in the daemon configuration, for example "my qbittorrent"<br>
+- Color: Optional color of the instance, the lines of its torrents will be displayed with this background color<br>
+</div>
+
+<p>Click on "Create" and the new instance will appear in the configured plugins. You can edit an instance by double clicking on it, and remove it by selecting it and clicking on the "&lt;" button.</p>
+
+<p>When you close the Manage Plugins window after a change, RT# tells you that the plugin configuration has changed. The changes are only applied after you restart the application. After the restart you should see the data provider in the data providers pane, and its torrents in the listing if there are any.</p>
+
+<p>Congratulations, you have just configured your first data provider!</p>
+
+<p>The other plugins (auto integrify, colored ratio...) are configured exactly the same way, except that they don't need a server or a data provider name.</p>
+
+</body>
+</html>

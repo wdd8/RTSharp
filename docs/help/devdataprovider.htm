@@ -1,0 +1,37 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Writing a data provider</title>
+   <meta name="keywords" content="IDataProvider,RegisterDataProvider,IDataProviderHost,DataProviderCapabilities,GetTorrentChanges,ListingChanges">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>A data provider is a plugin that connects RT# to a torrent daemon. It is written like any other plugin, except that its manifest declares "Type": "DATA_PROVIDER" and that it registers an implementation of IDataProvider during Init:</p>
+
+<pre>public override async Task&lt;IPlugin&gt; Init(IPluginHost&lt;MyDataProviderConfig&gt; Host, Action&lt;(string Status, float Percentage)&gt; Progress)
+{
+    var dp = new DataProvider(this);
+    this.Host = Host.RegisterDataProvider&lt;MyDataProviderConfig&gt;(dp);
+    Disposables.Add(this.Host);
+    return this;
+}</pre>
+
+<p>The configuration class of a data provider derives from PluginConfigContainer&lt;DataProviderInstanceConfig&gt;, so it carries the server id, the data provider name on the daemon and the color of the instance. RegisterDataProvider returns an IDataProviderHost&lt;TConfig&gt;, which is the plugin host with some more functions for data providers, such as AttachedDaemonService (the server this instance is attached to) and GetBuiltInDataProviderGrpcHeaders (the headers that select this daemon on the server).</p>
+
+<h3>1. Capabilities:</h3>
+<p>IDataProvider exposes its capabilities with DataProviderCapabilities, and its sub parts with their own capabilities: Files (IDataProviderFiles), Tracker (IDataProviderTracker), Peer (IDataProviderPeer) and Stats (IDataProviderStats). RT# uses them to enable or disable the menu items, so be honest: if your daemon cannot stop a torrent, set StopTorrent to false and the Stop button will be disabled for your torrents.</p>
+
+<h3>2. The listing:</h3>
+<p>The most important function is GetTorrentChanges, it returns a channel of ListingChanges which contains the torrents that have been added, changed and removed since the last change. RT# applies these changes to the listing. The more precise your changes are, the less RT# has to work, so try to only send the torrents that have really changed.</p>
+
+<h3>3. The details:</h3>
+<p>GetFiles, GetPeers, GetTrackers and GetPieces return the details of a list of torrents, while GetFileChanges streams the file changes of one torrent while the Files tab is visible.</p>
+
+<h3>4. The actions:</h3>
+<p>StartTorrents, PauseTorrents, StopTorrents, AddTorrents, RemoveTorrents, SetLabels... return a TorrentStatuses, which is the list of the torrents with the errors that happened for each of them, if any. Long actions such as ForceRecheck and MoveDownloadDirectory return the id of a script running on the server, RT# follows its progress in the action queue.</p>
+
+<p>The three built-in data providers (rtorrent, qbittorrent and transmission) are good examples, they all go through RTSharp.Daemon with gRPC.</p>
+
+</body>
+</html>

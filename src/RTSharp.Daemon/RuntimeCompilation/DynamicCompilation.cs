@@ -92,7 +92,8 @@ public static class DynamicCompilation
 
 	public static CSharpParseOptions Parse { get; } = new CSharpParseOptions(
 		kind: SourceCodeKind.Regular,
-		languageVersion: LanguageVersion.Latest);
+		languageVersion: LanguageVersion.Latest)
+		.WithFeatures([new KeyValuePair<string, string>("InterceptorsNamespaces", "Dapper.AOT")]);
 	public static CSharpCompilationOptions Compilation { get; } = new CSharpCompilationOptions(
 		OutputKind.DynamicallyLinkedLibrary,
 		optimizationLevel: OptimizationLevel.Debug,
@@ -102,7 +103,9 @@ public static class DynamicCompilation
 	{
 		var source = ParseScript(Script, ScriptEnvironment.BuiltInUsings);
 
-		var generators = new List<ISourceGenerator>();
+		var generators = new List<ISourceGenerator> {
+			new Dapper.CodeAnalysis.DapperInterceptorGenerator().AsSourceGenerator()
+		};
 
 		foreach (var path in source.SourceGeneratorAssemblies) {
 			Debug.WriteLine($"Loading {path}...");
@@ -126,10 +129,13 @@ public static class DynamicCompilation
 		var buffer = encoding.GetBytes(source.Text);
 		var sourceText = SourceText.From(buffer, buffer.Length, encoding, canBeEmbedded: true);
 		var csTree = CSharpSyntaxTree.ParseText(sourceText, Parse, path: $"{asmName}.cs");
-		var encoded = CSharpSyntaxTree.Create((CSharpSyntaxNode)csTree.GetRoot(), null, $"{asmName}.cs", encoding);
-		var compilation = CSharpCompilation.Create(asmName, options: Compilation, references: ScriptReferenceResolver.References, syntaxTrees: [ encoded ]);
-		var driver = CSharpGeneratorDriver.Create(generators);
-		driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var _);
+		var encoded = CSharpSyntaxTree.Create((CSharpSyntaxNode)csTree.GetRoot(), Parse, $"{asmName}.cs", encoding);
+		var global = CSharpSyntaxTree.ParseText("[module: Dapper.DapperAot]", Parse, path: "global.cs", encoding: encoding);
+		var compilation = CSharpCompilation.Create(asmName, options: Compilation, references: ScriptReferenceResolver.References, syntaxTrees: [ encoded, global ]);
+		var driver = CSharpGeneratorDriver.Create(generators, parseOptions: Parse);
+		driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var generatorDiagnostics);
+		if (generatorDiagnostics.Any(x => x.Severity == DiagnosticSeverity.Error || x.Id == "CS8785"))
+			throw new CompilationFailureException($"Source generation failure. {string.Join(Environment.NewLine, generatorDiagnostics)}");
 
     var texts = new List<EmbeddedText>();
     texts.Add(EmbeddedText.FromSource($"{asmName}.cs", sourceText));

@@ -1,0 +1,18 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Mass tracker rewrite</title>
+   <meta name="keywords" content="Mass tracker rewrite,Replace tracker,Tracker URL,Passkey">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>When a tracker changes its address, or when you get a new passkey, you would have to replace the tracker of each torrent one by one. The mass tracker rewrite plugin replaces a tracker address by another one across all your torrents, in one pass.</p>
+
+<p>Select "Mass tracker rewrite" in the Tools menu. The plugin fetches the trackers of all the torrents and displays the list of tracker addresses with the number of torrents using each of them. Select the tracker that you want to replace, enter the new address in the "Replacement..." field and click on "Go".</p>
+
+<h3>rtorrent:</h3>
+<p>rtorrent does not support natively replacing trackers in place, so a workaround is applied that removes, modifies and adds again the torrent. This has some undesired side-effects like losing the historical download and upload data of the torrent, and it requires a full rehash of the torrent after. For this reason, we recommend you to take rtorrent offline, replace the references to the tracker address in the session folder of rtorrent yourself, and start it up again. The plugin displays a warning before using the workaround.</p>
+
+</body>
+</html>

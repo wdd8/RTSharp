@@ -71,6 +71,8 @@ namespace RTSharp.Core.Services.Database.TrackerDb
             await conn.ExecuteAsync("UPDATE TrackerDb SET ImageHash = NULL");
         }
 
+        // https://github.com/DapperLib/DapperAOT/issues/226
+        [DapperAot(false)]
         public async Task AddOrUpdateTrackerInfo(string Domain, TrackerInfo Info)
         {
             await using var conn = await New();

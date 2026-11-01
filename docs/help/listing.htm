@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Browsing the listing</title>
+   <meta name="keywords" content="Torrent listing,Columns,Sorting,Filters,Search as you go,Copy,Select all,Hash glyph,Row color">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<h2>The columns</h2>
+<p>The listing displays one line for each torrent, with the following columns:</p>
+<div class="list">
+<b>Connection</b>: Name of the data provider instance the torrent belongs to<br>
+<b>Hash</b>: A small colored glyph computed from the info hash, the same torrent on two daemons has the same glyph<br>
+<b>Name</b>: Name of the torrent<br>
+<b>State</b>: Downloading, Seeding, Hashing, Paused, Stopped, Complete, Queued, Errored, Allocating...<br>
+<b>Size</b>: Total size of the torrent<br>
+<b>Done</b>: Progress bar of the download, the bar has a different color while the torrent is hashing<br>
+<b>Downloaded / Completed / Uploaded / Remaining</b>: Amount of data<br>
+<b>DL Speed / Hashing Speed / DL + Hashing Speed / UP Speed</b>: Current speeds<br>
+<b>Peers / Seeders</b>: Connected peers and seeders, with the total in brackets<br>
+<b>Labels</b>: Labels of the torrent<br>
+<b>ETA</b>: Estimated time left before the download is finished<br>
+<b>Created On / Added On / Finished On</b>: Dates of the torrent<br>
+<b>Ratio</b>: Share ratio<br>
+<b>Tracker</b>: Icon and name of the main tracker<br>
+<b>Priority</b>: Priority of the torrent<br>
+</div>
+<p>Right click on a column header and select "Columns" to show or hide any column. You can also resize the columns, and change their order by dragging the column header to its new position.</p>
+
+<h2>Sorting</h2>
+<p>Click on a column header to sort the listing on this column. Each click switches from ascending to descending, then back to the original order. You can sort on several columns at the same time, the listing will be sorted on the first column, then on the second one, and so on.</p>
+
+<h2>Filtering</h2>
+<p>Some column headers have a small funnel button, if you click on it you will get a filter for this column:</p>
+<div class="list">
+- Connection: Only display the torrents of the checked data providers<br>
+- Hash: Only display the torrent with this info hash (in hexadecimal)<br>
+- Name: Only display the torrents whose name contains the text<br>
+- State: Only display the torrents in one of the checked states<br>
+- Label: Only display the torrents with one of the checked labels<br>
+- Tracker: Only display the torrents of the checked trackers<br>
+</div>
+<p>Click on "Apply" to activate the filter or on "Clear" to remove it. The filters can be combined, for example you can display only the torrents of one tracker that are seeding on one data provider.</p>
+
+<h2>Search as you go</h2>
+<p>Just click in the listing and start typing the beginning of the name of a torrent, RT# will select the first torrent that matches and scroll to it. The search also looks at the labels and the tracker name, and it is not case dependent. The text that you have typed is displayed in the middle of the listing. Press Backspace to remove the last character or Escape to cancel the search. If you stop typing, the search is automatically cleared after a short delay that you can adjust in the Behavior options.</p>
+
+<h2>Selecting and copying</h2>
+<p>You can select several torrents with the Ctrl and Shift keys, or select all the torrents with Ctrl+A. Click on an empty area of the listing to clear the selection. Press Ctrl+C to copy the selected lines to the clipboard, the hash is copied in hexadecimal and the progress as a percentage, so you can paste them directly in a spreadsheet.</p>
+
+<h2>Colors</h2>
+<p>If a color has been set for a data provider, all its torrents are displayed with this background color, and the text is automatically displayed in black or white depending on the brightness of the color.</p>
+
+<p>The columns, the sorting and the filters are saved when you exit RT# and they will be restored the next time.</p>
+
+</body>
+</html>

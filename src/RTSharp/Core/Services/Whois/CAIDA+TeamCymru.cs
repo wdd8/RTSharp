@@ -2,6 +2,7 @@ using NetTools;
 
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Utils;
 
 using Serilog;
 using System;
@@ -31,7 +32,6 @@ public sealed partial class CaidaTeamCymruWhoisProvider(DomainParser DomainParse
     public string HelpText => "CAIDA (Center for Applied Internet Data Analysis) + Team Cymru maps IPs to ASNs via whois.cymru.com, then resolves ASNs to names using the CAIDA AS->org dataset. Produces more accurate company names than RDAP, however requires a dataset download and queries an API for every lookup.";
 
     private static readonly SemaphoreSlim Lock = new(1, 1);
-    private static readonly TeamCymruConnection CymruConnection = new();
 
     private static MemoryMappedFile? CaidaMmap;
     private static volatile MemoryMappedViewAccessor? CaidaMmapView;
@@ -50,7 +50,7 @@ public sealed partial class CaidaTeamCymruWhoisProvider(DomainParser DomainParse
         if (IpUtils.IsPrivate(In))
             return new WhoisInfo(Range: new IPAddressRange(In), Country: null, Organization: "LAN", Domain: null);
 
-        var cymruTask = CymruConnection.Query(In);
+        var cymruTask = QueryCymru(In, Token);
         var domainTask = ReverseDns(In);
 
         var cymru = await cymruTask;
@@ -64,7 +64,7 @@ public sealed partial class CaidaTeamCymruWhoisProvider(DomainParser DomainParse
             domain = replacement;
 
         return new WhoisInfo(
-            Range: cymru.Prefix,
+            Range: IPAddressRange.Parse(cymru.Prefix.ToString()),
             Country: cymru.Country,
             Organization: caidaOrg ?? cymru.OrgName ?? "Unknown",
             Domain: domain
@@ -82,165 +82,15 @@ public sealed partial class CaidaTeamCymruWhoisProvider(DomainParser DomainParse
         }
     }
 
-    private record TeamCymruData(uint Asn, IPAddressRange Prefix, string? Country, string? OrgName);
-
-    private sealed class TeamCymruConnection
+    private static async Task<TeamCymruWhoisInfo?> QueryCymru(IPAddress Address, CancellationToken Token)
     {
-        private static readonly TimeSpan IdleTimeout = TimeSpan.FromSeconds(10);
-        private static readonly TimeSpan QueryTimeout = TimeSpan.FromSeconds(10);
-
-        private readonly SemaphoreSlim ConnLock = new(1, 1);
-        private readonly Timer IdleTimer;
-
-        private TcpClient? Tcp;
-        private NetworkStream? Stream;
-        private StreamReader? Reader;
-        private StreamWriter? Writer;
-
-        public TeamCymruConnection()
-        {
-            IdleTimer = new Timer(_ => CloseIdle(), null, Timeout.Infinite, Timeout.Infinite);
-        }
-
-        public async Task<TeamCymruData?> Query(IPAddress In)
-        {
-            await ConnLock.WaitAsync(); try {
-                IdleTimer.Change(Timeout.Infinite, Timeout.Infinite);
-
-                for (int x = 0; x < 2; x++) {
-                    using var cts = new CancellationTokenSource(QueryTimeout);
-                    try {
-                        await EnsureOpen(cts.Token);
-
-                        await Writer!.WriteAsync($"{In}\n".AsMemory(), cts.Token);
-                        await Writer.FlushAsync(cts.Token);
-
-                        string? line;
-                        while ((line = await Reader!.ReadLineAsync(cts.Token)) != null) {
-                            var result = ParseLine(line, In);
-                            if (result != null)
-                                return result;
-                        }
-                        // invalid data?
-                        Close();
-                    } catch (OperationCanceledException) {
-                        Close();
-                        Log.Logger.Warning($"Team Cymru WHOIS query timed out for {In}");
-                        return null;
-                    } catch (Exception ex) {
-                        Close();
-                        if (x == 1) {
-                            Log.Logger.Warning(ex, $"Team Cymru WHOIS query failed for {In}");
-                            return null;
-                        }
-                    }
-                }
-                return null;
-            } finally {
-                if (Tcp != null)
-                    IdleTimer.Change(IdleTimeout, Timeout.InfiniteTimeSpan);
-                ConnLock.Release();
-            }
-        }
-
-        private async Task EnsureOpen(CancellationToken Token)
-        {
-            if (Tcp?.Connected == true)
-                return;
-
-            Close();
-
-            var tcp = new TcpClient();
-            await tcp.ConnectAsync("whois.cymru.com", 43, Token);
-            var stream = tcp.GetStream();
-            var reader = new StreamReader(stream, Encoding.ASCII);
-            var writer = new StreamWriter(stream, Encoding.ASCII) {
-                AutoFlush = false
-            };
-
-            await writer.WriteAsync("begin\nverbose\n".AsMemory(), Token);
-            await writer.FlushAsync(Token);
-
-            Tcp = tcp;
-            Stream = stream;
-            Reader = reader;
-            Writer = writer;
-        }
-
-        private void CloseIdle()
-        {
-            if (!ConnLock.Wait(0))
-                return;
-            try {
-                if (Tcp == null)
-                    return;
-                try {
-                    Writer?.Write("end\n");
-                    Writer?.Flush();
-                } catch { }
-                Close();
-            } finally {
-                ConnLock.Release();
-            }
-        }
-
-        private void Close()
-        {
-            try { Writer?.Dispose(); } catch { }
-            try { Reader?.Dispose(); } catch { }
-            try { Stream?.Dispose(); } catch { }
-            try { Tcp?.Dispose(); } catch { }
-            Writer = null;
-            Reader = null;
-            Stream = null;
-            Tcp = null;
-        }
-
-        private static TeamCymruData? ParseLine(string Line, IPAddress In)
-        {
-            Line = Line.Trim();
-            if (Line.Length == 0 || Line[0] == '#')
-                return null;
-
-            var parts = Line.Split('|');
-            if (parts.Length < 7)
-                return null;
-
-            if (!UInt32.TryParse(parts[0].Trim(), out var asn))
-                return null;
-
-            var prefixStr = parts[2].Trim();
-            var country = parts[3].Trim();
-            var orgName = ParseCymruOrgName(parts[6].Trim());
-
-            IPAddressRange prefix;
-            try {
-                prefix = IPAddressRange.Parse(prefixStr);
-            } catch {
-                prefix = new IPAddressRange(In);
-            }
-
-            return new TeamCymruData(
-                Asn: asn,
-                Prefix: prefix,
-                Country: country.Length == 2 ? country : null,
-                OrgName: string.IsNullOrWhiteSpace(orgName) ? null : orgName
-            );
-        }
-
-        private static string? ParseCymruOrgName(string In)
-        {
-            if (string.IsNullOrWhiteSpace(In))
-                return null;
-
-            var dashIdx = In.IndexOf(" - ", StringComparison.Ordinal);
-            var description = dashIdx >= 0 ? In[(dashIdx + 3)..] : In;
-
-            // Strip trailing ", XX" where XX is a 2-letter country code
-            if (description.Length > 4 && description[^4] == ',' && char.IsUpper(description[^2]) && char.IsUpper(description[^1]))
-                description = description[..^4].TrimEnd();
-
-            return string.IsNullOrWhiteSpace(description) ? In : description;
+        try {
+            return await TeamCymruWhoisClient.Shared.Query(Address, Token);
+        } catch (OperationCanceledException) when (Token.IsCancellationRequested) {
+            throw;
+        } catch (Exception ex) {
+            Log.Logger.Warning(ex, "Team Cymru WHOIS query failed for {Address}", Address);
+            return null;
         }
     }
 

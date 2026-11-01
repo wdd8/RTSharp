@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Torrent daemons</title>
+   <meta name="keywords" content="rtorrent,qBittorrent,Transmission,Daemons,Capabilities,Architecture">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>There are three different torrent daemons that RT# can control but one important notion to understand is that RT# never talks to these daemons directly, everything goes through RTSharp.Daemon:</p>
+
+<pre>RT# application  &lt;-- encrypted gRPC (certificates) --&gt;  RTSharp.Daemon  &lt;-- local --&gt;  torrent daemon</pre>
+
+<p>RTSharp.Daemon is a service that runs on the same Linux server as your torrent daemons. It works around various inefficiencies of these daemons (for example by sending only the changes of the listing), it performs the file operations on the torrent data and it supplements some additional features such as the mediainfo, the transfers between servers and the scripts. One RTSharp.Daemon can serve several torrent daemons of different types at the same time.</p>
+
+<p>On the application side, each torrent daemon is handled by a "data provider", which is a plugin. You can have as many data provider instances as you want, for example two rtorrent and one qBittorrent on the same server.</p>
+
+<h3>1. rtorrent:</h3>
+<p>RT# connects to rtorrent with its XML-RPC interface over SCGI. rtorrent does not support delta listing changes, so the daemon has to poll the full listing and compute the changes itself. This requires more resources to sustain fast updates for large lists of torrents.</p>
+
+<h3>2. qBittorrent:</h3>
+<p>RT# connects to the WebUI API of qBittorrent, with an API key or with a username and a password. qBittorrent has its own delta API which is used for the listing. This is the only daemon that accepts V2-only torrents.</p>
+
+<h3>3. Transmission:</h3>
+<p>RT# connects to the RPC interface of Transmission with a username and a password. Transmission also has native delta changes.</p>
+
+<h2>Supported features</h2>
+<p>Not all features are available with all daemons, this is due to the daemon itself and not to RT#. When a feature is not supported, the corresponding menu item is disabled:</p>
+
+<table class="grid">
+<tr><th>Feature</th><th>rtorrent</th><th>qBittorrent</th><th>Transmission</th></tr>
+<tr><td>Start / Recheck / Reannounce</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Pause</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td>Stop</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+<tr><td>Labels</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Move download directory</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Download sequentially</td><td>No</td><td>Yes</td><td>Yes (4.1.0 or later)</td></tr>
+<tr><td>File priority</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Add peer</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td>Ban peer</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+<tr><td>Add a new tracker</td><td>No</td><td>No</td><td>Yes</td></tr>
+<tr><td>Remove tracker</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Replace tracker</td><td>Yes*</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Daemon logs</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>All-time statistics</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>V2-only torrents</td><td>No</td><td>Yes</td><td>No</td></tr>
+</table>
+
+<p class="note">* rtorrent cannot replace a tracker in place, the torrent is removed, modified and added again. See the "Mass tracker rewrite" chapter for more details.</p>
+
+</body>
+</html>

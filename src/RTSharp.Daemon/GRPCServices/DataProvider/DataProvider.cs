@@ -1,4 +1,6 @@
 ﻿using Grpc.Core;
+using RTSharp.Daemon.Services.TorrentPoll;
+using System.Reactive.Disposables;
 
 namespace RTSharp.Daemon.GRPCServices.DataProvider
 {
@@ -15,6 +17,8 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
         public DataProviderType Type { get; } = Type;
         
         public T Resolve<T>() where T : notnull => ServiceProvider.GetRequiredKeyedService<T>(InstanceKey);
+
+        public TorrentPollingService TorrentPolling => Resolve<TorrentPollingService>();
 
         public override string ToString() => $"{Type}:{InstanceKey}";
     }
@@ -34,6 +38,24 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
         }
 
         public RegisteredDataProvider? GetDataProvider(string InstanceKey) => ServiceProvider.GetKeyedService<RegisteredDataProvider>(InstanceKey);
+
+        /// <summary>
+        /// Keep every configured provider polling until the returned lease is disposed.
+        /// </summary>
+        public IDisposable SubscribeToTorrentPolling(TimeSpan Interval)
+        {
+            if (Interval < TimeSpan.FromMilliseconds(10) || Interval.TotalMilliseconds > uint.MaxValue - 1)
+                throw new ArgumentOutOfRangeException(nameof(Interval), "Polling interval must be between 10ms and 49 days.");
+            var subscriptions = new CompositeDisposable();
+            try {
+                foreach (var provider in GetDataProviders())
+                    subscriptions.Add(provider.TorrentPolling.Subscribe(Interval));
+                return subscriptions;
+            } catch {
+                subscriptions.Dispose();
+                throw;
+            }
+        }
 
         public IEnumerable<RegisteredDataProvider> GetDataProviders()
         {

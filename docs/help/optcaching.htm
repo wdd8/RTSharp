@@ -1,0 +1,31 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Caching options</title>
+   <meta name="keywords" content="Options,Caching,AS cache,Torrent file cache,Image cache,Clear cache">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>RT# keeps some information in local caches so it doesn't have to ask the servers or the internet again and again. The caches are saved in the configuration folder.</p>
+
+<h3>Files cache:</h3>
+<div class="list">
+- Enable files caching: Keep the list of files of each torrent in the cache<br>
+- Concurrent peer caching requests: Maximum number of peer origin lookups running at the same time<br>
+- In-memory images: Number of images (flags, tracker icons) kept in memory. Set to 0 to disable in-memory image caching<br>
+</div>
+
+<h3>Cached data:</h3>
+<p>For each cache, RT# displays its current size, and you can empty it with the "Clear" button:</p>
+<div class="list">
+- AS cache: Caches the autonomous system (ISP/network) information for IP addresses seen in the peers list<br>
+- Torrent file cache: Caches the list of files contained in each torrent to avoid re-fetching it from the daemon<br>
+- Torrent properties cache: Caches basic torrent properties such as whether a torrent contains multiple files<br>
+- Image cache: Caches the scaled favicons and other images fetched from remote sources<br>
+</div>
+
+<p>Clearing a cache is completely safe, the information will simply be fetched again the next time it is needed. This can be useful if a tracker has changed its icon or if a network has changed its owner.</p>
+
+</body>
+</html>

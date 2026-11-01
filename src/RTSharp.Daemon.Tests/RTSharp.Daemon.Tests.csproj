@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -10,15 +10,24 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RTSharp.Daemon\RTSharp.Daemon.csproj" />
+    <ProjectReference Include="..\RTSharp.Daemon.Scripts\RTSharp.Daemon.Scripts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
   </ItemGroup>
 
+  <Import Project="../daemon-database.props" />
+
+  <ItemGroup>
+    <PackageReference Update="Dapper" Version="2.1.89" />
+    <PackageReference Update="Dapper.AOT" Version="1.1.0" />
+    <PackageReference Update="Microsoft.Data.Sqlite" Version="10.0.14" />
+    <PackageReference Update="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
+  </ItemGroup>
 </Project>
