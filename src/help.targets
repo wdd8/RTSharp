@@ -32,7 +32,7 @@
             DependsOnTargets="_CollectApiHelpSource"
             Inputs="@(_ApiHelpSource)"
             Outputs="$(HelpRepoDir)docs\help\api\toc.json">
-        <Exec Command="dotnet run &quot;$(HelpRepoDir)scripts\generate-api-help.cs&quot;"
+        <Exec Command="dotnet run &quot;$(HelpRepoDir)scripts/generate-api-help.cs&quot;"
               WorkingDirectory="$(HelpRepoDir)" />
     </Target>
 
@@ -49,7 +49,7 @@
             DependsOnTargets="_CollectHelpSource"
             Inputs="@(_HelpSource)"
             Outputs="$(HelpFile)">
-        <Exec Command="dotnet run &quot;$(HelpRepoDir)scripts\build-help.cs&quot; -- &quot;$([System.IO.Path]::GetFullPath('$(HelpFile)'))&quot; &quot;$(ChmCmd)&quot;"
+        <Exec Command="dotnet run &quot;$(HelpRepoDir)scripts/build-help.cs&quot; -- &quot;$([System.IO.Path]::GetFullPath('$(HelpFile)'))&quot; &quot;$(ChmCmd)&quot;"
               WorkingDirectory="$(HelpRepoDir)"
               ContinueOnError="$(HelpContinueOnError)" />
     </Target>

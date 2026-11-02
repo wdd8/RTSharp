@@ -4,6 +4,7 @@ param(
     [switch]$SelfContained
 )
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $true
 Set-StrictMode -Version Latest
 $pwd = Get-Location
 
