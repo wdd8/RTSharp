@@ -41,6 +41,7 @@
     { "title": "Plugins", "children": [
       { "title": "Introduction", "file": "plugins.htm" },
       { "title": "Auto integrify", "file": "autointegrify.htm" },
+      { "title": "Cross-seed", "file": "crossseed.htm" },
       { "title": "Mass tracker rewrite", "file": "masstracker.htm" },
       { "title": "Colored ratio", "file": "coloredratio.htm" },
       { "title": "Server script playground", "file": "scriptplayground.htm" },
@@ -75,7 +76,7 @@
         "listing.htm", "torrentactions.htm", "labels.htm", "movedir.htm", "duplicate.htm", "tabgeneral.htm", "tabfiles.htm", "tabpeers.htm", "tabtrackers.htm",
         "dppane.htm", "actionqueue.htm", "logs.htm", "statistics.htm",
         "torrentcreator.htm", "optbehavior.htm", "optcaching.htm", "optlook.htm", "optnetwork.htm",
-        "plugins.htm", "autointegrify.htm", "masstracker.htm", "coloredratio.htm", "scriptplayground.htm", "dpsettings.htm",
+        "plugins.htm", "autointegrify.htm", "crossseed.htm", "masstracker.htm", "coloredratio.htm", "scriptplayground.htm", "dpsettings.htm",
         "troubleshooting.htm", "daemontroubleshooting.htm"
       ],
       "seeAlso": [ "rtsharp-daemon(8)" ]

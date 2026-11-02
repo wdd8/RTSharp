@@ -4,7 +4,7 @@ namespace RTSharp.Daemon.Utils;
 
 public static class StreamExtensions
 {
-    public static async Task<long> CopyToAsync(this Stream source, Stream destination, Action<long> progress, CancellationToken cancellationToken = default, int bufferSize = 0xFFFF)
+    public static async Task<long> CopyToAsync(this Stream source, Stream destination, Action<long> progress, CancellationToken cancellationToken = default, int bufferSize = 0x40000)
     {
         var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
         try {

@@ -131,14 +131,14 @@ public partial class PeerAsnViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AverageDownloadSpeedDisplay))]
-    private partial ulong AaverageDownloadSpeed { get; set; }
+    public partial ulong AverageDownloadSpeed { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AverageUploadSpeedDisplay))]
-    private partial ulong AverageUploadSpeed { get; set; }
+    public partial ulong AverageUploadSpeed { get; set; }
 
-    public string AverageDownloadSpeedDisplay => Converters.GetSIDataSize(AverageDownloadSpeed) + "/s";
-    public string AverageUploadSpeedDisplay => Converters.GetSIDataSize(AverageUploadSpeed) + "/s";
+    public string AverageDownloadSpeedDisplay => RTSharp.Shared.Utils.Converters.GetSIDataSize(AverageDownloadSpeed) + "/s";
+    public string AverageUploadSpeedDisplay => RTSharp.Shared.Utils.Converters.GetSIDataSize(AverageUploadSpeed) + "/s";
 
     [ObservableProperty]
     public partial ulong PeerOccurrenceCount { get; set; }

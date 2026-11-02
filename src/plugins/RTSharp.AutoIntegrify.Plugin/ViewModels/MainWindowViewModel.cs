@@ -371,7 +371,7 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
                 HashAlgorithm = new FileBlockHashAlgorithm.Sha1()
             })];
 
-            totalPieces = (int)Math.Ceiling(files.Sum(x => x.File.FileSize) / (float)BencodeUtils.GetPieceLength(info));
+            totalPieces = BencodeUtils.GetPieces(info)!.Length / InfoHash.V1Length;
         } else {
             files = [.. BencodeUtils.AssignHashesToPiecesV2(bTorrent).Select(x => new FileInfo {
                 File = x.File,

@@ -12,6 +12,7 @@ $outDir = if ($SelfContained) { "$Rid-self-contained" } else { $Rid }
 
 dotnet publish ./src/RTSharp -c Release -r $Rid $scFlag -o $outDir
 dotnet publish ./src/plugins/RTSharp.AutoIntegrify.Plugin -c Release -r $Rid --no-self-contained -o "$(Join-Path $pwd $outDir 'plugins/AutoIntegrify')" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
+dotnet publish ./src/plugins/RTSharp.CrossSeed.Plugin -c Release -r $Rid --no-self-contained -o "$(Join-Path $pwd $outDir 'plugins/CrossSeed')" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
 dotnet publish ./src/plugins/RTSharp.MassTrackerRewrite.Plugin -c Release -r $Rid --no-self-contained -o "$(Join-Path $pwd $outDir 'plugins/MassTrackerRewrite')" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
 dotnet publish ./src/plugins/RTSharp.ColoredRatio.Plugin -c Release -r $Rid --no-self-contained -o "$(Join-Path $pwd $outDir 'plugins/ColoredRatio')" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"
 dotnet publish ./src/plugins/RTSharp.ServerScriptPlayground.Plugin -c Release -r $Rid --no-self-contained -o "$(Join-Path $pwd $outDir 'plugins/ServerScriptPlayground')" /p:ScriptsDir="$(Join-Path $pwd 'scripts')/"

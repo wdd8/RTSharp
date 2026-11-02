@@ -129,7 +129,7 @@ public static partial class BencodeUtils
     /// <see cref="FastVerifyFilesOnDisk"/> for v2 only torrents, verifying pieces against the
     /// per file merkle trees instead of the v1 piece hash string
     /// </summary>
-    private static async Task<bool> FastVerifyFilesOnDiskV2(BDictionary BTorrent, string BaseDirectory, ILogger Logger)
+    private static async Task<bool> FastVerifyFilesOnDiskV2(BDictionary BTorrent, Func<BDictionary, TorrentFile[]> GetDiskFiles, ILogger Logger)
     {
         FilePieceHashesV2[] fileHashes;
         int pieceLen;
@@ -141,7 +141,7 @@ public static partial class BencodeUtils
 
             fileHashes = AssignHashesToPiecesV2(BTorrent);
             // Same "file tree" walk order as AssignHashesToPiecesV2, so files[x] pairs with fileHashes[x]
-            files = GetFilesOnDisk(info, BaseDirectory);
+            files = GetDiskFiles(info);
         } catch (Exception ex) {
             Logger.LogWarning(ex, "Fast verify unavailable: could not read v2 torrent metadata");
             return false;

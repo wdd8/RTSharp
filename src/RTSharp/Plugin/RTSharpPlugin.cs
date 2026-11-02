@@ -103,28 +103,30 @@ public class RTSharpPlugin : IPluginHost
 
     public IDisposable RegisterActionQueue(IActionQueueRenderer In) => Core.ActionQueue.RegisterActionQueue(this, In);
 
-    public IDisposable RegisterRootMenuItem(MenuItem In)
+    private static System.Collections.IList MenuChildren(System.Collections.IList Items, string[]? Parent)
+    {
+        foreach (var name in Parent ?? []) {
+            var item = Items.OfType<MenuItem>().FirstOrDefault(x => x.Name == name) ?? throw new InvalidOperationException($"Menu item {name} was not found");
+            Items = item.ItemsSource as System.Collections.IList ?? item.Items;
+        }
+
+        return Items;
+    }
+
+    public IDisposable RegisterRootMenuItem(MenuItem In, string[]? Parent = null)
     {
         Dispatcher.UIThread.VerifyAccess();
 
-        App.MainWindowViewModel.MenuItems.Add(In);
+        var items = MenuChildren(App.MainWindowViewModel.MenuItems, Parent);
+        items.Add(In);
         return Disposable.Create(() => {
-            App.MainWindowViewModel.MenuItems.Remove(In);
+            items.Remove(In);
         });
     }
 
-    public IDisposable RegisterToolsMenuItem(MenuItem In)
-    {
-        Dispatcher.UIThread.VerifyAccess();
+    public IDisposable RegisterToolsMenuItem(MenuItem In) => RegisterRootMenuItem(In, ["ToolsMenu"]);
 
-        var tools = App.MainWindowViewModel.MenuItems.First(x => x.Name == "ToolsMenu");
-        tools.Items.Add(In);
-        return Disposable.Create(() => {
-            tools.Items.Remove(In);
-        });
-    }
-
-    public IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In)
+    public IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In, string[]? Parent = null)
     {
         Dispatcher.UIThread.VerifyAccess();
 
@@ -132,7 +134,7 @@ public class RTSharpPlugin : IPluginHost
         {
             var control = In();
             Debug.Assert(control.GetVisualParent() == null);
-            items.Add(control);
+            MenuChildren(items, Parent).Add(control);
             return control;
         }
         RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Add(fx);
@@ -141,14 +143,17 @@ public class RTSharpPlugin : IPluginHost
         });
     }
 
-    public IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove)
+    public IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove, string[]? Parent = null)
     {
         Dispatcher.UIThread.VerifyAccess();
 
-        RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Add(Add);
+        MenuItem add(System.Collections.IList items) => Add(MenuChildren(items, Parent));
+        void remove(System.Collections.IList items) => Remove(MenuChildren(items, Parent));
+
+        RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Add(add);
         return Disposable.Create(() => {
-            RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Remove(Add);
-            RTSharp.Views.TorrentListing.TorrentListingView.MenuItemRemoves.Remove(Remove);
+            RTSharp.Views.TorrentListing.TorrentListingView.MenuItemInserts.Remove(add);
+            RTSharp.Views.TorrentListing.TorrentListingView.MenuItemRemoves.Remove(remove);
         });
     }
 
@@ -184,6 +189,16 @@ public class RTSharpPlugin : IPluginHost
         AssemblyLoadContext = null!;
         Plugin.Plugins.LoadedPlugins.Remove(this);
     }
+
+    public async Task<(IDataProvider Provider, string RemotePath)?> SelectDuplicationTarget(Window Owner, Torrent Source, Func<IDataProvider, bool> Filter)
+    {
+        var target = await Core.TorrentDuplication.SelectTarget(Owner, Source, Filter);
+
+        return target == null ? null : (target.Provider, target.RemoteTargetPath);
+    }
+
+    public Task<byte[]> DuplicateTorrentAs(IReadOnlyList<Torrent> Sources, IDataProvider Target, string RemotePath, byte[] TargetTorrent, LinkOptions Links) =>
+        Core.TorrentDuplication.DuplicateAs(Sources, new Core.TorrentDuplication.DuplicationTarget(Target, RemotePath), TargetTorrent, Links);
 
     public IServiceScope CreateScope() => Core.ServiceProvider.CreateScope();
 

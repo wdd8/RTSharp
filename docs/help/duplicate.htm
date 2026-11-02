@@ -13,8 +13,8 @@
 
 <p>The duplication is performed by a script that runs on the source server:</p>
 <div class="list">
-1. The script waits until the source torrent is completely downloaded<br>
-2. If the target is on the same server, the files are linked into the target directory, so the data does not take any extra space. Otherwise the files are transmitted directly from the source server to the target server<br>
+1. The script waits until the source torrent is completely downloaded. A torrent that has files set to not download fails here, as does a v2-only torrent when the target data provider can't add those<br>
+2. If the target is on the same server, the files are linked into the target directory, so the data does not take any extra space. If the target directory is on another file system, the files are copied there instead, which takes as much space as the data. If the target is on another server, the files are transmitted directly from the source server to the target server<br>
 3. The torrent is added to the target data provider<br>
 4. The torrent is started on the target data provider<br>
 </div>

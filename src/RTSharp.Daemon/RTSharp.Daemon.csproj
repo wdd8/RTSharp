@@ -32,6 +32,7 @@
   </ItemGroup>
 
   <Import Project="../daemon-database.props" />
+  <Import Project="../RTSharp.Shared.Utils/Native/rls/rls.targets" />
 
   <ItemGroup>
     <Reference Include="Dapper.AOT.Analyzers">

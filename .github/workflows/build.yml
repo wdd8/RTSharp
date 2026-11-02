@@ -43,6 +43,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y fp-utils
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: src/RTSharp.Shared.Utils/Native/rls/go.mod
+          cache-dependency-path: src/RTSharp.Shared.Utils/Native/rls/go.sum
       - name: Publish ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
         run: pwsh scripts/publish.ps1 ${{ matrix.rid }}${{ matrix.self_contained == true && ' -SelfContained' || '' }}
       - name: Publish daemon ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
@@ -228,12 +233,12 @@ jobs:
             exit 0
           fi
           for RID in linux-x64 linux-arm64 win-x64 win-arm64; do
-            case "$RID" in linux-*) chmod +x "${RID}/RTSharp" "${RID}-self-contained/RTSharp" ;; esac
+            case "$RID" in linux-*) chmod +x "${RID}/RTSharp" "${RID}-self-contained/RTSharp" "${RID}/rls" "${RID}-self-contained/rls" ;; esac
             (cd "$RID" && zip -r "../RTSharp-${RID}-v${VERSION}.zip" .)
             (cd "${RID}-self-contained" && zip -r "../RTSharp-${RID}-self-contained-v${VERSION}.zip" .)
           done
           for RID in linux-x64 linux-arm64; do
-            chmod +x "${RID}-daemon/RTSharp.Daemon" "${RID}-daemon-self-contained/RTSharp.Daemon"
+            chmod +x "${RID}-daemon/RTSharp.Daemon" "${RID}-daemon-self-contained/RTSharp.Daemon" "${RID}-daemon/rls" "${RID}-daemon-self-contained/rls"
             (cd "${RID}-daemon" && zip -r "../RTSharp-Daemon-${RID}-v${VERSION}.zip" .)
             (cd "${RID}-daemon-self-contained" && zip -r "../RTSharp-Daemon-${RID}-self-contained-v${VERSION}.zip" .)
             for FORMAT in deb rpm pkg.tar.zst; do

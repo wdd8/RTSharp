@@ -1,0 +1,46 @@
+<Project>
+
+  <Target Name="ResolveRlsHelper">
+    <PropertyGroup>
+      <_RlsRid>$(RuntimeIdentifier)</_RlsRid>
+      <_RlsRid Condition="'$(_RlsRid)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</_RlsRid>
+
+      <_RlsGoos Condition="$(_RlsRid.StartsWith('linux-'))">linux</_RlsGoos>
+      <_RlsGoos Condition="$(_RlsRid.StartsWith('win-'))">windows</_RlsGoos>
+      <_RlsGoos Condition="$(_RlsRid.StartsWith('osx-'))">darwin</_RlsGoos>
+      <_RlsGoarch Condition="$(_RlsRid.EndsWith('-x64'))">amd64</_RlsGoarch>
+      <_RlsGoarch Condition="$(_RlsRid.EndsWith('-arm64'))">arm64</_RlsGoarch>
+
+      <_RlsFileName Condition="'$(_RlsGoos)' == 'linux' Or '$(_RlsGoos)' == 'darwin'">rls</_RlsFileName>
+      <_RlsFileName Condition="'$(_RlsGoos)' == 'windows'">rls.exe</_RlsFileName>
+
+      <_RlsOutput Condition="'$(_RlsFileName)' != '' And '$(_RlsGoarch)' != ''">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', 'rls', '$(_RlsRid)', '$(_RlsFileName)'))</_RlsOutput>
+
+      <_RlsContinueOnError>false</_RlsContinueOnError>
+      <_RlsContinueOnError Condition="'$(RuntimeIdentifier)' == ''">WarnAndContinue</_RlsContinueOnError>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="BuildRlsHelper"
+          DependsOnTargets="ResolveRlsHelper"
+          BeforeTargets="AssignTargetPaths"
+          Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="$(MSBuildThisFileDirectory)*.go;$(MSBuildThisFileDirectory)go.mod;$(MSBuildThisFileDirectory)go.sum"
+          Outputs="$(_RlsOutput)">
+    <Exec Condition="'$(_RlsOutput)' != ''"
+          WorkingDirectory="$(MSBuildThisFileDirectory)"
+          Command="go build -trimpath -buildvcs=false -ldflags=-s -o &quot;$(_RlsOutput)&quot; ."
+          EnvironmentVariables="CGO_ENABLED=0;GOOS=$(_RlsGoos);GOARCH=$(_RlsGoarch)"
+          ContinueOnError="$(_RlsContinueOnError)" />
+  </Target>
+
+  <Target Name="AddRlsHelper"
+          AfterTargets="BuildRlsHelper"
+          BeforeTargets="AssignTargetPaths"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(_RlsOutput)' != '' And Exists('$(_RlsOutput)')">
+    <ItemGroup>
+      <None Include="$(_RlsOutput)" Link="$(_RlsFileName)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+</Project>

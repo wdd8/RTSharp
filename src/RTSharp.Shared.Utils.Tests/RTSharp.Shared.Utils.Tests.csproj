@@ -19,4 +19,6 @@
       </PackageReference>
       <PackageReference Include="xunit.v3" Version="4.0.2" />
     </ItemGroup>
+
+    <Import Project="../RTSharp.Shared.Utils/Native/rls/rls.targets" />
 </Project>

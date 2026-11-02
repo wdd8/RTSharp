@@ -27,7 +27,7 @@
 - Search paths: Additional folders of the server where the files will be searched. By default, only the current remote path of the torrent is searched<br>
 - Random pieces to check: Number of pieces verified for each file found. The more pieces you verify, the more you are sure, but the longer it takes<br>
 - Search recursion limit: Number of sub folder levels searched in each path<br>
-- Links: "Reflink with hardlink fallback", "Reflink" or "Hardlink". A reflink is a copy that shares the data on the disk until one of the files is modified, it is only supported by some file systems (Btrfs, XFS...). A hardlink is a second name for the same file<br>
+- Links: "Reflink with hardlink fallback", "Reflink" or "Hardlink". A reflink is a copy that shares the data on the disk until one of the files is modified, it is only supported by some file systems (Btrfs, XFS...). A hardlink is a second name for the same file. A file on another file system is copied instead, which takes as much space as the file<br>
 </div>
 
 <p class="note">* qBittorrent has a bug that can make some torrents impossible to recheck. If the plugin detects it, it tells you to remove the torrent, add it again and force a recheck yourself.</p>

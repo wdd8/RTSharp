@@ -1,8 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using RTSharp.Models;
-
 using Serilog;
 
 using System;
@@ -14,17 +12,17 @@ namespace RTSharp.ViewModels
     {
         public DuplicationTargetSelectorViewModel Selector { get; } = new();
 
-        public Models.Torrent SourceTorrent { get; }
+        public Shared.Abstractions.Torrent SourceTorrent { get; }
 
         public Action<bool> CloseDialog { get; set; } = null!; // view set
 
-        public TorrentDuplicationTargetSelectorWindowViewModel(Models.Torrent SourceTorrent)
+        public TorrentDuplicationTargetSelectorWindowViewModel(Shared.Abstractions.Torrent SourceTorrent)
         {
             this.SourceTorrent = SourceTorrent;
 
             var orig = Selector.ResolveTarget;
             Selector.ResolveTarget = async provider => {
-                if (SourceTorrent.DataOwner.Config.Plugin.ServerId != provider.Host.Config.Plugin.ServerId)
+                if (SourceTorrent.DataOwner.Host.Config.Plugin.ServerId != provider.Host.Config.Plugin.ServerId)
                     return await orig(provider);
 
                 return (SourceTorrent.RemotePath, false);
@@ -47,16 +45,7 @@ namespace RTSharp.ViewModels
                 ConfirmClickCommand.NotifyCanExecuteChanged();
         }
 
-        public bool CanExecuteConfirmClick()
-        {
-            if (Selector.SelectedProvider == null)
-                return false;
-
-            if (SourceTorrent.DataOwner.Host.InstanceId == Selector.SelectedProvider.Host.Config.Plugin.InstanceId)
-                return false;
-
-            return true;
-        }
+        public bool CanExecuteConfirmClick() => Selector.SelectedProvider != null;
 
         [RelayCommand(CanExecute = nameof(CanExecuteConfirmClick))]
         public void ConfirmClick()

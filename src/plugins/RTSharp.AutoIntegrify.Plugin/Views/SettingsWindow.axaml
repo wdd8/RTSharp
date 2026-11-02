@@ -5,6 +5,7 @@
 		xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
 		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
 		xmlns:vm="clr-namespace:RTSharp.AutoIntegrify.Plugin.ViewModels"
+		xmlns:abstractions="clr-namespace:RTSharp.Shared.Abstractions;assembly=RTSharp.Shared.Abstractions"
 		xmlns:sys="using:System"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="RTSharp.AutoIntegrify.Plugin.SettingsWindow"
@@ -66,11 +67,11 @@
 		  <GroupBox Header="Links">
 			  <StackPanel Orientation="Vertical">
 			    <RadioButton GroupName="LinkGroup" Content="Reflink with hardlink fallback"
-					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:LinkOptions.ReflinkWithHardlinkFallback}}" />
+					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.ReflinkWithHardlinkFallback}}" />
 			    <RadioButton GroupName="LinkGroup" Content="Reflink" 
-					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:LinkOptions.Reflink}}" />
+					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Reflink}}" />
 			    <RadioButton GroupName="LinkGroup" Content="Hardlink"
-					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:LinkOptions.Hardlink}}" />
+					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Hardlink}}" />
               </StackPanel>
 		  </GroupBox>
 		</StackPanel>

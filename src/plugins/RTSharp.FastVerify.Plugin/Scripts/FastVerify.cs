@@ -38,7 +38,7 @@ public class Main(ILogger<Main> Logger) : IScript
             var bTorrent = new BencodeParser().Parse<BDictionary>(mem);
 
             var logger = new CapturingLogger();
-            var verified = await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, input.BaseDirectory, logger);
+            var verified = await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, input.BaseDirectory), logger);
 
             Session.Send(new FastVerifyResult(verified, logger.LastWarning));
             Session.Progress.State = TASK_STATE.DONE;

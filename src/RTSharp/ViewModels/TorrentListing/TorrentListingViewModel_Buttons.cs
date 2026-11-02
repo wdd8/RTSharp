@@ -456,21 +456,13 @@ public partial class TorrentListingViewModel
         In = [ ..In ]; // cp
 
         foreach (var torrent in In) {
-            var wnd = new TorrentDuplicationTargetSelectorWindow {
-                ViewModel = new TorrentDuplicationTargetSelectorWindowViewModel(torrent)
-            };
+            var source = torrent.ToPluginModel();
 
-            var result = await wnd.ShowDialog<bool>(App.MainWindow);
-            if (!result)
+            var target = await Core.TorrentDuplication.SelectTarget(App.MainWindow, source, x => x.Host.Config.Plugin.InstanceId != source.DataOwner.Host.Config.Plugin.InstanceId);
+            if (target == null)
                 return;
 
-            var selector = wnd.ViewModel.Selector;
-
-            if (selector.SelectedProvider == null || selector.RemoteTargetPath == null) {
-                return;
-            }
-
-            Core.TorrentDuplication.QueueSingle(torrent.ToPluginModel(), [new Core.TorrentDuplication.DuplicationTarget(selector.SelectedProvider, selector.RemoteTargetPath)]);
+            Core.TorrentDuplication.QueueSingle(source, [ target ]);
         }
     }
 }

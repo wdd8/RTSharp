@@ -15,6 +15,7 @@
         bool AddTorrent,
         bool? ForceStartTorrentOnAdd,
         bool FastResumeOnAdd,
+        bool AddV2OnlyTorrent,
         bool MoveDownloadDirectory,
         bool RemoveTorrent,
         bool RemoveTorrentAndData,

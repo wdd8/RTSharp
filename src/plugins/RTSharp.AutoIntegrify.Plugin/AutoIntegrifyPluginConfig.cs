@@ -1,4 +1,3 @@
-using RTSharp.AutoIntegrify.Plugin.ViewModels;
 using RTSharp.Shared.Abstractions;
 
 namespace RTSharp.AutoIntegrify.Plugin;

@@ -382,4 +382,5 @@
 
   <Import Project="..\daemon-script.targets" />
   <Import Project="..\help.targets" />
+  <Import Project="..\RTSharp.Shared.Utils\Native\rls\rls.targets" />
 </Project>

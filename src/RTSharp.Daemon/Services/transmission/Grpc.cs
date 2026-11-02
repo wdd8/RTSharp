@@ -331,10 +331,14 @@ namespace RTSharp.Daemon.Services.transmission
             if (String.IsNullOrEmpty(BaseDirectory) || String.IsNullOrEmpty(Client.ConfigDir))
                 return false;
 
-            if (!await BencodeUtils.FastVerifyFilesOnDisk(BTorrent, BaseDirectory, Logger))
+            var info = BTorrent.Get<BencodeNET.Objects.BDictionary>(BencodeNET.Torrents.TorrentFields.Info);
+
+            // transmission handles BEP 47 padding files as regular files, which might not be on disk and would need mtimes of their own
+            if (BencodeUtils.GetPaddingSize(info) != 0)
                 return false;
 
-            var info = BTorrent.Get<BencodeNET.Objects.BDictionary>(BencodeNET.Torrents.TorrentFields.Info);
+            if (!await BencodeUtils.FastVerifyFilesOnDisk(BTorrent, x => BencodeUtils.GetFilesOnDisk(x, BaseDirectory), Logger))
+                return false;
 
             var mtimes = new BencodeNET.Objects.BList();
             foreach (var file in BencodeUtils.GetFilesOnDisk(info, BaseDirectory)) {
@@ -567,7 +571,7 @@ namespace RTSharp.Daemon.Services.transmission
         {
             var client = await Client.Init();
 
-            var torrent = await client.TorrentGetAsync([ ToNativeHashString(Hash.Span) ], TorrentFields.TORRENT_FILE);
+            var torrent = await client.TorrentGetAsync([ ToNativeHashString(Hash.Span) ], [ TorrentFields.HASH_STRING, TorrentFields.TORRENT_FILE ]);
 
             if (torrent?.Torrents?.Any() != true) {
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
@@ -578,7 +582,7 @@ namespace RTSharp.Daemon.Services.transmission
             if (file == null || !System.IO.File.Exists(file))
                 throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, $".torrent file doesn't exist"));
 
-            return System.IO.File.OpenRead(torrent.Torrents[0].TorrentFile!);
+            return System.IO.File.OpenRead(file);
         }
 
         public async Task GetDotTorrents(Torrents Req, IServerStreamWriter<DotTorrentsData> Res, CancellationToken CancellationToken)

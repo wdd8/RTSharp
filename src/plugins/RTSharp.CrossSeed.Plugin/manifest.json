@@ -1,0 +1,4 @@
+{
+    "Module": "RTSharp.CrossSeed.Plugin.dll",
+    "Description": "Finds torrents with same content on other trackers"
+}

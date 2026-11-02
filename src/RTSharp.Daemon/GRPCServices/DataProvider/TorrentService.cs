@@ -61,7 +61,9 @@ namespace RTSharp.Daemon.GRPCServices.DataProvider
         public override async Task<Empty> TransmitTorrentData(TransmitTorrentDataInput Req, ServerCallContext Ctx)
         {
             var sourceDp = RegisteredDataProviders.GetDataProvider(Ctx);
-            await TorrentOps.TransmitTorrent(sourceDp, Req.Hash.ToByteArray(), new DataProviderEndpoint(Req.TargetUri, Req.TargetProviderKey), Req.SourceUri, Req.TargetPath, Ctx.CancellationToken);
+            var hash = Req.Hash.ToByteArray();
+            var files = await TorrentOps.GetFilePlacements(sourceDp, [ hash ], null, Ctx.CancellationToken);
+            await TorrentOps.TransmitTorrent(hash, new DataProviderEndpoint(Req.TargetUri, Req.TargetProviderKey), Req.SourceUri, Req.TargetPath, files, Ctx.CancellationToken);
             return new Empty();
         }
 

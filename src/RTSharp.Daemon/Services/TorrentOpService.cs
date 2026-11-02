@@ -1,3 +1,5 @@
+using BencodeNET.Parsing;
+
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
@@ -11,6 +13,8 @@ using RTSharp.Shared.Utils;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
+using ISpeedMovingAverage = RTSharp.Shared.Abstractions.ISpeedMovingAverage;
+using ISpeedMovingAverageService = RTSharp.Shared.Abstractions.ISpeedMovingAverageService;
 using ScriptProgressState = RTSharp.Shared.Abstractions.ScriptProgressState;
 using TASK_STATE = RTSharp.Shared.Abstractions.TASK_STATE;
 
@@ -18,17 +22,27 @@ namespace RTSharp.Daemon.Services;
 
 public class TorrentOpService
 {
+    /// <summary>
+    /// Where a file goes when duplicating a torrent
+    /// </summary>
+    /// <param name="SourcePath">Absolute path on the source server</param>
+    /// <param name="RelativeTarget">Path relative to the target directory</param>
+    /// <param name="Size">File size</param>
+    public record FilePlacement(string SourcePath, string RelativeTarget, ulong Size);
+
     private readonly SessionsService Sessions;
     private readonly ChannelsService Channels;
     private readonly FileTransferService FileTransfer;
     private readonly ILogger<TorrentOpService> Logger;
+    private readonly ISpeedMovingAverageService Smas;
 
-    public TorrentOpService(SessionsService Sessions, ChannelsService Channels, FileTransferService FileTransfer, ILogger<TorrentOpService> Logger, IServiceProvider Provider)
+    public TorrentOpService(SessionsService Sessions, ChannelsService Channels, FileTransferService FileTransfer, ILogger<TorrentOpService> Logger, ISpeedMovingAverageService Smas, IServiceProvider Provider)
     {
         this.Sessions = Sessions;
         this.Channels = Channels;
         this.FileTransfer = FileTransfer;
         this.Logger = Logger;
+        this.Smas = Smas;
         this.Remote = ActivatorUtilities.CreateInstance<RemoteOps>(Provider, this);
     }
     public async Task<Torrent> GetTorrent(RegisteredDataProvider RegisteredDataProvider, byte[] Hash)
@@ -42,6 +56,10 @@ public class TorrentOpService
         };
     }
 
+    /// <summary>
+    /// Waits until a torrent is completed
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Completed, but with files that weren't wanted, so not all of them are there</exception>
     public async Task WaitForCompletion(RegisteredDataProvider RegisteredDataProvider, byte[] Hash, CancellationToken CancellationToken)
     {
         Logger.LogDebug($"{RegisteredDataProvider}: Waiting for torrent {Convert.ToHexString(Hash)} to complete");
@@ -60,8 +78,14 @@ public class TorrentOpService
                 continue;
             }
 
-            if (torrent.IsCompleted)
+            if (torrent.IsCompleted) {
+                // WantedSize can't tell, as qbittorrent leaves padding out of it but not out of Size
+                var files = await GetTorrentsFiles(RegisteredDataProvider, new Torrents { Hashes = { Hash.ToByteString() } });
+                if (files.Reply.Any(x => x.Files.Any(f => f.Priority == TorrentsFilesReply.Types.FilePriority.DontDownload)))
+                    throw new InvalidOperationException($"Torrent {torrent.Name} isn't fully downloaded, as not all of its files are wanted");
+
                 return;
+            }
 
             if (torrent.CompletedSize != lastCompletedSize) {
                 lastCompletedSize = torrent.CompletedSize;
@@ -202,47 +226,102 @@ public class TorrentOpService
         return Sessions.RunSession("Receive torrent data", cts, async session => {
             session.Progress.State = TASK_STATE.RUNNING;
 
-            foreach (var f in Req.Files) {
-                if (Path.IsPathRooted(f.Path))
-                    throw new InvalidOperationException($"Torrent file path is rooted: {f.Path}");
+            try {
+                foreach (var f in Req.Files) {
+                    if (Path.IsPathRooted(f.StorePath))
+                        throw new InvalidOperationException($"Torrent file path is rooted: {f.StorePath}");
+                }
+
+                var transfer = new ScriptProgressState(session) { Text = "Receiving files...", Progress = 0f, State = TASK_STATE.RUNNING };
+                session.Progress.Chain = [transfer];
+
+                var filesClient = Channels.GetFilesClient(Req.SourceUri);
+
+                var totalBytes = Req.Files.Sum(f => (long)f.Size);
+                long completedBytes = 0;
+                long currentFileTotalBytes = 0;
+                string? currentPath = null;
+
+                await FileTransfer.ReceiveFilesFromRemote(filesClient, Req.Files.Select(f => (
+                    StorePath: Path.Combine(Req.TargetPath, f.StorePath),
+                    RemoteSourcePath: f.SourcePath
+                )), progress => {
+                    if (progress.Path == "") {
+                        transfer.Progress = 100f;
+                        return;
+                    }
+
+                    if (progress.Path != currentPath) {
+                        completedBytes += currentFileTotalBytes;
+                        currentFileTotalBytes = progress.TotalBytes;
+                        currentPath = progress.Path;
+                    }
+
+                    var doneBytes = completedBytes + progress.BytesReceived;
+                    transfer.Progress = totalBytes > 0 ? doneBytes / (float)totalBytes * 100f : 0f;
+                    transfer.Text = progress.BytesPerSecond > 0 ? $"{Converters.GetSIDataSize((ulong)progress.BytesPerSecond)}/s" : "Receiving files...";
+                });
+                transfer.State = TASK_STATE.DONE;
+                session.Progress.State = TASK_STATE.DONE;
+            } catch (Exception ex) when (ex is not OperationCanceledException) {
+                // Set here, as a status stream can end before the session's continuation marks it as failed
+                session.Progress.Text = ex.Message;
+                session.Progress.State = TASK_STATE.FAILED;
+                throw;
             }
-
-            var transfer = new ScriptProgressState(session) { Text = "Receiving files...", Progress = 0f, State = TASK_STATE.RUNNING };
-            session.Progress.Chain = [transfer];
-
-            var prefix = Req.SourceMultiFile ? Req.SourceName : "";
-            var filesClient = Channels.GetFilesClient(Req.SourceUri);
-
-            var totalBytes = Req.Files.Sum(f => (long)f.Size);
-            long completedBytes = 0;
-            long currentFileTotalBytes = 0;
-            string? currentPath = null;
-
-            await FileTransfer.ReceiveFilesFromRemote(filesClient, Req.Files.Select(f => (
-                StorePath: Path.Combine(Req.TargetPath, prefix, f.Path),
-                RemoteSourcePath: Path.Combine(Req.SourceRemotePath, prefix, f.Path)
-            )), progress => {
-                if (progress.Path == "") {
-                    transfer.Progress = 100f;
-                    return;
-                }
-
-                if (progress.Path != currentPath) {
-                    completedBytes += currentFileTotalBytes;
-                    currentFileTotalBytes = progress.TotalBytes;
-                    currentPath = progress.Path;
-                }
-
-                var doneBytes = completedBytes + progress.BytesReceived;
-                transfer.Progress = totalBytes > 0 ? doneBytes / (float)totalBytes * 100f : 0f;
-                transfer.Text = progress.BytesPerSecond > 0 ? $"{Converters.GetSIDataSize((ulong)progress.BytesPerSecond)}/s" : "Receiving files...";
-            });
-            transfer.State = TASK_STATE.DONE;
-            session.Progress.State = TASK_STATE.DONE;
         });
     }
 
-    public async Task TransmitTorrent(RegisteredDataProvider SourceDp, byte[] Hash, DataProviderEndpoint Target, string SourceUri, string TargetPath, CancellationToken CancellationToken)
+    /// <summary>
+    /// Resolves where the files of torrents go when duplicating them
+    /// </summary>
+    /// <param name="SourceDp">Data provider of the torrents</param>
+    /// <param name="Hashes">Info hashes of the torrents. Only <paramref name="TargetTorrent"/> can bring the files of several together</param>
+    /// <param name="TargetTorrent">.torrent of the same content to lay the files out for, or <c>null</c> to keep the layout of the torrent</param>
+    /// <param name="CancellationToken"></param>
+    public async Task<FilePlacement[]> GetFilePlacements(RegisteredDataProvider SourceDp, byte[][] Hashes, byte[]? TargetTorrent, CancellationToken CancellationToken)
+    {
+        if (TargetTorrent == null) {
+            var hash = Hashes.Single();
+            var source = await GetTorrent(SourceDp, hash);
+            var filesReply = await GetTorrentsFiles(SourceDp, new Torrents { Hashes = { hash.ToByteString() } });
+            var files = filesReply.Reply.FirstOrDefault(x => x.InfoHash.ToByteArray().SequenceEqual(hash)) ?? throw new InvalidOperationException($"No file listing returned for hash {Convert.ToHexString(hash)}");
+            var prefix = files.MultiFile ? source.Name : "";
+
+            return [ .. files.Files.Select(f => new FilePlacement(Path.Combine(source.RemotePath, prefix, f.Path), Path.Combine(prefix, f.Path), f.Size)) ];
+        }
+
+        var parser = new BencodeParser();
+
+        var onDisk = new List<(BencodeNET.Objects.BDictionary Info, string BaseDirectory)>(Hashes.Length);
+
+        foreach (var hash in Hashes) {
+            var source = await GetTorrent(SourceDp, hash);
+
+            using var dotTorrent = new MemoryStream();
+            using (var stream = await GetDotTorrentStream(SourceDp, hash, CancellationToken)) {
+                await stream.CopyToAsync(dotTorrent, CancellationToken);
+                dotTorrent.Position = 0;
+            }
+
+            var sourceInfo = parser.Parse<BencodeNET.Objects.BDictionary>(dotTorrent).Get<BencodeNET.Objects.BDictionary>("info") ?? throw new InvalidDataException("Torrent has no \"info\" dictionary");
+
+            onDisk.Add((sourceInfo, source.RemotePath));
+        }
+
+        using var targetTorrent = new MemoryStream(TargetTorrent);
+        var info = parser.Parse<BencodeNET.Objects.BDictionary>(targetTorrent).Get<BencodeNET.Objects.BDictionary>("info")
+            ?? throw new InvalidDataException("Torrent has no \"info\" dictionary");
+
+        if (!BencodeUtils.HasSafePaths(info))
+            throw new InvalidOperationException("Unsafe file paths");
+
+        var match = BencodeUtils.MatchFileTrees(info, onDisk) ?? throw new InvalidOperationException("The files of the torrents can't be paired");
+
+        return [ .. BencodeUtils.GetFilesOnDisk(info, "").Select((file, x) => new FilePlacement(match.DiskFiles[x].Path, file.Path, (ulong)file.FileSize)) ];
+    }
+
+    public async Task TransmitTorrent(byte[] Hash, DataProviderEndpoint Target, string SourceUri, string TargetPath, IReadOnlyList<FilePlacement> Files, CancellationToken CancellationToken)
     {
         // TODO: SourceUri should ideally be known by the server as it has the data provider registered in it.. but if we are listening on 0.0.0.0, what's our URI?
         ArgumentException.ThrowIfNullOrEmpty(Target.ProviderKey, nameof(Target.ProviderKey));
@@ -250,15 +329,7 @@ public class TorrentOpService
         ArgumentException.ThrowIfNullOrEmpty(SourceUri, nameof(SourceUri));
         ArgumentException.ThrowIfNullOrEmpty(TargetPath, nameof(TargetPath));
 
-        Logger.LogDebug($"{SourceDp}: Transmitting {Convert.ToHexStringLower(Hash)} to {Target.Uri} ({Target.ProviderKey}) -> remote {TargetPath}");
-
-        var sourceTask = GetTorrent(SourceDp, Hash);
-        var filesTask = GetTorrentsFiles(SourceDp, new Torrents { Hashes = { Hash.ToByteString() } });
-        await Task.WhenAll(sourceTask, filesTask);
-
-        var source = sourceTask.Result;
-        var filesReply = filesTask.Result;
-        var files = filesReply.Reply.FirstOrDefault(x => x.InfoHash.ToByteArray().SequenceEqual(Hash)) ?? throw new InvalidOperationException($"No file listing returned for hash {Convert.ToHexString(Hash)}");
+        Logger.LogDebug($"Transmitting {Convert.ToHexStringLower(Hash)} to {Target.Uri} ({Target.ProviderKey}) -> remote {TargetPath}");
 
         var targetClient = Channels.GetTorrentServiceClient(Target.Uri);
         var headers = new CallOptions(headers: new Metadata { { "data-provider", Target.ProviderKey } });
@@ -266,10 +337,7 @@ public class TorrentOpService
         var session = await targetClient.ReceiveTorrentDataAsync(new ReceiveTorrentDataInput {
             Hash = Hash.ToByteString(),
             SourceUri = SourceUri,
-            SourceName = source.Name,
-            SourceRemotePath = source.RemotePath,
-            SourceMultiFile = files.MultiFile,
-            Files = { files.Files.Select(f => new ReceiveTorrentDataInput.Types.FileEntry { Path = f.Path, Size = f.Size }) },
+            Files = { Files.Select(f => new ReceiveTorrentDataInput.Types.FileEntry { SourcePath = f.SourcePath, Size = f.Size, StorePath = f.RelativeTarget }) },
             TargetPath = TargetPath
         }, headers);
 
@@ -283,32 +351,65 @@ public class TorrentOpService
             if (info.State == Protocols.TaskState.Failed)
                 throw new InvalidOperationException($"Receiving torrent data failed on target: {info.Text}");
         }
+
+        throw new InvalidOperationException("Receiving torrent data on target ended before it finished");
     }
 
-    public async Task LinkFiles(RegisteredDataProvider SourceDp, byte[] Hash, string TargetPath, CancellationToken CancellationToken)
+    public async Task LinkFiles(string TargetPath, Protocols.LinkFilesInput.Types.LinkType Type, IReadOnlyList<FilePlacement> Files, ScriptProgressState Progress, CancellationToken CancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(TargetPath, nameof(TargetPath));
 
-        var sourceTask = GetTorrent(SourceDp, Hash);
-        var filesTask = GetTorrentsFiles(SourceDp, new Torrents { Hashes = { Hash.ToByteString() } });
-        await Task.WhenAll(sourceTask, filesTask);
+        Logger.LogDebug($"Linking {Files.Count} files -> {TargetPath}");
 
-        var source = sourceTask.Result;
-        var files = filesTask.Result.Reply.FirstOrDefault(x => x.InfoHash.ToByteArray().SequenceEqual(Hash)) ?? throw new InvalidOperationException($"No file listing returned for hash {Convert.ToHexString(Hash)}");
+        var created = new List<string>(Files.Count);
 
-        if (source.RemotePath == TargetPath)
-            return;
+        var totalBytes = Files.Sum(f => (long)f.Size);
+        long completedBytes = 0;
+        var sw = Stopwatch.StartNew();
 
-        Logger.LogDebug($"{SourceDp}: Linking {files.Files.Count} files for {Convert.ToHexStringLower(Hash)} from {source.RemotePath} -> {TargetPath}");
+        try {
+            foreach (var f in Files) {
+                CancellationToken.ThrowIfCancellationRequested();
 
-        var prefix = files.MultiFile ? source.Name : "";
-        foreach (var f in files.Files) {
-            CancellationToken.ThrowIfCancellationRequested();
-            var src = Path.Combine(source.RemotePath, prefix, f.Path);
-            var dst = Path.Combine(TargetPath, prefix, f.Path);
+                var dst = Path.Combine(TargetPath, f.RelativeTarget);
 
-            // Don't like this reference but what can you do
-            GRPCServices.FilesService.LinkFile(src, dst, Protocols.LinkFilesInput.Types.LinkType.Reflink | Protocols.LinkFilesInput.Types.LinkType.Hardlink);
+                // Either the source itself or from an earlier run. Fast resume verifies the content when it's added
+                if (File.Exists(dst)) {
+                    completedBytes += (long)f.Size;
+                    continue;
+                }
+
+                ISpeedMovingAverage? speed = null;
+
+                // Don't like this reference but what can you do
+                await GRPCServices.FilesService.LinkFile(f.SourcePath, dst, Type, copied => {
+                    if (speed == null) {
+                        speed = Smas.Get("FileTransfer", Guid.NewGuid().ToString(), itemsMax: 10);
+                        speed.Value(copied);
+                    }
+
+                    if (sw.Elapsed <= TimeSpan.FromSeconds(0.5))
+                        return;
+
+                    speed.ValueIfChanged(copied);
+                    var bytesPerSecond = Math.Max(0, speed.CalculateSpeed());
+
+                    Progress.Progress = totalBytes > 0 ? (completedBytes + copied) / (float)totalBytes * 100f : 0f;
+                    Progress.Text = bytesPerSecond > 0 ? $"{Converters.GetSIDataSize((ulong)bytesPerSecond)}/s" : "Copying files...";
+                    sw.Restart();
+                }, CancellationToken);
+
+                created.Add(dst);
+                completedBytes += (long)f.Size;
+            }
+
+            Progress.Progress = 100f;
+        } catch {
+            // The target can be shared with other torrents, so only what this run made is removed
+            foreach (var path in created)
+                File.Delete(path);
+
+            throw;
         }
     }
 
@@ -333,7 +434,7 @@ public class TorrentOpService
             }
         }
 
-        public async Task AddTorrent(DataProviderEndpoint Target, Stream Data, string Path, string Filename, bool FastResume, CancellationToken CancellationToken)
+        public async Task<TorrentsReply> AddTorrent(DataProviderEndpoint Target, Stream Data, string Path, string Filename, bool FastResume, CancellationToken CancellationToken)
         {
             var targetClient = Channels.GetTorrentServiceClient(Target.Uri);
             var opts = new CallOptions(headers: new Metadata { { "data-provider", Target.ProviderKey } }, cancellationToken: CancellationToken);
@@ -361,7 +462,7 @@ public class TorrentOpService
             }
 
             await call.RequestStream.CompleteAsync();
-            await call.ResponseAsync;
+            return await call.ResponseAsync;
         }
 
         public async Task<TorrentsReply> TryStartSeeding(DataProviderEndpoint Target, byte[] Hash, CancellationToken CancellationToken)
@@ -373,7 +474,7 @@ public class TorrentOpService
             return ret;
         }
 
-        public async Task LinkFiles(DataProviderEndpoint Target, string SourcePath, string TargetPath, string Name, TorrentsFilesReply.Types.TorrentsFiles Files, CancellationToken CancellationToken)
+        public async Task LinkFiles(DataProviderEndpoint Target, string SourcePath, string TargetPath, Protocols.LinkFilesInput.Types.LinkType Type, IReadOnlyList<FilePlacement> Files, CancellationToken CancellationToken)
         {
             ArgumentException.ThrowIfNullOrEmpty(SourcePath, nameof(SourcePath));
             ArgumentException.ThrowIfNullOrEmpty(TargetPath, nameof(TargetPath));
@@ -381,15 +482,14 @@ public class TorrentOpService
             if (SourcePath == TargetPath)
                 return;
 
-            Logger.LogDebug($"Linking {Files.Files.Count} files on {Target.Uri} from {SourcePath} -> {TargetPath}");
+            Logger.LogDebug($"Linking {Files.Count} files on {Target.Uri} from {SourcePath} -> {TargetPath}");
 
-            var prefix = Files.MultiFile ? Name : "";
             var input = new Protocols.LinkFilesInput {
-                Type = Protocols.LinkFilesInput.Types.LinkType.Reflink | Protocols.LinkFilesInput.Types.LinkType.Hardlink
+                Type = Type
             };
-            foreach (var f in Files.Files) {
-                input.Source.Add(Path.Combine(SourcePath, prefix, f.Path));
-                input.Target.Add(Path.Combine(TargetPath, prefix, f.Path));
+            foreach (var f in Files) {
+                input.Source.Add(Path.Combine(SourcePath, f.RelativeTarget));
+                input.Target.Add(Path.Combine(TargetPath, f.RelativeTarget));
             }
 
             var filesClient = Channels.GetFilesClient(Target.Uri);

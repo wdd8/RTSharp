@@ -127,7 +127,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                     if (bTorrent != null) {
                         var skipHashChecking = false;
                         if (torrent.FastResume) {
-                            skipHashChecking = await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, torrent.Path, Logger);
+                            skipHashChecking = await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, torrent.Path), Logger);
                             if (!skipHashChecking)
                                 Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", Convert.ToHexString(torrentId));
                         }
@@ -141,6 +141,8 @@ namespace RTSharp.Daemon.Services.qbittorrent
                             DownloadFolder = torrent.Path,
                             Paused = true,
                             SkipHashChecking = skipHashChecking,
+                            // Fast resume verifies the files in the layout of the torrent, not the layout qbit defaults to
+                            ContentLayout = torrent.FastResume ? TorrentContentLayout.Original : null,
                             TorrentFiles = { path }
                         });
 

@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RTSharp.CrossSeed.Plugin.ViewModels"
+        x:Class="RTSharp.CrossSeed.Plugin.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="1000" Height="560"
+        MinWidth="600" MinHeight="300"
+        Title="Cross-seed">
+    <DockPanel Margin="16">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+            <Button DockPanel.Dock="Right" Content="Stop" Command="{Binding StopCommand}" />
+            <TextBlock Text="{Binding ProgressText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        </DockPanel>
+        <DataGrid ItemsSource="{Binding Results}"
+                  AutoGenerateColumns="False" IsReadOnly="True"
+                  CanUserSortColumns="True" CanUserResizeColumns="True"
+                  GridLinesVisibility="Horizontal"
+                  AutomationProperties.Name="Cross-seed results">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Torrent" Width="*" x:DataType="vm:ResultRow" Binding="{Binding Source}" SortMemberPath="Source" />
+                <DataGridTextColumn Header="Indexer" Width="Auto" x:DataType="vm:ResultRow" Binding="{Binding Indexer}" SortMemberPath="Indexer" />
+                <DataGridTextColumn Header="Candidate" Width="*" x:DataType="vm:ResultRow" Binding="{Binding Title}" SortMemberPath="Title" />
+                <DataGridTextColumn Header="Outcome" Width="*" x:DataType="vm:ResultRow" Binding="{Binding Outcome}" SortMemberPath="Outcome" />
+                <DataGridTemplateColumn Width="170" CanUserResize="False" CanUserSort="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:ResultRow">
+                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,2" IsVisible="{Binding CanAdd}">
+                                <Button Content="Add"
+                                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).AddCommand}"
+                                        CommandParameter="{Binding}" />
+                                <Button Content="Add default"
+                                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).AddDefaultCommand}"
+                                        CommandParameter="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

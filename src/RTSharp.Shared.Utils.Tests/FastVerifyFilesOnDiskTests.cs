@@ -108,7 +108,7 @@ public class FastVerifyFilesOnDiskTests : IDisposable
         var (torrent, bTorrent) = await CreateTorrent(ContentDirectory, TorrentCreator.VERSION.V2);
 
         Assert.Empty(torrent.Pieces);
-        Assert.True(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, Root, NullLogger.Instance));
+        Assert.True(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, Root), NullLogger.Instance));
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class FastVerifyFilesOnDiskTests : IDisposable
         var path = Path.Combine(ContentDirectory, "sub", "large.bin");
         var (_, bTorrent) = await CreateTorrent(path, TorrentCreator.VERSION.V2);
 
-        Assert.True(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, Path.GetDirectoryName(path)!, NullLogger.Instance));
+        Assert.True(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, Path.GetDirectoryName(path)!), NullLogger.Instance));
     }
 
     [Theory]
@@ -132,7 +132,7 @@ public class FastVerifyFilesOnDiskTests : IDisposable
 
         CorruptEveryPiece(Path.Combine([ContentDirectory, .. RelativePath.Split('/')]));
 
-        Assert.False(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, Root, NullLogger.Instance));
+        Assert.False(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, Root), NullLogger.Instance));
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class FastVerifyFilesOnDiskTests : IDisposable
         var path = Path.Combine(ContentDirectory, "small.bin");
         File.WriteAllBytes(path, File.ReadAllBytes(path)[..^1]);
 
-        Assert.False(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, Root, NullLogger.Instance));
+        Assert.False(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, Root), NullLogger.Instance));
     }
 
     [Fact]
@@ -152,10 +152,29 @@ public class FastVerifyFilesOnDiskTests : IDisposable
         var (torrent, bTorrent) = await CreateTorrent(ContentDirectory, TorrentCreator.VERSION.V1);
 
         Assert.NotEmpty(torrent.Pieces);
-        Assert.True(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, Root, NullLogger.Instance));
+        Assert.True(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, Root), NullLogger.Instance));
 
         CorruptEveryPiece(Path.Combine(ContentDirectory, "sub", "large.bin"));
-        Assert.False(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, Root, NullLogger.Instance));
+        Assert.False(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, Root), NullLogger.Instance));
+    }
+
+    [Fact]
+    public async Task V1WithPadding_VerifiesWithoutPaddingOnDisk()
+    {
+        var (_, bTorrent) = await CreateTorrent(ContentDirectory, TorrentCreator.VERSION.V1 | TorrentCreator.VERSION.V2);
+
+        // Without its v2 metadata, this is a v1 torrent with its pieces laid over the padding files
+        var info = bTorrent.Get<BDictionary>(TorrentFields.Info);
+        info.Remove("file tree");
+        info.Remove("meta version");
+        bTorrent.Remove("piece layers");
+
+        Assert.NotEqual(0, BencodeUtils.GetPaddingSize(info));
+        Assert.Equal(4, BencodeUtils.AssignHashesToPieces(bTorrent).Length);
+        Assert.True(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, Root), NullLogger.Instance));
+
+        CorruptEveryPiece(Path.Combine(ContentDirectory, "sub", "large.bin"));
+        Assert.False(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, Root), NullLogger.Instance));
     }
 
     [Fact]
@@ -166,6 +185,6 @@ public class FastVerifyFilesOnDiskTests : IDisposable
         Assert.NotEmpty(torrent.Pieces);
         Assert.Contains(torrent.Files, x => (x.Path ?? x.PathUtf8).Contains(".pad"));
 
-        Assert.True(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, Root, NullLogger.Instance));
+        Assert.True(await BencodeUtils.FastVerifyFilesOnDisk(bTorrent, x => BencodeUtils.GetFilesOnDisk(x, Root), NullLogger.Instance));
     }
 }

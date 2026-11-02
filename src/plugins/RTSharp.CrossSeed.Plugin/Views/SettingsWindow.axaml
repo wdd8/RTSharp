@@ -1,0 +1,70 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+        xmlns:vm="clr-namespace:RTSharp.CrossSeed.Plugin.ViewModels"
+        xmlns:abstractions="clr-namespace:RTSharp.Shared.Abstractions;assembly=RTSharp.Shared.Abstractions"
+        xmlns:search="clr-namespace:RTSharp.Scripts.CrossSeedSearch"
+        x:Class="RTSharp.CrossSeed.Plugin.SettingsWindow"
+        x:DataType="vm:SettingsWindowViewModel"
+        Title="Settings"
+        SizeToContent="WidthAndHeight"
+        Padding="12">
+  <Window.Resources>
+    <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
+  </Window.Resources>
+
+  <Window.Styles>
+    <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
+  </Window.Styles>
+
+  <StackPanel Spacing="8" MinWidth="600">
+    <GroupBox Header="Torznab indexers, as seen from the server">
+      <Grid RowDefinitions="Auto,Auto">
+        <ListBox
+            Name="list"
+            Height="160"
+            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+            ScrollViewer.VerticalScrollBarVisibility="Visible"
+            ItemsSource="{Binding Indexers}"
+            SelectedItem="{Binding SelectedIndexer, Mode=TwoWay}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="search:CrossSeedIndexer">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button
+                    Content="X"
+                    Command="{Binding #list.((vm:SettingsWindowViewModel)DataContext).RemoveCommand}"
+                    CommandParameter="{Binding}" />
+                <TextBlock VerticalAlignment="Center" FontWeight="Bold" Text="{Binding Name}" />
+                <TextBlock VerticalAlignment="Center" Text="{Binding Url}" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Grid Grid.Row="1" ColumnDefinitions="160,*,Auto">
+          <TextBox Watermark="Name" Text="{Binding NewName}" />
+          <TextBox Grid.Column="1" HorizontalAlignment="Stretch" Watermark="http://localhost:9696/1/api?apikey=..." Text="{Binding NewUrl}" />
+          <Button Grid.Column="2" Content="Add" Command="{Binding AddCommand}" />
+        </Grid>
+      </Grid>
+    </GroupBox>
+
+    <GroupBox Header="Candidates with a different file layout">
+      <StackPanel Spacing="4">
+        <RadioButton GroupName="LinkGroup" Content="Reflink with hardlink fallback"
+            IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.ReflinkWithHardlinkFallback}}" />
+        <RadioButton GroupName="LinkGroup" Content="Reflink"
+            IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Reflink}}" />
+        <RadioButton GroupName="LinkGroup" Content="Hardlink"
+            IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Hardlink}}" />
+      </StackPanel>
+    </GroupBox>
+
+    <StackPanel Orientation="Horizontal" Spacing="8">
+      <TextBlock Text="Seconds between torrents:" VerticalAlignment="Center" />
+      <NumericUpDown Width="120" Minimum="0" Increment="1" Value="{Binding SearchDelaySeconds}" />
+    </StackPanel>
+
+    <Button Content="Save" IsDefault="True" Command="{Binding SaveCommand}" />
+  </StackPanel>
+</Window>

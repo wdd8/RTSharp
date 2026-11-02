@@ -10,6 +10,7 @@ using Mono.Unix;
 using Mono.Unix.Native;
 
 using RTSharp.Daemon.Protocols;
+using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Utils;
 
 using System.Runtime.InteropServices;
@@ -347,26 +348,29 @@ public partial class FilesService(
     /*[LibraryImport("libc")]
     private static unsafe partial nint copy_file_range(nint fd_in, nint* off_in, nint fd_out, nint* off_out, nint size, nuint flags);*/
 
-    [LibraryImport("libc")]
+    [LibraryImport("libc", SetLastError = true)]
     private static partial nint ioctl(nint dest_fd, nint op, nint src_fd);
 
-    public override Task<Empty> LinkFiles(LinkFilesInput Req, ServerCallContext Ctx)
+    public override async Task<Empty> LinkFiles(LinkFilesInput Req, ServerCallContext Ctx)
     {
         if (Req.Source.Count != Req.Target.Count) {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Source and Target path count must match"));
         }
 
         foreach (var (src, dst) in Req.Source.Zip(Req.Target)) {
-            LinkFile(src, dst, Req.Type);
+            // TODO: maybe report progress to outside?
+            await LinkFile(src, dst, Req.Type, _ => { }, Ctx.CancellationToken);
         }
-        return Task.FromResult(new Empty());
+        return new Empty();
     }
 
-    public static void LinkFile(string src, string dst, LinkFilesInput.Types.LinkType Type)
+    /// <param name="CopyProgress">Bytes copied so far, only called when the file has to be copied</param>
+    public static async Task LinkFile(string src, string dst, LinkFilesInput.Types.LinkType Type, Action<long> CopyProgress, CancellationToken CancellationToken)
     {
         int hSrcFile = -1;
         int hDstFile = -1;
         bool created = false;
+        bool crossDevice = false;
 
         try {
             if (Type.HasFlag(LinkFilesInput.Types.LinkType.Reflink)) {
@@ -397,6 +401,8 @@ public partial class FilesService(
                         }
                     }
 
+                    var dstExisted = File.Exists(dst);
+
                     try {
                         for (var x = 0;x < 2;x++) {
                             hDstFile = Syscall.open(dst, OpenFlags.O_CREAT | OpenFlags.O_WRONLY, stat.st_mode);
@@ -421,20 +427,36 @@ public partial class FilesService(
                     var resp = ioctl(hDstFile, 0x40049409 /* FICLONE */, hSrcFile);
                     if (resp != 0) {
                         var errno = Syscall.GetLastError();
-                        if (errno != Errno.EOPNOTSUPP) {
+
+                        // The failed clone leaves behind the empty file opened above, which would block the hardlink
+                        _ = Syscall.close(hDstFile);
+                        hDstFile = -1;
+                        if (!dstExisted)
+                            _ = Syscall.unlink(dst);
+
+                        if (errno == Errno.EXDEV) {
+                            crossDevice = true;
+                        } else if (!Type.HasFlag(LinkFilesInput.Types.LinkType.Hardlink)) {
                             throw new RpcException(new Status(StatusCode.Internal, "ioctl error: " + errno));
                         }
                     } else
                         created = true;
                 }
 
-                if (Type.HasFlag(LinkFilesInput.Types.LinkType.Hardlink) && !created) {
+                if (Type.HasFlag(LinkFilesInput.Types.LinkType.Hardlink) && !created && !crossDevice) {
                     for (var x = 0;x < 2;x++) {
                         var resp = Syscall.link(src, dst);
                         if (resp != 0) {
                             var errno = Syscall.GetLastError();
                             if (errno == Errno.ENOENT) {
+                                // The target directory exists on the second try, so it's the source that's missing
+                                if (x != 0)
+                                    throw new RpcException(new Status(StatusCode.InvalidArgument, $"{src} doesn't exist"));
+
                                 Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
+                            } else if (errno == Errno.EXDEV) {
+                                crossDevice = true;
+                                break;
                             } else if (errno == Errno.EACCES || errno == Errno.EPERM) {
                                 throw new RpcException(new Status(StatusCode.PermissionDenied, $"Cannot open {dst}"));
                             } else if (errno == Errno.EEXIST) {
@@ -444,6 +466,40 @@ public partial class FilesService(
                             }
                         } else
                             break;
+                    }
+                }
+
+                if (crossDevice) {
+                    Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
+
+                    // Copied under another name, as an interrupted copy at the target would get treated as an already linked file
+                    var temp = dst + ".rtsharp-copy";
+
+                    try {
+                        await using (var input = new FileStream(src, new FileStreamOptions {
+                            Mode = FileMode.Open,
+                            Access = FileAccess.Read,
+                            Share = FileShare.Read,
+                            Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+                        }))
+                        await using (var output = new FileStream(temp, new FileStreamOptions {
+                            Mode = FileMode.Create,
+                            Access = FileAccess.Write,
+                            Share = FileShare.None,
+                            Options = FileOptions.Asynchronous,
+                            PreallocationSize = input.Length,
+                            UnixCreateMode = File.GetUnixFileMode(src)
+                        }))
+                            await input.CopyToAsync(output, CopyProgress, CancellationToken);
+
+                        File.Move(temp, dst);
+                    } catch (Exception ex) {
+                        File.Delete(temp);
+
+                        if (ex is OperationCanceledException)
+                            throw;
+
+                        throw new RpcException(new Status(StatusCode.Internal, $"copy {dst}: {ex.Message}"));
                     }
                 }
             } finally {

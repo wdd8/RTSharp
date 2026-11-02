@@ -99,3 +99,7 @@ Example plugin. Makes ratio column colored.
 #### MassTrackerRewrite
 
 Rewrites tracker in torrents to some other URI.
+
+#### CrossSeed
+
+Searches Torznab indexers for the same content on other trackers, verifies candidates against the files on disk, and adds them with fast resume.

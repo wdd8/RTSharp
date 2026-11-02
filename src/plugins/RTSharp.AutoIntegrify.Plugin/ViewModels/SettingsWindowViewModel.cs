@@ -1,19 +1,13 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
 
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 
 namespace RTSharp.AutoIntegrify.Plugin.ViewModels;
-
-public enum LinkOptions
-{
-    ReflinkWithHardlinkFallback,
-    Reflink,
-    Hardlink
-}
 
 public partial class SettingsWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> PluginHost) : ObservableViewModel
 {

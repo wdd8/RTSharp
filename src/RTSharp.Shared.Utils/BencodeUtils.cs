@@ -44,7 +44,7 @@ public static partial class BencodeUtils
     }
 
     /// <summary>
-    /// Reads "file tree" (v2) or "files" (v1)
+    /// Reads "file tree" (v2) or "files" (v1), without BEP 47 padding files as they aren't part of the content
     /// </summary>
     public static (TorrentFile[] Files, bool IsMultiFile) GetFiles(BDictionary Info)
     {
@@ -64,13 +64,30 @@ public static partial class BencodeUtils
         if (filesList == null)
             return ([ new TorrentFile([ GetName(Info) ], Info.Get<BNumber>("length")?.Value ?? throw new InvalidDataException("Single-file torrent has no \"length\"")) ], false);
 
-        var multiFiles = filesList.Cast<BDictionary>().Select(f => new TorrentFile(
-            (f.Get<BList>("path") ?? f.Get<BList>("path.utf-8"))?.AsStrings().ToArray()
-                ?? throw new InvalidDataException("Torrent \"files\" entry has no \"path\""),
-            f.Get<BNumber>("length")?.Value
-                ?? throw new InvalidDataException("Torrent \"files\" entry has no \"length\"")
-        )).ToArray();
-        return (multiFiles, true);
+        return ([ .. ReadFilesList(filesList).Where(x => !x.IsPadding).Select(x => x.File) ], true);
+    }
+
+    /// <summary>
+    /// Reads the v1 "files" list as it is, where BEP 47 padding files take up space in the pieces
+    /// </summary>
+    private static (TorrentFile File, bool IsPadding)[] ReadFilesList(BList FilesList) =>
+        [ .. FilesList.Cast<BDictionary>().Select(f => (
+            new TorrentFile(
+                (f.Get<BList>("path") ?? f.Get<BList>("path.utf-8"))?.AsStrings().ToArray()
+                    ?? throw new InvalidDataException("Torrent \"files\" entry has no \"path\""),
+                f.Get<BNumber>("length")?.Value
+                    ?? throw new InvalidDataException("Torrent \"files\" entry has no \"length\"")
+            ),
+            f.Get<BString>("attr")?.ToString().Contains('p') == true
+        )) ];
+
+    /// <summary>
+    /// Total size of the BEP 47 padding files in the v1 "files" list, which a hybrid torrent has as well
+    /// </summary>
+    public static long GetPaddingSize(BDictionary Info)
+    {
+        var filesList = Info.Get<BList>("files");
+        return filesList == null ? 0 : ReadFilesList(filesList).Where(x => x.IsPadding).Sum(x => x.File.FileSize);
     }
 
     /// <summary>
@@ -83,6 +100,86 @@ public static partial class BencodeUtils
         return files
             .Select(f => f with { PathComponents = [ contentDir, ..f.PathComponents ] })
             .ToArray();
+    }
+
+    /// <summary>
+    /// Whether the name and every file path component stay inside the directory they get combined with.
+    /// Needed before using a .torrent from an untrusted source.
+    /// </summary>
+    public static bool HasSafePaths(BDictionary Info)
+    {
+        static bool isSafe(string Component) =>
+            Component.Length != 0 && Component != "." && Component != ".." && Component.IndexOfAny([ '/', '\\', '\0' ]) == -1;
+
+        // Padding files included, as not all clients know what they are and would create them
+        var filesList = Info.Get<BList>("files");
+
+        return isSafe(GetName(Info))
+            && GetFiles(Info).Files.All(x => x.PathComponents.All(isSafe))
+            && (filesList == null || ReadFilesList(filesList).All(x => x.File.PathComponents.All(isSafe)));
+    }
+
+    /// <summary>
+    /// How one torrent's files line up with another torrent's files on disk
+    /// </summary>
+    /// <param name="DiskFiles">The file on disk for each file of the torrent being matched, in its <see cref="GetFiles"/> order</param>
+    /// <param name="Strict">Both torrents have the same layout, so the base directory on disk can be used as is. Never set when matching against several torrents</param>
+    public record FileTreeMatch(TorrentFile[] DiskFiles, bool Strict);
+
+    /// <summary>
+    /// Pairs a torrent's files with the files of other torrents on disk, first by relative path and then by
+    /// size where that size is not shared with another unpaired file. Files at the same relative path must have the
+    /// same size.
+    /// </summary>
+    /// <param name="Info">Info dictionary of the torrent being matched</param>
+    /// <param name="OnDisk">Info dictionary and base directory of each torrent whose files are on disk</param>
+    /// <returns>The match, or <c>null</c> if the files differ or can't be paired unambiguously</returns>
+    public static FileTreeMatch? MatchFileTrees(BDictionary Info, IReadOnlyList<(BDictionary Info, string BaseDirectory)> OnDisk)
+    {
+        var (files, isMultiFile) = GetFiles(Info);
+        var onDiskFiles = OnDisk.SelectMany(x => GetFiles(x.Info).Files).ToArray();
+
+        if (files.Length != onDiskFiles.Length)
+            return null;
+
+        var filesOnDisk = OnDisk.SelectMany(x => GetFilesOnDisk(x.Info, x.BaseDirectory)).ToArray();
+
+        var unpairedOnDisk = new Dictionary<string, int>(onDiskFiles.Length);
+        for (var x = 0;x < onDiskFiles.Length;x++)
+            unpairedOnDisk[string.Join('/', onDiskFiles[x].PathComponents)] = x;
+
+        var result = new TorrentFile[files.Length];
+        var unpaired = new List<int>();
+
+        for (var x = 0;x < files.Length;x++) {
+            var path = string.Join('/', files[x].PathComponents);
+
+            if (unpairedOnDisk.TryGetValue(path, out var onDisk)) {
+                // Another file at the same path, even if its contents are found under another path. Could be enabled in the future with folders named after the info hash
+                if (onDiskFiles[onDisk].FileSize != files[x].FileSize)
+                    return null;
+
+                result[x] = filesOnDisk[onDisk];
+                unpairedOnDisk.Remove(path);
+            } else
+                unpaired.Add(x);
+        }
+
+        var strict = OnDisk is [ var only ] && unpaired.Count == 0 && isMultiFile == GetFiles(only.Info).IsMultiFile && GetName(Info) == GetName(only.Info);
+
+        var onDiskBySize = unpairedOnDisk.Values.ToLookup(x => onDiskFiles[x].FileSize);
+        var unpairedBySize = unpaired.ToLookup(x => files[x].FileSize);
+
+        foreach (var x in unpaired) {
+            var size = files[x].FileSize;
+
+            if (unpairedBySize[size].Count() != 1 || onDiskBySize[size].Count() != 1)
+                return null;
+
+            result[x] = filesOnDisk[onDiskBySize[size].Single()];
+        }
+
+        return new FileTreeMatch(result, strict);
     }
 
     /// <summary>
@@ -119,15 +216,20 @@ public static partial class BencodeUtils
         var pieces = GetPieces(info)
             ?? throw new InvalidDataException("Torrent has no \"pieces\"");
 
-        var files = GetFiles(info).Files;
+        // Padding files get no result, but the offsets of the files after them depend on their size
+        var filesList = info.Get<BList>("files");
+        (TorrentFile File, bool IsPadding)[] files = filesList != null ? ReadFilesList(filesList) : [ (GetFiles(info).Files[0], false) ];
 
-        var result = new FilePieceHashes[files.Length];
+        var result = new List<FilePieceHashes>(files.Length);
 
         for (var x = 0; x < files.Length; x++) {
-            var file = files[x];
+            var (file, isPadding) = files[x];
+
+            if (isPadding)
+                continue;
 
             if (file.FileSize < pieceSize) {
-                result[x] = new FilePieceHashes(file, [], 0..0);
+                result.Add(new FilePieceHashes(file, [], 0..0));
                 continue;
             }
 
@@ -154,7 +256,7 @@ public static partial class BencodeUtils
              */
             var start = 0L;
             for (var i = 0; i < x; i++)
-                start += files[i].FileSize;
+                start += files[i].File.FileSize;
 
             var unaligned = start % pieceSize != 0 ? 1 : 0;
 
@@ -207,35 +309,33 @@ public static partial class BencodeUtils
                 Hash: hash
             )).ToArray();
 
-            result[x] = new FilePieceHashes(
+            result.Add(new FilePieceHashes(
                 file,
                 pieceHashes,
-                (startingPiecesBytes / SHA1.HashSizeInBytes)..(endingPiecesBytes / SHA1.HashSizeInBytes));
+                (startingPiecesBytes / SHA1.HashSizeInBytes)..(endingPiecesBytes / SHA1.HashSizeInBytes)));
         }
 
-        return result;
+        return [ .. result ];
     }
 
     /// <summary>
     /// Perform file existence, size, and random piece hash verification for a torrent's files on disk
     /// </summary>
     /// <param name="BTorrent">.torrent bencode root</param>
-    /// <param name="BaseDirectory">Target base directory</param>
+    /// <param name="GetDiskFiles">Resolves where each file is on disk from the info dictionary, in <see cref="GetFiles"/> order</param>
     /// <param name="Logger"></param>
     /// <returns></returns>
-    public static async Task<bool> FastVerifyFilesOnDisk(BDictionary BTorrent, string BaseDirectory, ILogger Logger)
+    public static async Task<bool> FastVerifyFilesOnDisk(BDictionary BTorrent, Func<BDictionary, TorrentFile[]> GetDiskFiles, ILogger Logger)
     {
         var info = BTorrent.Get<BDictionary>(TorrentFields.Info)
             ?? throw new InvalidDataException("Torrent has no \"info\" dictionary");
 
         /*
          * Prefer the v2 path whenever v2 metadata is present, even for hybrid torrents
-         * that also carry v1 pieces. The v1 path cannot fast verify a hybrid torrent at
-         * all: BEP 52 requires v1 padding file entries, which have no counterpart on
-         * disk, so its existence check always fails.
+         * that also carry v1 pieces, as the v1 path doesn't take them.
          */
         if (info.ContainsKey("file tree"))
-            return await FastVerifyFilesOnDiskV2(BTorrent, BaseDirectory, Logger);
+            return await FastVerifyFilesOnDiskV2(BTorrent, GetDiskFiles, Logger);
 
         var pieces = GetPieces(info);
         if (pieces == null || pieces.Length == 0) {
@@ -245,7 +345,7 @@ public static partial class BencodeUtils
 
         var pieceLength = GetPieceLength(info);
 
-        var files = GetFilesOnDisk(info, BaseDirectory);
+        var files = GetDiskFiles(info);
 
         if (!CheckFilesExistWithSize(files, Logger))
             return false;

@@ -53,6 +53,7 @@ namespace QBittorrent.Client.Internal
                 .AddNonEmptyString("cookie", request.Cookie)
                 .AddNonEmptyString("category", request.Category)
                 .AddValue("skip_checking", request.SkipHashChecking)
+                .AddValue("seedMode", request.SkipHashChecking) // "skip_checking" was replaced with "seedMode" from API 2.16.0
                 .AddValue("paused", request.Paused)
                 .AddValue("stopped", request.Paused) // "paused" was replaced with "stopped" from API 2.11.2
                 .AddNotNullValue("root_folder", request.CreateRootFolder)

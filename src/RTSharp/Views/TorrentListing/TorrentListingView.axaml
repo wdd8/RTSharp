@@ -90,10 +90,12 @@
 				Header="Edit torrent..."
 				Command="{Binding EditTorrentCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
-			<MenuItem
-				Header="Duplicate torrent &amp; data to..."
-				Command="{Binding DuplicateTorrentToCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+			<MenuItem Name="DuplicateMenu" Header="_Duplicate">
+				<MenuItem
+					Header="Duplicate torrent &amp; data to..."
+					Command="{Binding DuplicateTorrentToCommand}"
+					CommandParameter="{Binding #grid.SelectedItems}" />
+			</MenuItem>
 		</acol:AvaloniaList>
 
 		<DataTemplate x:Key="DataGridFilterSetEqualsTemplate" x:DataType="{x:Type filters:SetFilterContext, x:TypeArguments=x:String}">

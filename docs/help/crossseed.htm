@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Cross-seed</title>
+   <meta name="keywords" content="Cross-seed,Find cross-seeds,Torznab,Fast resume,Hardlink,Reflink">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>Is the torrent you are seeding also available on your other trackers? The cross-seed plugin searches your indexers for the same content and lets you add the matching torrents, so you can seed them on the other trackers right away.</p>
+
+<p>To start, select one or more torrents in the listing, right click on them and select "Find cross-seeds". A new Cross-seed window will open and display one line for each candidate found, with the indexer and the outcome. Click on "Stop" or close the window to cancel the search.</p>
+
+<h2>Searching for a season</h2>
+<p>When you select several single-file video torrents that are episodes of the same season of a TV show, the plugin asks if you want to search for the season instead of each episode. If you click on "Yes", the episodes are searched together as one line named after the season, and you get the season packs made of exactly these episodes. The pack is added by linking the files of your episodes into a new folder named after the pack, in the folder of the first episode. If you click on "No", each episode is searched by itself. You are asked once for each season in your selection.</p>
+
+<h2>Adding a match</h2>
+<p>Each line with the "Match" outcome has two buttons:</p>
+<div class="list">
+- Add default: Adds the match to the same data provider as your torrent<br>
+- Add: Asks which data provider to add the match to. The files of a data provider on another server are transferred there first, into the remote directory you select, like when duplicating a torrent<br>
+</div>
+<p>The torrent is started as soon as the daemon reports it as complete.</p>
+
+<h2>How a candidate is checked</h2>
+<p>Indexers are searched using the title found in the name of the torrent with its year or episode, then the title alone. A candidate is a match once the plugin has made sure that:</p>
+<div class="list">
+1. Its total size is exactly the same as your torrent<br>
+2. All the paths in its .torrent file stay inside the target folder<br>
+3. Each of its files can be paired with one of your files, by path and then by size. A file at the same path as one of yours must have the same size<br>
+4. Random pieces of your files match the piece hashes of the candidate<br>
+</div>
+<p>When a match on the same server has the same name and layout as your torrent, it is added to the same folder, and any of its files with a different name are linked next to yours when you add it. When the layout is different, for example with another folder name, the files are linked next to your torrent when you add it, into a folder named after the candidate.</p>
+
+<h2>Settings</h2>
+<p>Select the cross-seed instance in the Plugins window and click on the settings button. The settings are shared by all the servers:</p>
+<div class="list">
+- Torznab indexers: The name displayed in the results and the Torznab feed URL of each indexer, ending in /api and followed by the API key. For example http://localhost:9696/1/api?apikey=... . The URLs are requested by the RT# daemon, so "localhost" means the server.<br>
+- Links: "Reflink with hardlink fallback", "Reflink" or "Hardlink", see the auto integrify chapter<br>
+- Seconds between torrents: How long to wait before searching for the next selected torrent of the same server<br>
+</div>
+
+<h2>Good to know</h2>
+<div class="list">
+- A candidate must have exactly the same files as your torrent, including small ones such as .nfo files. For a season, that means all of your selected episodes and nothing else<br>
+- A candidate that is already in any of your data providers shows "Already in client"<br>
+- Selected torrents with the same path on a server are not searched and show "Another selected torrent has the same path". Select only one of them to search for it<br>
+- Fast verification checks random pieces of each file that has a piece fully inside it. The other files are checked by their size<br>
+- Linked files share their data with the original files, so the disk space is freed once both torrents have had their data removed<br>
+- A recheck that repairs a hardlinked torrent also modifies the original file<br>
+- A file on another file system than the target folder is copied instead of linked, which takes as much space as the file<br>
+</div>
+
+<p class="note">* Downloading a .torrent file may count towards tracker statistics.</p>
+<p class="note">* The Torznab URLs are stored in plain text in the configuration file of the plugin, and sent to the RT# daemon when a search runs.</p>
+
+</body>
+</html>

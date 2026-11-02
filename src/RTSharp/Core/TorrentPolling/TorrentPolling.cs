@@ -36,11 +36,11 @@ public static class TorrentPolling
 
     public static Dictionary<string, int> AllLabelReferences { get; } = new();
     public static IObservable<string[]> AllLabelReferencesObservable { get; private set; }
-    private static Subject<string[]> AllLabelReferencesSubject;
+    private static BehaviorSubject<string[]> AllLabelReferencesSubject;
 
     static TorrentPolling()
     {
-        AllLabelReferencesSubject = new Subject<string[]>();
+        AllLabelReferencesSubject = new BehaviorSubject<string[]>([]);
         AllLabelReferencesObservable = AllLabelReferencesSubject.AsObservable();
 
     }

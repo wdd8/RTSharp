@@ -144,14 +144,14 @@ namespace RTSharp.Daemon.Services.rtorrent
             var info = BTorrentDict.Get<BDictionary>(TorrentFields.Info);
 
             /*
-             * rtorrent has no v2/hybrid support. The v1 "files" list of a hybrid torrent
-             * includes BEP 47 padding files that never exist on disk, so fastresume file
-             * would be invalid. Add normally instead.
+             * rtorrent has no v2/hybrid support, and handles BEP 47 padding files as regular
+             * files that it needs on disk. Those might not be there, and the fastresume file
+             * would need an entry for each. Add normally instead.
              */
-            if (info.ContainsKey("file tree"))
+            if (info.ContainsKey("file tree") || BencodeUtils.GetPaddingSize(info) != 0)
                 return null;
 
-            if (!await BencodeUtils.FastVerifyFilesOnDisk(BTorrentDict, BaseDirectory, Logger))
+            if (!await BencodeUtils.FastVerifyFilesOnDisk(BTorrentDict, x => BencodeUtils.GetFilesOnDisk(x, BaseDirectory), Logger))
                 return null;
 
             var pieceLength = BencodeUtils.GetPieceLength(info);
@@ -324,7 +324,6 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                 torrent.Data.Dispose();
 
-                // TODO: move after Scgi.Get
                 ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
                     InfoHash = rtsHash.ToByteString(),
                     Status = { GrpcExtensions.SuccessfulStatus(command) }
@@ -336,6 +335,30 @@ namespace RTSharp.Daemon.Services.rtorrent
             // TODO: more error handling
             using var response = await Scgi.Get(xml.ToString());
 
+            // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<params>\r\n<param><value><array><data>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
+            // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<fault>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Call XML not a proper XML-RPC call.  Incorrect Base64 padding</string></value></member>\r\n</struct></value>\r\n</fault>\r\n</methodResponse>\r\n
+
+            {
+                var result = response.Reader();
+
+                XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
+                if (XMLUtils.MaybeSeekFixed(ref result, XMLUtils.FAULT_TOKEN)) {
+                    XMLUtils.MaybeSeekFixed(ref result, XMLUtils.NEWLINE);
+                    var fault = GrpcExtensions.ToStatus(XMLUtils.GetFaultStruct(ref result, "load_raw"));
+
+                    // rtorrent rejected the whole call, so it applies to every torrent that was a part of it
+                    foreach (var torrent in ret.Torrents) {
+                        if (torrent.Status.All(x => x.FaultCode == "0")) {
+                            torrent.Status.Clear();
+                            torrent.Status.Add(fault);
+                        }
+                    }
+
+                    Logger.LogWarning($"Adding {rtsHashes.Count} torrents failed: {fault.FaultCode} - {fault.FaultString}");
+                    return ret;
+                }
+            }
+
             xml.Clear();
             xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in hashes) {
@@ -343,9 +366,6 @@ namespace RTSharp.Daemon.Services.rtorrent
             }
             xml.Append("</data></array></value></param></params></methodCall>");
             using var response2 = await Scgi.Get(xml.ToString());
-
-            // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<params>\r\n<param><value><array><data>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
-            // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<fault>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Call XML not a proper XML-RPC call.  Incorrect Base64 padding</string></value></member>\r\n</struct></value>\r\n</fault>\r\n</methodResponse>\r\n
 
             var sw = Stopwatch.StartNew();
             var accountedFor = new InfoHashDictionary<bool>();
@@ -369,21 +389,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 }
             }
 
-            var result = response.Reader();
-
-            XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
-            if (XMLUtils.MaybeSeekFixed(ref result, XMLUtils.FAULT_TOKEN)) {
-                XMLUtils.MaybeSeekFixed(ref result, XMLUtils.NEWLINE);
-                ret.Torrents.Add(new TorrentsReply.Types.TorrentReply() {
-                    InfoHash = Array.Empty<byte>().ToByteString(),
-                    Status = { GrpcExtensions.ToStatus(XMLUtils.GetFaultStruct(ref result, "load_raw")) }
-                });
-                Logger.LogInformation($"Added {ret.Torrents.Count} torrents (2)");
-                return ret;
-            } else {
-                Logger.LogInformation($"Added {ret.Torrents.Count} torrents");
-                return ret;
-            }
+            Logger.LogInformation($"Added {ret.Torrents.Count} torrents");
+            return ret;
         }
 
         public async Task<TorrentsReply> AddTorrents(IAsyncEnumerable<NewTorrentsData> Req)

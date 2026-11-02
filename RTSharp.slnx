@@ -9,6 +9,9 @@
     <Project Path="src/plugins/RTSharp.MassTrackerRewrite.Plugin/RTSharp.MassTrackerRewrite.Plugin.csproj">
       <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
     </Project>
+    <Project Path="src/plugins/RTSharp.CrossSeed.Plugin/RTSharp.CrossSeed.Plugin.csproj">
+      <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
+    </Project>
     <Project Path="src/plugins/RTSharp.FastVerify.Plugin/RTSharp.FastVerify.Plugin.csproj">
       <BuildDependency Project="src/RTSharp/RTSharp.csproj" />
     </Project>

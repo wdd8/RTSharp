@@ -117,19 +117,19 @@ WritePage("index.htm", "Plugin API reference", ["API reference", "Plugin API"], 
 
 
 foreach (var ns in namespaces) {
-    var body = new StringBuilder();
-    Paragraph(body, $"The <b>{Encode(ns.Key)}</b> namespace contains the following types:");
+    var innerBody = new StringBuilder();
+    Paragraph(innerBody, $"The <b>{Encode(ns.Key)}</b> namespace contains the following types:");
 
     var section = 0;
     foreach (var kind in ns.GroupBy(x => x.Kind).OrderBy(x => KindOrder(x.Key))) {
-        Heading(body, $"{++section}. {KindPlural(kind.Key)}:");
+        Heading(innerBody, $"{++section}. {KindPlural(kind.Key)}:");
         foreach (var type in kind.OrderBy(x => x.Name, StringComparer.Ordinal)) {
             var summary = FirstSentence(RenderDoc(type.Doc?.Element("summary"), type));
-            body.AppendLine($"<p><b><a href=\"{Encode(type.File)}\">{Encode(DisplayName(type))}</a></b>{(summary == "" ? "" : ": " + summary)}</p>");
+            innerBody.AppendLine($"<p><b><a href=\"{Encode(type.File)}\">{Encode(DisplayName(type))}</a></b>{(summary == "" ? "" : ": " + summary)}</p>");
         }
     }
 
-    WritePage($"{ns.Key}.htm", $"{ns.Key} namespace", [ns.Key], body.ToString());
+    WritePage($"{ns.Key}.htm", $"{ns.Key} namespace", [ns.Key], innerBody.ToString());
 
     toc.Add(new TocEntry(ns.Key, $"{ns.Key}.htm", [.. ns.OrderBy(x => x.Name, StringComparer.Ordinal).Select(x => new TocEntry($"{DisplayName(x)} {x.Kind}", x.File))]));
 }

@@ -47,6 +47,7 @@ public class DataProvider : IDataProvider
         GetDotTorrent: true,
         ForceStartTorrentOnAdd: null,
         FastResumeOnAdd: true,
+        AddV2OnlyTorrent: true,
         MoveDownloadDirectory: true,
         RemoveTorrent: true,
         RemoveTorrentAndData: true,

@@ -66,8 +66,9 @@ public interface IPluginHost
     /// Registers a root menu item
     /// </summary>
     /// <param name="In">Menu item</param>
+    /// <param name="Parent">Names of the menu items leading to the one to register under as a sub menu item, such as <c>["Menu item name", "sub item"]</c>, or <c>null</c> for the menu bar</param>
     /// <returns>Unregister</returns>
-    IDisposable RegisterRootMenuItem(MenuItem In);
+    IDisposable RegisterRootMenuItem(MenuItem In, string[]? Parent = null);
 
     /// <summary>
     /// Registers a menu item in tools menu
@@ -80,16 +81,18 @@ public interface IPluginHost
     /// Registers a menu item in torrent context menu
     /// </summary>
     /// <param name="In">Menu item creation</param>
+    /// <param name="Parent">Names of the menu items leading to the one to register under as a sub menu item, such as <c>["Menu item name", "sub item"]</c>, or <c>null</c> for the top level</param>
     /// <returns>Unregister</returns>
-    IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In);
+    IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In, string[]? Parent = null);
 
     /// <summary>
     /// Registers a menu item action to torrent context menu
     /// </summary>
-    /// <param name="Add">Menu item creation</param>
-    /// <param name="Remove">Menu item removal</param>
+    /// <param name="Add">Menu item creation, receives the items to add to</param>
+    /// <param name="Remove">Menu item removal, receives the items to remove from</param>
+    /// <param name="Parent">Names of the menu items leading to the one to register under as a sub menu item, such as <c>["Menu item name", "sub item"]</c>, or <c>null</c> for the top level</param>
     /// <returns>Unregister</returns>
-    IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove);
+    IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove, string[]? Parent = null);
 
     /// <summary>
     /// Hooks TorrentListing EvLoadingRow event, which then allows to modify appearance or behavior of a row
@@ -129,6 +132,27 @@ public interface IPluginHost
     HttpClient HttpClient { get; }
 
     IDaemonService? GetDaemonService(string serverId);
+
+    /// <summary>
+    /// Prompts for a data provider and a directory to duplicate to, like the "Duplicate torrent to" action
+    /// </summary>
+    /// <param name="Owner">Window the prompt is modal to</param>
+    /// <param name="Source">Torrent being duplicated</param>
+    /// <param name="Filter">Data providers to offer</param>
+    /// <returns>The selection, or <c>null</c> if cancelled</returns>
+    Task<(IDataProvider Provider, string RemotePath)?> SelectDuplicationTarget(Window Owner, Torrent Source, Func<IDataProvider, bool> Filter);
+
+    /// <summary>
+    /// Duplicates the files of torrents to a data provider like the "Duplicate torrent to" action, but adds and starts
+    /// another torrent of the same content there, whose file layout can be different.
+    /// </summary>
+    /// <param name="Sources">Torrents of one data provider whose files are used. Together they have the content of <paramref name="TargetTorrent"/>, such as the episodes of a season pack</param>
+    /// <param name="Target">Data provider to add to</param>
+    /// <param name="RemotePath">Directory to put the files in on the server of <paramref name="Target"/></param>
+    /// <param name="TargetTorrent">.torrent to add</param>
+    /// <param name="Links">How to link the files on the same server</param>
+    /// <returns>Info hash of the added torrent</returns>
+    Task<byte[]> DuplicateTorrentAs(IReadOnlyList<Torrent> Sources, IDataProvider Target, string RemotePath, byte[] TargetTorrent, LinkOptions Links);
 
     IServiceScope CreateScope();
 

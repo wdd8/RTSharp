@@ -29,10 +29,10 @@ internal sealed class PluginHostProxy<TConfig>(IPluginHost Inner) : IPluginHost<
     public void ShowTrayMessage(string Title, string Message) => Inner.ShowTrayMessage(Title, Message);
 
     public IDisposable RegisterActionQueue(IActionQueueRenderer In) => Inner.RegisterActionQueue(In);
-    public IDisposable RegisterRootMenuItem(MenuItem In) => Inner.RegisterRootMenuItem(In);
+    public IDisposable RegisterRootMenuItem(MenuItem In, string[]? Parent = null) => Inner.RegisterRootMenuItem(In, Parent);
     public IDisposable RegisterToolsMenuItem(MenuItem In) => Inner.RegisterToolsMenuItem(In);
-    public IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In) => Inner.RegisterTorrentContextMenuItem(In);
-    public IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove) => Inner.RegisterTorrentContextMenuItem(Add, Remove);
+    public IDisposable RegisterTorrentContextMenuItem(Func<MenuItem> In, string[]? Parent = null) => Inner.RegisterTorrentContextMenuItem(In, Parent);
+    public IDisposable RegisterTorrentContextMenuItem(Func<System.Collections.IList, MenuItem> Add, Action<System.Collections.IList> Remove, string[]? Parent = null) => Inner.RegisterTorrentContextMenuItem(Add, Remove, Parent);
 
     public IDisposable HookTorrentListingEvLoadingRow(Action<object, DataGridRowEventArgs> fx) => Inner.HookTorrentListingEvLoadingRow(fx);
     public IDisposable HookTorrentListingEvLoadingCell(string ColumnKey, Action<object, DataGridCell> fx) => Inner.HookTorrentListingEvLoadingCell(ColumnKey, fx);
@@ -45,6 +45,8 @@ internal sealed class PluginHostProxy<TConfig>(IPluginHost Inner) : IPluginHost<
     public HttpClient HttpClient => Inner.HttpClient;
 
     public IDaemonService? GetDaemonService(string serverId) => Inner.GetDaemonService(serverId);
+    public Task<(IDataProvider Provider, string RemotePath)?> SelectDuplicationTarget(Window Owner, Torrent Source, Func<IDataProvider, bool> Filter) => Inner.SelectDuplicationTarget(Owner, Source, Filter);
+    public Task<byte[]> DuplicateTorrentAs(IReadOnlyList<Torrent> Sources, IDataProvider Target, string RemotePath, byte[] TargetTorrent, LinkOptions Links) => Inner.DuplicateTorrentAs(Sources, Target, RemotePath, TargetTorrent, Links);
     public IServiceScope CreateScope() => Inner.CreateScope();
     public IReadOnlyList<IDaemonService> GetDaemonServices() => Inner.GetDaemonServices();
 
