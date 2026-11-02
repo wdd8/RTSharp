@@ -49,8 +49,10 @@
             DependsOnTargets="_CollectHelpSource"
             Inputs="@(_HelpSource)"
             Outputs="$(HelpFile)">
+        <!-- chmcmd prints "Error: Anchor ... undefined" for every anchor link into a subfolder, even though the anchor exists -->
         <Exec Command="dotnet run &quot;$(HelpRepoDir)scripts/build-help.cs&quot; -- &quot;$([System.IO.Path]::GetFullPath('$(HelpFile)'))&quot; &quot;$(ChmCmd)&quot;"
               WorkingDirectory="$(HelpRepoDir)"
+              IgnoreStandardErrorWarningFormat="true"
               ContinueOnError="$(HelpContinueOnError)" />
     </Target>
 
