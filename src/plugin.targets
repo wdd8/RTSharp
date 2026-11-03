@@ -34,7 +34,7 @@
 
     <Target Name="PluginPostBuild" AfterTargets="PostBuildEvent">
         <PropertyGroup>
-            <MainAppExeDir>$(OutputPath)../../</MainAppExeDir>
+            <MainAppExeDir>$(MSBuildThisFileDirectory)RTSharp/bin/$(Configuration)/$(TargetFramework)/$(RuntimeIdentifier)/</MainAppExeDir>
             <PluginName>$(ProjectName.TrimStart("RTSharp.").TrimEnd(".Plugin"))</PluginName>
             <ScriptsDir Condition="'$(ScriptsDir)' == ''">$(SolutionDir)scripts/</ScriptsDir>
         </PropertyGroup>
