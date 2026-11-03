@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 using RTSharp.Daemon.RuntimeCompilation.Exceptions;
+using RTSharp.Shared.Abstractions;
 
 using System.Reflection;
 using System.Text;
@@ -99,8 +101,19 @@ public static class DynamicCompilation
 		optimizationLevel: OptimizationLevel.Debug,
 		allowUnsafe: true);
 
-	public static (MemoryStream Assembly, string[] Tags) CompileAssembly(string Script, string Name)
+	public static (MemoryStream Assembly, string[] Tags) CompileAssembly(string Script, string Name, ScriptProgressState? Progress = null, CancellationToken CancellationToken = default)
 	{
+		void stage(string Text, float Percentage)
+		{
+			if (Progress == null)
+				return;
+
+			Progress.Text = Text;
+			Progress.Progress = Percentage;
+		}
+
+		stage("Preparing...", 0f);
+
 		var source = ParseScript(Script, ScriptEnvironment.BuiltInUsings);
 
 		var generators = new List<ISourceGenerator> {
@@ -133,7 +146,10 @@ public static class DynamicCompilation
 		var global = CSharpSyntaxTree.ParseText("[module: Dapper.DapperAot]", Parse, path: "global.cs", encoding: encoding);
 		var compilation = CSharpCompilation.Create(asmName, options: Compilation, references: ScriptReferenceResolver.References, syntaxTrees: [ encoded, global ]);
 		var driver = CSharpGeneratorDriver.Create(generators, parseOptions: Parse);
-		driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var generatorDiagnostics);
+
+		stage("Running source generators...", 25f);
+
+		driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var generatorDiagnostics, CancellationToken);
 		if (generatorDiagnostics.Any(x => x.Severity == DiagnosticSeverity.Error || x.Id == "CS8785"))
 			throw new CompilationFailureException($"Source generation failure. {string.Join(Environment.NewLine, generatorDiagnostics)}");
 
@@ -155,10 +171,13 @@ public static class DynamicCompilation
 
 		Debug.WriteLine($"Texts: {texts.Count}");
 
+		stage("Compiling...", 50f);
+
 		var emitResult = outputCompilation.Emit(
 			peStream: ms,
 			embeddedTexts: texts,
-			options: new EmitOptions(debugInformationFormat: DebugInformationFormat.Embedded)
+			options: new EmitOptions(debugInformationFormat: DebugInformationFormat.Embedded),
+			cancellationToken: CancellationToken
 		);
 
 		if (!emitResult.Success)
@@ -186,9 +205,23 @@ public static class DynamicCompilation
 		}
 	}
 
-	public static async Task<DynamicScript<T>> Compile<T>(string Script, string Name)
+	private static string CacheKey(string Script) => Convert.ToBase64String(System.Security.Cryptography.SHA512.HashData(Encoding.UTF8.GetBytes(Script)));
+
+	public static bool TryGetCached<T>(string Script, [NotNullWhen(true)] out DynamicScript<T>? Cached)
 	{
-		var key = Convert.ToBase64String(System.Security.Cryptography.SHA512.HashData(Encoding.UTF8.GetBytes(Script)));
+		lock (CacheLock) {
+			if (Cache.TryGetValue(CacheKey(Script), out Cached) && Cached!.TryAddRef()) {
+				return true;
+			}
+		}
+
+		Cached = null;
+		return false;
+	}
+
+	public static async Task<DynamicScript<T>> Compile<T>(string Script, string Name, ScriptProgressState? Progress = null, CancellationToken CancellationToken = default)
+	{
+		var key = CacheKey(Script);
 
 		SemaphoreSlim keyLock;
 		lock (CompileLocksLock) {
@@ -198,14 +231,12 @@ public static class DynamicCompilation
 			}
 		}
 
-		await keyLock.WaitAsync(); try {
-			lock (CacheLock) {
-				if (Cache.TryGetValue(key, out DynamicScript<T>? cached) && cached!.TryAddRef()) {
-					return cached;
-				}
+		await keyLock.WaitAsync(CancellationToken); try {
+			if (TryGetCached<T>(Script, out var cached)) {
+				return cached;
 			}
 
-			var (ms, tags) = CompileAssembly(Script, Name);
+			var (ms, tags) = await Task.Run(() => CompileAssembly(Script, Name, Progress, CancellationToken), CancellationToken);
 
 			var compilation = new DynamicScript<T>(ms, tags, CompilationCacheIdleTimeout, self => {
 				lock (CacheLock) {

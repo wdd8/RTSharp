@@ -65,9 +65,14 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
                 };
                 var msgBox = MessageBoxManager.GetMessageBoxStandard("Peer Reputation", message, ButtonEnum.YesNo, Icon.Question);
                 if (await msgBox.ShowAsync() == ButtonResult.Yes) {
-                    Progress(("Installing or updating script...", 50f));
-                    foreach (var daemon in notInstalled.Concat(outdated))
-                        await daemon.InstallScript(scriptId, "Peer Reputation", GUID, script, []);
+                    _ = Task.WhenAll(notInstalled.Concat(outdated).Select(async daemon => {
+                        try {
+                            await daemon.InstallScript(scriptId, "Peer Reputation", GUID, script, []);
+                        } catch (Exception ex) {
+                            this.Host.Logger.Error(ex, "Could not install the Peer Reputation script on {Server}", daemon.Id);
+                            await Dispatcher.UIThread.InvokeAsync(() => MessageBoxManager.GetMessageBoxStandard("Peer Reputation", $"Could not install the script on {daemon.Id}:\n{ex.Message}", ButtonEnum.Ok, Icon.Error).ShowAsync());
+                        }
+                    }));
                 }
             }
 

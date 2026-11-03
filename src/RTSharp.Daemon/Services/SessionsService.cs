@@ -132,6 +132,37 @@ public class SessionsService(IServiceScopeFactory ScopeFactory, ILogger<Sessions
 
     private readonly List<ChannelWriter<(ScriptSessionUpdate Update, bool IncludeChain)>> Subscribers = new();
 
+    /// <summary>
+    /// Compiles a script, reporting progress through a session of its own unless the script is already compiled
+    /// </summary>
+    public async Task<DynamicScript<IScript>> CompileScript(string Script, string Name)
+    {
+        if (DynamicCompilation.TryGetCached<IScript>(Script, out var cached))
+            return cached;
+
+        DynamicScript<IScript>? compilation = null;
+        var cts = new CancellationTokenSource();
+
+        await RunSession($"Compile {Name}", cts, async session => {
+            session.Progress.State = TASK_STATE.RUNNING;
+
+            try {
+                compilation = await DynamicCompilation.Compile<IScript>(Script, Name, session.Progress, cts.Token);
+
+                session.Progress.Text = "Compiled";
+                session.Progress.Progress = 100f;
+                session.Progress.State = TASK_STATE.DONE;
+            } catch (Exception ex) when (ex is not OperationCanceledException) {
+                // Set here, as a status stream can end before the session's continuation marks it as failed
+                session.Progress.Text = DynamicCompilation.TryDescribeAuthoringError(ex, out var message) ? message : ex.Message;
+                session.Progress.State = TASK_STATE.FAILED;
+                throw;
+            }
+        }).Execution!;
+
+        return compilation!;
+    }
+
     public ScriptSession RunScript(string Name, DynamicScript<IScript> DynamicScript, IEnumerable<ScriptMessage> Input, string? InstalledScriptId = null)
     {
         var scope = ScopeFactory.CreateScope();

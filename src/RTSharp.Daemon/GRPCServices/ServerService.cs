@@ -36,7 +36,7 @@ namespace RTSharp.Daemon.GRPCServices
                 Logger.LogDebug("Compiling script...");
                 Logger.LogTrace("Script: {script}", Req.Script);
 
-                var compilation = await DynamicCompilation.Compile<IScript>(Req.Script, Req.Name);
+                var compilation = await Sessions.CompileScript(Req.Script, Req.Name);
 
                 var session = Sessions.RunScript(Req.Name, compilation, Req.Input.Select(x => x.ToScriptMessage()));
 
@@ -55,6 +55,8 @@ namespace RTSharp.Daemon.GRPCServices
                 return new ScriptSessionReply {
                     Id = session.Id.ToByteString()
                 };
+            } catch (OperationCanceledException) {
+                throw new RpcException(new Status(StatusCode.Cancelled, "Script compilation was cancelled"));
             } catch (Exception ex) when (DynamicCompilation.TryDescribeAuthoringError(ex, out var message)) {
                 throw new RpcException(new Status(StatusCode.InvalidArgument, message));
             } catch (Exception ex) {
@@ -231,6 +233,8 @@ namespace RTSharp.Daemon.GRPCServices
                 return MapInstalledScript(installed);
             } catch (ArgumentException ex) {
                 throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+            } catch (OperationCanceledException) {
+                throw new RpcException(new Status(StatusCode.Cancelled, "Script compilation was cancelled"));
             } catch (Exception ex) when (DynamicCompilation.TryDescribeAuthoringError(ex, out var message)) {
                 throw new RpcException(new Status(StatusCode.InvalidArgument, message));
             } catch (Exception ex) {

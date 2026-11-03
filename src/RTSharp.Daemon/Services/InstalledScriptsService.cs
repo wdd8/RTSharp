@@ -86,7 +86,7 @@ public class InstalledScriptsService(
         if (Id.AsSpan().ContainsAny([..Path.GetInvalidFileNameChars(), Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) || Id is "." or "..")
             throw new ArgumentException($"Installed script id {Id} is not usable as a directory name", nameof(Id));
 
-        var compilation = await DynamicCompilation.Compile<IScript>(Start.Script, Start.Name);
+        var compilation = await Sessions.CompileScript(Start.Script, Start.Name);
 
         var idLock = IdLocks.GetOrAdd(Id, _ => new SemaphoreSlim(1, 1));
         await idLock.WaitAsync(); try {
