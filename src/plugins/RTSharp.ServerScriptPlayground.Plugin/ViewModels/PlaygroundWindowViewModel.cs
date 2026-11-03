@@ -106,6 +106,22 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
     }
 
     [RelayCommand]
+    public async Task UnorphanService(InstalledScript Script)
+    {
+        if (SelectedServer == null)
+            return;
+
+        try {
+            await Host.GetDaemonService(SelectedServer)!.SetOrphanAcknowledged(Script.Id, false);
+        } catch (Exception ex) {
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
+            return;
+        }
+
+        await RefreshInstalled();
+    }
+
+    [RelayCommand]
     public async Task RefreshInstalled()
     {
         InstalledScripts.Clear();

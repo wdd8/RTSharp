@@ -260,12 +260,12 @@ namespace RTSharp.Daemon.GRPCServices
             return ret;
         }
 
-        public override async Task<Protocols.InstalledScript> AcknowledgeOrphanedScript(StringValue Req, ServerCallContext Ctx)
+        public override async Task<Protocols.InstalledScript> SetOrphanAcknowledged(SetOrphanAcknowledgedInput Req, ServerCallContext Ctx)
         {
             try {
-                return MapInstalledScript(await InstalledScripts.AcknowledgeOrphaned(Req.Value));
+                return MapInstalledScript(await InstalledScripts.SetOrphanAcknowledged(Req.Id, Req.Acknowledged));
             } catch (Exception ex) when (ex is KeyNotFoundException or DirectoryNotFoundException or FileNotFoundException) {
-                throw new RpcException(new Status(StatusCode.NotFound, $"No installed script '{Req.Value}'"));
+                throw new RpcException(new Status(StatusCode.NotFound, $"No installed script '{Req.Id}'"));
             }
         }
     }

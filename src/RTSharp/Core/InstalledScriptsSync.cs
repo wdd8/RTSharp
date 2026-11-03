@@ -59,6 +59,10 @@ public static class InstalledScriptsSync
                         new MsBox.Avalonia.Models.ButtonDefinition() {
                             Name = "No, do not ask again",
                             IsDefault = false
+                        },
+                        new MsBox.Avalonia.Models.ButtonDefinition() {
+                            Name = "Ignore",
+                            IsDefault = false
                         }
                     ],
                     Icon = Icon.Question,
@@ -70,8 +74,8 @@ public static class InstalledScriptsSync
                 try {
                     if (answer == "Yes")
                         await daemon.UninstallScript(orphan.Id);
-                    else
-                        await daemon.AcknowledgeOrphanedScript(orphan.Id);
+                    else if (answer == "No, do not ask again")
+                        await daemon.SetOrphanAcknowledged(orphan.Id, true);
                 } catch (Exception ex) {
                     Log.Logger.Error(ex, $"Could not resolve orphaned script {orphan.Id} on {serverId}");
                 }

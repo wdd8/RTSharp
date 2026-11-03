@@ -294,9 +294,9 @@ public class DaemonService : IDaemonService
         return [ ..reply.Scripts.Select(MapInstalledScript) ];
     }
 
-    public async Task AcknowledgeOrphanedScript(string Id)
+    public async Task SetOrphanAcknowledged(string Id, bool Acknowledged)
     {
-        await ServerClient.AcknowledgeOrphanedScriptAsync(new StringValue { Value = Id });
+        await ServerClient.SetOrphanAcknowledgedAsync(new SetOrphanAcknowledgedInput { Id = Id, Acknowledged = Acknowledged });
     }
 
     static Shared.Abstractions.InstalledScript MapInstalledScript(RTSharp.Daemon.Protocols.InstalledScript In)

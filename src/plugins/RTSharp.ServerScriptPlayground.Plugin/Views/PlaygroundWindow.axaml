@@ -42,12 +42,16 @@
                     <ItemsControl ItemsSource="{Binding InstalledScripts}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="abstractions:InstalledScript">
-                                <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,2">
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2">
                                     <TextBlock Grid.Column="0" VerticalAlignment="Center"
                                                Text="{Binding Name}" ToolTip.Tip="{Binding LastError}" />
                                     <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0"
                                                Text="{Binding State}" ToolTip.Tip="{Binding StatusText}" />
-                                    <Button Grid.Column="2" Content="Uninstall"
+                                    <Button Grid.Column="2" Content="Unorphan" Margin="0,0,4,0"
+                                            IsVisible="{Binding OrphanAcknowledged}"
+                                            Command="{Binding $parent[ItemsControl].((vm:PlaygroundWindowViewModel)DataContext).UnorphanServiceCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Grid.Column="3" Content="Uninstall"
                                             Command="{Binding $parent[ItemsControl].((vm:PlaygroundWindowViewModel)DataContext).UninstallServiceCommand}"
                                             CommandParameter="{Binding}" />
                                 </Grid>

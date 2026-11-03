@@ -143,12 +143,12 @@ public class InstalledScriptsService(
         }
     }
 
-    public async Task<InstalledScript> AcknowledgeOrphaned(string Id)
+    public async Task<InstalledScript> SetOrphanAcknowledged(string Id, bool Acknowledged)
     {
         var idLock = IdLocks.GetOrAdd(Id, _ => new SemaphoreSlim(1, 1));
         await idLock.WaitAsync();
         try {
-            var info = await ReadInfo(Id, CancellationToken.None) with { OrphanAcknowledged = true };
+            var info = await ReadInfo(Id, CancellationToken.None) with { OrphanAcknowledged = Acknowledged };
 
             await WriteAtomic(Path.Combine(StorePath, Id, INFO_JSON), JsonSerializer.SerializeToUtf8Bytes(info, InstalledScriptInfoContext.Default.InstalledScriptInfo));
 

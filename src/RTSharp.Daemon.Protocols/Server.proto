@@ -21,7 +21,7 @@ service GRPCServerService {
     rpc InstallScript (InstallScriptInput) returns (InstalledScript);
     rpc UninstallScript (google.protobuf.StringValue) returns (google.protobuf.Empty);
     rpc ListInstalledScripts (google.protobuf.Empty) returns (InstalledScriptList);
-    rpc AcknowledgeOrphanedScript (google.protobuf.StringValue) returns (InstalledScript);
+    rpc SetOrphanAcknowledged (SetOrphanAcknowledgedInput) returns (InstalledScript);
 }
 
 message ServerSettings {
@@ -87,6 +87,11 @@ message InstallScriptInput {
     string Id = 1;
     string OwnerId = 2;
     StartScriptInput Start = 3;
+}
+
+message SetOrphanAcknowledgedInput {
+    string Id = 1;
+    bool Acknowledged = 2;
 }
 
 message InstalledScript {

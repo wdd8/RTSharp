@@ -104,10 +104,10 @@ public interface IDaemonService
     Task<IReadOnlyList<InstalledScript>> ListInstalledScripts();
 
     /// <summary>
-    /// Records on the server that a user has been asked about this script being orphaned and chose
-    /// to keep it
+    /// Records on the server whether a user has been asked about this script being orphaned and chose
+    /// to keep it. Clearing it makes the orphan prompt include the script again
     /// </summary>
-    Task AcknowledgeOrphanedScript(string Id);
+    Task SetOrphanAcknowledged(string Id, bool Acknowledged);
 
     Task QueueScriptCancellation(Guid Id);
 
