@@ -106,8 +106,30 @@ static void BuildTree(string Stage, Package Pkg, string Format)
 
     Run("dotnet", ["run", "scripts/build-man.cs", "--", Pkg.BinName, Path.Combine(Stage, "usr", "share", "man")]);
 
-    if (!Pkg.IsDaemon)
+    if (!Pkg.IsDaemon) {
+        var desktopFile = Path.Combine(Stage, Consts.DesktopFile);
+        Directory.CreateDirectory(Path.GetDirectoryName(desktopFile)!);
+        File.WriteAllText(desktopFile,
+"""
+[Desktop Entry]
+Type=Application
+Name=RTSharp
+GenericName=BitTorrent Client
+Comment=Manage remote torrent daemons
+Exec=rtsharp
+Icon=rtsharp
+Terminal=false
+Categories=Network;FileTransfer;P2P;
+Keywords=torrent;bittorrent;rtorrent;qbittorrent;transmission;
+StartupWMClass=RTSharp
+""");
+
+        var iconFile = Path.Combine(Stage, Consts.IconFile);
+        Directory.CreateDirectory(Path.GetDirectoryName(iconFile)!);
+        File.Copy("src/RTSharp/Assets/rtsharp.png", iconFile);
+
         return;
+    }
 
     var systemdDir = Path.Combine(Stage, Format == "deb" ? "lib" : Path.Combine("usr", "lib"), "systemd", "system");
     Directory.CreateDirectory(systemdDir);
@@ -259,6 +281,10 @@ static void PackRpm(string Stage, Package Pkg, string Version, string Arch, stri
     spec.AppendLine($"/{Pkg.InstallDir}");
     spec.AppendLine($"/usr/bin/{Pkg.BinName}");
     spec.AppendLine($"/usr/share/man/man*/{Pkg.BinName}.*");
+    if (!Pkg.IsDaemon) {
+        spec.AppendLine($"/{Consts.DesktopFile}");
+        spec.AppendLine($"/{Consts.IconFile}");
+    }
     if (Pkg.IsDaemon) {
         spec.AppendLine("%dir /etc/rtsharp-daemon");
         spec.AppendLine($"%config(noreplace) /{Consts.ConfigFile}");
@@ -435,6 +461,9 @@ static class Consts
 
     public const string ServiceFile = "rtsharp-daemon.service";
     public const string ConfigFile = "etc/rtsharp-daemon/appsettings.json";
+
+    public const string DesktopFile = "usr/share/applications/rtsharp.desktop";
+    public const string IconFile = "usr/share/icons/hicolor/256x256/apps/rtsharp.png";
 
     public const UnixFileMode ExecMode =
         UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
