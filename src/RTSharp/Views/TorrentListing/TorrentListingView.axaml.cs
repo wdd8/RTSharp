@@ -323,7 +323,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     private async Task<string?> ShowSelectRemoteDirectoryDialog(Window Owner, string Title, IDataProvider DataProvider, string? StartingDir)
     {
         var dialog = new DirectorySelectorWindow() {
-            ViewModel = new DirectorySelectorWindowViewModel(DataProvider) {
+            ViewModel = new DirectorySelectorWindowViewModel(DataProvider.Host.AttachedDaemonService) {
                 WindowTitle = Title
             }
         };

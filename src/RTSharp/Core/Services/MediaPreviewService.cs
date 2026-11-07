@@ -10,14 +10,18 @@ using Microsoft.Extensions.Options;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
+using RTSharp.Core.Services.Daemon;
 using RTSharp.Daemon.Protocols;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Daemon;
+using RTSharp.Shared.Controls.ViewModels;
+using RTSharp.Shared.Controls.Views;
 
 using Serilog;
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -27,8 +31,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Torrent = RTSharp.Models.Torrent;
 
 namespace RTSharp.Core.Services;
 
@@ -62,14 +64,40 @@ public class MediaPreviewService
         return listener;
     }
 
-    public async Task OpenPreview(Torrent Torrent, string remotePath, ulong fileSize)
+    public async Task ShowMediaInfo(IDaemonService Server, IList<string> RemotePaths)
+    {
+        IList<string> reply;
+        try {
+            reply = await Server.Mediainfo(RemotePaths);
+        } catch (RpcException ex) when (ex.StatusCode == StatusCode.DeadlineExceeded) {
+            await MessageBoxManager.GetMessageBoxStandard(
+                title: "Timeout",
+                text: $"mediainfo has timed out.",
+                @enum: ButtonEnum.Ok,
+                icon: Icon.Error
+            ).ShowAsync();
+            return;
+        } catch (Exception ex) {
+            Log.Logger.Error(ex, "Mediainfo failed");
+            return;
+        }
+
+        new TextPreviewWindow {
+            ViewModel = new TextPreviewWindowViewModel {
+                Text = string.Join('\n', reply),
+                Monospace = true
+            }
+        }.Show();
+    }
+
+    public async Task OpenPreview(IDaemonService Server, string remotePath, ulong fileSize)
     {
         using var cts = new CancellationTokenSource();
         var listener = await BindAsync(cts.Token);
 
         var ep = (IPEndPoint)listener.EndPoint;
         var token = Guid.NewGuid().ToString("N");
-        _sessions[token] = new PreviewSession(Torrent.DataOwner.AttachedDaemonService, remotePath, fileSize, GetContentType(remotePath));
+        _sessions[token] = new PreviewSession(Server, remotePath, fileSize, GetContentType(remotePath));
 
         var url = $"http://{ep.Address}:{ep.Port}/{token}";
         Log.Logger.Information("MediaPreviewService: preview {Url}", url);

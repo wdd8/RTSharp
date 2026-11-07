@@ -32,6 +32,7 @@
       { "title": "Statistics", "file": "statistics.htm" }
     ] },
     { "title": "Tools and Options", "children": [
+      { "title": "Browsing the file system of a server", "file": "browsefs.htm" },
       { "title": "Torrent Creator", "file": "torrentcreator.htm" },
       { "title": "Behavior options", "file": "optbehavior.htm" },
       { "title": "Caching options", "file": "optcaching.htm" },
@@ -75,7 +76,7 @@
         "installation.htm", "mainscreen.htm", "servers.htm", "dataproviders.htm", "addtorrent.htm",
         "listing.htm", "torrentactions.htm", "labels.htm", "movedir.htm", "duplicate.htm", "tabgeneral.htm", "tabfiles.htm", "tabpeers.htm", "tabtrackers.htm",
         "dppane.htm", "actionqueue.htm", "logs.htm", "statistics.htm",
-        "torrentcreator.htm", "optbehavior.htm", "optcaching.htm", "optlook.htm", "optnetwork.htm",
+        "browsefs.htm", "torrentcreator.htm", "optbehavior.htm", "optcaching.htm", "optlook.htm", "optnetwork.htm",
         "plugins.htm", "autointegrify.htm", "crossseed.htm", "masstracker.htm", "coloredratio.htm", "scriptplayground.htm", "dpsettings.htm",
         "troubleshooting.htm", "daemontroubleshooting.htm"
       ],

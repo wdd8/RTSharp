@@ -236,13 +236,15 @@ public class DaemonService : IDaemonService
         }
     }
 
+    public static readonly TimeSpan MediainfoTimeout = TimeSpan.FromSeconds(30);
+
     public async Task<IList<string>> Mediainfo(IList<string> Files)
     {
         MediaInfoReply reply;
         try {
             reply = await FilesClient.MediaInfoAsync(new MediaInfoInput() {
                 Paths = { Files }
-            });
+            }, deadline: DateTime.UtcNow + MediainfoTimeout);
         } catch (Exception ex) {
             Log.Logger.Error(ex, "Failed to Mediainfo");
             throw;

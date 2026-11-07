@@ -94,7 +94,6 @@ public partial class TorrentFilesViewModel : ObservableObject
 
     [ObservableProperty]
     public partial Models.Torrent? Torrent { get; set; }
-    public Action<string> ShowTextPreviewWindow { get; set; } = null!; // view set
 
     private static DataGridBindingDefinition CreateNodeBinding<TValue>(string name, Func<Models.File, TValue> getter)
     {
@@ -236,7 +235,7 @@ public partial class TorrentFilesViewModel : ObservableObject
 
             using var scope = Core.ServiceProvider.CreateScope();
             var preview = scope.ServiceProvider.GetRequiredService<MediaPreviewService>();
-            await preview.OpenPreview(Torrent, remotePath, file.Size);
+            await preview.OpenPreview(Torrent.DataOwner.AttachedDaemonService, remotePath, file.Size);
         }
     }
 
@@ -249,16 +248,8 @@ public partial class TorrentFilesViewModel : ObservableObject
         if (files.Count() == 0 || Torrent == null)
             return;
 
-        var server = Torrent.DataOwner.AttachedDaemonService;
-
-        IList<string> reply;
-        try {
-            reply = await server.Mediainfo(files.Select(x => x.GetRemotePath(Torrent.RemotePath, Torrent.Name, MultiFile)).ToArray());
-        } catch (Exception ex) {
-            Log.Logger.Error(ex, "Mediainfo failed");
-            return;
-        }
-
-        ShowTextPreviewWindow(string.Join('\n', reply));
+        using var scope = Core.ServiceProvider.CreateScope();
+        var preview = scope.ServiceProvider.GetRequiredService<MediaPreviewService>();
+        await preview.ShowMediaInfo(Torrent.DataOwner.AttachedDaemonService, files.Select(x => x.GetRemotePath(Torrent.RemotePath, Torrent.Name, MultiFile)).ToArray());
     }
 }

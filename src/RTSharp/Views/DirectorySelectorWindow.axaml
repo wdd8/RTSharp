@@ -5,6 +5,7 @@
         xmlns:vm="clr-namespace:RTSharp.ViewModels;assembly=RTSharp"
         xmlns:i="https://github.com/projektanker/icons.avalonia"
         xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters"
+        xmlns:sharedConverters="using:RTSharp.Shared.Controls.Converters"
         xmlns:models="clr-namespace:RTSharp.Models"
         d:DataContext="{x:Static vm:ExampleDirectorySelectorWindowViewModel.ViewModel}"
         x:DataType="vm:DirectorySelectorWindowViewModel"
@@ -32,6 +33,7 @@
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
             <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
+            <sharedConverters:ToHexStringConverter x:Key="ToHexStringConverter" />
         </ResourceDictionary>
     </Control.Resources>
 
@@ -73,6 +75,16 @@
 
             <DataGrid.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="Media_info"
+                              Command="{Binding MediaInfoCommand}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
+                    />
+                    <MenuItem Header="Preview with _mpv"
+                              Command="{Binding PreviewCommand}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
+                              IsEnabled="{Binding PreviewAllowed}"
+                    />
+                    <Separator />
                     <MenuItem Header="Remove directory"
                               Command="{Binding RemoveEmptyDirectoryCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
@@ -130,6 +142,26 @@
                 </DataGridTemplateColumn>
                 <DataGridTextColumn Header="Size" IsReadOnly="True" Binding="{Binding Size, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}, TargetNullValue=''}" Width="100" />
                 <DataGridTextColumn Header="Last modified" IsReadOnly="True" Binding="{Binding LastModified, Mode=OneWay}" Width="170" />
+                <DataGridTemplateColumn Header="Torrents" IsReadOnly="True" Width="300">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="models:FileSystemItem">
+                            <ItemsControl ItemsSource="{Binding Torrents}" VerticalAlignment="Center" Margin="{DynamicResource DataGridCellTextBlockMargin}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="12" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:Torrent">
+                                        <TextBlock ToolTip.Tip="{Binding Hash, Converter={StaticResource ToHexStringConverter}}">
+                                            <Run Text="{Binding Name}" /><Run Text=" (" /><Run Text="{Binding DataOwner.Config.Plugin.Name}" /><Run Text=")" />
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -145,7 +177,7 @@
             </Grid>
             
             <Grid Grid.Column="1">
-                <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" IsVisible="{Binding !IsBrowser}">
                     <Button Margin="0 0 4 0" Command="{Binding SelectCommand}">Select</Button>
                     <Button Command="{Binding CancelCommand}">Cancel</Button>
                 </StackPanel>

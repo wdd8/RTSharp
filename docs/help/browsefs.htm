@@ -1,0 +1,32 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+   <title>Browsing the file system of a server</title>
+   <meta name="keywords" content="Browse file system,Server files,Torrents column,Cross-seed,Mediainfo,Preview,mpv">
+   <link rel="stylesheet" type="text/css" href="help.css">
+</head>
+<body bgcolor="#FFFFFF">
+
+<p>RT# can browse the files and folders of a server, and tell you which torrents each of them belongs to. Open the Servers window, select a server and click on "Browse file system".</p>
+
+<p>The window opens on the root of the server. Double click on a folder to open it, or on ".." to go to the parent folder. You can also type a path in the box at the top and press Enter, and F5 refreshes the current folder. For each file or folder, RT# displays the following columns:</p>
+<div class="list">
+<b>Name</b>: Name of the file or of the folder, followed by the target of the symbolic links<br>
+<b>Permissions</b>: Type and permissions of the file, hover them to see the owner and the group<br>
+<b>Size</b>: Size of the file<br>
+<b>Last modified</b>: Date of the last modification<br>
+<b>Torrents</b>: The torrents whose data is this file or folder, or contains it, with the data provider they belong to. Hover a torrent to see its info hash<br>
+</div>
+
+<p>The Torrents column covers all the data providers attached to the server, so several torrents are listed when a folder is shared between them, for example by cross-seeded torrents. The folders inside the data of a torrent show that torrent as well, so you can tell where any file comes from. The torrents are those known to RT# when the folder was opened, press F5 to refresh them.</p>
+
+<p>Select one or several files and right click on them to get the files menu:</p>
+<div class="list">
+- Mediainfo: Run mediainfo on the server for the selected files and display the result in a new window<br>
+- Preview with mpv: Play the file with mpv directly from the server, as in the Files tab<br>
+- Remove directory: Remove the selected empty directory<br>
+</div>
+<p>The "Create directory" button creates a new folder in the current folder.</p>
+
+</body>
+</html>

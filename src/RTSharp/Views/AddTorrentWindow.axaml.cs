@@ -32,7 +32,7 @@ namespace RTSharp.Views
         {
             var dialog = new DirectorySelectorWindow()
             {
-                ViewModel = new DirectorySelectorWindowViewModel(ViewModel!.SelectedProvider!)
+                ViewModel = new DirectorySelectorWindowViewModel(ViewModel!.SelectedProvider!.Host.AttachedDaemonService)
                 {
                     WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider!.Host.Config.Plugin.Name})"
                 }

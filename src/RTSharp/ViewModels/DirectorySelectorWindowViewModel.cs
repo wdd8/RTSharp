@@ -12,11 +12,13 @@ using CommunityToolkit.Mvvm.Input;
 using DynamicData;
 using DynamicData.Binding;
 
-using RTSharp.Core.Services.Daemon;
+using Microsoft.Extensions.DependencyInjection;
+
+using RTSharp.Core.Services;
+using RTSharp.Core.TorrentPolling;
 using RTSharp.Models;
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.Shared.Abstractions.Daemon;
-using RTSharp.Shared.Abstractions.DataProvider;
 
 using Serilog;
 
@@ -32,7 +34,7 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
 
     public FileSystemItem? Current { get; set; }
 
-    public IDataProvider DataProvider { get; init; }
+    public bool IsBrowser { get; init; }
 
     public SourceList<FileSystemItem> _itemsSource { get; set; } = new();
 
@@ -48,17 +50,19 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
     [ObservableProperty]
     public partial bool RemoveDirectoryAllowed { get; set; }
 
+    [ObservableProperty]
+    public partial bool PreviewAllowed { get; set; }
+
     private readonly IDaemonService Server;
 
-    public DirectorySelectorWindowViewModel(IDataProvider DataProvider)
+    public DirectorySelectorWindowViewModel(IDaemonService Server)
     {
-        this.DataProvider = DataProvider;
         var comparer = SortExpressionComparer<FileSystemItem>
             .Ascending(x => x.Display.Name switch { "." => 0, ".." => 1, _ => 2 })
             .ThenByAscending(x => x.Path);
         AddDisposable(_itemsSource.Connect().Sort(comparer).Bind(out _items).Subscribe());
 
-        Server = DataProvider.Host.AttachedDaemonService;
+        this.Server = Server;
     }
 
     [RelayCommand]
@@ -151,14 +155,28 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
         if (!dirInfo.Directory)
             return;
 
+        var torrentsByContentPath = TorrentPolling.Torrents.GetSnapshot()
+            .Where(x => x.DataOwner.Config.Plugin.ServerId == Server.Id)
+            .ToLookup(x => x.RemotePath.TrimEnd('/') + "/" + x.Name);
+
+        List<Torrent> torrentsOf(string Path)
+        {
+            var ret = new List<Torrent>();
+            for (var path = Path; path.Length > 0; path = path[..Math.Max(path.LastIndexOf('/'), 0)])
+                ret.AddRange(torrentsByContentPath[path]);
+            return ret;
+        }
+
         var newList = new List<FileSystemItem>();
 
         if (dirInfo.Path != "/") {
-            newList.Add(new FileSystemItem(dirInfo.Path + "/.", true, dirInfo.Size, dirInfo.LastModified, dirInfo.Permissions, dirInfo.Owner, dirInfo.Group, dirInfo.LinkTarget));
+            newList.Add(new FileSystemItem(dirInfo.Path + "/.", true, dirInfo.Size, dirInfo.LastModified, dirInfo.Permissions, dirInfo.Owner, dirInfo.Group, dirInfo.LinkTarget) {
+                Torrents = torrentsOf(dirInfo.Path)
+            });
             newList.Add(new FileSystemItem(dirInfo.Path + "/..", true, null, null, null, null, null, null));
         }
 
-        foreach (var item in dirInfo.Children!.Select(x => new FileSystemItem(x))) {
+        foreach (var item in dirInfo.Children!.Select(x => new FileSystemItem(x) { Torrents = torrentsOf(x.Path) })) {
             newList.Add(item);
         }
 
@@ -172,12 +190,39 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
     {
         Selected = Current;
         RemoveDirectoryAllowed = value.IsDirectory;
+        PreviewAllowed = !value.IsDirectory;
 
         if (!value.IsDirectory || value.Display.Name is ".." or ".") {
             return;
         }
 
         Selected = value;
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    public async Task Preview(IList In)
+    {
+        var file = In.Cast<FileSystemItem>().FirstOrDefault(x => !x.IsDirectory);
+
+        if (file == null)
+            return;
+
+        using var scope = Core.ServiceProvider.CreateScope();
+        var preview = scope.ServiceProvider.GetRequiredService<MediaPreviewService>();
+        await preview.OpenPreview(Server, file.Path, file.Size ?? 0);
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    public async Task MediaInfo(IList In)
+    {
+        var paths = In.Cast<FileSystemItem>().Where(x => x.Display.Name is not ("." or "..")).Select(x => x.Path).ToArray();
+
+        if (paths.Length == 0)
+            return;
+
+        using var scope = Core.ServiceProvider.CreateScope();
+        var preview = scope.ServiceProvider.GetRequiredService<MediaPreviewService>();
+        await preview.ShowMediaInfo(Server, paths);
     }
 }
 

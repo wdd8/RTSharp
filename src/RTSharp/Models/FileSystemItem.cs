@@ -67,13 +67,18 @@ namespace RTSharp.Models
         public string? Group { get; init; }
 
         public string? LinkTarget { get; init; }
+
+        /// <summary>
+        /// Torrents whose data is this item or contains it
+        /// </summary>
+        public IReadOnlyList<Torrent> Torrents { get; init; } = [];
     }
 
     public class FileSystemItemEqualityComparer : IEqualityComparer<FileSystemItem>
     {
         public bool Equals(FileSystemItem? x, FileSystemItem? y)
         {
-            return x != null && y != null && x.Path == y.Path && x.IsDirectory == y.IsDirectory && x.Size == y.Size && x.LastModified == y.LastModified && x.Permissions == y.Permissions;
+            return x != null && y != null && x.Path == y.Path && x.IsDirectory == y.IsDirectory && x.Size == y.Size && x.LastModified == y.LastModified && x.Permissions == y.Permissions && x.Torrents.SequenceEqual(y.Torrents);
         }
 
         public int GetHashCode([DisallowNull] FileSystemItem obj)

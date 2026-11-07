@@ -105,7 +105,10 @@
                 <TextBlock Grid.Column="0" Grid.Row="3" Classes="label" IsVisible="{Binding SelectedServer.Latency, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">Latency:</TextBlock>
                 <TextBlock Grid.Column="1" Grid.Row="3" Classes="value" Text="{Binding SelectedServer.Latency}" IsVisible="{Binding SelectedServer.Latency, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                <Button Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" Content="Test Connection" Command="{Binding TestConnectionCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+                <StackPanel Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                    <Button Content="Test Connection" Command="{Binding TestConnectionCommand}" />
+                    <Button Content="Browse file system" Command="{Binding BrowseFileSystemCommand}" />
+                </StackPanel>
 
                 <Separator Grid.Column="0" Grid.Row="5" Grid.ColumnSpan="2" />
 

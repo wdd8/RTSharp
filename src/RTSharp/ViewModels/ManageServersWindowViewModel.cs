@@ -24,6 +24,7 @@ using System.Threading.Tasks;
 
 using Avalonia.Controls;
 using RTSharp.Models;
+using RTSharp.Views;
 
 namespace RTSharp.ViewModels;
 
@@ -35,6 +36,7 @@ public partial class ManageServersWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(BeginEditCommand))]
     [NotifyCanExecuteChangedFor(nameof(DeleteCommand))]
     [NotifyCanExecuteChangedFor(nameof(TestConnectionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BrowseFileSystemCommand))]
     public partial Server? SelectedServer { get; set; }
 
     [ObservableProperty]
@@ -230,6 +232,27 @@ public partial class ManageServersWindowViewModel : ObservableObject
 
         await config.Rewrite();
         Refresh();
+    }
+
+    public bool CanBrowseFileSystem() => SelectedServer != null;
+
+    [RelayCommand(CanExecute = nameof(CanBrowseFileSystem))]
+    public async Task BrowseFileSystem()
+    {
+        if (!Core.Servers.All.TryGetValue(SelectedServer!.ServerId, out var daemonService)) {
+            Log.Logger.Error("Server not found");
+            return;
+        }
+
+        var wnd = new DirectorySelectorWindow {
+            ViewModel = new DirectorySelectorWindowViewModel(daemonService) {
+                WindowTitle = $"RT# - Browse file system ({SelectedServer.ServerId})",
+                IsBrowser = true
+            }
+        };
+
+        await wnd.ViewModel.SetCurrentFolder("/");
+        wnd.Show();
     }
 
     public bool CanTestConnection() => SelectedServer != null;
