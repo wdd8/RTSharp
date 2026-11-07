@@ -133,7 +133,8 @@ public partial class TorrentFilesViewModel : ObservableObject
                 Binding = CreateNodeBinding<Models.File>("Item", item => item),
                 CellTemplateKey = "FileNameTemplate",
                 ColumnKey = nameof(Models.File.Name),
-                SortMemberPath = nameof(Models.File.Name)
+                SortMemberPath = nameof(Models.File.Name),
+                Width = new DataGridLength(400)
             },
             new DataGridTemplateColumnDefinition
             {
@@ -142,6 +143,7 @@ public partial class TorrentFilesViewModel : ObservableObject
                 CellTemplateKey = "FileSizeTemplate",
                 ColumnKey = nameof(Models.File.Size),
                 SortMemberPath = nameof(Models.File.Size),
+                Width = new DataGridLength(100)
             },
             new DataGridTemplateColumnDefinition
             {
@@ -149,25 +151,29 @@ public partial class TorrentFilesViewModel : ObservableObject
                 CellTemplateKey = "FileDownloadedTemplate",
                 ColumnKey = nameof(Models.File.Downloaded),
                 SortMemberPath = nameof(Models.File.Downloaded),
+                Width = new DataGridLength(120)
             },
             new DataGridTemplateColumnDefinition
             {
                 Header = nameof(Models.File.Done),
                 CellTemplateKey = "FileDoneTemplate",
                 ColumnKey = nameof(Models.File.Done),
-                SortMemberPath = nameof(Models.File.Done)
+                SortMemberPath = nameof(Models.File.Done),
+                Width = new DataGridLength(120)
             },
             new DataGridTemplateColumnDefinition
             {
                 Header = "Priority",
                 CellTemplateKey = "FilePriorityTemplate",
                 ColumnKey = nameof(Models.File.Priority),
+                Width = new DataGridLength(110)
             },
             new DataGridTemplateColumnDefinition
             {
                 Header = "Download strategy",
                 CellTemplateKey = "FileDownloadStrategyTemplate",
-                ColumnKey = nameof(Models.File.DownloadStrategy)
+                ColumnKey = nameof(Models.File.DownloadStrategy),
+                Width = new DataGridLength(150)
             }
         ]);
 
