@@ -148,10 +148,8 @@ namespace RTSharp.ViewModels.TorrentListing
             TrackersView.Refresh();
 
             try {
-                var trackerInfo = await trackerDb.GetTrackerInfo(trackers[0].Domain);
-                trackerInfo ??= new TrackerInfo("", null, null);
-                trackerInfo.Name = In.Text;
-                await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, trackerInfo);
+                var trackerInfo = trackerDb.GetTrackerInfo(trackers[0].Domain);
+                await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, new TrackerInfo(trackers[0].Domain, In.Text, trackerInfo?.ImageHash));
                 await TorrentListingViewModel.UpdateTrackersInTorrents();
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Setting tracker name failed");
@@ -185,8 +183,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 return;
             }
 
-            var trackerInfo = await trackerDb.GetTrackerInfo(trackers[0].Domain);
-            trackerInfo ??= new TrackerInfo(trackers[0].Domain, null, null);
+            var trackerInfo = trackerDb.GetTrackerInfo(trackers[0].Domain);
 
             var img = await imageCache.AddImage(icon);
             if (img == null) {
@@ -194,7 +191,6 @@ namespace RTSharp.ViewModels.TorrentListing
                 return;
             }
 
-            trackerInfo.ImageHash = img.Value.Hash;
             foreach (var tracker in Trackers) {
                 if (tracker.Domain != trackers[0].Domain)
                     continue;
@@ -202,7 +198,7 @@ namespace RTSharp.ViewModels.TorrentListing
                 tracker.Icon = img.Value.Image;
             }
 
-            await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, trackerInfo);
+            await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, new TrackerInfo(trackers[0].Domain, trackerInfo?.Name, img.Value.Hash));
             await TorrentListingViewModel.UpdateTrackersInTorrents();
         }
 
@@ -232,8 +228,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     continue;
                 }
 
-                var trackerInfo = await trackerDb.GetTrackerInfo(domain);
-                trackerInfo ??= new TrackerInfo(domain, null, null);
+                var trackerInfo = trackerDb.GetTrackerInfo(domain);
 
                 var img = await imageCache.AddImage(icon);
                 if (img == null) {
@@ -241,7 +236,6 @@ namespace RTSharp.ViewModels.TorrentListing
                     continue;
                 }
 
-                trackerInfo.ImageHash = img.Value.Hash;
                 foreach (var tracker in Trackers) {
                     if (tracker.Domain != domain)
                         continue;
@@ -249,7 +243,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     tracker.Icon = img.Value.Image;
                 }
 
-                await trackerDb.AddOrUpdateTrackerInfo(domain, trackerInfo);
+                await trackerDb.AddOrUpdateTrackerInfo(domain, new TrackerInfo(domain, trackerInfo?.Name, img.Value.Hash));
             }
 
             await TorrentListingViewModel.UpdateTrackersInTorrents();

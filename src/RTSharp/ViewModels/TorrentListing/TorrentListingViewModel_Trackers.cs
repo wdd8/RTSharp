@@ -51,7 +51,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     var domain = UriUtils.GetDomainForTracker(torrent.TrackerSingle);
 
                     if (!resolved.TryGetValue(domain, out var info)) {
-                        var trackerInfo = await trackerDb.GetTrackerInfo(domain);
+                        var trackerInfo = trackerDb.GetTrackerInfo(domain);
                         IImage? icon = null;
                         if (trackerInfo?.ImageHash != null)
                             icon = await imageCache.GetCachedImage(trackerInfo.ImageHash);
@@ -83,6 +83,9 @@ namespace RTSharp.ViewModels.TorrentListing
             Models.Torrent? lastFetchedFor = null;
 
             try {
+                using var scope = Core.ServiceProvider.CreateScope();
+                var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
+
                 TrackersViewModel.Trackers.Clear();
 
                 await foreach (var (fetchedFor, trackers) in TrackersChanges.Reader.ReadAllAsync()) {
@@ -104,7 +107,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             oldTracker.UpdateFromPluginModel(newTracker);
                         } else {
                             // Add
-                            TrackersViewModel.Trackers.Add(Models.Tracker.FromPluginModel(newTracker));
+                            TrackersViewModel.Trackers.Add(Models.Tracker.FromPluginModel(newTracker, trackerDb.GetTrackerInfo(UriUtils.GetDomainForTracker(newTracker.Uri))?.Name));
                         }
                     }
 
@@ -141,7 +144,7 @@ namespace RTSharp.ViewModels.TorrentListing
                     var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
                     var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
-                    var trackerInfo = await trackerDb.GetTrackerInfo(tracker.Domain);
+                    var trackerInfo = trackerDb.GetTrackerInfo(tracker.Domain);
 
                     if (trackerInfo != null) {
                         var icon = trackerInfo.ImageHash == null ? null : await imageCache.GetCachedImage(trackerInfo.ImageHash);

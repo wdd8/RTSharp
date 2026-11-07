@@ -100,10 +100,11 @@ namespace RTSharp.Models
             this.Message = In.StatusMsg;
         }
 
-        public static Tracker FromPluginModel(Shared.Abstractions.Tracker In)
+        public static Tracker FromPluginModel(Shared.Abstractions.Tracker In, string? DisplayName)
         {
             var ret = new Tracker {
-                Uri = In.Uri
+                Uri = In.Uri,
+                DisplayName = DisplayName
             };
 
             ret.UpdateDisplay();

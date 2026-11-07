@@ -316,8 +316,8 @@ public partial class TorrentListingViewModel
 
         if (references.Length != 0) {
             var msgBox = MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
-                ButtonDefinitions = new[]
-                {
+                ButtonDefinitions =
+                [
                     new ButtonDefinition {
                         Name = "Yes",
                         IsDefault = false
@@ -327,7 +327,7 @@ public partial class TorrentListingViewModel
                         IsDefault = true,
                         IsCancel = true
                     }
-                },
+                ],
                 ContentHeader = "Following torrents are referenced multiple times in same system. Do you really want to remove data of these torrents? This will cause data access errors.",
                 ContentMessage = String.Join("\n\n\n\n", references.Select(x => {
                     return $"**{x[0].RemotePath + "/" + x[0].Name}**:\n\n" + String.Join("\n", x.Select(x => " * " + x.DataOwner.Config.Plugin.Name + $" ({x.DataOwner.Host.InstanceId}): {Convert.ToHexString(x.Hash)}"));

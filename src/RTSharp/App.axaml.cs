@@ -196,7 +196,7 @@ public class App : Application
                 services.AddTransient<Core.Services.Cache.TorrentPropertiesCache.TorrentPropertiesCache>();
                 services.AddTransient<Core.Services.Cache.ASCache.ASCache>();
                 services.AddTransient<Core.Services.Cache.Images.ImageCache>();
-                services.AddTransient<TrackerDb>();
+                services.AddSingleton<TrackerDb>();
                 services.AddSingleton<Shared.Abstractions.ISpeedMovingAverageService, Core.Services.SpeedMovingAverageService>();
                 services.AddSingleton<Core.Services.DomainParser>();
                 services.AddSingleton<Shared.Abstractions.Client.IWhoisProvider, Core.Services.Whois.RdapWhoisProvider>();

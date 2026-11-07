@@ -51,7 +51,7 @@ namespace RTSharp.Models
                 var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
                 var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
-                trackerInfo = await trackerDb.GetTrackerInfo(trackers.Select(UriUtils.GetDomainForTracker));
+                trackerInfo = trackerDb.GetTrackerInfo(trackers.Select(UriUtils.GetDomainForTracker)).ToArray();
                 var imagesTasks = trackerInfo.Where(x => x.ImageHash != null).ToDictionary(x => x, x => imageCache.GetCachedImage(x.ImageHash!).AsTask());
                 await Task.WhenAll(imagesTasks.Values.ToArray());
 
@@ -698,7 +698,7 @@ namespace RTSharp.Models
                 var imageCache = scope.ServiceProvider.GetRequiredService<ImageCache>();
 
                 var domain = UriUtils.GetDomainForTracker(In.TrackerSingle!);
-                var trackerInfo = await trackerDb.GetTrackerInfo(domain);
+                var trackerInfo = trackerDb.GetTrackerInfo(domain);
 
                 IImage? icon = null;
                 string displayName;
