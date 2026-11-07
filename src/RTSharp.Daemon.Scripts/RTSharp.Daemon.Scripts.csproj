@@ -11,7 +11,12 @@
     <NoWarn>$(NoWarn);CS1633</NoWarn>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <IsPackable>false</IsPackable>
+    <EmitScriptGlobalUsings>true</EmitScriptGlobalUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="EmitScriptGlobalUsings" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\RTSharp\**\Scripts\**\*.cs" Exclude="..\RTSharp\bin\**;..\RTSharp\obj\**" LinkBase="RTSharp" />

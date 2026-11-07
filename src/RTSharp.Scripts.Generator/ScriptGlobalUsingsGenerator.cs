@@ -11,10 +11,20 @@ namespace RTSharp.Scripts.Generator
     {
         private const string ScriptEnvironmentType = "RTSharp.Daemon.RuntimeCompilation.ScriptEnvironment";
         private const string UsingsField = "BuiltInUsingsList";
+        private const string EnableProperty = "build_property.EmitScriptGlobalUsings";
 
         public void Initialize(IncrementalGeneratorInitializationContext Context)
         {
-            var usings = Context.CompilationProvider.Select((compilation, ct) => {
+            // Global usings apply to the whole project, so only emit them where the project opts in
+            var enabled = Context.AnalyzerConfigOptionsProvider.Select((options, ct) =>
+                options.GlobalOptions.TryGetValue(EnableProperty, out var value) && String.Equals(value, "true", StringComparison.OrdinalIgnoreCase));
+
+            var usings = Context.CompilationProvider.Combine(enabled).Select((input, ct) => {
+                var (compilation, isEnabled) = input;
+
+                if (!isEnabled)
+                    return null;
+
                 var type = compilation.GetTypeByMetadataName(ScriptEnvironmentType);
 
                 if (type == null)
