@@ -339,6 +339,13 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
     public void EvGridTextInput(object? sender, Avalonia.Input.TextInputEventArgs e) => ViewModel!.EvGridTextInput(e);
 
+    [RelayCommand]
+    private void FocusFilter()
+    {
+        FilterTextBox.Focus(NavigationMethod.Tab);
+        FilterTextBox.SelectAll();
+    }
+
     private void EvGridPointerPressedClearSelection(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed)

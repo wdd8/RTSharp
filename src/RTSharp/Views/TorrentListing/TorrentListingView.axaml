@@ -1,4 +1,5 @@
 <UserControl x:Class="RTSharp.Views.TorrentListing.TorrentListingView"
+			 x:Name="Root"
 			 xmlns="https://github.com/avaloniaui"
 			 xmlns:dataGridEx="using:RTSharp.Views.DataGridEx"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -19,6 +20,10 @@
 			 d:DataContext="{x:Static torrentListingVm:ExampleTorrentListingViewModel.ViewModel}"
 			 x:DataType="torrentListingVm:TorrentListingViewModel"
 			 d:DesignWidth="600" d:DesignHeight="450">
+
+	<UserControl.KeyBindings>
+		<KeyBinding Gesture="Ctrl+F" Command="{Binding #Root.FocusFilterCommand}" />
+	</UserControl.KeyBindings>
 
 	<Control.Resources>
 		<converters:SIDataSizeConverter x:Key="SIDataSizeConverter" />
@@ -203,37 +208,52 @@
 		</dialogHost:DialogHost.DialogContent>
 
 		<Grid Name="ContentGrid" RowDefinitions="Auto,*,4,*">
-			<StackPanel Orientation="Horizontal">
-				<Button
-					i:Attached.Icon="fa7-solid fa7-play"
-					Command="{Binding StartTorrentsCommand}"
-					CommandParameter="{Binding #grid.SelectedItems}"
-					Background="Transparent"
-					ToolTip.Tip="Start" />
-				<Button
-					i:Attached.Icon="fa7-solid fa7-pause"
-					Command="{Binding PauseTorrentsCommand}"
-					CommandParameter="{Binding #grid.SelectedItems}"
-					Background="Transparent"
-					ToolTip.Tip="Pause" />
-				<Button
-					i:Attached.Icon="fa7-solid fa7-stop"
-					Command="{Binding StopTorrentsCommand}"
-					CommandParameter="{Binding #grid.SelectedItems}"
-					Background="Transparent"
-					ToolTip.Tip="Stop" />
-				<Panel Margin="-5 0 -30 0">
-					<Separator RenderTransformOrigin="0 0" VerticalAlignment="Top">
-						<Separator.RenderTransform>
-							<RotateTransform Angle="90" />
-						</Separator.RenderTransform>
-					</Separator>
-				</Panel>
-				<Button
-					i:Attached.Icon="fa7-solid fa7-gear"
-					Background="Transparent"
-					Command="{Binding ShowOptionsCommand}" />
-			</StackPanel>
+			<DockPanel>
+				<TextBox Name="FilterTextBox"
+						 DockPanel.Dock="Right"
+						 Width="200"
+						 VerticalAlignment="Center"
+						 Classes="clearButton"
+						 Watermark="Filter..."
+						 Text="{Binding FilterText}">
+					<TextBox.InnerLeftContent>
+						<i:Icon Value="fa7-solid fa7-filter"
+								Margin="8 0 0 0"
+								Foreground="{DynamicResource TextControlPlaceholderForeground}" />
+					</TextBox.InnerLeftContent>
+				</TextBox>
+				<StackPanel Orientation="Horizontal">
+					<Button
+						i:Attached.Icon="fa7-solid fa7-play"
+						Command="{Binding StartTorrentsCommand}"
+						CommandParameter="{Binding #grid.SelectedItems}"
+						Background="Transparent"
+						ToolTip.Tip="Start" />
+					<Button
+						i:Attached.Icon="fa7-solid fa7-pause"
+						Command="{Binding PauseTorrentsCommand}"
+						CommandParameter="{Binding #grid.SelectedItems}"
+						Background="Transparent"
+						ToolTip.Tip="Pause" />
+					<Button
+						i:Attached.Icon="fa7-solid fa7-stop"
+						Command="{Binding StopTorrentsCommand}"
+						CommandParameter="{Binding #grid.SelectedItems}"
+						Background="Transparent"
+						ToolTip.Tip="Stop" />
+					<Panel Margin="-5 0 -30 0">
+						<Separator RenderTransformOrigin="0 0" VerticalAlignment="Top">
+							<Separator.RenderTransform>
+								<RotateTransform Angle="90" />
+							</Separator.RenderTransform>
+						</Separator>
+					</Panel>
+					<Button
+						i:Attached.Icon="fa7-solid fa7-gear"
+						Background="Transparent"
+						Command="{Binding ShowOptionsCommand}" />
+				</StackPanel>
+			</DockPanel>
 			<DataGrid Grid.Row="1"
 					  Name="grid"
 					  ItemsSource="{Binding View}"

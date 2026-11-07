@@ -97,7 +97,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
     public SetFilterContext<string> LabelsFilter { get; }
     public SetFilterContext<TrackerFilterContext> TrackerFilter { get; }
 
-    public DataGridColumnDefinition NameColumn, LabelsColumn, TrackerColumn;
+    public DataGridColumnDefinition NameColumn;
 
     public ObservableCollection<TemplatedControl> LabelsWithAdd { get; } = new();
     public GeneralTorrentInfoViewModel GeneralInfoViewModel { get; } = new();
@@ -157,7 +157,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
         FilteringAdapterFactory = new TorrentFilteringAdapterFactory(TorrentPolling.Torrents.ApplyFilter);
 
         var builder = DataGridColumnDefinitionBuilder.For<Torrent>();
-        DataGridColumnDefinition connectionColumn, hashColumn, stateColumn, priorityColumn;
+        DataGridColumnDefinition connectionColumn, hashColumn, stateColumn, labelsColumn, trackerColumn, priorityColumn;
 
         ColumnDefinitions =
         [
@@ -354,7 +354,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
                     c.CustomSortComparer = Comparer<uint>.Default;
                 }
             ),
-            (LabelsColumn = builder.Text(
+            (labelsColumn = builder.Text(
                 header: "Labels",
                 property: Utils.CreateProperty<string>(nameof(Torrent.LabelsDisplay), x => ((Torrent)x).LabelsDisplay, null),
                 getter: x => x.LabelsDisplay,
@@ -428,7 +428,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
                     c.CustomSortComparer = Comparer<DateTime?>.Default;
                 }
             ),
-            (TrackerColumn = builder.Template(
+            (trackerColumn = builder.Template(
                 header: "Tracker",
                 cellTemplateKey: "TorrentTrackerTemplate",
                 configure: c => {
@@ -462,8 +462,8 @@ public partial class TorrentListingViewModel : ObservableViewModel
         });
         NameFilter = new TextFilterContext("Name contains", FilteringModel, NameColumn, FilteringOperator.Contains);
         StateFilter = new SetFilterContext<string>("State equals", FilteringModel, stateColumn, FilteringOperator.Custom, (x, opts) => opts.Any(i => ((Torrent)x!).InternalState.HasFlag(EnumExt.ToTorrentState((string)i!))));
-        LabelsFilter = new SetFilterContext<string>("Label equals", FilteringModel, LabelsColumn, FilteringOperator.Custom, (x, opts) => opts.Any(i => ((Torrent)x!).Labels.Contains((string)i!)));
-        TrackerFilter = new SetFilterContext<TrackerFilterContext>("Tracker equals", FilteringModel, TrackerColumn, FilteringOperator.Custom, (x, opts) => opts.Any(i => ((TrackerFilterContext)i!).Name == ((Torrent)x!).TrackerDisplayName));
+        LabelsFilter = new SetFilterContext<string>("Label equals", FilteringModel, labelsColumn, FilteringOperator.Custom, (x, opts) => opts.Any(i => ((Torrent)x!).Labels.Contains((string)i!)));
+        TrackerFilter = new SetFilterContext<TrackerFilterContext>("Tracker equals", FilteringModel, trackerColumn, FilteringOperator.Custom, (x, opts) => opts.Any(i => ((TrackerFilterContext)i!).Name == ((Torrent)x!).TrackerDisplayName));
 
         SelectionModel.SelectionChanged += CurrentlySelectedTorrentsChanged;
 

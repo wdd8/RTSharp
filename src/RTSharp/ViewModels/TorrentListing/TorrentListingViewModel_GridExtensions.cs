@@ -204,6 +204,21 @@ public partial class TorrentListingViewModel
 
     private readonly DispatcherTimer SearchClearTimer;
 
+    [ObservableProperty]
+    public partial string? FilterText { get; set; }
+
+    partial void OnFilterTextChanged(string? value)
+    {
+        if (String.IsNullOrEmpty(value)) {
+            FilteringAdapterFactory.SetSearchPredicate(null);
+            return;
+        }
+
+        FilteringAdapterFactory.SetSearchPredicate(x =>
+            x.Name.StartsWith(value, StringComparison.OrdinalIgnoreCase) ||
+            x.LabelsDisplay.StartsWith(value, StringComparison.OrdinalIgnoreCase));
+    }
+
     public void PostGridStateRestore()
     {
         foreach (var desc in FilteringModel.Descriptors) {
@@ -295,11 +310,7 @@ public partial class TorrentListingViewModel
             matchMode: SearchMatchMode.Regex,
             termMode: SearchTermCombineMode.All,
             scope: SearchScope.ExplicitColumns,
-            columnIds: [
-                NameColumn,
-                LabelsColumn,
-                TrackerColumn
-            ],
+            columnIds: [ NameColumn ],
             comparison: StringComparison.OrdinalIgnoreCase,
             wholeWord: false
         ));

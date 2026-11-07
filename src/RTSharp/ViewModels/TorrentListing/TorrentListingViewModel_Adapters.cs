@@ -135,6 +135,8 @@ namespace RTSharp.ViewModels.TorrentListing
     public class TorrentFilteringAdapterFactory : IDataGridFilteringAdapterFactory
     {
         private readonly Action<Func<Torrent, bool>> FxApply;
+        private Func<Torrent, bool> ColumnPredicate = AlwaysTrue;
+        private Func<Torrent, bool>? SearchPredicate;
 
         public Func<Torrent, bool> FilterPredicate { get; private set; }
 
@@ -148,7 +150,22 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public void UpdateFilter(IReadOnlyList<FilteringDescriptor> descriptors)
         {
-            FilterPredicate = BuildPredicate(descriptors);
+            ColumnPredicate = BuildPredicate(descriptors);
+            Apply();
+        }
+
+        public void SetSearchPredicate(Func<Torrent, bool>? predicate)
+        {
+            SearchPredicate = predicate;
+            Apply();
+        }
+
+        private void Apply()
+        {
+            var column = ColumnPredicate;
+            var search = SearchPredicate;
+
+            FilterPredicate = search == null ? column : item => column(item) && search(item);
             FxApply(FilterPredicate);
         }
 
