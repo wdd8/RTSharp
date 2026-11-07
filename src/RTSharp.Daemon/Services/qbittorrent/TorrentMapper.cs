@@ -107,7 +107,7 @@ public class TorrentMapper
             };
         }
         if (External.SavePath != null)
-            Stored.RemotePath = External.SavePath;
+            Stored.RemotePath = Path.TrimEndingDirectorySeparator(External.SavePath);
         if (External.MagnetUri != null)
             Stored.MagnetDummy = External.MagnetUri != null && Stored.WantedSize == 0;
         if (External.SequentialDownload != null)
@@ -192,7 +192,7 @@ public class TorrentMapper
             };
         }
         if (External.SavePath != null)
-            Stored.RemotePath = External.SavePath;
+            Stored.RemotePath = Path.TrimEndingDirectorySeparator(External.SavePath);
         if (External.MagnetUri != null)
             Stored.MagnetDummy = External.MagnetUri != null;
         Stored.SequentialDownload = External.SequentialDownload;

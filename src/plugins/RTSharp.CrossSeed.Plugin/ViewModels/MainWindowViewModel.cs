@@ -287,7 +287,7 @@ public partial class MainWindowViewModel(IPluginHost<CrossSeedPluginConfig> Host
              * only gets caught by fast verify when it's added.
              */
             var samePath = Torrents
-                .GroupBy(x => (x.DataOwner.Host.AttachedDaemonService, x.RemotePath.TrimEnd('/'), x.Name))
+                .GroupBy(x => (x.DataOwner.Host.AttachedDaemonService, x.RemotePath, x.Name))
                 .Where(x => x.Count() > 1)
                 .SelectMany(x => x)
                 .ToHashSet();

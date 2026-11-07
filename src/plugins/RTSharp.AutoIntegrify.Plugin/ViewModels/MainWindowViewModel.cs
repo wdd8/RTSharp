@@ -223,15 +223,12 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
             ProgressText = $"Searching for {File.File.Path}{(WideSearch ? " (wide search)" : "")}...";
         });
 
-        var remotePathParts = Torrent.RemotePath.Split('/');
-
         var script = await Torrent.DataOwner.Host.AttachedDaemonService!.RunCustomScript(
             DaemonScripts.SolveFile, "AutoIntegrify", [ScriptMessage.Of(new SolveFileInput(
                 AdditionalPaths: [.. AdditionalPaths],
                 FilePath: File.File.Path,
                 Size: (long)File.File.FileSize,
                 CurrentPath: IsMultiFile ? $"{Torrent.RemotePath}/{Torrent.Name}" : Torrent.RemotePath,
-                LimitPath: string.Join('/', remotePathParts[..^1]),
                 IsMultiFile: IsMultiFile,
                 WideSearch: WideSearch,
                 RecurseLimit: SearchRecursionLimit

@@ -20,7 +20,6 @@ using Serilog;
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
@@ -302,29 +301,20 @@ public partial class TorrentListingViewModel
     public async Task RemoveTorrentsAndData(IReadOnlyList<Torrent> In)
     {
         In = [.. In]; // cp
-        var serverIds = In.Select(x => x.DataOwner.Config.Plugin.ServerId).Distinct();
 
-        var references = new InfoHashDictionary<Torrent[]>();
-        var allTorrents = TorrentPolling.Torrents.GetSnapshot().Where(x => {
-            var selectedOnly = In.Where(i => i.Hash.SequenceEqual(x.Hash)).Select(x => x.DataOwner.Config.Plugin.ServerId);
-            
-            return selectedOnly.Contains(x.DataOwner.Config.Plugin.ServerId);
-        }).ToImmutableArray();
-        bool multiReference = false;
+        static string dataKey(Torrent x) => x.DataOwner.Config.Plugin.ServerId + "_" + x.RemotePath + "/" + x.Name;
 
-        foreach (var torrentGroup in allTorrents.GroupBy(x => x.Hash, HashEqualityComparer.Instance)) {
-            var found = torrentGroup.GroupBy(x => x.DataOwner.Config.Plugin.ServerId + "_" + x.RemotePath).Where(x => x.Count() > 1);
-            foreach (var torrentsInServer in found) {
+        var removing = In.ToHashSet();
+        var removingData = In.Select(dataKey).ToHashSet();
 
-                if (torrentsInServer.Select(x => x.DataOwner.Host.InstanceId).Except(In.Where(x => x.Hash.SequenceEqual(torrentGroup.Key)).Select(x => x.DataOwner.Host.InstanceId)).Count() != 0) {
-                    references[torrentGroup.Key] = torrentsInServer.ToArray();
-                    multiReference = true;
-                }
+        var references = TorrentPolling.Torrents.GetSnapshot()
+            .Where(x => removingData.Contains(dataKey(x)))
+            .GroupBy(dataKey)
+            .Where(x => x.Any(t => !removing.Contains(t)))
+            .Select(x => x.ToArray())
+            .ToArray();
 
-            }
-        }
-
-        if (multiReference) {
+        if (references.Length != 0) {
             var msgBox = MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
                 ButtonDefinitions = new[]
                 {
@@ -340,22 +330,18 @@ public partial class TorrentListingViewModel
                 },
                 ContentHeader = "Following torrents are referenced multiple times in same system. Do you really want to remove data of these torrents? This will cause data access errors.",
                 ContentMessage = String.Join("\n\n\n\n", references.Select(x => {
-                    // TODO: assumes Name always stays the same?
-                    return $"**{x.Value[0].Name} ({Convert.ToHexString(x.Value[0].Hash)})**:\n\n" + String.Join("\n", x.Value.Select(x => " * " + x.DataOwner.Config.Plugin.Name + $" ({x.DataOwner.Host.InstanceId}): {x.RemotePath}"));
+                    return $"**{x[0].RemotePath + "/" + x[0].Name}**:\n\n" + String.Join("\n", x.Select(x => " * " + x.DataOwner.Config.Plugin.Name + $" ({x.DataOwner.Host.InstanceId}): {Convert.ToHexString(x.Hash)}"));
                 })),
                 ContentTitle = "RT#",
                 Icon = MsBox.Avalonia.Enums.Icon.Warning,
                 Markdown = true
             });
             var res = await msgBox.ShowWindowDialogAsync(App.MainWindow);
-            if (res == "Yes")
-                multiReference = false;
+            if (res != "Yes")
+                return;
         }
 
-        if (multiReference)
-            return;
-
-        var result = await DeleteTorrentsConfirmationDialog(App.MainWindow, (ulong)In.DistinctBy(x => x.DataOwner.Config.Plugin.ServerId + "_" + Convert.ToHexString(x.Hash)).Sum(x => (decimal)x.WantedSize), In.Count, true);
+        var result = await DeleteTorrentsConfirmationDialog(App.MainWindow, (ulong)In.DistinctBy(dataKey).Sum(x => (decimal)x.WantedSize), In.Count, true);
 
         if (result)
             await ActionForMulti(In, "Remove torrents and data", (dp, torrents) => dp.Instance.RemoveTorrentsAndData([.. torrents.Select(x => x.ToPluginModel())]));

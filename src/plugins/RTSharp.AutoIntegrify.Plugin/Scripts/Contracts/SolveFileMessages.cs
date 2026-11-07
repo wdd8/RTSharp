@@ -5,7 +5,6 @@ public partial record SolveFileInput(
     string FilePath,
     long Size,
     string CurrentPath,
-    string LimitPath,
     bool IsMultiFile,
     bool WideSearch,
     int RecurseLimit

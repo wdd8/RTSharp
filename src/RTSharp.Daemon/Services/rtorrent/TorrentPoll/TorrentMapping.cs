@@ -77,7 +77,8 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         {
             var priority = (TorrentPriority)PriorityRaw;
 
-            var directory = DirectoryDecoded;
+            // d.directory keeps a trailing separator as it was set for single-file torrents
+            var directory = System.IO.Path.TrimEndingDirectorySeparator(DirectoryDecoded);
             if (IsMultiFile) {
                 // If multifile remove d.name from path. Base path shouldn't point to any inner files of torrent
                 var lastSep = directory.LastIndexOf(System.IO.Path.DirectorySeparatorChar);

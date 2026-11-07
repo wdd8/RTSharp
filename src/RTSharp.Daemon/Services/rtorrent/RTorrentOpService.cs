@@ -156,7 +156,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 }
 
                 XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
-                var directory = XMLUtils.Decode(XMLUtils.GetValue<string>(ref result));
+                // Same as RemotePath in torrent polling, d.directory keeps a trailing separator as it was set
+                var directory = Path.TrimEndingDirectorySeparator(XMLUtils.Decode(XMLUtils.GetValue<string>(ref result)));
                 XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
 
                 if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
