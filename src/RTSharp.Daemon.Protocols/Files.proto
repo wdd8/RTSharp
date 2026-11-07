@@ -121,7 +121,10 @@ message FileSystemItem {
     repeated FileSystemItem Children = 1;
     bool Directory = 2;
     string Path = 3;
-    uint64 Size = 4;
+    optional uint64 Size = 4;
     google.protobuf.Timestamp LastModified = 5;
     string Permissions = 6;
+    string Owner = 7;
+    string Group = 8;
+    optional string LinkTarget = 9;
 }

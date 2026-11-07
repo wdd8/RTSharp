@@ -11,19 +11,46 @@
         mc:Ignorable="d"
         MinWidth="450"
         MinHeight="200"
-        Height="400"
-        SizeToContent="WidthAndHeight"
+        Width="760"
+        Height="480"
         x:Class="RTSharp.Views.DirectorySelectorWindow"
         Icon="/Assets/rtsharp.ico"
         Title="{Binding WindowTitle}">
 
     <Control.Resources>
-        <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="PermissionTypeBrush" Color="#4A6C94" />
+                    <SolidColorBrush x:Key="PermissionNoneBrush" Color="#A0A7AF" />
+                    <SolidColorBrush x:Key="LinkTargetBrush" Color="#6B7480" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="PermissionTypeBrush" Color="#7E9DC2" />
+                    <SolidColorBrush x:Key="PermissionNoneBrush" Color="#5C636B" />
+                    <SolidColorBrush x:Key="LinkTargetBrush" Color="#8F98A3" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+            <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
+        </ResourceDictionary>
     </Control.Resources>
+
+    <Window.Styles>
+        <Style Selector="StackPanel.Permissions > TextBlock">
+            <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,Menlo,DejaVu Sans Mono,monospace" />
+        </Style>
+        <Style Selector="StackPanel.Permissions Run[Text=d], StackPanel.Permissions Run[Text=l]">
+            <Setter Property="Foreground" Value="{DynamicResource PermissionTypeBrush}" />
+        </Style>
+        <Style Selector="StackPanel.Permissions Run[Text=-]">
+            <Setter Property="Foreground" Value="{DynamicResource PermissionNoneBrush}" />
+        </Style>
+    </Window.Styles>
 
     <Grid ColumnDefinitions="*" RowDefinitions="Auto,*,Auto" Margin="8">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" RowDefinitions="*">
             <TextBox Name="PathTextBox" Text="{Binding Selected.Path, Mode=OneWay}" Grid.Column="0" Margin="0 0 8 0" />
+            <Button Grid.Column="1" Margin="0 0 4 0" Command="{Binding RefreshCommand}" HotKey="F5" ToolTip.Tip="Refresh" i:Attached.Icon="fa7-solid fa7-rotate-right" />
             <Button Grid.Column="2" Command="{Binding SetCurrentFolderCommand}" CommandParameter="{Binding #PathTextBox.Text}" IsDefault="True" i:Attached.Icon="fa7-solid fa7-right-long" />
         </Grid>
 
@@ -54,12 +81,20 @@
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.Columns>
-                <DataGridTemplateColumn Header="Name" IsReadOnly="True">
+                <DataGridTemplateColumn Header="Name" IsReadOnly="True" Width="340">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:FileSystemItem">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <PathIcon Data="{Binding Display.Icon}" Width="16" Height="16" />
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="{DynamicResource DataGridCellTextBlockMargin}">
+                                <Image Source="{Binding Display.Icon^}"
+                                       IsVisible="{Binding Display.Icon^, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                       Width="16" Height="16"
+                                       VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding Display.Name}" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding LinkTarget, StringFormat='→ {0}'}"
+                                           IsVisible="{Binding LinkTarget, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                           Foreground="{DynamicResource LinkTargetBrush}"
+                                           ToolTip.Tip="Symbolic link"
+                                           VerticalAlignment="Center" />
                             </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -69,9 +104,32 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellEditingTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Permissions" IsReadOnly="True" Binding="{Binding Permissions, Mode=OneWay}" />
-                <DataGridTextColumn Header="Size" IsReadOnly="True" Binding="{Binding Size, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}, TargetNullValue=''}" />
-                <DataGridTextColumn Header="Last modified" IsReadOnly="True" Binding="{Binding LastModified, Mode=OneWay}" />
+                <DataGridTemplateColumn Header="Permissions" IsReadOnly="True" SortMemberPath="Permissions" Width="110">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="models:FileSystemItem">
+                            <StackPanel Classes="Permissions"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center"
+                                        Margin="{DynamicResource DataGridCellTextBlockMargin}"
+                                        Background="Transparent"
+                                        IsVisible="{Binding PermissionBits, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <ToolTip.Tip>
+                                    <TextBlock>
+                                        <Run Text="Owner: " /><Run Text="{Binding Owner}" FontWeight="SemiBold" />
+                                        <LineBreak />
+                                        <Run Text="Group: " /><Run Text="{Binding Group}" FontWeight="SemiBold" />
+                                    </TextBlock>
+                                </ToolTip.Tip>
+                                <TextBlock><Run Text="{Binding PermissionBits[0]}" /></TextBlock>
+                                <TextBlock ToolTip.Tip="{Binding Owner, StringFormat='Owner: {0}'}"><Run Text="{Binding PermissionBits[1]}" /><Run Text="{Binding PermissionBits[2]}" /><Run Text="{Binding PermissionBits[3]}" /></TextBlock>
+                                <TextBlock ToolTip.Tip="{Binding Group, StringFormat='Group: {0}'}"><Run Text="{Binding PermissionBits[4]}" /><Run Text="{Binding PermissionBits[5]}" /><Run Text="{Binding PermissionBits[6]}" /></TextBlock>
+                                <TextBlock ToolTip.Tip="Others"><Run Text="{Binding PermissionBits[7]}" /><Run Text="{Binding PermissionBits[8]}" /><Run Text="{Binding PermissionBits[9]}" /></TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Size" IsReadOnly="True" Binding="{Binding Size, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}, TargetNullValue=''}" Width="100" />
+                <DataGridTextColumn Header="Last modified" IsReadOnly="True" Binding="{Binding LastModified, Mode=OneWay}" Width="170" />
             </DataGrid.Columns>
         </DataGrid>
 

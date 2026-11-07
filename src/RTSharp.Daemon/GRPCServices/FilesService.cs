@@ -29,7 +29,7 @@ public partial class FilesService(
     {
         var x = Input.FileAccessPermissions;
         return String.Format("{0}{1}{2}{3}{4}{5}{6}{7}{8}{9}",
-            Input.IsDirectory ? "d" : "-",
+            Input.IsDirectory ? "d" : Input.IsSymbolicLink ? "l" : "-",
 
             x.HasFlag(FileAccessPermissions.UserRead) ? "r" : "-",
             x.HasFlag(FileAccessPermissions.UserWrite) ? "w" : "-",
@@ -78,36 +78,59 @@ public partial class FilesService(
         var expanded = await PathUtils.ExpandTilde(Req.Value);
         Logger.LogDebug($"GetDirectoryInfo expanded: {expanded}");
 
-        if (!UnixFileSystemInfo.TryGetFileSystemEntry(expanded, out var info))
+        if (!UnixFileSystemInfo.TryGetFileSystemEntry(UnixPath.GetFullPath(expanded), out var info))
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Failed to open directory"));
 
-        var ret = new FileSystemItem() {
-            Path = info.FullName,
-            Directory = info.IsDirectory,
-            Permissions = FileAccessPermissionsToString(info),
-            Size = (ulong)info.Length,
-            LastModified = Timestamp.FromDateTime(info.LastWriteTimeUtc)
-        };
+        var users = new Dictionary<long, string>();
+        var groups = new Dictionary<long, string>();
 
-        if (info.IsDirectory) {
-            var entriesRaw = Directory.GetFileSystemEntries(info.FullName);
+        // CephFS keeps a recursive byte count per directory. Other file systems have no instant cumulative size
+        var recursiveSizes = Syscall.getxattr(info.FullName, "ceph.dir.rbytes", out byte[] _) >= 0;
 
-            var entries = entriesRaw.Select(x => {
-                if (UnixFileSystemInfo.TryGetFileSystemEntry(x, out var entry)) {
-                    return entry;
-                }
+        FileSystemItem toItem(UnixFileSystemInfo In)
+        {
+            string? linkTarget = null;
+            if (In is UnixSymbolicLinkInfo link) {
+                linkTarget = UnixPath.TryReadLink(link.FullName);
 
-                return null;
-            });
+                var target = new UnixFileInfo(link.FullName);
+                if (target.Exists)
+                    In = target;
+            }
 
-            ret.Children.AddRange(entries.Where(x => x != null).Select(x => new FileSystemItem() {
-                Path = x!.FullName,
-                Directory = x.IsDirectory,
-                Children = { },
-                LastModified = Timestamp.FromDateTime(x.LastWriteTimeUtc),
-                Permissions = FileAccessPermissionsToString(x),
-                Size = (ulong)x.Length
-            }));
+            if (!users.TryGetValue(In.OwnerUserId, out var user))
+                users[In.OwnerUserId] = user = Syscall.getpwuid((uint)In.OwnerUserId)?.pw_name ?? In.OwnerUserId.ToString();
+
+            if (!groups.TryGetValue(In.OwnerGroupId, out var group))
+                groups[In.OwnerGroupId] = group = Syscall.getgrgid((uint)In.OwnerGroupId)?.gr_name ?? In.OwnerGroupId.ToString();
+
+            var item = new FileSystemItem() {
+                Path = In.FullName,
+                Directory = In.IsDirectory,
+                LastModified = Timestamp.FromDateTime(In.LastWriteTimeUtc),
+                Permissions = FileAccessPermissionsToString(In),
+                Owner = user,
+                Group = group
+            };
+
+            if (!In.IsDirectory)
+                item.Size = (ulong)In.Length;
+            else if (recursiveSizes && Syscall.getxattr(In.FullName, "ceph.dir.rbytes", out byte[] rbytes) >= 0 && ulong.TryParse(rbytes, out var size))
+                item.Size = size;
+
+            if (linkTarget != null)
+                item.LinkTarget = linkTarget;
+
+            return item;
+        }
+
+        var ret = toItem(info);
+
+        if (ret.Directory) {
+            foreach (var path in Directory.EnumerateFileSystemEntries(info.FullName)) {
+                if (UnixFileSystemInfo.TryGetFileSystemEntry(path, out var entry))
+                    ret.Children.Add(toItem(entry));
+            }
         }
 
         return ret;

@@ -1,3 +1,5 @@
+using Avalonia.Controls;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -67,16 +69,45 @@ public class Config
 
             public int? LastPosY { get; set; }
 
-            public int? LastWidth { get; set; }
-
-            public int? LastHeight { get; set; }
-
-            public bool Maximized { get; set; }
+            /// <summary>
+            /// Keyed by window type name
+            /// </summary>
+            public Dictionary<string, WindowSize> WindowSizes { get; set; } = new();
 
             public bool TrayIconVisible { get; set; }
 
             public double[]? TorrentListingGridRowHeights { get; set; }
+
+            public void RestoreWindowSize(Window Window)
+            {
+                if (!WindowSizes.TryGetValue(Window.GetType().Name, out var size))
+                    return;
+
+                Window.Width = size.Width;
+                Window.Height = size.Height;
+                Window.WindowState = size.State;
+            }
+
+            /// <returns>Whether the stored size changed</returns>
+            public bool StoreWindowSize(Window Window)
+            {
+                var key = Window.GetType().Name;
+                WindowSizes.TryGetValue(key, out var previous);
+
+                var state = Window.WindowState == WindowState.Minimized ? WindowState.Normal : Window.WindowState;
+                var size = Window.WindowState != WindowState.Normal && previous != null ?
+                    previous with { State = state } :
+                    new WindowSize((uint)Window.ClientSize.Width, (uint)Window.ClientSize.Height, state);
+
+                if (size == previous)
+                    return false;
+
+                WindowSizes[key] = size;
+                return true;
+            }
         }
+
+        public record WindowSize(uint Width, uint Height, [property: JsonConverter(typeof(JsonStringEnumConverter<WindowState>))] WindowState State);
 
         public class Server
         {
@@ -196,9 +227,7 @@ public class Config
     "DockState": null,
     "LastPosX": null,
     "LastPosY": null,
-    "LastWidth": null,
-    "LastHeight": null,
-    "Maximized": false
+    "WindowSizes": {}
   },
   "Look": {
     "DataProviders": {

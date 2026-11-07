@@ -53,7 +53,10 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
     public DirectorySelectorWindowViewModel(IDataProvider DataProvider)
     {
         this.DataProvider = DataProvider;
-        AddDisposable(_itemsSource.Connect().Sort(SortExpressionComparer<FileSystemItem>.Ascending(x => x.Path)).Bind(out _items).Subscribe());
+        var comparer = SortExpressionComparer<FileSystemItem>
+            .Ascending(x => x.Display.Name switch { "." => 0, ".." => 1, _ => 2 })
+            .ThenByAscending(x => x.Path);
+        AddDisposable(_itemsSource.Connect().Sort(comparer).Bind(out _items).Subscribe());
 
         Server = DataProvider.Host.AttachedDaemonService;
     }
@@ -78,7 +81,7 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
         if (Current == null)
             return;
 
-        var emptyItem = new FileSystemItem(Current.Path + "/New directory", true, null, null, "d?????????");
+        var emptyItem = new FileSystemItem(Current.Path + "/New directory", true, null, null, null, null, null, null);
         _itemsSource.Add(emptyItem);
         await Task.Delay(100); // huge fucking hack to wait til the list in grid populates
 
@@ -120,6 +123,15 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
     }
 
     [RelayCommand]
+    private async Task Refresh()
+    {
+        if (Current == null)
+            return;
+
+        await SetCurrentFolder(Current.Path);
+    }
+
+    [RelayCommand]
     public async Task SetCurrentFolder(string? value)
     {
         if (ClearSelection != null)
@@ -139,10 +151,12 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
         if (!dirInfo.Directory)
             return;
 
-        var newList = new List<FileSystemItem> {
-            new FileSystemItem(dirInfo.Path + "/.", true, dirInfo.Size, dirInfo.LastModified, dirInfo.Permissions),
-            new FileSystemItem(dirInfo.Path + "/..", true, 0, null, "d?????????")
-        };
+        var newList = new List<FileSystemItem>();
+
+        if (dirInfo.Path != "/") {
+            newList.Add(new FileSystemItem(dirInfo.Path + "/.", true, dirInfo.Size, dirInfo.LastModified, dirInfo.Permissions, dirInfo.Owner, dirInfo.Group, dirInfo.LinkTarget));
+            newList.Add(new FileSystemItem(dirInfo.Path + "/..", true, null, null, null, null, null, null));
+        }
 
         foreach (var item in dirInfo.Children!.Select(x => new FileSystemItem(x))) {
             newList.Add(item);

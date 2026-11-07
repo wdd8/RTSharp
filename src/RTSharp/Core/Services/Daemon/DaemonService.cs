@@ -193,7 +193,10 @@ public class DaemonService : IDaemonService
                 Directory: In.Directory,
                 LastModified: In.LastModified.ToDateTime(),
                 Permissions: In.Permissions,
-                Size: In.Size,
+                Owner: In.Owner,
+                Group: In.Group,
+                LinkTarget: In.HasLinkTarget ? In.LinkTarget : null,
+                Size: In.HasSize ? In.Size : null,
                 Children: In.Children.Select(map).ToList()
             );
         }

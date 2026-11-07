@@ -4,15 +4,18 @@ using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
-using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+
+using RTSharp.Core.Services;
 
 namespace RTSharp.Models
 {
     public class NameWithIcon
     {
-        public Geometry Icon { get; set; }
+        public Task<Bitmap?> Icon => FileIconService.GetIconAsync(Name, Item.IsDirectory);
 
         public string Name {
             get => Item.Path == "/" || Item.Path == "\\" ? Item.Path : Path.GetFileName(Item.Path);
@@ -23,31 +26,30 @@ namespace RTSharp.Models
 
         private FileSystemItem Item;
 
-        public NameWithIcon(FileSystemItem Item, bool IsDirectory)
+        public NameWithIcon(FileSystemItem Item)
         {
             this.Item = Item;
-
-            if (IsDirectory)
-                Icon = Core.FontAwesomeIcons.Get("fa7-regular fa7-folder");
-            else
-                Icon = Core.FontAwesomeIcons.Get("fa7-regular fa7-file");
         }
     }
 
     public partial class FileSystemItem : ObservableObject
     {
-        public FileSystemItem(string Path, bool IsDirectory, ulong? Size, DateTime? LastModified, string Permissions)
+        public FileSystemItem(string Path, bool IsDirectory, ulong? Size, DateTime? LastModified, string? Permissions, string? Owner, string? Group, string? LinkTarget)
         {
             this.IsDirectory = IsDirectory;
             this.Path = Path;
-            this.Display = new NameWithIcon(this, IsDirectory);
+            this.Display = new NameWithIcon(this);
             this.Size = Size;
             this.LastModified = LastModified;
             this.Permissions = Permissions;
+            this.PermissionBits = Permissions?.Select(x => x.ToString()).ToArray();
+            this.Owner = Owner;
+            this.Group = Group;
+            this.LinkTarget = LinkTarget;
         }
 
         public FileSystemItem(Shared.Abstractions.FileSystemItem Input)
-            : this(Input.Path, Input.Directory, Input.Size, Input.LastModified, Input.Permissions)
+            : this(Input.Path, Input.Directory, Input.Size, Input.LastModified, Input.Permissions, Input.Owner, Input.Group, Input.LinkTarget)
         {
         }
 
@@ -58,7 +60,13 @@ namespace RTSharp.Models
         public string Path { get; set; }
         public ulong? Size { get; init; }
         public DateTime? LastModified { get; init; }
-        public string Permissions { get; init; }
+        public string? Permissions { get; init; }
+        public string[]? PermissionBits { get; }
+
+        public string? Owner { get; init; }
+        public string? Group { get; init; }
+
+        public string? LinkTarget { get; init; }
     }
 
     public class FileSystemItemEqualityComparer : IEqualityComparer<FileSystemItem>
