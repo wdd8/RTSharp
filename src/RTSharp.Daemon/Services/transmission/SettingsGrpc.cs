@@ -46,7 +46,7 @@ public class SettingsGrpc
             Encryption = info.Encryption switch {
                 "required" => TransmissionEncryption.Required,
                 "preferred" => TransmissionEncryption.Preferred,
-                "tolerated" => TransmissionEncryption.Tolerated,
+                "allowed" => TransmissionEncryption.Tolerated,
                 _ => throw new NotSupportedException()
             },
             IdleSeedingLimit = info.IdleSeedingLimit,
@@ -105,7 +105,7 @@ public class SettingsGrpc
             Encryption = Input.Encryption switch {
                 TransmissionEncryption.Required => "required",
                 TransmissionEncryption.Preferred => "preferred",
-                TransmissionEncryption.Tolerated => "tolerated",
+                TransmissionEncryption.Tolerated => "allowed",
                 _ => throw new NotSupportedException(),
             },
             IdleSeedingLimit = Input.IdleSeedingLimit,
