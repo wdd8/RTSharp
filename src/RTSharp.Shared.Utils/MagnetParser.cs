@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Web;
 
 namespace RTSharp.Shared.Utils;
@@ -8,6 +9,41 @@ public record MagnetUri(Uri Uri, byte[]? V1InfoHash, byte[]? V2InfoHash, string?
 
 public class MagnetParser
 {
+    /// <summary>
+    /// Splits a multi-torrent magnet URI (<c>xt.1=...&amp;xt.2=...</c>) into one magnet URI per torrent
+    /// </summary>
+    public static IList<string> Split(string In)
+    {
+        if (!Uri.TryCreate(In, UriKind.Absolute, out var uri) || uri.Scheme != "magnet")
+            return [In];
+
+        var shared = new List<string>();
+        var indexed = new SortedDictionary<int, List<string>>();
+        var multiTopic = false;
+
+        foreach (var param in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)) {
+            var eq = param.IndexOf('=');
+            var key = eq == -1 ? param : param[..eq];
+            var dot = key.LastIndexOf('.');
+
+            if (dot == -1 || !Int32.TryParse(key.AsSpan(dot + 1), NumberStyles.None, CultureInfo.InvariantCulture, out var index)) {
+                shared.Add(param);
+                continue;
+            }
+
+            multiTopic |= key[..dot] == "xt";
+
+            if (!indexed.TryGetValue(index, out var group))
+                indexed[index] = group = [];
+            group.Add(key[..dot] + param[key.Length..]);
+        }
+
+        if (!multiTopic)
+            return [In];
+
+        return [.. indexed.Values.Select(x => "magnet:?" + String.Join('&', x.Concat(shared)))];
+    }
+
     public static bool TryParse(string In, [NotNullWhen(true)] out MagnetUri? Result)
     {
         Result = null;

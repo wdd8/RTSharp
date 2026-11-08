@@ -38,8 +38,9 @@ public class TorrentAdd
         var plugin = Plugins.GetPluginOrDefault(Primary) ?? throw new NullReferenceException("No plugin corresponding to data provider found");
 
         var tasks = new List<Task<(string? Filename, byte[]? Content, string? MagnetUri)>>();
+        var sources = Input.Sources.SelectMany(x => MagnetParser.Split(x.Source).Select(source => (Source: source, x.Options))).ToList();
 
-        foreach (var (source, opts) in Input.Sources) {
+        foreach (var (source, opts) in sources) {
             Func<Task<(string? Filename, byte[]? Content, string? MagnetUri)>> fx;
 
             if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && !uri.IsFile) {
@@ -68,7 +69,7 @@ public class TorrentAdd
             tasks.Add(fx());
         }
 
-        var files = (await Task.WhenAll(tasks)).Select((data, x) => (data.Content, data.MagnetUri, data.Filename, Input.Sources[x].Options)).ToList();
+        var files = (await Task.WhenAll(tasks)).Select((data, x) => (data.Content, data.MagnetUri, data.Filename, sources[x].Options)).ToList();
 
         var filesByHash = new InfoHashDictionary<(byte[]? Content, string? MagnetUri, string Name, AddTorrentsOptions Options)>();
         {
