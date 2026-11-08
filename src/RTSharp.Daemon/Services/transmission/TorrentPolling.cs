@@ -19,6 +19,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
     private readonly ConcurrentInfoHashDictionary<int> HashToId = new();
     private readonly ConcurrentDictionary<int, byte[]> IdToHash = new();
     private readonly ConcurrentQueue<byte[]> FullUpdateQueue = new();
+    private InfoHashDictionary<Protocols.DataProvider.Torrent>? LastSnapshot;
     private static readonly string[] AllFieldsExceptLists = TorrentFields.ALL_FIELDS.Except([
         TorrentFields.FILES, TorrentFields.FILE_STATS, TorrentFields.PEERS,
         TorrentFields.TRACKER_STATS, TorrentFields.TRACKER_LIST, TorrentFields.PIECES
@@ -29,11 +30,18 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
     protected internal override DeltaTorrentsListResponse BuildChanges(HistoryEntry? Previous, HistoryEntry Current)
     {
         var delta = new DeltaTorrentsListResponse();
+        if (Previous != null && ReferenceEquals(Previous.List, Current.List))
+            return delta;
+
         foreach (var (hash, torrent) in Current.List) {
             if (Previous == null || !Previous.List.TryGetValue(hash, out var old)) {
-                delta.FullUpdate.Add(torrent.Clone());
+                delta.FullUpdate.Add(torrent);
                 continue;
             }
+
+            // Unchanged torrents are from the previous poll
+            if (ReferenceEquals(torrent, old))
+                continue;
 
             if (torrent.Name != old.Name ||
                 torrent.Size != old.Size ||
@@ -48,9 +56,9 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 torrent.RemotePath != old.RemotePath ||
                 torrent.StatusMessage != old.StatusMessage ||
                 !Equals(torrent.FinishedOn, old.FinishedOn) ||
-                !torrent.Labels.SequenceEqual(old.Labels) ||
+                !torrent.Labels.Equals(old.Labels) ||
                 torrent.PrimaryTracker?.Uri != old.PrimaryTracker?.Uri) {
-                delta.FullUpdate.Add(torrent.Clone());
+                delta.FullUpdate.Add(torrent);
             } else if (torrent.IsCompleted) {
                 if (torrent.Uploaded != old.Uploaded ||
                     torrent.UPSpeed != old.UPSpeed ||
@@ -140,7 +148,12 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
             }
             LastSuccessfulPoll = DateTime.UtcNow;
             PollInitialized = true;
-            return new HistoryEntry(DateTime.UtcNow, LatestTorrents.ToInfoHashDictionary(x => x.Key, x => x.Value.Clone()));
+
+            if (!all && LastSnapshot != null && result.Torrents.Length == 0 && (result.Removed?.Length ?? 0) == 0)
+                return new HistoryEntry(DateTime.UtcNow, LastSnapshot);
+
+            LastSnapshot = LatestTorrents.ToInfoHashDictionary(x => x.Key, x => x.Value);
+            return new HistoryEntry(DateTime.UtcNow, LastSnapshot);
         } catch (Exception ex) {
             // Recover the complete list after connection failures or a daemon restart
             PollInitialized = false;

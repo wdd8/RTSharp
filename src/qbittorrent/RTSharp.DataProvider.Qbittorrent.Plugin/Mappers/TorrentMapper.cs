@@ -154,7 +154,6 @@
             if (External.ActiveTime != null) Stored.ActiveTime = External.ActiveTime;
             if (External.AutomaticTorrentManagement != null) Stored.AutomaticTorrentManagement = External.AutomaticTorrentManagement.Value;
             if (External.TotalSize != null) Stored.TotalSize = External.TotalSize;
-            if (External.AdditionalData != null) Stored.AdditionalData = External.AdditionalData;
         }
 
         public static Shared.Abstractions.File.PRIORITY MapFromExternal(QBittorrent.Client.TorrentContentPriority In)

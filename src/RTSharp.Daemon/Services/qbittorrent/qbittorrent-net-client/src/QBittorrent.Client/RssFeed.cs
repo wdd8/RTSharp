@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client
 {
@@ -18,7 +18,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The uid.
         /// </value>
-        [JsonProperty("uid")]
+        [JsonPropertyName("uid")]
         public Guid Uid { get; set; }
 
         /// <summary>
@@ -27,7 +27,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The feed URL.
         /// </value>
-        [JsonProperty("url")]
+        [JsonPropertyName("url")]
         public Uri Url { get; set; }
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The title.
         /// </value>
-        [JsonProperty("title")]
+        [JsonPropertyName("title")]
         public string Title { get; set; }
 
         /// <summary>
@@ -45,19 +45,19 @@ namespace QBittorrent.Client
         /// <value>
         /// The last build date.
         /// </value>
-        [JsonProperty("lastBuildDate")]
+        [JsonPropertyName("lastBuildDate")]
         public DateTimeOffset? LastBuildDate { get; set; }
 
         /// <summary>
         /// Gets or sets the value indicating whether the feed is loading.
         /// </summary>
-        [JsonProperty("isLoading")]
+        [JsonPropertyName("isLoading")]
         public bool? IsLoading { get; set; }
 
         /// <summary>
         /// Gets or sets the value indicating whether the feed has an error.
         /// </summary>
-        [JsonProperty("hasError")]
+        [JsonPropertyName("hasError")]
         public bool? HasError { get; set; }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The articles.
         /// </value>
-        [JsonProperty("articles")]
+        [JsonPropertyName("articles")]
         public IList<RssArticle> Articles { get; set; }
     }
 }

@@ -22,15 +22,13 @@ public class FileTransferService
 
     private readonly Dictionary<string, GrpcChannel> Channels = new();
 
-    public FileTransferService(ILogger<FileTransferService> Logger, IConfiguration config, ISpeedMovingAverageService Smas)
+    public FileTransferService(ILogger<FileTransferService> Logger, IConfiguration config)
     {
         this.Logger = Logger;
         this.Config = config;
-        this.Smas = Smas;
     }
 
     private readonly IConfiguration Config;
-    private readonly ISpeedMovingAverageService Smas;
 
 
     public async Task ReceiveFilesFromRemote(Protocols.GRPCFilesService.GRPCFilesServiceClient Client, IEnumerable<(string StorePath, string RemoteSourcePath)> Paths, Action<FileTransferSessionProgress> Progress)
@@ -94,7 +92,7 @@ public class FileTransferService
                     });
                     currentTotalBytes = (long)buffer.Header.TotalBytes;
                     bytesTotal = 0;
-                    speed = Smas.Get("FileTransfer", Guid.NewGuid().ToString(), itemsMax: 10);
+                    speed = new SpeedMovingAverage(10);
                     speed.Value(0);
                     sw.Restart();
 

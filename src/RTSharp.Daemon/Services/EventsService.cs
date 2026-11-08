@@ -65,6 +65,8 @@ public class EventsService(ILogger<EventsService> Logger, RegisteredDataProvider
         }
     }
 
+    internal bool HasTorrentChangedStateSubscribers => ProviderStateSubscribers.Count != 0 || TorrentChangedStateEvSubscribers.Count != 0;
+
     internal void EmitTorrentChangedStateEvent(TorrentPollingService Source, Torrent Torrent, TorrentState State)
     {
         foreach (var handler in ProviderStateSubscribers) {

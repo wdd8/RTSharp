@@ -27,30 +27,23 @@ namespace RTSharp.Daemon.Services.rtorrent
         private static readonly byte[] EXPECTED_HEADER = "Status: 200 OK\r\nContent-Type: text/xml\r\nContent-Length: "u8.ToArray();
 
         /// <summary>
-        /// Owns the connection's PipeReader for the lifetime of the caller's parse. Dispose only after all parsing
-        /// against <see cref="Reader"/> results is complete - disposing recycles the pooled segments backing the body.
+        /// Owns the pooled buffer holding the response body for the lifetime of the caller's parse. Dispose only after
+        /// <see cref="Reader"/> is unused
         /// </summary>
         public readonly struct ScgiResponse : IDisposable
         {
-            private readonly PipeReader PipeReader;
-            private readonly Action Disconnect;
+            private readonly byte[] Rented;
             public readonly ReadOnlySequence<byte> Body;
 
-            internal ScgiResponse(PipeReader PipeReader, Action Disconnect, ReadOnlySequence<byte> Body)
+            internal ScgiResponse(byte[] Rented, int Length)
             {
-                this.PipeReader = PipeReader;
-                this.Disconnect = Disconnect;
-                this.Body = Body;
+                this.Rented = Rented;
+                Body = new ReadOnlySequence<byte>(Rented, 0, Length);
             }
 
             public SequenceReader<byte> Reader() => new SequenceReader<byte>(Body);
 
-            public void Dispose()
-            {
-                PipeReader.AdvanceTo(Body.End);
-                PipeReader.Complete();
-                Disconnect();
-            }
+            public void Dispose() => ArrayPool<byte>.Shared.Return(Rented);
         }
 
         private static async Task<int> ReadContentLengthAsync(PipeReader Reader, CancellationToken CancellationToken)
@@ -103,7 +96,17 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public async Task<ScgiResponse> Get(string Xml, CancellationToken CancellationToken = default)
         {
-            var payload = SCGIPayloadBuilder.BuildPayload(Xml);
+            var body = ArrayPool<byte>.Shared.Rent(Encoding.UTF8.GetByteCount(Xml));
+            try {
+                var length = Encoding.UTF8.GetBytes(Xml, body);
+                return await Get(body.AsMemory(0, length), CancellationToken);
+            } finally {
+                ArrayPool<byte>.Shared.Return(body);
+            }
+        }
+
+        public async Task<ScgiResponse> Get(ReadOnlyMemory<byte> XmlUtf8, CancellationToken CancellationToken = default)
+        {
             NetworkStream stm;
             var listenPath = Config.SCGIListen;
             Action disconnect;
@@ -132,7 +135,8 @@ namespace RTSharp.Daemon.Services.rtorrent
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.IP);
                 var unixEp = new UnixDomainSocketEndPoint(listenPath);
 
-                Logger.LogDebug($"Connecting to {listenPath}");
+                if (Logger.IsEnabled(LogLevel.Debug))
+                    Logger.LogDebug("Connecting to {ListenPath}", listenPath);
                 try {
                     await socket.ConnectAsync(unixEp, CancellationToken);
                 } catch (SocketException ex) {
@@ -148,38 +152,58 @@ namespace RTSharp.Daemon.Services.rtorrent
                 var tcp = new TcpClient();
 
                 var portRaw = listenPath.LastIndexOf(':');
-                var port = Int32.Parse(listenPath[(portRaw + 1)..]);
-                var destination = $"{listenPath[..portRaw]}:{port}";
+                var host = listenPath[..portRaw];
+                var port = Int32.Parse(listenPath.AsSpan(portRaw + 1));
 
-                Logger.LogDebug($"Connecting to {destination}");
+                if (Logger.IsEnabled(LogLevel.Debug))
+                    Logger.LogDebug("Connecting to {Host}:{Port}", host, port);
                 try {
-                    await tcp.ConnectAsync(listenPath[..portRaw], port, CancellationToken);
+                    await tcp.ConnectAsync(host, port, CancellationToken);
                 } catch (SocketException ex) {
-                    throw new DataProviderFailure(ex.Message, ex, destination);
+                    throw new DataProviderFailure(ex.Message, ex, $"{host}:{port}");
                 }
+                tcp.NoDelay = true;
                 stm = tcp.GetStream();
 
                 disconnect = tcp.Close;
             }
 
-            await stm.WriteAsync(payload, CancellationToken);
+            var pipeReader = PipeReader.Create(stm, new StreamPipeReaderOptions(pool: MemoryPool<byte>.Shared, bufferSize: 64 * 1024, leaveOpen: true));
+            byte[]? body = null;
 
-            var pipeReader = PipeReader.Create(stm, new StreamPipeReaderOptions(pool: MemoryPool<byte>.Shared, leaveOpen: true));
-
-            int len;
-            ReadResult bodyResult;
             try {
-                len = await ReadContentLengthAsync(pipeReader, CancellationToken);
-                bodyResult = await pipeReader.ReadAtLeastAsync(len, CancellationToken);
+                await stm.WriteAsync(SCGIPayloadBuilder.BuildHeader(XmlUtf8.Length), CancellationToken);
+                await stm.WriteAsync(XmlUtf8, CancellationToken);
+
+                var len = await ReadContentLengthAsync(pipeReader, CancellationToken);
+
+                body = ArrayPool<byte>.Shared.Rent(len);
+                var filled = 0;
+                while (filled < len) {
+                    var readResult = await pipeReader.ReadAsync(CancellationToken);
+                    var buffer = readResult.Buffer;
+                    var take = (int)Math.Min(buffer.Length, len - filled);
+
+                    buffer.Slice(0, take).CopyTo(body.AsSpan(filled));
+                    filled += take;
+                    pipeReader.AdvanceTo(buffer.GetPosition(take));
+
+                    if (filled < len && readResult.IsCompleted)
+                        throw new Exception("Got EOF while reading SCGI response body");
+                }
+
+                return new ScgiResponse(body, len);
             } catch {
-                await pipeReader.CompleteAsync();
-                disconnect();
+                if (body != null)
+                    ArrayPool<byte>.Shared.Return(body);
                 throw;
+            } finally {
+                await pipeReader.CompleteAsync();
+                try {
+                    disconnect();
+                } catch {
+                }
             }
-
-            var body = bodyResult.Buffer.Slice(0, len);
-
-            return new ScgiResponse(pipeReader, disconnect, body);
         }
 
 

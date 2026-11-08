@@ -1,34 +1,30 @@
 ﻿using System;
-using System.Numerics;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client.Converters
 {
-    internal class MinutesToTimeSpanConverter : JsonConverter
+    internal class MinutesToTimeSpanConverter : JsonConverter<TimeSpan?>
     {
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-        {
-            if (value == null)
-            {
-                writer.WriteValue(-1);
-                return;
-            }
+        // null is written as -1
+        public override bool HandleNull => true;
 
-            writer.WriteValue((long)((TimeSpan)value).TotalMinutes);
+        public override void Write(Utf8JsonWriter writer, TimeSpan? value, JsonSerializerOptions options)
+        {
+            writer.WriteNumberValue(value == null ? -1 : (long)value.Value.TotalMinutes);
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue,
-            JsonSerializer serializer)
+        public override TimeSpan? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonToken.Null)
+            if (reader.TokenType == JsonTokenType.Null)
                 return null;
 
-            if (reader.TokenType == JsonToken.Integer)
+            if (reader.TokenType == JsonTokenType.Number)
             {
-                if (reader.Value is BigInteger)
+                // Beyond long
+                if (!reader.TryGetInt64(out var totalMinutes))
                     return TimeSpan.MaxValue;
 
-                long totalMinutes = Convert.ToInt64(reader.Value);
                 if (totalMinutes >= 0)
                 {
                     return totalMinutes > TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerMinute
@@ -43,12 +39,7 @@ namespace QBittorrent.Client.Converters
                 }
             }
 
-            throw new JsonSerializationException($"Unexpected token {reader.TokenType} when parsing integer.");
-        }
-
-        public override bool CanConvert(Type objectType)
-        {
-            return objectType == typeof(TimeSpan?);
+            throw new JsonException($"Unexpected token {reader.TokenType} when parsing integer.");
         }
     }
 }

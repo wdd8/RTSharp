@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client
 {
@@ -13,13 +13,13 @@ namespace QBittorrent.Client
         /// <summary>
         /// The number of added peers.
         /// </summary>
-        [JsonProperty("added")]
+        [JsonPropertyName("added")]
         public int Added { get; set; }
 
         /// <summary>
         /// The number of peers that cannot be added.
         /// </summary>
-        [JsonProperty("failed")]
+        [JsonPropertyName("failed")]
         public int Failed { get; set; }
     }
 }

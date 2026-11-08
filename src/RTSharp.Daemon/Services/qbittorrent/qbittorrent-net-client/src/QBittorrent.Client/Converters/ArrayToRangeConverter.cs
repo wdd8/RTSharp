@@ -1,57 +1,42 @@
 ﻿using System;
-using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client.Converters
 {
-    internal class ArrayToRangeConverter : JsonConverter
+    internal class ArrayToRangeConverter : JsonConverter<Range>
     {
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, Range value, JsonSerializerOptions options)
         {
-            if (value == null)
-            {
-                writer.WriteNull();
-                return;
-            }
-
-            var range = (Range) value;
             writer.WriteStartArray();
-            writer.WriteValue(range.StartIndex);
-            writer.WriteValue(range.EndIndex);
+            writer.WriteNumberValue(value.StartIndex);
+            writer.WriteNumberValue(value.EndIndex);
             writer.WriteEndArray();
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override Range Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonToken.Null)
-            {
-                if (objectType != typeof(Range?))
-                    throw new JsonSerializationException("Not-null value was expected.");
+            if (reader.TokenType != JsonTokenType.StartArray)
+                throw new JsonException($"Unexpected token {reader.TokenType}.");
 
-                return null;
-            }
-
-            if (reader.TokenType == JsonToken.StartArray)
+            long start = 0, end = 0;
+            var count = 0;
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
             {
-                var list = new List<long>(2);
-                while (reader.Read() && reader.TokenType != JsonToken.EndArray)
+                if (reader.TokenType != JsonTokenType.Number)
+                    throw new JsonException($"Unexpected token {reader.TokenType}.");
+
+                var value = reader.GetInt64();
+                switch (count++)
                 {
-                    if (reader.TokenType != JsonToken.Integer)
-                        throw new JsonSerializationException($"Unexpected token {reader.TokenType}.");
-                    list.Add(Convert.ToInt64(reader.Value));
+                    case 0: start = value; break;
+                    case 1: end = value; break;
                 }
-
-                if (list.Count != 2)
-                    throw new JsonSerializationException("Expected array of 2 elements.");
-                return new Range(list[0], list[1]);
             }
 
-            throw new JsonSerializationException($"Unexpected token {reader.TokenType}.");
-        }
-
-        public override bool CanConvert(Type objectType)
-        {
-            return objectType == typeof(Range) || objectType == typeof(Range?);
+            if (count != 2)
+                throw new JsonException("Expected array of 2 elements.");
+            return new Range(start, end);
         }
     }
 }

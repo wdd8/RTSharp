@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client
 {
@@ -15,7 +14,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The response identifier.
         /// </value>
-        [JsonProperty("rid")]
+        [JsonPropertyName("rid")]
         public int ResponseId { get; set; }
 
         /// <summary>
@@ -25,7 +24,7 @@ namespace QBittorrent.Client
         ///   <see langword="true" /> if this object contains all data; 
         ///   <see langword="false" /> if this object contains only changes of data since the previous request.
         /// </value>
-        [JsonProperty("full_update")]
+        [JsonPropertyName("full_update")]
         public bool FullUpdate { get; set; }
 
         /// <summary>
@@ -34,25 +33,18 @@ namespace QBittorrent.Client
         /// <value>
         ///   <see langword="true" /> if flags must be shown; otherwise, <see langword="false" />.
         /// </value>
-        [JsonProperty("show_flags")]
+        [JsonPropertyName("show_flags")]
         public bool ShowFlags { get; set; }
 
         /// <summary>
         /// Gets or sets the changed and new peers.
         /// </summary>
-        [JsonProperty("peers")]
+        [JsonPropertyName("peers")]
         public IReadOnlyDictionary<string, PeerPartialInfo> PeersChanged { get; set; }
 
         /// <summary>
         /// Gets or sets the removed peers.
         /// </summary>
-        [JsonProperty("peers_removed")]
-        public IReadOnlyList<string> PeersRemoved { get; set; }
-
-        /// <summary>
-        /// Additional properties not handled by this library.
-        /// </summary>
-        [JsonExtensionData]
-        public IDictionary<string, JToken> AdditionalData { get; set; }
-    }
+        [JsonPropertyName("peers_removed")]
+        public IReadOnlyList<string> PeersRemoved { get; set; }    }
 }

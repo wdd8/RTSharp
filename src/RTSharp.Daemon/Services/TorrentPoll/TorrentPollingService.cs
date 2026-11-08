@@ -87,9 +87,10 @@ public abstract class TorrentPollingService(ILogger Logger, EventsService Events
                 }
 
                 if (delay == Timeout.InfiniteTimeSpan || delay > TimeSpan.Zero) {
-                    try {
-                        await changed.WaitAsync(delay, stoppingToken);
-                    } catch (TimeoutException) { }
+                    using (var wait = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken)) {
+                        await Task.WhenAny(changed, Task.Delay(delay, wait.Token));
+                        wait.Cancel();
+                    }
                     continue;
                 }
 
@@ -114,12 +115,14 @@ public abstract class TorrentPollingService(ILogger Logger, EventsService Events
                 lastPoll = DateTime.UtcNow;
                 var previous = Latest;
                 Latest = entry;
-                foreach (var (hash, torrent) in entry.List) {
-                    var old = previous != null && previous.List.TryGetValue(hash, out var value) ? value : null;
-                    if (torrent.State != (old?.State ?? TorrentState.None)) {
-                        var before = (old ?? torrent).Clone();
-                        before.State = old?.State ?? TorrentState.None;
-                        Events.EmitTorrentChangedStateEvent(this, before, torrent.State);
+                if (Events.HasTorrentChangedStateSubscribers && !ReferenceEquals(previous?.List, entry.List)) {
+                    foreach (var (hash, torrent) in entry.List) {
+                        var old = previous != null && previous.List.TryGetValue(hash, out var value) ? value : null;
+                        if (torrent.State != (old?.State ?? TorrentState.None)) {
+                            var before = (old ?? torrent).Clone();
+                            before.State = old?.State ?? TorrentState.None;
+                            Events.EmitTorrentChangedStateEvent(this, before, torrent.State);
+                        }
                     }
                 }
 
@@ -161,5 +164,8 @@ public abstract class TorrentPollingService(ILogger Logger, EventsService Events
         return null;
     }
 
-    public TorrentTracker[] GetTorrentTrackers(byte[] Hash) => GetLatestHistoryEntry(Hash)?.Trackers.Trackers.Select(x => x.Clone()).ToArray() ?? [];
+    internal Torrent? FindLatestTorrent(byte[] Hash) => Latest is { } latest && latest.List.TryGetValue(Hash, out var torrent) ? torrent : null;
+
+    public TorrentTracker[] GetTorrentTrackers(byte[] Hash) =>
+        Latest is { } latest && latest.Trackers.TryGetValue(Hash, out var trackers) ? trackers.Trackers.Select(x => x.Clone()).ToArray() : [];
 }

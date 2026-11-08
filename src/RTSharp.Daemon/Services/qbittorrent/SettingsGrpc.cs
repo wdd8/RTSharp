@@ -1,7 +1,5 @@
 using Google.Protobuf.WellKnownTypes;
 
-using Newtonsoft.Json.Linq;
-
 using QBittorrent.Client;
 
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
@@ -79,119 +77,41 @@ public class SettingsGrpc
         }
     }
 
-    private static JToken? GetAdditional(IDictionary<string, JToken>? data, string key) =>
-        data != null && data.TryGetValue(key, out var val) ? val : null;
-
     private static QBittorrentSettings MapSettingsToProto(Preferences p)
     {
-        // Behaviour
-        var logEnabled = GetAdditional(p.AdditionalData, "file_log_enabled");
-        var logPath = GetAdditional(p.AdditionalData, "file_log_path");
-        var logBackupEnabled = GetAdditional(p.AdditionalData, "file_log_backup_enabled");
-        var logMaxSize = GetAdditional(p.AdditionalData, "file_log_max_size");
-        var logDeleteOld = GetAdditional(p.AdditionalData, "file_log_delete_old");
-        var logAge = GetAdditional(p.AdditionalData, "file_log_age");
-        var logAgeType = GetAdditional(p.AdditionalData, "file_log_age_type");
-
-        // Downloads
-        var torrentContentLayout = GetAdditional(p.AdditionalData, "torrent_content_layout");
-        var addToTopOfQueue = GetAdditional(p.AdditionalData, "add_to_top_of_queue");
-        var torrentStopCondition = GetAdditional(p.AdditionalData, "torrent_stop_condition");
-        var mergeTrackers = GetAdditional(p.AdditionalData, "merge_trackers");
-        var autoDeleteMode = GetAdditional(p.AdditionalData, "auto_delete_mode");
-        var useUnwantedFolder = GetAdditional(p.AdditionalData, "use_unwanted_folder");
-        var useCategoryPathsInManualMode = GetAdditional(p.AdditionalData, "use_category_paths_in_manual_mode");
-        var useSubcategories = GetAdditional(p.AdditionalData, "use_subcategories");
-        var excludedFileNamesEnabled = GetAdditional(p.AdditionalData, "excluded_file_names_enabled");
-        var excludedFileNames = GetAdditional(p.AdditionalData, "excluded_file_names");
-        var autorunOnTorrentAddedEnabled = GetAdditional(p.AdditionalData, "autorun_on_torrent_added_enabled");
-        var autorunOnTorrentAddedProgram = GetAdditional(p.AdditionalData, "autorun_on_torrent_added_program");
-
-        // BitTorrent
-        var trackerListEnabled = GetAdditional(p.AdditionalData, "add_trackers_from_url_enabled");
-        var trackerListUrl = GetAdditional(p.AdditionalData, "add_trackers_url");
-        var trackerListContent = GetAdditional(p.AdditionalData, "add_trackers_url_list");
-
-        // RSS
-        var rssFetchDelay = GetAdditional(p.AdditionalData, "rss_fetch_delay");
-
-        // WebUI
-        var reverseProxyEnabled = GetAdditional(p.AdditionalData, "web_ui_reverse_proxy_enabled");
-        var reverseProxiesList = GetAdditional(p.AdditionalData, "web_ui_reverse_proxies_list");
-        var webUiApiKey = GetAdditional(p.AdditionalData, "web_ui_api_key");
-
-        // Advanced
-        var resumeDataStorageType = GetAdditional(p.AdditionalData, "resume_data_storage_type");
-        var torrentContentRemoveOption = GetAdditional(p.AdditionalData, "torrent_content_remove_option");
-        var memoryWorkingSetLimit = GetAdditional(p.AdditionalData, "memory_working_set_limit");
-        var saveStatisticsInterval = GetAdditional(p.AdditionalData, "save_statistics_interval");
-        var torrentFileSizeLimit = GetAdditional(p.AdditionalData, "torrent_file_size_limit");
-        var confirmTorrentRecheck = GetAdditional(p.AdditionalData, "confirm_torrent_recheck");
-        var appInstanceName = GetAdditional(p.AdditionalData, "app_instance_name");
-        var refreshInterval = GetAdditional(p.AdditionalData, "refresh_interval");
-        var reannounceWhenAddressChanged = GetAdditional(p.AdditionalData, "reannounce_when_address_changed");
-        var embeddedTrackerPortForwarding = GetAdditional(p.AdditionalData, "embedded_tracker_port_forwarding");
-        var ignoreSslErrors = GetAdditional(p.AdditionalData, "ignore_ssl_errors");
-        var pythonExecutablePath = GetAdditional(p.AdditionalData, "python_executable_path");
-        var diskIOReadMode = GetAdditional(p.AdditionalData, "disk_io_read_mode");
-        var diskIOWriteMode = GetAdditional(p.AdditionalData, "disk_io_write_mode");
-        var hashingThreads = GetAdditional(p.AdditionalData, "hashing_threads");
-        var diskQueueSize = GetAdditional(p.AdditionalData, "disk_queue_size");
-        var bdecodeDepthLimit = GetAdditional(p.AdditionalData, "bdecode_depth_limit");
-        var bdecodeTokenLimit = GetAdditional(p.AdditionalData, "bdecode_token_limit");
-        var socketSendBufferSize = GetAdditional(p.AdditionalData, "socket_send_buffer_size");
-        var socketReceiveBufferSize = GetAdditional(p.AdditionalData, "socket_receive_buffer_size");
-        var outgoingConnectionsPerSecond = GetAdditional(p.AdditionalData, "connection_speed");
-        var upnpLeaseDuration = GetAdditional(p.AdditionalData, "upnp_lease_duration");
-        var peerTos = GetAdditional(p.AdditionalData, "peer_tos");
-        var idnSupportEnabled = GetAdditional(p.AdditionalData, "idn_support_enabled");
-        var validateHttpsTrackerCertificate = GetAdditional(p.AdditionalData, "validate_https_tracker_certificate");
-        var ssrfMitigation = GetAdditional(p.AdditionalData, "ssrf_mitigation");
-        var blockPeersOnPrivilegedPorts = GetAdditional(p.AdditionalData, "block_peers_on_privileged_ports");
-        var announcePort = GetAdditional(p.AdditionalData, "announce_port");
-        var peerTurnover = GetAdditional(p.AdditionalData, "peer_turnover");
-        var peerTurnoverCutoff = GetAdditional(p.AdditionalData, "peer_turnover_cutoff");
-        var peerTurnoverInterval = GetAdditional(p.AdditionalData, "peer_turnover_interval");
-        var requestQueueSize = GetAdditional(p.AdditionalData, "request_queue_size");
-        var dhtBootstrapNodes = GetAdditional(p.AdditionalData, "dht_bootstrap_nodes");
-        var i2pInboundQuantity = GetAdditional(p.AdditionalData, "i2p_inbound_quantity");
-        var i2pOutboundQuantity = GetAdditional(p.AdditionalData, "i2p_outbound_quantity");
-        var i2pInboundLength = GetAdditional(p.AdditionalData, "i2p_inbound_length");
-        var i2pOutboundLength = GetAdditional(p.AdditionalData, "i2p_outbound_length");
-
         var r = new QBittorrentSettings {
             // Behaviour
-            LogEnabled = logEnabled?.Value<bool>(),
-            LogPath = logPath?.Value<string>(),
-            LogBackupEnabled = logBackupEnabled?.Value<bool>(),
-            LogMaxSize = logMaxSize?.Value<int>(),
-            LogDeleteOld = logDeleteOld?.Value<bool>(),
-            LogAge = logAge?.Value<int>(),
-            LogAgeType = logAgeType?.Value<int>(),
+            LogEnabled = p.LogEnabled,
+            LogPath = p.LogPath,
+            LogBackupEnabled = p.LogBackupEnabled,
+            LogMaxSize = p.LogMaxSize,
+            LogDeleteOld = p.LogDeleteOld,
+            LogAge = p.LogAge,
+            LogAgeType = p.LogAgeType,
 
             // Downloads
-            TorrentContentLayout = torrentContentLayout?.Value<string>(),
-            AddToTopOfQueue = addToTopOfQueue?.Value<bool>(),
+            TorrentContentLayout = p.TorrentContentLayout?.ToString(),
+            AddToTopOfQueue = p.AddToTopOfQueue,
             AddTorrentPaused = p.AddTorrentPaused,
-            TorrentStopCondition = torrentStopCondition?.Value<string>(),
-            MergeTrackers = mergeTrackers?.Value<bool>(),
-            AutoDeleteMode = autoDeleteMode?.Value<int>(),
+            TorrentStopCondition = p.TorrentStopCondition,
+            MergeTrackers = p.MergeTrackers,
+            AutoDeleteMode = (int?)p.TorrentFileAutoDeleteMode,
             PreallocateAll = p.PreallocateAll,
             AppendExtensionToIncompleteFiles = p.AppendExtensionToIncompleteFiles,
-            UseUnwantedFolder = useUnwantedFolder?.Value<bool>(),
+            UseUnwantedFolder = p.UseUnwantedFolder,
             AutoTMMEnabledByDefault = p.AutoTMMEnabledByDefault,
             AutoTMMRetainedWhenCategoryChanges = p.AutoTMMRetainedWhenCategoryChanges,
             AutoTMMRetainedWhenDefaultSavePathChanges = p.AutoTMMRetainedWhenDefaultSavePathChanges,
             AutoTMMRetainedWhenCategorySavePathChanges = p.AutoTMMRetainedWhenCategorySavePathChanges,
-            UseSubcategories = useSubcategories?.Value<bool>(),
-            UseCategoryPathsInManualMode = useCategoryPathsInManualMode?.Value<bool>(),
+            UseSubcategories = p.UseSubcategories,
+            UseCategoryPathsInManualMode = p.UseCategoryPathsInManualMode,
             SavePath = p.SavePath,
             TempPathEnabled = p.TempPathEnabled,
             TempPath = p.TempPath,
             ExportDirectory = p.ExportDirectory,
             ExportDirectoryForFinished = p.ExportDirectoryForFinished,
-            ExcludedFileNamesEnabled = excludedFileNamesEnabled?.Value<bool>(),
-            ExcludedFileNames = excludedFileNames?.Value<string>(),
+            ExcludedFileNamesEnabled = p.ExcludedFileNamesEnabled,
+            ExcludedFileNames = p.ExcludedFileNames,
             MailNotificationEnabled = p.MailNotificationEnabled,
             MailNotificationSender = p.MailNotificationSender,
             MailNotificationEmailAddress = p.MailNotificationEmailAddress,
@@ -202,8 +122,8 @@ public class SettingsGrpc
             MailNotificationPassword = p.MailNotificationPassword,
             AutorunEnabled = p.AutorunEnabled,
             AutorunProgram = p.AutorunProgram,
-            AutorunOnTorrentAddedEnabled = autorunOnTorrentAddedEnabled?.Value<bool>(),
-            AutorunOnTorrentAddedProgram = autorunOnTorrentAddedProgram?.Value<string>(),
+            AutorunOnTorrentAddedEnabled = p.AutorunOnTorrentAddedEnabled,
+            AutorunOnTorrentAddedProgram = p.AutorunOnTorrentAddedProgram,
 
             // Connection
             BittorrentProtocol = p.BittorrentProtocol switch {
@@ -297,9 +217,9 @@ public class SettingsGrpc
                 _ => QBittorrentMaxRatioAction.Stop
             },
             AdditionalTrackersEnabled = p.AdditionalTrackersEnabled,
-            TrackerListEnabled = trackerListEnabled?.Value<bool>(),
-            TrackerListUrl = trackerListUrl?.Value<string>(),
-            TrackerListContent = trackerListContent?.Value<string>(),
+            TrackerListEnabled = p.TrackerListEnabled,
+            TrackerListUrl = p.TrackerListUrl,
+            TrackerListContent = p.TrackerListContent,
 
             // RSS
             RssProcessingEnabled = p.RssProcessingEnabled,
@@ -307,7 +227,7 @@ public class SettingsGrpc
             RssMaxArticlesPerFeed = p.RssMaxArticlesPerFeed,
             RssAutoDownloadingEnabled = p.RssAutoDownloadingEnabled,
             RssDownloadRepackProperEpisodes = p.RssDownloadRepackProperEpisodes,
-            RssFetchDelay = rssFetchDelay?.Value<int>(),
+            RssFetchDelay = p.RssFetchDelay,
 
             // WebUI
             WebUIAddress = p.WebUIAddress,
@@ -315,7 +235,7 @@ public class SettingsGrpc
             WebUIUpnp = p.WebUIUpnp,
             WebUIUsername = p.WebUIUsername,
             WebUIPasswordHash = p.WebUIPasswordHash,
-            WebUIApiKey = String.IsNullOrEmpty(webUiApiKey?.Value<string>()) ? null : webUiApiKey?.Value<string>(),
+            WebUIApiKey = String.IsNullOrEmpty(p.WebUIApiKey) ? null : p.WebUIApiKey,
             WebUIHttps = p.WebUIHttps,
             WebUISslKeyPath = p.WebUISslKeyPath,
             WebUISslCertificatePath = p.WebUISslCertificatePath,
@@ -332,8 +252,8 @@ public class SettingsGrpc
             WebUICustomHttpHeadersEnabled = p.WebUICustomHttpHeadersEnabled,
             BypassLocalAuthentication = p.BypassLocalAuthentication,
             BypassAuthenticationSubnetWhitelistEnabled = p.BypassAuthenticationSubnetWhitelistEnabled,
-            ReverseProxyEnabled = reverseProxyEnabled?.Value<bool>(),
-            ReverseProxiesList = reverseProxiesList?.Value<string>(),
+            ReverseProxyEnabled = p.ReverseProxyEnabled,
+            ReverseProxiesList = p.ReverseProxiesList,
             DynamicDnsEnabled = p.DynamicDnsEnabled,
             DynamicDnsService = p.DynamicDnsService switch {
                 QBittorrent.Client.DynamicDnsService.DynDNS => QBittorrentDynamicDnsService.Dyndns,
@@ -345,34 +265,34 @@ public class SettingsGrpc
             DynamicDnsDomain = p.DynamicDnsDomain,
 
             // Advanced
-            ResumeDataStorageType = resumeDataStorageType?.Value<string>(),
-            TorrentContentRemoveOption = torrentContentRemoveOption?.Value<string>(),
+            ResumeDataStorageType = p.ResumeDataStorageType,
+            TorrentContentRemoveOption = p.TorrentContentRemoveOption,
             CurrentNetworkInterface = p.CurrentNetworkInterface,
             CurrentInterfaceAddress = p.CurrentInterfaceAddress,
             SaveResumeDataInterval = p.SaveResumeDataInterval,
             RecheckCompletedTorrents = p.RecheckCompletedTorrents,
             ResolvePeerCountries = p.ResolvePeerCountries,
-            MemoryWorkingSetLimit = memoryWorkingSetLimit?.Value<int>(),
-            SaveStatisticsInterval = saveStatisticsInterval?.Value<int>(),
-            TorrentFileSizeLimit = torrentFileSizeLimit?.Value<long>() is long tfsz ? (int)(tfsz / (1024 * 1024)) : (int?)null,
-            ConfirmTorrentRecheck = confirmTorrentRecheck?.Value<bool>(),
-            AppInstanceName = appInstanceName?.Value<string>(),
-            RefreshInterval = refreshInterval?.Value<int>(),
-            ReannounceWhenAddressChanged = reannounceWhenAddressChanged?.Value<bool>(),
-            EmbeddedTrackerPortForwarding = embeddedTrackerPortForwarding?.Value<bool>(),
-            IgnoreSslErrors = ignoreSslErrors?.Value<bool>(),
-            PythonExecutablePath = pythonExecutablePath?.Value<string>(),
+            MemoryWorkingSetLimit = p.MemoryWorkingSetLimit,
+            SaveStatisticsInterval = p.SaveStatisticsInterval,
+            TorrentFileSizeLimit = p.TorrentFileSizeLimit is long tfsz ? (int)(tfsz / (1024 * 1024)) : (int?)null,
+            ConfirmTorrentRecheck = p.ConfirmTorrentRecheck,
+            AppInstanceName = p.AppInstanceName,
+            RefreshInterval = p.RefreshInterval,
+            ReannounceWhenAddressChanged = p.ReannounceWhenAddressChanged,
+            EmbeddedTrackerPortForwarding = p.EmbeddedTrackerPortForwarding,
+            IgnoreSslErrors = p.IgnoreSslErrors,
+            PythonExecutablePath = p.PythonExecutablePath,
             LibtorrentAsynchronousIOThreads = p.LibtorrentAsynchronousIOThreads,
             LibtorrentFilePoolSize = p.LibtorrentFilePoolSize,
             LibtorrentOutstandingMemoryWhenCheckingTorrent = p.LibtorrentOutstandingMemoryWhenCheckingTorrent,
             LibtorrentDiskCache = p.LibtorrentDiskCache,
             LibtorrentDiskCacheExpiryInterval = p.LibtorrentDiskCacheExpiryInterval,
-            LibtorrentDiskIOReadMode = diskIOReadMode?.Value<int>(),
-            LibtorrentDiskIOWriteMode = diskIOWriteMode?.Value<int>(),
-            LibtorrentHashingThreads = hashingThreads?.Value<int>(),
-            LibtorrentDiskQueueSize = diskQueueSize?.Value<long>() is long dqs ? (int)(dqs / 1024) : (int?)null,
-            LibtorrentBdecodeDepthLimit = bdecodeDepthLimit?.Value<int>(),
-            LibtorrentBdecodeTokenLimit = bdecodeTokenLimit?.Value<int>(),
+            LibtorrentDiskIOReadMode = p.LibtorrentDiskIOReadMode,
+            LibtorrentDiskIOWriteMode = p.LibtorrentDiskIOWriteMode,
+            LibtorrentHashingThreads = p.LibtorrentHashingThreads,
+            LibtorrentDiskQueueSize = p.LibtorrentDiskQueueSize is long dqs ? (int)(dqs / 1024) : (int?)null,
+            LibtorrentBdecodeDepthLimit = p.LibtorrentBdecodeDepthLimit,
+            LibtorrentBdecodeTokenLimit = p.LibtorrentBdecodeTokenLimit,
             LibtorrentCoalesceReadsAndWrites = p.LibtorrentCoalesceReadsAndWrites,
             LibtorrentPieceExtentAffinity = p.LibtorrentPieceExtentAffinity,
             LibtorrentSendUploadPieceSuggestions = p.LibtorrentSendUploadPieceSuggestions,
@@ -380,13 +300,13 @@ public class SettingsGrpc
             LibtorrentSendBufferLowWatermark = p.LibtorrentSendBufferLowWatermark,
             LibtorrentSendBufferWatermarkFactor = p.LibtorrentSendBufferWatermarkFactor,
             LibtorrentSocketBacklogSize = p.LibtorrentSocketBacklogSize,
-            LibtorrentSocketSendBufferSize = socketSendBufferSize?.Value<int>(),
-            LibtorrentSocketReceiveBufferSize = socketReceiveBufferSize?.Value<int>(),
+            LibtorrentSocketSendBufferSize = p.LibtorrentSocketSendBufferSize,
+            LibtorrentSocketReceiveBufferSize = p.LibtorrentSocketReceiveBufferSize,
             LibtorrentOutgoingPortsMin = p.LibtorrentOutgoingPortsMin,
             LibtorrentOutgoingPortsMax = p.LibtorrentOutgoingPortsMax,
-            LibtorrentOutgoingConnectionsPerSecond = outgoingConnectionsPerSecond?.Value<int>(),
-            LibtorrentUpnpLeaseDuration = upnpLeaseDuration?.Value<int>(),
-            LibtorrentPeerTos = peerTos?.Value<int>(),
+            LibtorrentOutgoingConnectionsPerSecond = p.LibtorrentOutgoingConnectionsPerSecond,
+            LibtorrentUpnpLeaseDuration = p.LibtorrentUpnpLeaseDuration,
+            LibtorrentPeerTos = p.LibtorrentPeerTos,
             LibtorrentUtpTcpMixedModeAlgorithm = p.LibtorrentUtpTcpMixedModeAlgorithm switch {
                 QBittorrent.Client.UtpTcpMixedModeAlgorithm.PeerProportional => QBittorrentUtpTcpMixedModeAlgorithm.PeerProportional,
                 _ => QBittorrentUtpTcpMixedModeAlgorithm.PreferTcp
@@ -408,20 +328,20 @@ public class SettingsGrpc
             LibtorrentAnnounceIp = p.LibtorrentAnnounceIp,
             LibtorrentStopTrackerTimeout = p.LibtorrentStopTrackerTimeout,
             LibtorrentMaxConcurrentHttpAnnounces = p.LibtorrentMaxConcurrentHttpAnnounces,
-            LibtorrentIdnSupportEnabled = idnSupportEnabled?.Value<bool>(),
-            LibtorrentValidateHttpsTrackerCertificate = validateHttpsTrackerCertificate?.Value<bool>(),
-            LibtorrentSsrfMitigation = ssrfMitigation?.Value<bool>(),
-            LibtorrentBlockPeersOnPrivilegedPorts = blockPeersOnPrivilegedPorts?.Value<bool>(),
-            LibtorrentAnnouncePort = announcePort?.Value<int>(),
-            LibtorrentPeerTurnover = peerTurnover?.Value<int>(),
-            LibtorrentPeerTurnoverCutoff = peerTurnoverCutoff?.Value<int>(),
-            LibtorrentPeerTurnoverInterval = peerTurnoverInterval?.Value<int>(),
-            LibtorrentRequestQueueSize = requestQueueSize?.Value<int>(),
-            LibtorrentDhtBootstrapNodes = dhtBootstrapNodes?.Value<string>(),
-            LibtorrentI2PInboundQuantity = i2pInboundQuantity?.Value<int>(),
-            LibtorrentI2POutboundQuantity = i2pOutboundQuantity?.Value<int>(),
-            LibtorrentI2PInboundLength = i2pInboundLength?.Value<int>(),
-            LibtorrentI2POutboundLength = i2pOutboundLength?.Value<int>()
+            LibtorrentIdnSupportEnabled = p.LibtorrentIdnSupportEnabled,
+            LibtorrentValidateHttpsTrackerCertificate = p.LibtorrentValidateHttpsTrackerCertificate,
+            LibtorrentSsrfMitigation = p.LibtorrentSsrfMitigation,
+            LibtorrentBlockPeersOnPrivilegedPorts = p.LibtorrentBlockPeersOnPrivilegedPorts,
+            LibtorrentAnnouncePort = p.LibtorrentAnnouncePort,
+            LibtorrentPeerTurnover = p.LibtorrentPeerTurnover,
+            LibtorrentPeerTurnoverCutoff = p.LibtorrentPeerTurnoverCutoff,
+            LibtorrentPeerTurnoverInterval = p.LibtorrentPeerTurnoverInterval,
+            LibtorrentRequestQueueSize = p.LibtorrentRequestQueueSize,
+            LibtorrentDhtBootstrapNodes = p.LibtorrentDhtBootstrapNodes,
+            LibtorrentI2PInboundQuantity = p.LibtorrentI2PInboundQuantity,
+            LibtorrentI2POutboundQuantity = p.LibtorrentI2POutboundQuantity,
+            LibtorrentI2PInboundLength = p.LibtorrentI2PInboundLength,
+            LibtorrentI2POutboundLength = p.LibtorrentI2POutboundLength
         };
 
         // Downloads
@@ -444,7 +364,28 @@ public class SettingsGrpc
     private static Preferences MapSettingsFromProto(QBittorrentSettings r)
     {
         var p = new Preferences {
+            // Behaviour
+            LogEnabled = r.LogEnabled,
+            LogPath = r.LogPath,
+            LogBackupEnabled = r.LogBackupEnabled,
+            LogMaxSize = r.LogMaxSize,
+            LogDeleteOld = r.LogDeleteOld,
+            LogAge = r.LogAge,
+            LogAgeType = r.LogAgeType,
+
             // Downloads
+            TorrentContentLayout = System.Enum.TryParse<QBittorrent.Client.TorrentContentLayout>(r.TorrentContentLayout, out var layout) ? layout : null,
+            AddToTopOfQueue = r.AddToTopOfQueue,
+            TorrentStopCondition = r.TorrentStopCondition,
+            MergeTrackers = r.MergeTrackers,
+            TorrentFileAutoDeleteMode = (QBittorrent.Client.TorrentFileAutoDeleteMode?)r.AutoDeleteMode,
+            UseUnwantedFolder = r.UseUnwantedFolder,
+            UseCategoryPathsInManualMode = r.UseCategoryPathsInManualMode,
+            UseSubcategories = r.UseSubcategories,
+            ExcludedFileNamesEnabled = r.ExcludedFileNamesEnabled,
+            ExcludedFileNames = r.ExcludedFileNames,
+            AutorunOnTorrentAddedEnabled = r.AutorunOnTorrentAddedEnabled,
+            AutorunOnTorrentAddedProgram = r.AutorunOnTorrentAddedProgram,
             AddTorrentPaused = r.AddTorrentPaused,
             PreallocateAll = r.PreallocateAll,
             AppendExtensionToIncompleteFiles = r.AppendExtensionToIncompleteFiles,
@@ -559,6 +500,8 @@ public class SettingsGrpc
             MaxRatioAction = (QBittorrent.Client.MaxRatioAction)(int)r.MaxRatioAction,
             AdditionalTrackersEnabled = r.AdditionalTrackersEnabled,
             AdditinalTrackers = r.AdditionalTrackers.ToList(),
+            TrackerListEnabled = r.TrackerListEnabled,
+            TrackerListUrl = r.TrackerListUrl,
 
             // RSS
             RssProcessingEnabled = r.RssProcessingEnabled,
@@ -567,6 +510,7 @@ public class SettingsGrpc
             RssAutoDownloadingEnabled = r.RssAutoDownloadingEnabled,
             RssDownloadRepackProperEpisodes = r.RssDownloadRepackProperEpisodes,
             RssSmartEpisodeFilters = r.RssSmartEpisodeFilters.ToList(),
+            RssFetchDelay = r.RssFetchDelay,
 
             // WebUI
             WebUIAddress = r.WebUIAddress,
@@ -592,6 +536,8 @@ public class SettingsGrpc
             BypassLocalAuthentication = r.BypassLocalAuthentication,
             BypassAuthenticationSubnetWhitelistEnabled = r.BypassAuthenticationSubnetWhitelistEnabled,
             BypassAuthenticationSubnetWhitelist = r.BypassAuthenticationSubnetWhitelist.ToList(),
+            ReverseProxyEnabled = r.ReverseProxyEnabled,
+            ReverseProxiesList = r.ReverseProxiesList,
             DynamicDnsEnabled = r.DynamicDnsEnabled,
             DynamicDnsService = r.DynamicDnsService switch {
                 QBittorrentDynamicDnsService.Dyndns => QBittorrent.Client.DynamicDnsService.DynDNS,
@@ -642,31 +588,47 @@ public class SettingsGrpc
             LibtorrentAnnounceToAllTiers = r.LibtorrentAnnounceToAllTiers,
             LibtorrentAnnounceIp = r.LibtorrentAnnounceIp,
             LibtorrentStopTrackerTimeout = r.LibtorrentStopTrackerTimeout,
-            LibtorrentMaxConcurrentHttpAnnounces = r.LibtorrentMaxConcurrentHttpAnnounces
+            LibtorrentMaxConcurrentHttpAnnounces = r.LibtorrentMaxConcurrentHttpAnnounces,
+            ResumeDataStorageType = r.ResumeDataStorageType,
+            TorrentContentRemoveOption = r.TorrentContentRemoveOption,
+            MemoryWorkingSetLimit = r.MemoryWorkingSetLimit,
+            SaveStatisticsInterval = r.SaveStatisticsInterval,
+            TorrentFileSizeLimit = (long?)r.TorrentFileSizeLimit * 1024 * 1024,
+            ConfirmTorrentRecheck = r.ConfirmTorrentRecheck,
+            AppInstanceName = r.AppInstanceName,
+            RefreshInterval = r.RefreshInterval,
+            ReannounceWhenAddressChanged = r.ReannounceWhenAddressChanged,
+            EmbeddedTrackerPortForwarding = r.EmbeddedTrackerPortForwarding,
+            IgnoreSslErrors = r.IgnoreSslErrors,
+            PythonExecutablePath = r.PythonExecutablePath,
+            LibtorrentDiskIOReadMode = r.LibtorrentDiskIOReadMode,
+            LibtorrentDiskIOWriteMode = r.LibtorrentDiskIOWriteMode,
+            LibtorrentHashingThreads = r.LibtorrentHashingThreads,
+            LibtorrentDiskQueueSize = (long?)r.LibtorrentDiskQueueSize * 1024,
+            LibtorrentBdecodeDepthLimit = r.LibtorrentBdecodeDepthLimit,
+            LibtorrentBdecodeTokenLimit = r.LibtorrentBdecodeTokenLimit,
+            LibtorrentSocketSendBufferSize = r.LibtorrentSocketSendBufferSize,
+            LibtorrentSocketReceiveBufferSize = r.LibtorrentSocketReceiveBufferSize,
+            LibtorrentOutgoingConnectionsPerSecond = r.LibtorrentOutgoingConnectionsPerSecond,
+            LibtorrentUpnpLeaseDuration = r.LibtorrentUpnpLeaseDuration,
+            LibtorrentPeerTos = r.LibtorrentPeerTos,
+            LibtorrentIdnSupportEnabled = r.LibtorrentIdnSupportEnabled,
+            LibtorrentValidateHttpsTrackerCertificate = r.LibtorrentValidateHttpsTrackerCertificate,
+            LibtorrentSsrfMitigation = r.LibtorrentSsrfMitigation,
+            LibtorrentBlockPeersOnPrivilegedPorts = r.LibtorrentBlockPeersOnPrivilegedPorts,
+            LibtorrentAnnouncePort = r.LibtorrentAnnouncePort,
+            LibtorrentPeerTurnover = r.LibtorrentPeerTurnover,
+            LibtorrentPeerTurnoverCutoff = r.LibtorrentPeerTurnoverCutoff,
+            LibtorrentPeerTurnoverInterval = r.LibtorrentPeerTurnoverInterval,
+            LibtorrentRequestQueueSize = r.LibtorrentRequestQueueSize,
+            LibtorrentDhtBootstrapNodes = r.LibtorrentDhtBootstrapNodes,
+            LibtorrentI2PInboundQuantity = r.LibtorrentI2PInboundQuantity,
+            LibtorrentI2POutboundQuantity = r.LibtorrentI2POutboundQuantity,
+            LibtorrentI2PInboundLength = r.LibtorrentI2PInboundLength,
+            LibtorrentI2POutboundLength = r.LibtorrentI2POutboundLength
         };
 
-        p.AdditionalData ??= new Dictionary<string, JToken>();
-
-        // Behaviour
-        if (r.LogEnabled != null) p.AdditionalData["file_log_enabled"] = r.LogEnabled.Value;
-        if (r.LogPath != null) p.AdditionalData["file_log_path"] = r.LogPath;
-        if (r.LogBackupEnabled != null) p.AdditionalData["file_log_backup_enabled"] = r.LogBackupEnabled.Value;
-        if (r.LogMaxSize != null) p.AdditionalData["file_log_max_size"] = r.LogMaxSize.Value;
-        if (r.LogDeleteOld != null) p.AdditionalData["file_log_delete_old"] = r.LogDeleteOld.Value;
-        if (r.LogAge != null) p.AdditionalData["file_log_age"] = r.LogAge.Value;
-        if (r.LogAgeType != null) p.AdditionalData["file_log_age_type"] = r.LogAgeType.Value;
-
         // Downloads
-        if (r.TorrentContentLayout != null) p.AdditionalData["torrent_content_layout"] = r.TorrentContentLayout;
-        if (r.AddToTopOfQueue != null) p.AdditionalData["add_to_top_of_queue"] = r.AddToTopOfQueue.Value;
-        if (r.TorrentStopCondition != null) p.AdditionalData["torrent_stop_condition"] = r.TorrentStopCondition;
-        if (r.MergeTrackers != null) p.AdditionalData["merge_trackers"] = r.MergeTrackers.Value;
-        if (r.AutoDeleteMode != null) p.AdditionalData["auto_delete_mode"] = r.AutoDeleteMode.Value;
-        if (r.UseUnwantedFolder != null) p.AdditionalData["use_unwanted_folder"] = r.UseUnwantedFolder.Value;
-        if (r.UseCategoryPathsInManualMode != null) p.AdditionalData["use_category_paths_in_manual_mode"] = r.UseCategoryPathsInManualMode.Value;
-        if (r.UseSubcategories != null) p.AdditionalData["use_subcategories"] = r.UseSubcategories.Value;
-        if (r.ExcludedFileNamesEnabled != null) p.AdditionalData["excluded_file_names_enabled"] = r.ExcludedFileNamesEnabled.Value;
-        if (r.ExcludedFileNames != null) p.AdditionalData["excluded_file_names"] = r.ExcludedFileNames;
         p.ScanDirectories = new Dictionary<string, SaveLocation>();
         foreach (var (path, action) in r.ScanDirectories)
             p.ScanDirectories[path] = action switch {
@@ -674,58 +636,6 @@ public class SettingsGrpc
                 "1" => new SaveLocation(StandardSaveLocation.Default),
                 _ => new SaveLocation(action)
             };
-        if (r.AutorunOnTorrentAddedEnabled != null) p.AdditionalData["autorun_on_torrent_added_enabled"] = r.AutorunOnTorrentAddedEnabled.Value;
-        if (r.AutorunOnTorrentAddedProgram != null) p.AdditionalData["autorun_on_torrent_added_program"] = r.AutorunOnTorrentAddedProgram;
-
-        // BitTorrent
-        if (r.TrackerListEnabled != null) p.AdditionalData["add_trackers_from_url_enabled"] = r.TrackerListEnabled.Value;
-        if (r.TrackerListUrl != null) p.AdditionalData["add_trackers_url"] = r.TrackerListUrl;
-
-        // RSS
-        if (r.RssFetchDelay != null) p.AdditionalData["rss_fetch_delay"] = r.RssFetchDelay.Value;
-
-        // WebUI
-        if (r.ReverseProxyEnabled != null) p.AdditionalData["web_ui_reverse_proxy_enabled"] = r.ReverseProxyEnabled.Value;
-        if (r.ReverseProxiesList != null) p.AdditionalData["web_ui_reverse_proxies_list"] = r.ReverseProxiesList;
-
-        // Advanced
-        if (r.ResumeDataStorageType != null) p.AdditionalData["resume_data_storage_type"] = r.ResumeDataStorageType;
-        if (r.TorrentContentRemoveOption != null) p.AdditionalData["torrent_content_remove_option"] = r.TorrentContentRemoveOption;
-        if (r.MemoryWorkingSetLimit != null) p.AdditionalData["memory_working_set_limit"] = r.MemoryWorkingSetLimit.Value;
-        if (r.SaveStatisticsInterval != null) p.AdditionalData["save_statistics_interval"] = r.SaveStatisticsInterval.Value;
-        if (r.TorrentFileSizeLimit != null) p.AdditionalData["torrent_file_size_limit"] = (long)r.TorrentFileSizeLimit.Value * 1024 * 1024;
-        if (r.ConfirmTorrentRecheck != null) p.AdditionalData["confirm_torrent_recheck"] = r.ConfirmTorrentRecheck.Value;
-        if (r.AppInstanceName != null) p.AdditionalData["app_instance_name"] = r.AppInstanceName;
-        if (r.RefreshInterval != null) p.AdditionalData["refresh_interval"] = r.RefreshInterval.Value;
-        if (r.ReannounceWhenAddressChanged != null) p.AdditionalData["reannounce_when_address_changed"] = r.ReannounceWhenAddressChanged.Value;
-        if (r.EmbeddedTrackerPortForwarding != null) p.AdditionalData["embedded_tracker_port_forwarding"] = r.EmbeddedTrackerPortForwarding.Value;
-        if (r.IgnoreSslErrors != null) p.AdditionalData["ignore_ssl_errors"] = r.IgnoreSslErrors.Value;
-        if (r.PythonExecutablePath != null) p.AdditionalData["python_executable_path"] = r.PythonExecutablePath;
-        if (r.LibtorrentDiskIOReadMode != null) p.AdditionalData["disk_io_read_mode"] = r.LibtorrentDiskIOReadMode.Value;
-        if (r.LibtorrentDiskIOWriteMode != null) p.AdditionalData["disk_io_write_mode"] = r.LibtorrentDiskIOWriteMode.Value;
-        if (r.LibtorrentHashingThreads != null) p.AdditionalData["hashing_threads"] = r.LibtorrentHashingThreads.Value;
-        if (r.LibtorrentDiskQueueSize != null) p.AdditionalData["disk_queue_size"] = (long)r.LibtorrentDiskQueueSize.Value * 1024;
-        if (r.LibtorrentBdecodeDepthLimit != null) p.AdditionalData["bdecode_depth_limit"] = r.LibtorrentBdecodeDepthLimit.Value;
-        if (r.LibtorrentBdecodeTokenLimit != null) p.AdditionalData["bdecode_token_limit"] = r.LibtorrentBdecodeTokenLimit.Value;
-        if (r.LibtorrentSocketSendBufferSize != null) p.AdditionalData["socket_send_buffer_size"] = r.LibtorrentSocketSendBufferSize.Value;
-        if (r.LibtorrentSocketReceiveBufferSize != null) p.AdditionalData["socket_receive_buffer_size"] = r.LibtorrentSocketReceiveBufferSize.Value;
-        if (r.LibtorrentOutgoingConnectionsPerSecond != null) p.AdditionalData["connection_speed"] = r.LibtorrentOutgoingConnectionsPerSecond.Value;
-        if (r.LibtorrentUpnpLeaseDuration != null) p.AdditionalData["upnp_lease_duration"] = r.LibtorrentUpnpLeaseDuration.Value;
-        if (r.LibtorrentPeerTos != null) p.AdditionalData["peer_tos"] = r.LibtorrentPeerTos.Value;
-        if (r.LibtorrentIdnSupportEnabled != null) p.AdditionalData["idn_support_enabled"] = r.LibtorrentIdnSupportEnabled.Value;
-        if (r.LibtorrentValidateHttpsTrackerCertificate != null) p.AdditionalData["validate_https_tracker_certificate"] = r.LibtorrentValidateHttpsTrackerCertificate.Value;
-        if (r.LibtorrentSsrfMitigation != null) p.AdditionalData["ssrf_mitigation"] = r.LibtorrentSsrfMitigation.Value;
-        if (r.LibtorrentBlockPeersOnPrivilegedPorts != null) p.AdditionalData["block_peers_on_privileged_ports"] = r.LibtorrentBlockPeersOnPrivilegedPorts.Value;
-        if (r.LibtorrentAnnouncePort != null) p.AdditionalData["announce_port"] = r.LibtorrentAnnouncePort.Value;
-        if (r.LibtorrentPeerTurnover != null) p.AdditionalData["peer_turnover"] = r.LibtorrentPeerTurnover.Value;
-        if (r.LibtorrentPeerTurnoverCutoff != null) p.AdditionalData["peer_turnover_cutoff"] = r.LibtorrentPeerTurnoverCutoff.Value;
-        if (r.LibtorrentPeerTurnoverInterval != null) p.AdditionalData["peer_turnover_interval"] = r.LibtorrentPeerTurnoverInterval.Value;
-        if (r.LibtorrentRequestQueueSize != null) p.AdditionalData["request_queue_size"] = r.LibtorrentRequestQueueSize.Value;
-        if (r.LibtorrentDhtBootstrapNodes != null) p.AdditionalData["dht_bootstrap_nodes"] = r.LibtorrentDhtBootstrapNodes;
-        if (r.LibtorrentI2PInboundQuantity != null) p.AdditionalData["i2p_inbound_quantity"] = r.LibtorrentI2PInboundQuantity.Value;
-        if (r.LibtorrentI2POutboundQuantity != null) p.AdditionalData["i2p_outbound_quantity"] = r.LibtorrentI2POutboundQuantity.Value;
-        if (r.LibtorrentI2PInboundLength != null) p.AdditionalData["i2p_inbound_length"] = r.LibtorrentI2PInboundLength.Value;
-        if (r.LibtorrentI2POutboundLength != null) p.AdditionalData["i2p_outbound_length"] = r.LibtorrentI2POutboundLength.Value;
 
         return p;
     }

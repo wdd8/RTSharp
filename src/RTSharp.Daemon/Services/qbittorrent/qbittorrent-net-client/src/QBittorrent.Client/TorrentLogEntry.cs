@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client
 {
@@ -10,25 +10,25 @@ namespace QBittorrent.Client
         /// <summary>
         /// Message Id
         /// </summary>
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public int Id { get; set; }
 
         /// <summary>
         /// Message text
         /// </summary>
-        [JsonProperty("message")]
+        [JsonPropertyName("message")]
         public string Message { get; set; }
 
         /// <summary>
         /// Message timestamp
         /// </summary>
-        [JsonProperty("timestamp")]
+        [JsonPropertyName("timestamp")]
         public long Timestamp { get; set; }
 
         /// <summary>
         /// Log entry severity.
         /// </summary>
-        [JsonProperty("type")]
+        [JsonPropertyName("type")]
         public TorrentLogSeverity Severity { get; set; }
     }
 }

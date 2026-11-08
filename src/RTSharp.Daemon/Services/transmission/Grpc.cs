@@ -387,7 +387,7 @@ namespace RTSharp.Daemon.Services.transmission
                         torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume, chunk.TMetadata.Magnet);
                         break;
                     case NewTorrentsData.DataOneofCase.TData:
-                        torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.ToByteArray());
+                        torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.Span);
                         break;
                 }
             }

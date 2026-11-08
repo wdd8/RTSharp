@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using JetBrains.Annotations;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client
 {
@@ -27,19 +24,19 @@ namespace QBittorrent.Client
         /// <summary>
         /// Whether the plugin is enabled.
         /// </summary>
-        [JsonProperty("enabled")]
+        [JsonPropertyName("enabled")]
         public bool IsEnabled { get; set; }
 
         /// <summary>
         /// Full name of the plugin
         /// </summary>
-        [JsonProperty("fullName")]
+        [JsonPropertyName("fullName")]
         public string FullName { get; set; }
 
         /// <summary>
         /// Short name of the plugin
         /// </summary>
-        [JsonProperty("name")]
+        [JsonPropertyName("name")]
         public string Name { get; set; }
 
         /// <summary>
@@ -47,57 +44,60 @@ namespace QBittorrent.Client
         /// </summary>
         [Obsolete("Use " + nameof(Categories) + " property instead.")]
         [JsonIgnore]
-        public IReadOnlyList<string> SupportedCategories { get; set; }
+        public IReadOnlyList<string> SupportedCategories { get; set; } = Array.Empty<string>();
 
         /// <summary>
         /// List of supported categories
         /// </summary>
         [JsonIgnore]
-        public IReadOnlyList<SearchPluginCategory> Categories { get; set; }
+        public IReadOnlyList<SearchPluginCategory> Categories { get; set; } = Array.Empty<SearchPluginCategory>();
+
+#pragma warning disable 618
+        [JsonPropertyName("supportedCategories")]
+        [JsonInclude]
+        [JsonConverter(typeof(CategoriesConverter))]
+        private IReadOnlyList<SearchPluginCategory> CategoriesField
+        {
+            get => Categories;
+            set
+            {
+                Categories = value ?? Array.Empty<SearchPluginCategory>();
+                SupportedCategories = Categories.Select(c => c.Id).ToArray();
+            }
+        }
+#pragma warning restore 618
 
         /// <summary>
         /// URL of the torrent site
         /// </summary>
-        [JsonProperty("url")]
+        [JsonPropertyName("url")]
         public Uri Url { get; set; }
 
         /// <summary>
         /// Installed version of the plugin
         /// </summary>
-        [JsonProperty("version")]
+        [JsonPropertyName("version")]
         public Version Version { get; set; }
 
-        /// <summary>
-        /// Additional properties not handled by this library.
-        /// </summary>
-        [JsonExtensionData]
-        public IDictionary<string, JToken> AdditionalData { get; set; }
-
-#pragma warning disable 618
-        [OnDeserialized]
-        [UsedImplicitly]
-        private void OnDeserialized(StreamingContext context)
+        private sealed class CategoriesConverter : JsonConverter<IReadOnlyList<SearchPluginCategory>>
         {
-            const string supportedCategoriesKey = "supportedCategories";
-            if (AdditionalData != null &&
-                AdditionalData.TryGetValue(supportedCategoriesKey, out var token) &&
-                token is JArray { Count: > 0 } array )
+            public override IReadOnlyList<SearchPluginCategory> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                if (array.First.Type == JTokenType.String)
+                if (reader.TokenType != JsonTokenType.StartArray)
+                    throw new JsonException($"Unexpected token {reader.TokenType}.");
+
+                var categories = new List<SearchPluginCategory>();
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                 {
-                    SupportedCategories = array.ToObject<List<string>>();
-                    Categories = SupportedCategories.Select(c => new SearchPluginCategory(c)).ToArray();
+                    categories.Add(reader.TokenType == JsonTokenType.String ?
+                        new SearchPluginCategory(reader.GetString()) :
+                        JsonSerializer.Deserialize<SearchPluginCategory>(ref reader, options));
                 }
-                else if (array.First.Type == JTokenType.Object)
-                {
-                    Categories = array.ToObject<List<SearchPluginCategory>>();
-                    SupportedCategories = Categories.Select(c => c.Id).ToArray();
-                }
+                return categories;
             }
 
-            SupportedCategories ??= Array.Empty<string>();
-            Categories ??= Array.Empty<SearchPluginCategory>();
+            public override void Write(Utf8JsonWriter writer, IReadOnlyList<SearchPluginCategory> value, JsonSerializerOptions options) =>
+                JsonSerializer.Serialize(writer, value, options);
         }
-#pragma warning restore 618
     }
 }

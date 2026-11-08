@@ -1,29 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client.Converters
 {
-    internal class SeparatedStringToListConverter : JsonConverter<IEnumerable<string>>
+    internal class SeparatedStringToListConverter<TList> : JsonConverter<TList> where TList : class, IEnumerable<string>
     {
         private readonly string[] _separators;
-
-        public SeparatedStringToListConverter(string separator) 
-            : this(new [] { separator} )
-        {
-        }
-
-        public SeparatedStringToListConverter(string separator1, string separator2)
-            : this(new[] { separator1, separator2 })
-        {
-        }
-
-        public SeparatedStringToListConverter(string separator1, string separator2, string separator3)
-            : this(new[] { separator1, separator2, separator3 })
-        {
-        }
 
         public SeparatedStringToListConverter(params string[] separators)
         {
@@ -37,31 +22,26 @@ namespace QBittorrent.Client.Converters
             _separators = separators.ToArray();
         }
 
-        public override void WriteJson(JsonWriter writer, IEnumerable<string> value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, TList value, JsonSerializerOptions options)
         {
-            if (value == null)
-            {
-                writer.WriteNull();
-                return;
-            }
-
-            writer.WriteValue(string.Join(_separators[0], value));
+            writer.WriteStringValue(string.Join(_separators[0], value));
         }
 
-        public override IEnumerable<string> ReadJson(JsonReader reader, Type objectType, IEnumerable<string> existingValue, bool hasExistingValue,
-            JsonSerializer serializer)
+        public override TList Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonToken.Null)
+            if (reader.TokenType == JsonTokenType.String)
             {
-                return null;
+                return (TList)(object)reader.GetString().Split(_separators, StringSplitOptions.RemoveEmptyEntries).ToList();
             }
 
-            if (reader.TokenType == JsonToken.String)
-            {
-                return reader.Value.ToString().Split(_separators, StringSplitOptions.RemoveEmptyEntries).ToList();
-            }
-
-            throw new JsonSerializationException($"Unexpected token {reader.TokenType}.");
+            throw new JsonException($"Unexpected token {reader.TokenType}.");
         }
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    internal sealed class SeparatedStringToListAttribute(params string[] separators) : JsonConverterAttribute
+    {
+        public override JsonConverter CreateConverter(Type typeToConvert) =>
+            (JsonConverter)Activator.CreateInstance(typeof(SeparatedStringToListConverter<>).MakeGenericType(typeToConvert), [separators]);
     }
 }

@@ -13,15 +13,18 @@ namespace RTSharp.Daemon.Services.qbittorrent;
 public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProvider Services, ILogger<TorrentPolling> Logger, EventsService Events) : TorrentPollingService(Logger, Events)
 {
     private int PollResponseId;
-    private InfoHashDictionary<Protocols.DataProvider.Torrent> LatestTorrents = new();
+    // By native hash, with the torrent's key in the snapshot
+    private InfoHashDictionary<(Protocols.DataProvider.Torrent Torrent, byte[] Key)> LatestTorrents = new();
     private readonly ReaderWriterLockSlim LatestTorrentsLock = new();
+    // Only used by the poll loop
+    private InfoHashDictionary<Protocols.DataProvider.Torrent>? LastSnapshot;
 
     public Protocols.DataProvider.Torrent? GetLatestTorrent(ReadOnlySpan<byte> Hash)
     {
         var nativeHash = InfoHash.TruncateV2(Hash);
         LatestTorrentsLock.EnterReadLock();
         try {
-            return LatestTorrents.TryGetValue(nativeHash, out var torrent) ? torrent.Clone() : null;
+            return LatestTorrents.TryGetValue(nativeHash, out var latest) ? latest.Torrent.Clone() : null;
         } finally {
             LatestTorrentsLock.ExitReadLock();
         }
@@ -30,11 +33,17 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
     protected internal override DeltaTorrentsListResponse BuildChanges(HistoryEntry? Previous, HistoryEntry Current)
     {
         var delta = new DeltaTorrentsListResponse();
+        if (Previous != null && ReferenceEquals(Previous.List, Current.List))
+            return delta;
+
         foreach (var (hash, torrent) in Current.List) {
             if (Previous == null || !Previous.List.TryGetValue(hash, out var old)) {
-                delta.FullUpdate.Add(torrent.Clone());
+                delta.FullUpdate.Add(torrent);
                 continue;
             }
+
+            if (ReferenceEquals(torrent, old))
+                continue;
 
             // These fields need a whole torrent row on the client.
             if (torrent.Name != old.Name ||
@@ -50,9 +59,9 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 torrent.RemotePath != old.RemotePath ||
                 torrent.StatusMessage != old.StatusMessage ||
                 !Equals(torrent.FinishedOn, old.FinishedOn) ||
-                !torrent.Labels.SequenceEqual(old.Labels) ||
+                !torrent.Labels.Equals(old.Labels) ||
                 torrent.PrimaryTracker?.Uri != old.PrimaryTracker?.Uri) {
-                delta.FullUpdate.Add(torrent.Clone());
+                delta.FullUpdate.Add(torrent);
             } else if (torrent.IsCompleted) {
                 // qBittorrent reports noisy peer counts for inactive completed torrents.
                 if (torrent.State.HasFlag(Protocols.DataProvider.TorrentState.Active) &&
@@ -93,7 +102,13 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
         try {
             var client = await backend.Init();
             var data = await client.GetPartialDataAsync(PollResponseId, CancellationToken);
-            var next = new InfoHashDictionary<Protocols.DataProvider.Torrent>();
+
+            if (!data.FullUpdate && LastSnapshot != null && (data.TorrentsChanged?.Count ?? 0) == 0 && (data.TorrentsRemoved?.Count ?? 0) == 0) {
+                PollResponseId = data.ResponseId;
+                return new HistoryEntry(DateTime.UtcNow, LastSnapshot);
+            }
+
+            var next = new InfoHashDictionary<(Protocols.DataProvider.Torrent Torrent, byte[] Key)>(data.FullUpdate ? 0 : LatestTorrents.Count);
             if (!data.FullUpdate) {
                 LatestTorrentsLock.EnterReadLock();
                 try {
@@ -109,7 +124,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                     var native = Convert.FromHexString(nativeHex);
                     Protocols.DataProvider.Torrent current;
                     if (next.TryGetValue(native, out var previous)) {
-                        current = previous.Clone();
+                        current = previous.Torrent.Clone();
                         // Magnet can acquire a full v2 hash after the first snapshot.
                         if (!String.IsNullOrEmpty(external.InfoHashV2))
                             current.Hash = Convert.FromHexString(external.InfoHashV2).ToByteString();
@@ -132,7 +147,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                     }
                     TorrentMapper.ApplyFromExternal(current, external);
                     UpdateHashingSpeed(current);
-                    next[native] = current;
+                    next[native] = (current, current.Hash.ToByteArray());
                 }
             }
             if (data.TorrentsRemoved != null) {
@@ -147,7 +162,8 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 LatestTorrentsLock.ExitWriteLock();
             }
             PollResponseId = data.ResponseId;
-            return new HistoryEntry(DateTime.UtcNow, next.Values.ToInfoHashDictionary(x => x.Hash.ToByteArray(), x => x.Clone()));
+            LastSnapshot = next.Values.ToInfoHashDictionary(x => x.Key, x => x.Torrent);
+            return new HistoryEntry(DateTime.UtcNow, LastSnapshot);
         } catch (Exception ex) {
             PollResponseId = 0;
             if (ex.IsConnectionFailure())

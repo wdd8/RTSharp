@@ -57,27 +57,15 @@ namespace RTSharp.Daemon.Services
         public double CalculateSpeed()
         {
             lock (ItemsLock) {
-                if (Items.Count < 2) {
-                    return 0;
-                }
+                Span<(DateTime TimeUtc, long TotalBytes)> snapshot = Items.Count <= 64
+                    ? stackalloc (DateTime, long)[Items.Count]
+                    : new (DateTime, long)[Items.Count];
+                var x = 0;
+                foreach (var item in Items)
+                    snapshot[x++] = item;
 
-                var deltas = new List<double>(Items.Count - 1);
-                var item = Items.First;
-                while (item?.Next != null) {
-                    var (timeUtc, totalBytes) = item.Next.Value;
-                    var time = timeUtc - item.Value.TimeUtc;
-
-                    deltas.Add((totalBytes - item.Value.TotalBytes) / time.TotalSeconds);
-                    item = item.Next;
-                }
-
-                return CalculateAvg(deltas, Alpha);
+                return CalculateSpeed(snapshot, Alpha);
             }
-        }
-
-        private static double CalculateAvg(IEnumerable<double> Deltas, double Alpha = 0.8)
-        {
-            return Deltas.Aggregate((ema, nextQuote) => Alpha * nextQuote + (1 - Alpha) * ema);
         }
     }
 

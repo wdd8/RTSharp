@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 using QBittorrent.Client.Converters;
 
 namespace QBittorrent.Client
@@ -14,46 +14,46 @@ namespace QBittorrent.Client
         /// <summary>
         /// Name of the file.
         /// </summary>
-        [JsonProperty("fileName")]
+        [JsonPropertyName("fileName")]
         public string FileName { get; set; }
 
         /// <summary>
         /// Size of the file in bytes.
         /// </summary>
-        [JsonProperty("fileSize")]
+        [JsonPropertyName("fileSize")]
         [JsonConverter(typeof(NegativeToNullConverter))]
         public long? FileSize { get; set; }
 
         /// <summary>
         /// Torrent download link (usually either .torrent file or magnet link).
         /// </summary>
-        [JsonProperty("fileUrl")]
+        [JsonPropertyName("fileUrl")]
         public Uri FileUrl { get; set; }
 
         /// <summary>
         /// Number of leechers.
         /// </summary>
-        [JsonProperty("nbLeechers")]
+        [JsonPropertyName("nbLeechers")]
         [JsonConverter(typeof(NegativeToNullConverter))]
         public long? Leechers { get; set; }
 
         /// <summary>
         /// Number of seeders.
         /// </summary>
-        [JsonProperty("nbSeeders")]
+        [JsonPropertyName("nbSeeders")]
         [JsonConverter(typeof(NegativeToNullConverter))]
         public long? Seeds { get; set; }
 
         /// <summary>
         /// URL of the torrent site
         /// </summary>
-        [JsonProperty("siteUrl")]
+        [JsonPropertyName("siteUrl")]
         public Uri SiteUrl { get; set; }
 
         /// <summary>
         /// URL of the torrent's description page.
         /// </summary>
-        [JsonProperty("descrLink")]
+        [JsonPropertyName("descrLink")]
         public Uri DescriptionUrl { get; set; }
     }
 }

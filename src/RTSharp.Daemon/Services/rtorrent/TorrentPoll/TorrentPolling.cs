@@ -10,6 +10,7 @@ using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Daemon.Utils;
 using RTSharp.Shared.Utils;
 
+using System.Buffers;
 using System.Diagnostics;
 
 
@@ -20,14 +21,20 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         protected internal override DeltaTorrentsListResponse BuildChanges(HistoryEntry? Previous, HistoryEntry Current)
         {
             var delta = new DeltaTorrentsListResponse();
+            if (Previous != null && ReferenceEquals(Previous.List, Current.List))
+                return delta;
+
             foreach (var (hash, torrent) in Current.List) {
                 if (Previous == null || !Previous.List.TryGetValue(hash, out var old)) {
-                    delta.FullUpdate.Add(torrent.Clone());
+                    delta.FullUpdate.Add(torrent);
                     continue;
                 }
 
                 Current.Trackers.TryGetValue(hash, out var trackers);
                 Previous.Trackers.TryGetValue(hash, out var oldTrackers);
+
+                if (ReferenceEquals(torrent, old) && ReferenceEquals(trackers, oldTrackers))
+                    continue;
 
                 if (torrent.Name != old.Name ||
                     torrent.Size != old.Size ||
@@ -42,10 +49,10 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     torrent.RemotePath != old.RemotePath ||
                     torrent.StatusMessage != old.StatusMessage ||
                     !Equals(torrent.FinishedOn, old.FinishedOn) ||
-                    !torrent.Labels.SequenceEqual(old.Labels) ||
+                    !torrent.Labels.Equals(old.Labels) ||
                     TrackersChanged(trackers, oldTrackers) ||
                     torrent.PrimaryTracker?.Uri != old.PrimaryTracker?.Uri) {
-                    delta.FullUpdate.Add(torrent.Clone());
+                    delta.FullUpdate.Add(torrent);
                 } else if (torrent.IsCompleted) {
                     if (torrent.Uploaded != old.Uploaded ||
                         torrent.UPSpeed != old.UPSpeed ||
@@ -81,12 +88,26 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         private static bool TrackersChanged(TorrentsTrackersReply.Types.TorrentsTrackers? Current,
             TorrentsTrackersReply.Types.TorrentsTrackers? Previous)
         {
+            if (ReferenceEquals(Current, Previous))
+                return false;
             if (Current == null || Previous == null)
-                return Current != Previous;
+                return true;
             if (Current.Trackers.Count != Previous.Trackers.Count)
                 return true;
-            foreach (var tracker in Current.Trackers) {
-                var old = Previous.Trackers.FirstOrDefault(x => x.Uri == tracker.Uri);
+
+            for (var x = 0; x < Current.Trackers.Count; x++) {
+                var tracker = Current.Trackers[x];
+                // Usually in the same order as the previous poll
+                var old = Previous.Trackers[x];
+                if (old.Uri != tracker.Uri) {
+                    old = null;
+                    foreach (var candidate in Previous.Trackers) {
+                        if (candidate.Uri == tracker.Uri) {
+                            old = candidate;
+                            break;
+                        }
+                    }
+                }
                 if (old == null || tracker.Status != old.Status ||
                     tracker.StatusMessage != old.StatusMessage || tracker.LastUpdated != old.LastUpdated)
                     return true;
@@ -109,20 +130,47 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
         private readonly InfoHashDictionary<(int Attempts, DateTime NextTry)> ResolveBackoff = new();
 
-        private readonly record struct SpeedSample(DateTime Date, InfoHashDictionary<(ulong Uploaded, ulong CompletedSize)> Values);
+        private const int SPEED_HISTORY_MAX = 5;
 
-        private readonly List<SpeedSample> GlobalHistory = [];
-
-        private static double ComputeSpeed(List<SpeedSample> History, byte[] Hash, bool Uploaded)
+        private sealed class PolledTorrent
         {
-            Span<(DateTime, long)> buf = stackalloc (DateTime, long)[History.Count];
-            var c = 0;
-            foreach (var h in History) {
-                if (h.Values.TryGetValue(Hash, out var t))
-                    buf[c++] = (h.Date, (long)(Uploaded ? t.Uploaded : t.CompletedSize));
+            public byte[] Raw = [];
+            public byte[]? NativeHash;
+            public string TrackersRaw = "";
+            public TorrentsTrackersReply.Types.TorrentsTrackers? Trackers;
+            public Torrent? Torrent;
+            public long LastPoll;
+
+            public readonly (long Poll, DateTime Date, ulong Uploaded, ulong CompletedSize)[] Samples = new (long, DateTime, ulong, ulong)[SPEED_HISTORY_MAX];
+            public int Count;
+
+            public void AddSample(long Poll, DateTime Date, ulong Uploaded, ulong CompletedSize)
+            {
+                if (Count == Samples.Length) {
+                    Array.Copy(Samples, 1, Samples, 0, Count - 1);
+                    Count--;
+                }
+                Samples[Count++] = (Poll, Date, Uploaded, CompletedSize);
             }
-            return SpeedMovingAverage.CalculateSpeed(buf[..c]);
+
+            /// <param name="OldestPoll">Samples from polls before this one are out of the window</param>
+            public double Speed(long OldestPoll, bool Uploaded)
+            {
+                Span<(DateTime, long)> buf = stackalloc (DateTime, long)[SPEED_HISTORY_MAX];
+                var c = 0;
+                for (var x = 0; x < Count; x++) {
+                    var sample = Samples[x];
+                    if (sample.Poll >= OldestPoll)
+                        buf[c++] = (sample.Date, (long)(Uploaded ? sample.Uploaded : sample.CompletedSize));
+                }
+                return SpeedMovingAverage.CalculateSpeed(buf[..c]);
+            }
         }
+
+        private readonly InfoHashDictionary<PolledTorrent> Polled = new();
+        private long PollCount;
+        private readonly List<(byte[] Key, Torrent Torrent, TorrentsTrackersReply.Types.TorrentsTrackers Trackers)> PollEntries = [];
+        private HistoryEntry? LastSnapshot;
 
         private static string AllTorrentsXml(bool IsV16) => IsV16 ? AllTorrentsXmlV16 : AllTorrentsXmlOld;
 
@@ -162,138 +210,167 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 + "d.is_meta=</string></value></param>"
                 + "</params></methodCall>";
 
-        public async Task<(InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers)> GetAllTorrents(CancellationToken CancellationToken = default)
+        private async Task<SCGICommunication.ScgiResponse> FetchAllTorrents(CancellationToken CancellationToken)
         {
-            SCGICommunication.ScgiResponse response;
+            using var scope = ScopeFactory.CreateScope();
+            var comm = scope.ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
+            var version = scope.ServiceProvider.GetRequiredKeyedService<RtorrentVersionService>(InstanceKey);
 
-            using (var scope = ScopeFactory.CreateScope()) {
-                var comm = scope.ServiceProvider.GetRequiredKeyedService<SCGICommunication>(InstanceKey);
-                var version = scope.ServiceProvider.GetRequiredKeyedService<RtorrentVersionService>(InstanceKey);
+            return await comm.Get(AllTorrentsXml(await version.IsV16()), CancellationToken);
+        }
 
-                response = await comm.Get(AllTorrentsXml(await version.IsV16()), CancellationToken);
+        /// <summary>
+        /// Reads the next torrent's entry of the d.multicall response
+        /// </summary>
+        private static bool NextEntry(ref SequenceReader<byte> Xml, out ReadOnlySequence<byte> Entry)
+        {
+            if (XMLUtils.CheckFor(Xml, XMLUtils.DATA_TOKEN_END)) {
+                Debug.Assert(Xml.Remaining == 31 + 2 + 9 + 2 + 17 + 2);
+                Entry = default;
+                return false;
             }
 
-            using (response) {
-                var xml = response.Reader();
+            XMLUtils.SeekFixed(ref Xml, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
 
-                XMLUtils.SeekTo(ref xml, XMLUtils.METHOD_RESPONSE);
-                XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_START);
+            Debug.Assert(Xml.Sequence.IsSingleSegment);
+            var length = Xml.UnreadSpan.IndexOf(XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+            if (length < 0)
+                throw new InvalidDataException($"Malformed response at pos {Xml.Consumed}");
 
-                var torrents = new InfoHashDictionary<Torrent>();
-                var trackers = new InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers>();
+            Entry = Xml.Sequence.Slice(Xml.Position, length);
+            Xml.Advance(length + XMLUtils.MULTICALL_RESPONSE_ENTRY_END.Length);
+            return true;
+        }
 
-                List<byte[]>? unknownV1s = null;
+        private byte[] KeyOf(byte[] Hash, bool IsMeta, List<byte[]> UnknownV1s)
+        {
+            if (Cache.TryGetRTSHash(Hash, out var rtsHash))
+                return rtsHash;
+            if (!IsMeta && (!ResolveBackoff.TryGetValue(Hash, out var backoff) || DateTime.UtcNow >= backoff.NextTry))
+                UnknownV1s.Add(Hash);
+            return Hash;
+        }
+
+        /// <summary>
+        /// Parses a torrent's entry of the d.multicall response
+        /// </summary>
+        /// <param name="Previous">What the poll loop kept of the torrent</param>
+        private (byte[] Hash, byte[] Key, Torrent Torrent, string TrackersRaw, TorrentsTrackersReply.Types.TorrentsTrackers Trackers) ParseEntry(SequenceReader<byte> Entry, PolledTorrent? Previous, List<byte[]> UnknownV1s)
+        {
+            var hashRaw = XMLUtils.GetValue<string>(ref Entry);
+            var name = XMLUtils.GetValue<string>(ref Entry);
+            var totalSize = XMLUtils.GetValue<ulong>(ref Entry);
+            var completedBytes = XMLUtils.GetValue<ulong>(ref Entry);
+            var downloaded = XMLUtils.GetValue<ulong>(ref Entry);
+            var uploaded = XMLUtils.GetValue<ulong>(ref Entry);
+
+            var downSpeed = XMLUtils.GetValue<ulong>(ref Entry);
+
+            var creationDateRaw = XMLUtils.GetValue<ulong>(ref Entry);
+            if (!UInt64.TryParse(XMLUtils.GetValue<string>(ref Entry), out var addDateRaw)) {
+                addDateRaw = 0;
+            }
+            var finishedDateRaw = XMLUtils.GetValue<ulong>(ref Entry);
+
+            var label = XMLUtils.GetValue<string>(ref Entry);
+            var torrentComment = XMLUtils.GetValue<string>(ref Entry);
+            var isMultiFile = XMLUtils.GetValue<bool>(ref Entry);
+            var directory = XMLUtils.Decode(XMLUtils.GetValue<string>(ref Entry));
+            var priorityRaw = XMLUtils.GetValue<ulong>(ref Entry);
+            var chunkSize = XMLUtils.GetValue<ulong>(ref Entry);
+            var isComplete = XMLUtils.GetValue<bool>(ref Entry);
+            var wantedChunks = XMLUtils.GetValue<ulong>(ref Entry);
+            var skippedTotal = XMLUtils.GetValue<ulong>(ref Entry);
+
+            var trackersRaw = XMLUtils.GetValue<string>(ref Entry);
+
+            var statusMessage = XMLUtils.Decode(XMLUtils.GetValue<string>(ref Entry));
+
+            var isOpenRaw = XMLUtils.GetValue<bool>(ref Entry);
+            var isActiveRaw = XMLUtils.GetValue<bool>(ref Entry);
+            var isHashCheckingRaw = XMLUtils.GetValue<bool>(ref Entry);
+            var isPrivateRaw = XMLUtils.GetValue<bool>(ref Entry);
+
+            var seedersConnected = XMLUtils.GetValue<ulong>(ref Entry);
+            var peersConnected = XMLUtils.GetValue<ulong>(ref Entry);
+            var isMeta = XMLUtils.GetValue<bool>(ref Entry);
+
+            var hash = Previous?.NativeHash ?? Convert.FromHexString(hashRaw);
+            var key = KeyOf(hash, isMeta, UnknownV1s);
+
+            // Trackers rarely change between polls
+            TorrentsTrackersReply.Types.TorrentsTrackers torrentTrackers;
+            if (Previous is { Trackers: { } previousTrackers } && Previous.TrackersRaw == trackersRaw && previousTrackers.InfoHash.Span.SequenceEqual(key)) {
+                torrentTrackers = previousTrackers;
+            } else {
+                torrentTrackers = new TorrentsTrackersReply.Types.TorrentsTrackers {
+                    InfoHash = ByteString.CopyFrom(key)
+                };
 
                 Span<Range> trackerRanges = stackalloc Range[64];
                 Span<Range> trackerPartRanges = stackalloc Range[9];
 
-                while (!XMLUtils.CheckFor(xml, XMLUtils.DATA_TOKEN_END)) {
-                    XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+                var trackersRawSpan = trackersRaw.AsSpan();
+                var trackerCount = trackersRawSpan.Split(trackerRanges, '|', StringSplitOptions.RemoveEmptyEntries);
 
-                    var hashRaw = XMLUtils.GetValue<string>(ref xml);
-                    var name = XMLUtils.GetValue<string>(ref xml);
-                    var totalSize = XMLUtils.GetValue<ulong>(ref xml);
-                    var completedBytes = XMLUtils.GetValue<ulong>(ref xml);
-                    var downloaded = XMLUtils.GetValue<ulong>(ref xml);
-                    var uploaded = XMLUtils.GetValue<ulong>(ref xml);
+                for (var x = 0; x < trackerCount; x++) {
+                    var trackerRaw = trackersRawSpan[trackerRanges[x]];
+                    var partCount = trackerRaw.Split(trackerPartRanges, '^', StringSplitOptions.RemoveEmptyEntries);
+                    Debug.Assert(partCount == 9);
 
-                    var downSpeed = XMLUtils.GetValue<ulong>(ref xml);
-
-                    var creationDateRaw = XMLUtils.GetValue<ulong>(ref xml);
-                    if (!UInt64.TryParse(XMLUtils.GetValue<string>(ref xml), out var addDateRaw)) {
-                        addDateRaw = 0;
-                    }
-                    var finishedDateRaw = XMLUtils.GetValue<ulong>(ref xml);
-
-                    var label = XMLUtils.GetValue<string>(ref xml);
-                    var torrentComment = XMLUtils.GetValue<string>(ref xml);
-                    var isMultiFile = XMLUtils.GetValue<bool>(ref xml);
-                    var directory = XMLUtils.Decode(XMLUtils.GetValue<string>(ref xml));
-                    var priorityRaw = XMLUtils.GetValue<ulong>(ref xml);
-                    var chunkSize = XMLUtils.GetValue<ulong>(ref xml);
-                    var isComplete = XMLUtils.GetValue<bool>(ref xml);
-                    var wantedChunks = XMLUtils.GetValue<ulong>(ref xml);
-                    var skippedTotal = XMLUtils.GetValue<ulong>(ref xml);
-
-                    var trackersRaw = XMLUtils.GetValue<string>(ref xml);
-
-                    var statusMessage = XMLUtils.Decode(XMLUtils.GetValue<string>(ref xml));
-
-                    var isOpenRaw = XMLUtils.GetValue<bool>(ref xml);
-                    var isActiveRaw = XMLUtils.GetValue<bool>(ref xml);
-                    var isHashCheckingRaw = XMLUtils.GetValue<bool>(ref xml);
-                    var isPrivateRaw = XMLUtils.GetValue<bool>(ref xml);
-
-                    var seedersConnected = XMLUtils.GetValue<ulong>(ref xml);
-                    var peersConnected = XMLUtils.GetValue<ulong>(ref xml);
-                    var isMeta = XMLUtils.GetValue<bool>(ref xml);
-
-                    XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
-
-                    var hash = Convert.FromHexString(hashRaw);
-
-                    byte[] key;
-                    if (Cache.TryGetRTSHash(hash, out var rtsHash))
-                        key = rtsHash;
-                    else {
-                        key = hash;
-                        if (!isMeta) {
-                            unknownV1s ??= new List<byte[]>();
-                            unknownV1s.Add(hash);
-                        }
-                    }
-
-                    var curTrackers = new List<TorrentTracker>();
-
-                    var trackersRawSpan = trackersRaw.AsSpan();
-                    var trackerCount = trackersRawSpan.Split(trackerRanges, '|', StringSplitOptions.RemoveEmptyEntries);
-
-                    for (var x = 0; x < trackerCount; x++) {
-                        var trackerRaw = trackersRawSpan[trackerRanges[x]];
-                        var partCount = trackerRaw.Split(trackerPartRanges, '^', StringSplitOptions.RemoveEmptyEntries);
-                        Debug.Assert(partCount == 9);
-
-                        curTrackers.Add(Mapper.MapFromRaw(
-                            trackerRaw[trackerPartRanges[0]].ToString(),
-                            trackerRaw[trackerPartRanges[1]] is "1",
-                            trackerRaw[trackerPartRanges[2]] is "1",
-                            UInt32.Parse(trackerRaw[trackerPartRanges[3]]),
-                            UInt32.Parse(trackerRaw[trackerPartRanges[4]]),
-                            UInt32.Parse(trackerRaw[trackerPartRanges[5]]),
-                            UInt64.Parse(trackerRaw[trackerPartRanges[6]]),
-                            UInt32.Parse(trackerRaw[trackerPartRanges[7]]),
-                            trackerRaw[trackerPartRanges[8]].ToString()));
-                    }
-
-                    var torrent = Mapper.MapFromRaw(
-                        key, name, totalSize, downloaded, completedBytes, uploaded, downSpeed,
-                        creationDateRaw, addDateRaw, finishedDateRaw, label, torrentComment,
-                        isMultiFile, directory, priorityRaw, chunkSize, isComplete, wantedChunks, skippedTotal,
-                        statusMessage, isOpenRaw, isActiveRaw, isHashCheckingRaw, isPrivateRaw,
-                        seedersConnected, peersConnected, isMeta, curTrackers);
-
-                    trackers[key] = new TorrentsTrackersReply.Types.TorrentsTrackers()
-                    {
-                        InfoHash = ByteString.CopyFrom(key),
-                        Trackers = { curTrackers }
-                    };
-
-                    torrents[key] = torrent;
+                    torrentTrackers.Trackers.Add(Mapper.MapFromRaw(
+                        trackerRaw[trackerPartRanges[0]].ToString(),
+                        trackerRaw[trackerPartRanges[1]] is "1",
+                        trackerRaw[trackerPartRanges[2]] is "1",
+                        UInt32.Parse(trackerRaw[trackerPartRanges[3]]),
+                        UInt32.Parse(trackerRaw[trackerPartRanges[4]]),
+                        UInt32.Parse(trackerRaw[trackerPartRanges[5]]),
+                        UInt64.Parse(trackerRaw[trackerPartRanges[6]]),
+                        UInt32.Parse(trackerRaw[trackerPartRanges[7]]),
+                        trackerRaw[trackerPartRanges[8]].ToString()));
                 }
-
-                Debug.Assert(xml.Remaining == 31 + 2 + 9 + 2 + 17 + 2);
-
-                if (unknownV1s?.Count > 0)
-                    await ResolveUnknownHashes(unknownV1s, torrents, trackers);
-
-                return (torrents, trackers);
             }
+
+            var torrent = Mapper.MapFromRaw(
+                torrentTrackers.InfoHash, name, totalSize, downloaded, completedBytes, uploaded, downSpeed,
+                creationDateRaw, addDateRaw, finishedDateRaw, label, torrentComment,
+                isMultiFile, directory, priorityRaw, chunkSize, isComplete, wantedChunks, skippedTotal,
+                statusMessage, isOpenRaw, isActiveRaw, isHashCheckingRaw, isPrivateRaw,
+                seedersConnected, peersConnected, isMeta, torrentTrackers.Trackers);
+
+            return (hash, key, torrent, trackersRaw, torrentTrackers);
         }
 
+        public async Task<(InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers)> GetAllTorrents(CancellationToken CancellationToken = default)
+        {
+            using var response = await FetchAllTorrents(CancellationToken);
+
+            var torrents = new InfoHashDictionary<Torrent>();
+            var trackers = new InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers>();
+            var unknownV1s = new List<byte[]>();
+
+            var xml = response.Reader();
+            XMLUtils.SeekTo(ref xml, XMLUtils.METHOD_RESPONSE);
+            XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_START);
+
+            while (NextEntry(ref xml, out var entry)) {
+                var (_, key, torrent, _, torrentTrackers) = ParseEntry(new SequenceReader<byte>(entry), null, unknownV1s);
+                trackers[key] = torrentTrackers;
+                torrents[key] = torrent;
+            }
+
+            if (unknownV1s.Count > 0)
+                await ResolveUnknownHashes(unknownV1s, torrents, trackers);
+
+            return (torrents, trackers);
+        }
+
+        /// <param name="UnknownV1s">From <see cref="KeyOf"/>, so only ones due to resolve</param>
         private async Task ResolveUnknownHashes(List<byte[]> UnknownV1s, InfoHashDictionary<Torrent> Torrents, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers)
         {
             var now = DateTime.UtcNow;
-            var toResolve = UnknownV1s.Where(v1 => !Cache.Contains(v1) && (!ResolveBackoff.TryGetValue(v1, out var b) || now >= b.NextTry)).ToList();
+            // The cache can have learned some since
+            var toResolve = UnknownV1s.Where(v1 => !Cache.Contains(v1)).ToList();
 
             if (toResolve.Count == 0)
                 return;
@@ -331,14 +408,14 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     ResolveBackoff.Remove(v1);
 
                     if (v2 != null) {
+                        var v2Hash = ByteString.CopyFrom(v2);
                         if (Torrents.Remove(v1, out var t)) {
-                            t.Hash = ByteString.CopyFrom(v2);
-                            Torrents[v2] = t;
+                            var moved = t.Clone();
+                            moved.Hash = v2Hash;
+                            Torrents[v2] = moved;
                         }
-                        if (Trackers.Remove(v1, out var tr)) {
-                            tr.InfoHash = ByteString.CopyFrom(v2);
-                            Trackers[v2] = tr;
-                        }
+                        if (Trackers.Remove(v1, out var tr))
+                            Trackers[v2] = new() { InfoHash = v2Hash, Trackers = { tr.Trackers } };
                     }
                 } catch (Exception ex) {
                     Logger.LogTrace(ex, "Failed to resolve rtsHash hash for {Hash}", Convert.ToHexString(v1));
@@ -349,55 +426,127 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
         protected override async Task<HistoryEntry> PollAsync(CancellationToken CancellationToken)
         {
-            var allTorrents = await GetAllTorrents(CancellationToken);
-            const int SPEED_HISTORY_MAX = 5;
+            using var response = await FetchAllTorrents(CancellationToken);
 
             var now = DateTime.UtcNow;
+            var poll = ++PollCount;
+            // Speed window is the last SPEED_HISTORY_MAX polls
+            var oldestPoll = poll - SPEED_HISTORY_MAX + 1;
 
-            var speedValues = new InfoHashDictionary<(ulong Uploaded, ulong CompletedSize)>();
-            foreach (var (hash, torrent) in allTorrents.List)
-                speedValues[hash] = (torrent.Uploaded, torrent.CompletedSize);
+            var unknownV1s = new List<byte[]>();
+            var polledLookup = Polled.GetAlternateLookup<ReadOnlySpan<byte>>();
+            var lastSnapshot = LastSnapshot;
+            // Every torrent is the same as in the last snapshot so far
+            var unchanged = lastSnapshot != null;
+            PollEntries.Clear();
 
-            GlobalHistory.Add(new SpeedSample(now, speedValues));
-            if (GlobalHistory.Count > SPEED_HISTORY_MAX)
-                GlobalHistory.RemoveAt(0);
+            var xml = response.Reader();
+            XMLUtils.SeekTo(ref xml, XMLUtils.METHOD_RESPONSE);
+            XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_START);
 
-            var entry = new HistoryEntry(now, allTorrents.List, allTorrents.Trackers);
+            while (NextEntry(ref xml, out var entry)) {
+                // Response body is one buffer
+                Debug.Assert(entry.IsSingleSegment);
+                var raw = entry.FirstSpan;
 
-            foreach (var (hash, torrent) in allTorrents.List) {
-                var upSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: true);
-                torrent.UPSpeed = upSpeed;
+                var hashReader = new SequenceReader<byte>(entry);
+                XMLUtils.SeekFixed(ref hashReader, XMLUtils.VALUE_TOKEN);
+                XMLUtils.SeekFixed(ref hashReader, XMLUtils.STRING_TOKEN);
+                var hashHex = XMLUtils.GetBytesUntilNextTag(ref hashReader).FirstSpan;
 
-                if (torrent.IsCompleted) {
-                    torrent.DLSpeed = 0;
-                    torrent.HashingSpeed = 0;
-                    torrent.ETA = null;
-                } else if (torrent.State.HasFlag(TorrentState.Hashing)) {
-                    var hashingSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: false);
-                    torrent.HashingSpeed = hashingSpeed;
-                    if (hashingSpeed == 0) {
-                        torrent.ETA = null;
-                    } else {
-                        var secs = (double)(torrent.WantedSize - torrent.CompletedSize) / hashingSpeed;
-                        torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
+                if (!polledLookup.TryGetValue(hashHex, out var polled)) {
+                    polled = new PolledTorrent();
+                    polledLookup[hashHex] = polled;
+                }
+                polled.LastPoll = poll;
+
+                var shared = polled.Torrent != null && raw.SequenceEqual(polled.Raw) ? polled.Torrent : null;
+
+                byte[] key;
+                Torrent torrent;
+                TorrentsTrackersReply.Types.TorrentsTrackers torrentTrackers;
+                if (shared != null) {
+                    key = KeyOf(polled.NativeHash!, shared.MagnetDummy, unknownV1s);
+                    torrent = shared;
+                    torrentTrackers = polled.Trackers!;
+
+                    // V2 hash of a hybrid torrent became known since
+                    if (!shared.Hash.Span.SequenceEqual(key)) {
+                        var keyHash = ByteString.CopyFrom(key);
+                        torrentTrackers = new() { InfoHash = keyHash, Trackers = { torrentTrackers.Trackers } };
+                        torrent = shared.Clone();
+                        torrent.Hash = keyHash;
                     }
                 } else {
-                    torrent.HashingSpeed = 0;
-                    var dlSpeed = (ulong)ComputeSpeed(GlobalHistory, hash, Uploaded: false);
-                    torrent.DLSpeed = dlSpeed;
-                    if (dlSpeed == 0) {
-                        torrent.ETA = null;
-                    } else {
-                        var secs = (double)(torrent.WantedSize - torrent.CompletedSize) / dlSpeed;
-                        torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
-                    }
+                    (polled.NativeHash, key, torrent, polled.TrackersRaw, torrentTrackers) = ParseEntry(new SequenceReader<byte>(entry), polled, unknownV1s);
+                    polled.Raw = raw.ToArray();
                 }
 
-                if (torrent.UPSpeed > 0 || torrent.DLSpeed > 0 || torrent.HashingSpeed > 0)
-                    torrent.State |= TorrentState.Active;
+                polled.AddSample(poll, now, torrent.Uploaded, torrent.CompletedSize);
+
+                var upSpeed = (ulong)polled.Speed(oldestPoll, Uploaded: true);
+                var dlSpeed = torrent.DLSpeed;
+                ulong hashingSpeed = 0;
+                Duration? eta = null;
+                if (torrent.IsCompleted) {
+                    dlSpeed = 0;
+                } else {
+                    var speed = (ulong)polled.Speed(oldestPoll, Uploaded: false);
+                    if (torrent.State.HasFlag(TorrentState.Hashing))
+                        hashingSpeed = speed;
+                    else
+                        dlSpeed = speed;
+
+                    if (speed != 0) {
+                        var secs = (double)(torrent.WantedSize - torrent.CompletedSize) / speed;
+                        eta = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
+                    }
+                }
+                var state = upSpeed > 0 || dlSpeed > 0 || hashingSpeed > 0 ? torrent.State | TorrentState.Active : torrent.State & ~TorrentState.Active;
+
+                if (torrent.UPSpeed != upSpeed || torrent.DLSpeed != dlSpeed || torrent.HashingSpeed != hashingSpeed || !Equals(torrent.ETA, eta) || torrent.State != state) {
+                    if (ReferenceEquals(torrent, shared))
+                        torrent = shared.Clone();
+
+                    torrent.UPSpeed = upSpeed;
+                    torrent.DLSpeed = dlSpeed;
+                    torrent.HashingSpeed = hashingSpeed;
+                    torrent.ETA = eta;
+                    torrent.State = state;
+                }
+
+                polled.Trackers = torrentTrackers;
+                polled.Torrent = torrent;
+
+                unchanged = unchanged &&
+                    lastSnapshot!.List.TryGetValue(key, out var lastTorrent) && ReferenceEquals(lastTorrent, torrent) &&
+                    lastSnapshot.Trackers.TryGetValue(key, out var lastTrackers) && ReferenceEquals(lastTrackers, torrentTrackers);
+                PollEntries.Add((key, torrent, torrentTrackers));
             }
 
-            return entry;
+            // Torrents gone for the whole speed window
+            foreach (var (hashHex, polled) in Polled) {
+                if (polled.LastPoll < oldestPoll)
+                    Polled.Remove(hashHex);
+            }
+
+            if (unchanged && unknownV1s.Count == 0 && PollEntries.Count == lastSnapshot!.List.Count) {
+                PollEntries.Clear();
+                return LastSnapshot = new HistoryEntry(now, lastSnapshot.List, lastSnapshot.Trackers);
+            }
+
+            var torrents = new InfoHashDictionary<Torrent>(PollEntries.Count);
+            var trackers = new InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers>(PollEntries.Count);
+            foreach (var (key, torrent, torrentTrackers) in PollEntries) {
+                trackers[key] = torrentTrackers;
+                torrents[key] = torrent;
+            }
+            PollEntries.Clear();
+
+            if (unknownV1s.Count > 0)
+                await ResolveUnknownHashes(unknownV1s, torrents, trackers);
+
+            return LastSnapshot = new HistoryEntry(now, torrents, trackers);
         }
     }
 }

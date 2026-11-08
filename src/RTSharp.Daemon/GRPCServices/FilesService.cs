@@ -89,6 +89,7 @@ public partial class FilesService(
 
         FileSystemItem toItem(UnixFileSystemInfo In)
         {
+            var permissions = FileAccessPermissionsToString(In);
             string? linkTarget = null;
             if (In is UnixSymbolicLinkInfo link) {
                 linkTarget = UnixPath.TryReadLink(link.FullName);
@@ -108,7 +109,7 @@ public partial class FilesService(
                 Path = In.FullName,
                 Directory = In.IsDirectory,
                 LastModified = Timestamp.FromDateTime(In.LastWriteTimeUtc),
-                Permissions = FileAccessPermissionsToString(In),
+                Permissions = permissions,
                 Owner = user,
                 Group = group
             };

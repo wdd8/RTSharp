@@ -20,19 +20,20 @@ public static partial class BencodeUtils
     {
         var info = BTorrent.Get<BDictionary>(TorrentFields.Info);
 
-        using var ms = new MemoryStream(info.GetSizeInBytes());
-        info.EncodeTo(ms);
-        var infoBytes = ms.GetBuffer().AsSpan(0, (int)ms.Length);
+        var size = info.GetSizeInBytes();
+        var rented = ArrayPool<byte>.Shared.Rent(size);
+        try {
+            using (var ms = new MemoryStream(rented, 0, size))
+                info.EncodeTo(ms);
+            var infoBytes = rented.AsSpan(0, size);
 
-        var v1 = info.ContainsKey("pieces")
-            ? SHA1.HashData(infoBytes)
-            : null;
+            var v1 = info.ContainsKey("pieces") ? SHA1.HashData(infoBytes) : null;
+            var v2 = info.ContainsKey("file tree") ? SHA256.HashData(infoBytes) : null;
 
-        var v2 = info.ContainsKey("file tree")
-            ? SHA256.HashData(infoBytes)
-            : null;
-
-        return (v1, v2);
+            return (v1, v2);
+        } finally {
+            ArrayPool<byte>.Shared.Return(rented);
+        }
     }
 
     /// <summary>

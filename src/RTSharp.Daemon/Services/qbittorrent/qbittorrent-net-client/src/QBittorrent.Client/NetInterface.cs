@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client
 {
@@ -12,19 +10,12 @@ namespace QBittorrent.Client
         /// <summary>
         /// Gets or sets the internal network interface identifier.
         /// </summary>
-        [JsonProperty("value")]
+        [JsonPropertyName("value")]
         public string Id { get; set; }
 
         /// <summary>
         /// Gets or sets the network interface name.
         /// </summary>
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Additional properties not handled by this library.
-        /// </summary>
-        [JsonExtensionData]
-        public IDictionary<string, JToken> AdditionalData { get; set; }
-    }
+        [JsonPropertyName("name")]
+        public string Name { get; set; }    }
 }

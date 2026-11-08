@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.Serialization;
 using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using QBittorrent.Client.Converters;
 
 namespace QBittorrent.Client
@@ -14,7 +12,6 @@ namespace QBittorrent.Client
     /// <summary>
     /// qBittorrent application preferences.
     /// </summary>
-    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class Preferences
     {
         private const string WebUiPasswordPropertyName = "web_ui_password";
@@ -23,243 +20,243 @@ namespace QBittorrent.Client
         /// <summary>
         /// Currently selected language
         /// </summary>
-        [JsonProperty("locale")]
+        [JsonPropertyName("locale")]
         public string Locale { get; set; }
 
         /// <summary>
         /// Default save path for torrents, separated by slashes
         /// </summary>
-        [JsonProperty("save_path")]
+        [JsonPropertyName("save_path")]
         public string SavePath { get; set; }
 
         /// <summary>
         /// True if folder for incomplete torrents is enabled
         /// </summary>
-        [JsonProperty("temp_path_enabled")]
+        [JsonPropertyName("temp_path_enabled")]
         public bool? TempPathEnabled { get; set; }
 
         /// <summary>
         /// Path for incomplete torrents, separated by slashes
         /// </summary>
-        [JsonProperty("temp_path")]
+        [JsonPropertyName("temp_path")]
         public string TempPath { get; set; }
 
         /// <summary>
         /// List of watch folders to add torrent automatically.
         /// </summary>
-        [JsonProperty("scan_dirs")]
+        [JsonPropertyName("scan_dirs")]
         public IDictionary<string, SaveLocation> ScanDirectories { get; set; }
 
         /// <summary>
         /// Path to directory to copy .torrent files.
         /// </summary>
-        [JsonProperty("export_dir")]
+        [JsonPropertyName("export_dir")]
         public string ExportDirectory { get; set; }
 
         /// <summary>
         /// Path to directory to copy finished .torrent files
         /// </summary>
-        [JsonProperty("export_dir_fin")]
+        [JsonPropertyName("export_dir_fin")]
         public string ExportDirectoryForFinished { get; set; }
 
         /// <summary>
         /// True if e-mail notification should be enabled.
         /// </summary>
-        [JsonProperty("mail_notification_enabled")]
+        [JsonPropertyName("mail_notification_enabled")]
         public bool? MailNotificationEnabled { get; set; }
 
         /// <summary>
         /// E-mail address to send notifications to.
         /// </summary>
-        [JsonProperty("mail_notification_email")]
+        [JsonPropertyName("mail_notification_email")]
         public string MailNotificationEmailAddress { get; set; }
 
         /// <summary>
         /// SMTP server for e-mail notifications.
         /// </summary>
-        [JsonProperty("mail_notification_smtp")]
+        [JsonPropertyName("mail_notification_smtp")]
         public string MailNotificationSmtpServer { get; set; }
 
         /// <summary>
         /// True if SMTP server requires SSL connection.
         /// </summary>
-        [JsonProperty("mail_notification_ssl_enabled")]
+        [JsonPropertyName("mail_notification_ssl_enabled")]
         public bool? MailNotificationSslEnabled { get; set; }
 
         /// <summary>
         /// True if SMTP server requires authentication
         /// </summary>
-        [JsonProperty("mail_notification_auth_enabled")]
+        [JsonPropertyName("mail_notification_auth_enabled")]
         public bool? MailNotificationAuthenticationEnabled { get; set; }
 
         /// <summary>
         /// Username for SMTP authentication.
         /// </summary>
-        [JsonProperty("mail_notification_username")]
+        [JsonPropertyName("mail_notification_username")]
         public string MailNotificationUsername { get; set; }
 
         /// <summary>
         /// Password for SMTP authentication.
         /// </summary>
-        [JsonProperty("mail_notification_password")]
+        [JsonPropertyName("mail_notification_password")]
         public string MailNotificationPassword { get; set; }
 
         /// <summary>
         /// True if external program should be run after torrent has finished downloading.
         /// </summary>
-        [JsonProperty("autorun_enabled")]
+        [JsonPropertyName("autorun_enabled")]
         public bool? AutorunEnabled { get; set; }
 
         /// <summary>
         /// Program path/name/arguments to run if <see cref="AutorunEnabled"/> is <see langword="true"/>.
         /// </summary>
-        [JsonProperty("autorun_program")]
+        [JsonPropertyName("autorun_program")]
         public string AutorunProgram { get; set; }
 
         /// <summary>
         /// True if file preallocation should take place, otherwise sparse files are used.
         /// </summary>
-        [JsonProperty("preallocate_all")]
+        [JsonPropertyName("preallocate_all")]
         public bool? PreallocateAll { get; set; }
 
         /// <summary>
         /// True if torrent queuing is enabled
         /// </summary>
-        [JsonProperty("queueing_enabled")]
+        [JsonPropertyName("queueing_enabled")]
         public bool? QueueingEnabled { get; set; }
 
         /// <summary>
         /// Maximum number of active simultaneous downloads
         /// </summary>
-        [JsonProperty("max_active_downloads")]
+        [JsonPropertyName("max_active_downloads")]
         public int? MaxActiveDownloads { get; set; }
 
         /// <summary>
         /// Maximum number of active simultaneous downloads and uploads
         /// </summary>
-        [JsonProperty("max_active_torrents")]
+        [JsonPropertyName("max_active_torrents")]
         public int? MaxActiveTorrents { get; set; }
 
         /// <summary>
         /// Maximum number of active simultaneous uploads
         /// </summary>
-        [JsonProperty("max_active_uploads")]
+        [JsonPropertyName("max_active_uploads")]
         public int? MaxActiveUploads { get; set; }
 
         /// <summary>
         /// If true torrents w/o any activity (stalled ones) will not be counted towards max_active_* limits.
         /// </summary>
-        [JsonProperty("dont_count_slow_torrents")]
+        [JsonPropertyName("dont_count_slow_torrents")]
         public bool? DoNotCountSlowTorrents { get; set; }
 
         /// <summary>
         /// True if share ratio limit is enabled
         /// </summary>
-        [JsonProperty("max_ratio_enabled")]
+        [JsonPropertyName("max_ratio_enabled")]
         public bool? MaxRatioEnabled { get; set; }
 
         /// <summary>
         /// Get the global share ratio limit
         /// </summary>
-        [JsonProperty("max_ratio")]
+        [JsonPropertyName("max_ratio")]
         public double? MaxRatio { get; set; }
 
         /// <summary>
         /// Action performed when a torrent reaches the maximum share ratio.
         /// </summary>
-        [JsonProperty("max_ratio_act")]
+        [JsonPropertyName("max_ratio_act")]
         public MaxRatioAction? MaxRatioAction { get; set; }
 
         /// <summary>
         /// Maximal seeding time in minutes.
         /// </summary>
-        [JsonProperty("max_seeding_time")]
+        [JsonPropertyName("max_seeding_time")]
         public int? MaxSeedingTime { get; set; }
 
         /// <summary>
         /// True if maximal seeding time is enabled.
         /// </summary>
-        [JsonProperty("max_seeding_time_enabled")]
+        [JsonPropertyName("max_seeding_time_enabled")]
         public bool? MaxSeedingTimeEnabled { get; set; }
         
         /// <summary>
         /// Maximal inactive seeding time in minutes.
         /// </summary>
-        [JsonProperty("max_inactive_seeding_time")]
+        [JsonPropertyName("max_inactive_seeding_time")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.9.2")]
         public int? MaxInactiveSeedingTime { get; set; }
 
         /// <summary>
         /// True if maximal inactive seeding time is enabled.
         /// </summary>
-        [JsonProperty("max_inactive_seeding_time_enabled")]
+        [JsonPropertyName("max_inactive_seeding_time_enabled")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.9.2")]
         public bool? MaxInactiveSeedingTimeEnabled { get; set; }
 
         /// <summary>
         /// If true <c>.!qB</c> extension will be appended to incomplete files.
         /// </summary>
-        [JsonProperty("incomplete_files_ext")]
+        [JsonPropertyName("incomplete_files_ext")]
         public bool? AppendExtensionToIncompleteFiles { get; set; }
 
         /// <summary>
         /// Port for incoming connections.
         /// </summary>
-        [JsonProperty("listen_port")]
+        [JsonPropertyName("listen_port")]
         public int? ListenPort { get; set; }
 
         /// <summary>
         /// True if UPnP/NAT-PMP is enabled.
         /// </summary>
-        [JsonProperty("upnp")]
+        [JsonPropertyName("upnp")]
         public bool? UpnpEnabled { get; set; }
 
         /// <summary>
         /// True if the port is randomly selected
         /// </summary>
-        [JsonProperty("random_port")]
+        [JsonPropertyName("random_port")]
         public bool? RandomPort { get; set; }
 
         /// <summary>
         /// Global download speed limit in KiB/s; -1 means no limit is applied.
         /// </summary>
-        [JsonProperty("dl_limit")]
+        [JsonPropertyName("dl_limit")]
         public int? DownloadLimit { get; set; }
 
         /// <summary>
         /// Global upload speed limit in KiB/s; -1 means no limit is applied.
         /// </summary>
-        [JsonProperty("up_limit")]
+        [JsonPropertyName("up_limit")]
         public int? UploadLimit { get; set; }
 
         /// <summary>
         /// Maximum global number of simultaneous connections.
         /// </summary>
-        [JsonProperty("max_connec")]
+        [JsonPropertyName("max_connec")]
         public int? MaxConnections { get; set; }
 
         /// <summary>
         /// Maximum number of simultaneous connections per torrent.
         /// </summary>
-        [JsonProperty("max_connec_per_torrent")]
+        [JsonPropertyName("max_connec_per_torrent")]
         public int? MaxConnectionsPerTorrent { get; set; }
 
         /// <summary>
         /// Maximum number of upload slots.
         /// </summary>
-        [JsonProperty("max_uploads")]
+        [JsonPropertyName("max_uploads")]
         public int? MaxUploads { get; set; }
 
         /// <summary>
         /// Maximum number of upload slots per torrent
         /// </summary>
-        [JsonProperty("max_uploads_per_torrent")]
+        [JsonPropertyName("max_uploads_per_torrent")]
         public int? MaxUploadsPerTorrent { get; set; }
 
         /// <summary>
         /// True if uTP protocol should be enabled.
         /// </summary>
-        [JsonProperty("enable_utp")]
+        [JsonPropertyName("enable_utp")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [Obsolete("Use BittorrentProtocol property for qBittorrent 4.x")]
         public bool? EnableUTP { get; set; }
@@ -267,7 +264,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if <see cref="DownloadLimit"/> and <see cref="UploadLimit"/> should be applied to uTP connections.
         /// </summary>
-        [JsonProperty("limit_utp_rate")]
+        [JsonPropertyName("limit_utp_rate")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? LimitUTPRate { get; set; }
 
@@ -275,237 +272,237 @@ namespace QBittorrent.Client
         /// True if <see cref="DownloadLimit"/> and <see cref="UploadLimit"/>
         /// should be applied to estimated TCP overhead (service data: e.g. packet headers).
         /// </summary>
-        [JsonProperty("limit_tcp_overhead")]
+        [JsonPropertyName("limit_tcp_overhead")]
         public bool? LimitTcpOverhead { get; set; }
 
         /// <summary>
         /// Alternative global download speed limit in KiB/s
         /// </summary>
-        [JsonProperty("alt_dl_limit")]
+        [JsonPropertyName("alt_dl_limit")]
         public int? AlternativeDownloadLimit { get; set; }
 
         /// <summary>
         /// Alternative global upload speed limit in KiB/s
         /// </summary>
-        [JsonProperty("alt_up_limit")]
+        [JsonPropertyName("alt_up_limit")]
         public int? AlternativeUploadLimit { get; set; }
 
         /// <summary>
         /// True if alternative limits should be applied according to schedule
         /// </summary>
-        [JsonProperty("scheduler_enabled")]
+        [JsonPropertyName("scheduler_enabled")]
         public bool? SchedulerEnabled { get; set; }
 
         /// <summary>
         /// Scheduler starting hour.
         /// </summary>
-        [JsonProperty("schedule_from_hour")]
+        [JsonPropertyName("schedule_from_hour")]
         public int? ScheduleFromHour { get; set; }
 
         /// <summary>
         /// Scheduler starting minute.
         /// </summary>
-        [JsonProperty("schedule_from_min")]
+        [JsonPropertyName("schedule_from_min")]
         public int? ScheduleFromMinute { get; set; }
 
         /// <summary>
         /// Scheduler ending hour.
         /// </summary>
-        [JsonProperty("schedule_to_hour")]
+        [JsonPropertyName("schedule_to_hour")]
         public int? ScheduleToHour { get; set; }
 
         /// <summary>
         /// Scheduler ending minute.
         /// </summary>
-        [JsonProperty("schedule_to_min")]
+        [JsonPropertyName("schedule_to_min")]
         public int? ScheduleToMinute { get; set; }
 
         /// <summary>
         /// Scheduler days.
         /// </summary>
-        [JsonProperty("scheduler_days")]
+        [JsonPropertyName("scheduler_days")]
         public SchedulerDay? SchedulerDays { get; set; }
 
         /// <summary>
         /// True if DHT is enabled
         /// </summary>
-        [JsonProperty("dht")]
+        [JsonPropertyName("dht")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? DHT { get; set; }
 
         /// <summary>
         /// True if DHT port should match TCP port
         /// </summary>
-        [JsonProperty("dhtSameAsBT")]
+        [JsonPropertyName("dhtSameAsBT")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? DHTSameAsBT { get; set; }
 
         /// <summary>
         /// DHT port if <see cref="DHTSameAsBT"/> is <see langword="false"/>.
         /// </summary>
-        [JsonProperty("dht_port")]
+        [JsonPropertyName("dht_port")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public int? DHTPort { get; set; }
 
         /// <summary>
         /// True if peer exchange PeX is enabled.
         /// </summary>
-        [JsonProperty("pex")]
+        [JsonPropertyName("pex")]
         public bool? PeerExchange { get; set; }
 
         /// <summary>
         /// True if local peer discovery is enabled
         /// </summary>
-        [JsonProperty("lsd")]
+        [JsonPropertyName("lsd")]
         public bool? LocalPeerDiscovery { get; set; }
 
         /// <summary>
         /// Encryption mode.
         /// </summary>
-        [JsonProperty("encryption")]
+        [JsonPropertyName("encryption")]
         public Encryption? Encryption { get; set; }
 
         /// <summary>
         /// If true anonymous mode will be enabled.
         /// </summary>
-        [JsonProperty("anonymous_mode")]
+        [JsonPropertyName("anonymous_mode")]
         public bool? AnonymousMode { get; set; }
 
         /// <summary>
         /// Proxy type.
         /// </summary>
-        [JsonProperty("proxy_type")]
+        [JsonPropertyName("proxy_type")]
         public ProxyType? ProxyType { get; set; }
 
         /// <summary>
         /// Proxy IP address or domain name.
         /// </summary>
-        [JsonProperty("proxy_ip")]
+        [JsonPropertyName("proxy_ip")]
         public string ProxyAddress { get; set; }
 
         /// <summary>
         /// Proxy port.
         /// </summary>
-        [JsonProperty("proxy_port")]
+        [JsonPropertyName("proxy_port")]
         public int? ProxyPort { get; set; }
 
         /// <summary>
         /// True if peer and web seed connections should be proxified.
         /// </summary>
-        [JsonProperty("proxy_peer_connections")]
+        [JsonPropertyName("proxy_peer_connections")]
         public bool? ProxyPeerConnections { get; set; }
 
         /// <summary>
         /// True if the connections not supported by the proxy are disabled.
         /// </summary>
-        [JsonProperty("force_proxy")]
+        [JsonPropertyName("force_proxy")]
         [Deprecated("2.3")]
         public bool? ForceProxy { get; set; }
 
         /// <summary>
         /// True if proxy should be used only for torrents.
         /// </summary>
-        [JsonProperty("proxy_torrents_only")]
+        [JsonPropertyName("proxy_torrents_only")]
         [ApiLevel(ApiLevel.V2, MaxVersion = "2.8.19")]
         public bool? ProxyTorrentsOnly { get; set; }
 
         /// <summary>
         /// True if proxy requires authentication; doesn't apply to SOCKS4 proxies.
         /// </summary>
-        [JsonProperty("proxy_auth_enabled")]
+        [JsonPropertyName("proxy_auth_enabled")]
         [Obsolete("Use ProxyType instead.")]
         public bool? ProxyAuthenticationEnabled { get; set; }
 
         /// <summary>
         /// Username for proxy authentication.
         /// </summary>
-        [JsonProperty("proxy_username")]
+        [JsonPropertyName("proxy_username")]
         public string ProxyUsername { get; set; }
 
         /// <summary>
         /// Password for proxy authentication.
         /// </summary>
-        [JsonProperty("proxy_password")]
+        [JsonPropertyName("proxy_password")]
         public string ProxyPassword { get; set; }
 
         /// <summary>
         /// True if proxy should be used to perform hostname lookup.
         /// </summary>
-        [JsonProperty("proxy_hostname_lookup")]
+        [JsonPropertyName("proxy_hostname_lookup")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.8.18")]
         public bool? ProxyHostnameLookup { get; set; }
 
         /// <summary>
         /// True if proxy should be used for BitTorrent purposes.
         /// </summary>
-        [JsonProperty("proxy_bittorrent")]
+        [JsonPropertyName("proxy_bittorrent")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.9.1")]
         public bool? ProxyBittorrent { get; set; }
 
         /// <summary>
         /// True if proxy should be used for general purposes.
         /// </summary>
-        [JsonProperty("proxy_misc")]
+        [JsonPropertyName("proxy_misc")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.9.1")]
         public bool? ProxyMisc { get; set; }
 
         /// <summary>
         /// True if proxy should be used for RSS purposes.
         /// </summary>
-        [JsonProperty("proxy_rss")]
+        [JsonPropertyName("proxy_rss")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.9.1")]
         public bool? ProxyRss { get; set; }
 
         /// <summary>
         /// True if external IP filter should be enabled.
         /// </summary>
-        [JsonProperty("ip_filter_enabled")]
+        [JsonPropertyName("ip_filter_enabled")]
         public bool? IpFilterEnabled { get; set; }
 
         /// <summary>
         /// Path to IP filter file (.dat, .p2p, .p2b files are supported).
         /// </summary>
-        [JsonProperty("ip_filter_path")]
+        [JsonPropertyName("ip_filter_path")]
         public string IpFilterPath { get; set; }
 
         /// <summary>
         /// True if IP filters are applied to trackers
         /// </summary>
-        [JsonProperty("ip_filter_trackers")]
+        [JsonPropertyName("ip_filter_trackers")]
         public bool? IpFilterTrackers { get; set; }
 
         /// <summary>
         /// WebUI IP address. Use <c>*</c> to accept connections on any IP address.
         /// </summary>
-        [JsonProperty("web_ui_address")]
+        [JsonPropertyName("web_ui_address")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public string WebUIAddress { get; set; }
 
         /// <summary>
         /// WebUI port.
         /// </summary>
-        [JsonProperty("web_ui_port")]
+        [JsonPropertyName("web_ui_port")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public int? WebUIPort { get; set; }
 
         /// <summary>
         /// WebUI domain. Use <c>*</c> to accept connections on any domain.
         /// </summary>
-        [JsonProperty("web_ui_domain_list")]
+        [JsonPropertyName("web_ui_domain_list")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public string WebUIDomain { get; set; }
 
         /// <summary>
         /// True if UPnP is used for the WebUI port.
         /// </summary>
-        [JsonProperty("web_ui_upnp")]
+        [JsonPropertyName("web_ui_upnp")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? WebUIUpnp { get; set; }
 
         /// <summary>
         /// WebUI username
         /// </summary>
-        [JsonProperty("web_ui_username")]
+        [JsonPropertyName("web_ui_username")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public string WebUIUsername { get; set; }
 
@@ -531,17 +528,26 @@ namespace QBittorrent.Client
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public string WebUIPasswordHash { get; set; }
 
+        // The same field is the new password when sent, and the current password's hash when read
+        [JsonPropertyName(WebUiPasswordPropertyName)]
+        [JsonInclude]
+        private string WebUIPasswordField
+        {
+            get => WebUIPassword;
+            set => WebUIPasswordHash = value;
+        }
+
         /// <summary>
         /// True if WebUI HTTPS access is enabled.
         /// </summary>
-        [JsonProperty("use_https")]
+        [JsonPropertyName("use_https")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? WebUIHttps { get; set; }
 
         /// <summary>
         /// SSL keyfile contents (this is a not a path).
         /// </summary>
-        [JsonProperty("ssl_key")]
+        [JsonPropertyName("ssl_key")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [Deprecated("2.3", Description = "Use WebUISslKeyPath on API 2.3 or later.")]
         public string WebUISslKey { get; set; }
@@ -549,7 +555,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// SSL certificate contents (this is a not a path).
         /// </summary>
-        [JsonProperty("ssl_cert")]
+        [JsonPropertyName("ssl_cert")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [Deprecated("2.3", Description = "Use WebUISslCertificatePath on API 2.3 or later.")]
         public string WebUISslCertificate { get; set; }
@@ -557,7 +563,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if WebUI clickjacking protection is enabled
         /// </summary>
-        [JsonProperty("web_ui_clickjacking_protection_enabled")]
+        [JsonPropertyName("web_ui_clickjacking_protection_enabled")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.0.2")]
         public bool? WebUIClickjackingProtection { get; set; }
@@ -565,7 +571,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if WebUI CSRF protection is enabled
         /// </summary>
-        [JsonProperty("web_ui_csrf_protection_enabled")]
+        [JsonPropertyName("web_ui_csrf_protection_enabled")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.0.2")]
         public bool? WebUICsrfProtection { get; set; }
@@ -573,7 +579,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if Secure attribute is set on cookie when using HTTPS
         /// </summary>
-        [JsonProperty("web_ui_secure_cookie_enabled")]
+        [JsonPropertyName("web_ui_secure_cookie_enabled")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.4.1")]
         public bool? WebUISecureCookie { get; set; }
@@ -582,7 +588,7 @@ namespace QBittorrent.Client
         /// The number of the failed authentication attempt after which the client will be banned.
         /// </summary>
         /// <seealso cref="WebUIBanDuration"/>
-        [JsonProperty("web_ui_max_auth_fail_count")]
+        [JsonPropertyName("web_ui_max_auth_fail_count")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.4.1")]
         public int? WebUIMaxAuthenticationFailures { get; set; }
@@ -590,7 +596,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// The duration (in seconds) the client will be banned for after <see cref="WebUIMaxAuthenticationFailures"/> failed authentication attempts.
         /// </summary>
-        [JsonProperty("web_ui_ban_duration")]
+        [JsonPropertyName("web_ui_ban_duration")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.4.1")]
         public int? WebUIBanDuration { get; set; }
@@ -598,7 +604,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if custom HTTP headers are enabled for Web UI.
         /// </summary>
-        [JsonProperty("web_ui_use_custom_http_headers_enabled")]
+        [JsonPropertyName("web_ui_use_custom_http_headers_enabled")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.5.1")]
         public bool? WebUICustomHttpHeadersEnabled { get; set; }
@@ -609,8 +615,8 @@ namespace QBittorrent.Client
         /// <remarks>
         /// Each header must be specified as a key-value pair separated by a colon, i.e.<c>HEADER:VALUE</c>. The headers must be separated by a new-line character (<c>\n</c>).
         /// </remarks>
-        [JsonProperty("web_ui_custom_http_headers")]
-        [JsonConverter(typeof(SeparatedStringToListConverter), "\n")]
+        [JsonPropertyName("web_ui_custom_http_headers")]
+        [SeparatedStringToList("\n")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.5.1")]
         public IList<string> WebUICustomHttpHeaders { get; set; }
@@ -618,7 +624,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if authentication challenge for loopback address (127.0.0.1) should be disabled.
         /// </summary>
-        [JsonProperty("bypass_local_auth")]
+        [JsonPropertyName("bypass_local_auth")]
         public bool? BypassLocalAuthentication { get; set; }
 
         /// <summary>
@@ -626,7 +632,7 @@ namespace QBittorrent.Client
         /// </summary>
         /// <seealso cref="BypassAuthenticationSubnetWhitelist"/>
         /// <seealso cref="BypassLocalAuthentication"/>
-        [JsonProperty("bypass_auth_subnet_whitelist_enabled")]
+        [JsonPropertyName("bypass_auth_subnet_whitelist_enabled")]
         public bool? BypassAuthenticationSubnetWhitelistEnabled { get; set; }
 
         /// <summary>
@@ -634,103 +640,103 @@ namespace QBittorrent.Client
         /// </summary>
         /// <seealso cref="BypassAuthenticationSubnetWhitelistEnabled"/>
         /// <seealso cref="BypassLocalAuthentication"/>
-        [JsonProperty("bypass_auth_subnet_whitelist")]
-        [JsonConverter(typeof(SeparatedStringToListConverter), ",", "\n")]
+        [JsonPropertyName("bypass_auth_subnet_whitelist")]
+        [SeparatedStringToList(",", "\n")]
         public IList<string> BypassAuthenticationSubnetWhitelist { get; set; }
 
         /// <summary>
         /// True if server DNS should be updated dynamically.
         /// </summary>
-        [JsonProperty("dyndns_enabled")]
+        [JsonPropertyName("dyndns_enabled")]
         public bool? DynamicDnsEnabled { get; set; }
 
         /// <summary>
         /// Dynamic DNS service.
         /// </summary>
-        [JsonProperty("dyndns_service")]
+        [JsonPropertyName("dyndns_service")]
         public DynamicDnsService? DynamicDnsService { get; set; }
 
         /// <summary>
         /// Username for DDNS service.
         /// </summary>
-        [JsonProperty("dyndns_username")]
+        [JsonPropertyName("dyndns_username")]
         public string DynamicDnsUsername { get; set; }
 
         /// <summary>
         /// Password for DDNS service.
         /// </summary>
-        [JsonProperty("dyndns_password")]
+        [JsonPropertyName("dyndns_password")]
         public string DynamicDnsPassword { get; set; }
 
         /// <summary>
         /// Your DDNS domain name.
         /// </summary>
-        [JsonProperty("dyndns_domain")]
+        [JsonPropertyName("dyndns_domain")]
         public string DynamicDnsDomain { get; set; }
 
         /// <summary>
         /// RSS refresh interval.
         /// </summary>
-        [JsonProperty("rss_refresh_interval")]
+        [JsonPropertyName("rss_refresh_interval")]
         public uint? RssRefreshInterval { get; set; }
 
         /// <summary>
         /// Max stored articles per RSS feed.
         /// </summary>
-        [JsonProperty("rss_max_articles_per_feed")]
+        [JsonPropertyName("rss_max_articles_per_feed")]
         public int? RssMaxArticlesPerFeed { get; set; }
 
         /// <summary>
         /// Enable processing of RSS feeds.
         /// </summary>
-        [JsonProperty("rss_processing_enabled")]
+        [JsonPropertyName("rss_processing_enabled")]
         public bool? RssProcessingEnabled { get; set; }
 
         /// <summary>
         /// Enable auto-downloading of torrents from the RSS feeds.
         /// </summary>
-        [JsonProperty("rss_auto_downloading_enabled")]
+        [JsonPropertyName("rss_auto_downloading_enabled")]
         public bool? RssAutoDownloadingEnabled { get; set; }
 
         /// <summary>
         /// Enables downloading REPACK/PROPER episodes.
         /// </summary>
-        [JsonProperty("rss_download_repack_proper_episodes")]
+        [JsonPropertyName("rss_download_repack_proper_episodes")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.5.1")]
         public bool? RssDownloadRepackProperEpisodes { get; set; }
 
         /// <summary>
         /// Smart episode filters.
         /// </summary>
-        [JsonProperty("rss_smart_episode_filters")]
+        [JsonPropertyName("rss_smart_episode_filters")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.5.1")]
-        [JsonConverter(typeof(SeparatedStringToListConverter), "\n")]
+        [SeparatedStringToList("\n")]
         public IList<string> RssSmartEpisodeFilters { get; set; }
 
         /// <summary>
         /// True if additional trackers are enabled.
         /// </summary>
-        [JsonProperty("add_trackers_enabled")]
+        [JsonPropertyName("add_trackers_enabled")]
         public bool? AdditionalTrackersEnabled { get; set; }
 
         /// <summary>
         /// The list of addional trackers.
         /// </summary>
-        [JsonProperty("add_trackers")]
-        [JsonConverter(typeof(SeparatedStringToListConverter), "\n")]
+        [JsonPropertyName("add_trackers")]
+        [SeparatedStringToList("\n")]
         public IList<string> AdditinalTrackers { get; set; }
 
         /// <summary>
         /// The list of banned IP addresses.
         /// </summary>
-        [JsonProperty("banned_IPs")]
-        [JsonConverter(typeof(SeparatedStringToListConverter), "\n")]
+        [JsonPropertyName("banned_IPs")]
+        [SeparatedStringToList("\n")]
         public IList<string> BannedIpAddresses { get; set; }
 
         /// <summary>
         /// Bittorrent protocol.
         /// </summary>
-        [JsonProperty("bittorrent_protocol")]
+        [JsonPropertyName("bittorrent_protocol")]
         public BittorrentProtocol? BittorrentProtocol { get; set; }
 
         /* API 2.2.0 */
@@ -738,7 +744,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if a subfolder should be created when adding a torrent
         /// </summary>
-        [JsonProperty("create_subfolder_enabled")]
+        [JsonPropertyName("create_subfolder_enabled")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         [Deprecated("2.7.0")]
         public bool? CreateTorrentSubfolder { get; set; }
@@ -746,21 +752,34 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if torrents should be added in a Paused state
         /// </summary>
-        [JsonProperty("start_paused_enabled")]
+        [JsonPropertyName("start_paused_enabled")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public bool? AddTorrentPaused { get; set; }
+
+        // The name of start_paused_enabled since qBittorrent 5
+        [JsonPropertyName(AddTorrentStoppedPropertyName)]
+        [JsonInclude]
+        private bool? AddTorrentStopped
+        {
+            get => AddTorrentPaused;
+            set
+            {
+                if (value != null)
+                    AddTorrentPaused = value;
+            }
+        }
 
         /// <summary>
         /// 
         /// </summary>
-        [JsonProperty("auto_delete_mode")]
+        [JsonPropertyName("auto_delete_mode")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public TorrentFileAutoDeleteMode? TorrentFileAutoDeleteMode { get; set; }
 
         /// <summary>
         /// True if Automatic Torrent Management is enabled by default
         /// </summary>
-        [JsonProperty("auto_tmm_enabled")]
+        [JsonPropertyName("auto_tmm_enabled")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? AutoTMMEnabledByDefault { get; set; }
@@ -768,7 +787,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if torrent should be relocated when its category changes
         /// </summary>
-        [JsonProperty("torrent_changed_tmm_enabled")]
+        [JsonPropertyName("torrent_changed_tmm_enabled")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? AutoTMMRetainedWhenCategoryChanges { get; set; }
@@ -776,7 +795,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if torrent should be relocated when the default save path changes
         /// </summary>
-        [JsonProperty("save_path_changed_tmm_enabled")]
+        [JsonPropertyName("save_path_changed_tmm_enabled")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? AutoTMMRetainedWhenDefaultSavePathChanges { get; set; }
@@ -785,7 +804,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if torrent should be relocated when its category's save path changes
         /// </summary>
-        [JsonProperty("category_changed_tmm_enabled")]
+        [JsonPropertyName("category_changed_tmm_enabled")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? AutoTMMRetainedWhenCategorySavePathChanges { get; set; }
@@ -793,14 +812,14 @@ namespace QBittorrent.Client
         /// <summary>
         /// E-mail where notifications should originate from
         /// </summary>
-        [JsonProperty("mail_notification_sender")]
+        [JsonPropertyName("mail_notification_sender")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public string MailNotificationSender { get; set; }
 
         /// <summary>
         /// True if <see cref="DownloadLimit" /> and <seealso cref="UploadLimit"/> should be applied to peers on the LAN
         /// </summary>
-        [JsonProperty("limit_lan_peers")]
+        [JsonPropertyName("limit_lan_peers")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         public bool? LimitLAN { get; set; }
@@ -808,28 +827,28 @@ namespace QBittorrent.Client
         /// <summary>
         /// Download rate in KiB/s for a torrent to be considered "slow"
         /// </summary>
-        [JsonProperty("slow_torrent_dl_rate_threshold")]
+        [JsonPropertyName("slow_torrent_dl_rate_threshold")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public int? SlowTorrentDownloadRateThreshold { get; set; }
 
         /// <summary>
         /// Upload rate in KiB/s for a torrent to be considered "slow"
         /// </summary>
-        [JsonProperty("slow_torrent_ul_rate_threshold")]
+        [JsonPropertyName("slow_torrent_ul_rate_threshold")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public int? SlowTorrentUploadRateThreshold { get; set; }
 
         /// <summary>
         /// Time in seconds a torrent should be inactive before considered "slow"
         /// </summary>
-        [JsonProperty("slow_torrent_inactive_timer")]
+        [JsonPropertyName("slow_torrent_inactive_timer")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public int? SlowTorrentInactiveTime { get; set; }
 
         /// <summary>
         /// True if an alternative WebUI should be used
         /// </summary>
-        [JsonProperty("alternative_webui_enabled")]
+        [JsonPropertyName("alternative_webui_enabled")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public bool? AlternativeWebUIEnabled { get; set; }
@@ -837,7 +856,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// File path to the alternative WebUI
         /// </summary>
-        [JsonProperty("alternative_webui_path")]
+        [JsonPropertyName("alternative_webui_path")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public string AlternativeWebUIPath { get; set; }
@@ -845,7 +864,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// True if WebUI host header validation is enabled
         /// </summary>
-        [JsonProperty("web_ui_host_header_validation_enabled")]
+        [JsonPropertyName("web_ui_host_header_validation_enabled")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2")]
         public bool? WebUIHostHeaderValidation { get; set; }
@@ -855,7 +874,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// SSL key file path on the server.
         /// </summary>
-        [JsonProperty("web_ui_https_key_path")]
+        [JsonPropertyName("web_ui_https_key_path")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public string WebUISslKeyPath { get; set; }
@@ -863,7 +882,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// SSL certificate file path on the server.
         /// </summary>
-        [JsonProperty("web_ui_https_cert_path")]
+        [JsonPropertyName("web_ui_https_cert_path")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public string WebUISslCertificatePath { get; set; }
@@ -871,7 +890,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// Web UI session timeout in seconds
         /// </summary>
-        [JsonProperty("web_ui_session_timeout")]
+        [JsonPropertyName("web_ui_session_timeout")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? WebUISessionTimeout { get; set; }
@@ -881,21 +900,21 @@ namespace QBittorrent.Client
         /// On multi-nic systems (e.g. device has an ethernet port and wifi)
         /// you may limit which interface should be used to send and transmit data.
         /// </summary>
-        [JsonProperty("current_network_interface")]
+        [JsonPropertyName("current_network_interface")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public string CurrentNetworkInterface { get; set; }
 
         /// <summary>
         /// Current network interface address
         /// </summary>
-        [JsonProperty("current_interface_address")]
+        [JsonPropertyName("current_interface_address")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public string CurrentInterfaceAddress { get; set; }
 
         /// <summary>
         /// Allows qBittorrent to listen on IPv6 address in addition to the old, standard IPv4.
         /// </summary>
-        [JsonProperty("listen_on_ipv6_address")]
+        [JsonPropertyName("listen_on_ipv6_address")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         [Deprecated("2.4")]
         public bool? ListenOnIPv6Address { get; set; }
@@ -903,21 +922,21 @@ namespace QBittorrent.Client
         /// <summary>
         /// Duration in minutes on which the resume data is saved to the disk.
         /// </summary>
-        [JsonProperty("save_resume_data_interval")]
+        [JsonPropertyName("save_resume_data_interval")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? SaveResumeDataInterval { get; set; }
 
         /// <summary>
         /// When enabled, after the torrent is completely downloaded a recheck operation is performed on the torrent.
         /// </summary>
-        [JsonProperty("recheck_completed_torrents")]
+        [JsonPropertyName("recheck_completed_torrents")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public bool? RecheckCompletedTorrents { get; set; }
 
         /// <summary>
         /// When enabled, qBittorrent tries to lookup the originating country of each peer using GeoIP database.
         /// </summary>
-        [JsonProperty("resolve_peer_countries")]
+        [JsonPropertyName("resolve_peer_countries")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public bool? ResolvePeerCountries { get; set; }
 
@@ -931,7 +950,7 @@ namespace QBittorrent.Client
         /// So for example, if your CPU is 4c/4t or 2c/4t, set this to 16, if your CPU is 4c/8t or 8c/8t set this to 32, etc.
         /// It is unlikely that setting this any higher than this will bring a performance benefit.
         /// </remarks>
-        [JsonProperty("async_io_threads")]
+        [JsonPropertyName("async_io_threads")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentAsynchronousIOThreads { get; set; }
@@ -945,14 +964,14 @@ namespace QBittorrent.Client
         /// Deferring the closing of the files will be the difference between a usable system and a completely hogged down system.
         /// Most operating systems also has a limit on the total number of file descriptors a process may have open.
         /// </remarks>
-        [JsonProperty("file_pool_size")]
+        [JsonPropertyName("file_pool_size")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentFilePoolSize { get; set; }
 
         /// <summary>
         /// The amount of memory (in MiB) to use when checking torrents. Higher numbers give faster rechecks but use more memory.
         /// </summary>
-        [JsonProperty("checking_memory_use")]
+        [JsonPropertyName("checking_memory_use")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentOutstandingMemoryWhenCheckingTorrent { get; set; }
 
@@ -961,7 +980,7 @@ namespace QBittorrent.Client
         /// If set to <c>0</c>, no data will be kept in RAM and instead it will be immediately written to disk (you might see performance impact.)
         /// </summary>
         /// <seealso cref="LibtorrentDiskCacheExpiryInterval"/>
-        [JsonProperty("disk_cache")]
+        [JsonPropertyName("disk_cache")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentDiskCache { get; set; }
 
@@ -969,7 +988,7 @@ namespace QBittorrent.Client
         /// The number of seconds from the last cached write to a piece in the write cache, to when it's forcefully flushed to disk.
         /// </summary>
         /// <seealso cref="LibtorrentDiskCache"/>
-        [JsonProperty("disk_cache_ttl")]
+        [JsonPropertyName("disk_cache_ttl")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentDiskCacheExpiryInterval { get; set; }
 
@@ -982,7 +1001,7 @@ namespace QBittorrent.Client
         /// or if you want to prevent qbittorrent from potentially evicting all other processes' cache
         /// (which may result in lower perceived system responsiveness).
         /// </remarks>
-        [JsonProperty("enable_os_cache")]
+        [JsonPropertyName("enable_os_cache")]
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3", MaxVersion = "2.8.19")]
         public bool? LibtorrentUseOSCache { get; set; }
@@ -993,7 +1012,7 @@ namespace QBittorrent.Client
         /// <remarks>
         /// Only used where writev/readv cannot be used, and will use more RAM but may improve performance.
         /// </remarks>
-        [JsonProperty("enable_coalesce_read_write")]
+        [JsonPropertyName("enable_coalesce_read_write")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public bool? LibtorrentCoalesceReadsAndWrites { get; set; }
 
@@ -1003,7 +1022,7 @@ namespace QBittorrent.Client
         /// <remarks>
         /// This is an attempt to achieve better disk I/O throughput by downloading larger extents of bytes, for torrents with small piece sizes.
         /// </remarks>
-        [JsonProperty("enable_piece_extent_affinity")]
+        [JsonPropertyName("enable_piece_extent_affinity")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.4.1")]
         public bool? LibtorrentPieceExtentAffinity { get; set; }
 
@@ -1011,7 +1030,7 @@ namespace QBittorrent.Client
         /// Controls whether or not libtorrent will send out suggest messages to create a bias of its peers to request certain pieces.
         /// If enabled, libtorrent will send out suggest messages for the most recent pieces that are in the read cache.
         /// </summary>
-        [JsonProperty("enable_upload_suggestions")]
+        [JsonPropertyName("enable_upload_suggestions")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public bool? LibtorrentSendUploadPieceSuggestions { get; set; }
 
@@ -1025,7 +1044,7 @@ namespace QBittorrent.Client
         /// </remarks>
         /// <seealso cref="LibtorrentSendBufferLowWatermark"/>
         /// <seealso cref="LibtorrentSendBufferWatermarkFactor"/>
-        [JsonProperty("send_buffer_watermark")]
+        [JsonPropertyName("send_buffer_watermark")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentSendBufferWatermark { get; set; }
 
@@ -1043,7 +1062,7 @@ namespace QBittorrent.Client
         /// </remarks>
         /// <seealso cref="LibtorrentSendBufferWatermark"/>
         /// <seealso cref="LibtorrentSendBufferWatermarkFactor"/>
-        [JsonProperty("send_buffer_low_watermark")]
+        [JsonPropertyName("send_buffer_low_watermark")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentSendBufferLowWatermark { get; set; }
 
@@ -1059,7 +1078,7 @@ namespace QBittorrent.Client
         /// </remarks>
         /// <seealso cref="LibtorrentSendBufferWatermark"/>
         /// <seealso cref="LibtorrentSendBufferLowWatermark"/>
-        [JsonProperty("send_buffer_watermark_factor")]
+        [JsonPropertyName("send_buffer_watermark_factor")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentSendBufferWatermarkFactor { get; set; }
 
@@ -1071,7 +1090,7 @@ namespace QBittorrent.Client
         /// If this is a high performance server which expects to receive a lot of connections,
         /// or used in a simulator or test, it might make sense to raise this number.
         /// </remarks>
-        [JsonProperty("socket_backlog_size")]
+        [JsonPropertyName("socket_backlog_size")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentSocketBacklogSize { get; set; }
 
@@ -1096,7 +1115,7 @@ namespace QBittorrent.Client
         /// </para>
         /// </remarks>
         /// <seealso cref="LibtorrentOutgoingPortsMax"/>
-        [JsonProperty("outgoing_ports_min")]
+        [JsonPropertyName("outgoing_ports_min")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentOutgoingPortsMin { get; set; }
 
@@ -1120,7 +1139,7 @@ namespace QBittorrent.Client
         /// </para>
         /// </remarks>
         /// <seealso cref="LibtorrentOutgoingPortsMin"/>
-        [JsonProperty("outgoing_ports_max")]
+        [JsonPropertyName("outgoing_ports_max")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentOutgoingPortsMax { get; set; }
 
@@ -1138,7 +1157,7 @@ namespace QBittorrent.Client
         /// and rate limits all TCP connections to their proportional share based on how many of the connections are TCP.
         /// This works best if uTP connections are not rate limited by the global rate limiter.
         /// </remarks>
-        [JsonProperty("utp_tcp_mixed_mode")]
+        [JsonPropertyName("utp_tcp_mixed_mode")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public UtpTcpMixedModeAlgorithm? LibtorrentUtpTcpMixedModeAlgorithm { get; set; }
 
@@ -1150,7 +1169,7 @@ namespace QBittorrent.Client
         /// It may be useful to allow such connections in cases where simulations are run on the same machine,
         /// and all peers in a swarm has the same IP address.
         /// </remarks>
-        [JsonProperty("enable_multi_connections_from_same_ip")]
+        [JsonPropertyName("enable_multi_connections_from_same_ip")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public bool? LibtorrentAllowMultipleConnectionsFromSameIp { get; set; }
 
@@ -1161,7 +1180,7 @@ namespace QBittorrent.Client
         /// It is not a fully-featured bittorrent tracker, but it supports the basic features need for sharing a few torrents.
         /// </remarks>
         /// <seealso cref="LibtorrentEmbeddedTrackerPort"/>
-        [JsonProperty("enable_embedded_tracker")]
+        [JsonPropertyName("enable_embedded_tracker")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public bool? LibtorrentEnableEmbeddedTracker { get; set; }
 
@@ -1169,21 +1188,21 @@ namespace QBittorrent.Client
         /// The port the embedded tracker should listen on.
         /// </summary>
         /// <seealso cref="LibtorrentEnableEmbeddedTracker"/>
-        [JsonProperty("embedded_tracker_port")]
+        [JsonPropertyName("embedded_tracker_port")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public int? LibtorrentEmbeddedTrackerPort { get; set; }
 
         /// <summary>
         /// Specifies which algorithm to use to determine which peers to unchoke.
         /// </summary>
-        [JsonProperty("upload_slots_behavior")]
+        [JsonPropertyName("upload_slots_behavior")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public ChokingAlgorithm? LibtorrentUploadSlotsBehavior { get; set; }
 
         /// <summary>
         /// Controls the seeding unchoke behavior.
         /// </summary>
-        [JsonProperty("upload_choking_algorithm")]
+        [JsonPropertyName("upload_choking_algorithm")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public SeedChokingAlgorithm? LibtorrentUploadChokingAlgorithm { get; set; }
 
@@ -1194,7 +1213,7 @@ namespace QBittorrent.Client
         /// When this is set to <see langword="true"/>, a piece has to have been forwarded to a third peer before another one is handed out.
         /// This is the traditional definition of super seeding.
         /// </remarks>
-        [JsonProperty("enable_super_seeding")]
+        [JsonPropertyName("enable_super_seeding")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         [Deprecated("2.5")]
         public bool? LibtorrentStrictSuperSeeding { get; set; }
@@ -1208,7 +1227,7 @@ namespace QBittorrent.Client
         /// Otherwise the behavior is as defined by the multi tracker specification.
         /// </remarks>
         /// <seealso cref="LibtorrentAnnounceToAllTiers"/>
-        [JsonProperty("announce_to_all_trackers")]
+        [JsonPropertyName("announce_to_all_trackers")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public bool? LibtorrentAnnounceToAllTrackers { get; set; }
 
@@ -1220,14 +1239,14 @@ namespace QBittorrent.Client
         /// This is the uTorrent behavior. This is false by default in order to comply with the multi-tracker specification.
         /// </remarks>
         /// <seealso cref="LibtorrentAnnounceToAllTrackers"/>
-        [JsonProperty("announce_to_all_tiers")]
+        [JsonPropertyName("announce_to_all_tiers")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public bool? LibtorrentAnnounceToAllTiers { get; set; }
 
         /// <summary>
         /// The ip address passed along to trackers. If this value is blank, the parameter will be omitted.
         /// </summary>
-        [JsonProperty("announce_ip")]
+        [JsonPropertyName("announce_ip")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.3")]
         public string LibtorrentAnnounceIp { get; set; }
 
@@ -1237,75 +1256,410 @@ namespace QBittorrent.Client
         /// <remarks>
         /// This is usually shorter, to make the client quit faster. If the value is set to 0, the connections to trackers with the stopped event are suppressed.
         /// </remarks>
-        [JsonProperty("stop_tracker_timeout")]
+        [JsonPropertyName("stop_tracker_timeout")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.4.1")]
         public int? LibtorrentStopTrackerTimeout { get; set; }
 
         /// <summary>
         /// Limits the number of concurrent HTTP tracker announces. Once the limit is hit, tracker requests are queued and issued when an outstanding announce completes.
         /// </summary>
-        [JsonProperty("max_concurrent_http_announces")]
+        [JsonPropertyName("max_concurrent_http_announces")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.6")]
         public int? LibtorrentMaxConcurrentHttpAnnounces { get; set; }
 
         /// <summary>
         /// The default torrent content layout.
         /// </summary>
-        [JsonProperty("torrent_content_layout")]
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonPropertyName("torrent_content_layout")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.7")]
         public TorrentContentLayout? TorrentContentLayout { get; set; }
 
-        /* Other */
+        /* Behaviour */
 
         /// <summary>
-        /// Additional properties not handled by this library.
+        /// True if the log file is enabled.
         /// </summary>
-        [JsonExtensionData]
-        public IDictionary<string, JToken> AdditionalData { get; set; }
+        [JsonPropertyName("file_log_enabled")]
+        public bool? LogEnabled { get; set; }
 
-        [OnSerializing]
-        internal void OnSerializingMethod(StreamingContext context)
-        {
-            if (WebUIPassword != null)
-            {
-                AdditionalData ??= new Dictionary<string, JToken>();
-                AdditionalData[WebUiPasswordPropertyName] = WebUIPassword;
-            }
+        /// <summary>
+        /// Folder of the log file.
+        /// </summary>
+        [JsonPropertyName("file_log_path")]
+        public string LogPath { get; set; }
 
-            if (AddTorrentPaused != null)
-            {
-                AdditionalData ??= new Dictionary<string, JToken>();
-                AdditionalData[AddTorrentStoppedPropertyName] = AddTorrentPaused;
-            }
-        }
+        /// <summary>
+        /// True if the log file is backed up when it reaches <see cref="LogMaxSize"/>.
+        /// </summary>
+        [JsonPropertyName("file_log_backup_enabled")]
+        public bool? LogBackupEnabled { get; set; }
 
-        [OnDeserialized]
-        internal void OnDeserializedMethod(StreamingContext context)
-        {
-            if (AdditionalData == null)
-                return;
+        /// <summary>
+        /// Size of the log file before it's backed up, in KiB.
+        /// </summary>
+        [JsonPropertyName("file_log_max_size")]
+        public int? LogMaxSize { get; set; }
 
-            if (AdditionalData.TryGetValue(WebUiPasswordPropertyName, out var hashToken)
-                && hashToken.Type == JTokenType.String)
-            {
-                WebUIPasswordHash = hashToken.Value<string>();
-                AdditionalData.Remove(WebUiPasswordPropertyName);
-            }
+        /// <summary>
+        /// True if log backups older than <see cref="LogAge"/> are deleted.
+        /// </summary>
+        [JsonPropertyName("file_log_delete_old")]
+        public bool? LogDeleteOld { get; set; }
 
-            if (AdditionalData.TryGetValue(AddTorrentStoppedPropertyName, out var addTorrentStopped)
-                && addTorrentStopped.Type == JTokenType.Boolean)
-            {
-                AddTorrentPaused = addTorrentStopped.Value<bool>();
-                AdditionalData.Remove(AddTorrentStoppedPropertyName);
-            }
-        }
+        /// <summary>
+        /// Age of log backups to delete, in <see cref="LogAgeType"/> units.
+        /// </summary>
+        [JsonPropertyName("file_log_age")]
+        public int? LogAge { get; set; }
+
+        /// <summary>
+        /// Unit of <see cref="LogAge"/>: 0 days, 1 months, 2 years.
+        /// </summary>
+        [JsonPropertyName("file_log_age_type")]
+        public int? LogAgeType { get; set; }
+
+        /* Downloads */
+
+        /// <summary>
+        /// True if new torrents are added to the top of the queue.
+        /// </summary>
+        [JsonPropertyName("add_to_top_of_queue")]
+        public bool? AddToTopOfQueue { get; set; }
+
+        /// <summary>
+        /// When new torrents stop: <c>None</c>, <c>MetadataReceived</c> or <c>FilesChecked</c>.
+        /// </summary>
+        [JsonPropertyName("torrent_stop_condition")]
+        public string TorrentStopCondition { get; set; }
+
+        /// <summary>
+        /// True if trackers are merged into an existing torrent when it's added again.
+        /// </summary>
+        [JsonPropertyName("merge_trackers")]
+        public bool? MergeTrackers { get; set; }
+
+        /// <summary>
+        /// True if files that aren't downloaded go to an <c>.unwanted</c> folder.
+        /// </summary>
+        [JsonPropertyName("use_unwanted_folder")]
+        public bool? UseUnwantedFolder { get; set; }
+
+        /// <summary>
+        /// True if category paths are used for torrents in manual management mode.
+        /// </summary>
+        [JsonPropertyName("use_category_paths_in_manual_mode")]
+        public bool? UseCategoryPathsInManualMode { get; set; }
+
+        /// <summary>
+        /// True if subcategories are enabled.
+        /// </summary>
+        [JsonPropertyName("use_subcategories")]
+        public bool? UseSubcategories { get; set; }
+
+        /// <summary>
+        /// True if files matching <see cref="ExcludedFileNames"/> aren't downloaded.
+        /// </summary>
+        [JsonPropertyName("excluded_file_names_enabled")]
+        public bool? ExcludedFileNamesEnabled { get; set; }
+
+        /// <summary>
+        /// Patterns of file names not to download, one per line.
+        /// </summary>
+        [JsonPropertyName("excluded_file_names")]
+        public string ExcludedFileNames { get; set; }
+
+        /// <summary>
+        /// True if <see cref="AutorunOnTorrentAddedProgram"/> runs when a torrent is added.
+        /// </summary>
+        [JsonPropertyName("autorun_on_torrent_added_enabled")]
+        public bool? AutorunOnTorrentAddedEnabled { get; set; }
+
+        /// <summary>
+        /// Program to run when a torrent is added.
+        /// </summary>
+        [JsonPropertyName("autorun_on_torrent_added_program")]
+        public string AutorunOnTorrentAddedProgram { get; set; }
+
+        /* BitTorrent */
+
+        /// <summary>
+        /// True if trackers from <see cref="TrackerListUrl"/> are added to new torrents.
+        /// </summary>
+        [JsonPropertyName("add_trackers_from_url_enabled")]
+        public bool? TrackerListEnabled { get; set; }
+
+        /// <summary>
+        /// URL of a tracker list to add to new torrents.
+        /// </summary>
+        [JsonPropertyName("add_trackers_url")]
+        public string TrackerListUrl { get; set; }
+
+        /// <summary>
+        /// Trackers last fetched from <see cref="TrackerListUrl"/>.
+        /// </summary>
+        [JsonPropertyName("add_trackers_url_list")]
+        public string TrackerListContent { get; set; }
+
+        /* RSS */
+
+        /// <summary>
+        /// Delay between fetching RSS feeds of the same site, in seconds.
+        /// </summary>
+        [JsonPropertyName("rss_fetch_delay")]
+        public int? RssFetchDelay { get; set; }
+
+        /* WebUI */
+
+        /// <summary>
+        /// True if the WebUI is behind a reverse proxy.
+        /// </summary>
+        [JsonPropertyName("web_ui_reverse_proxy_enabled")]
+        public bool? ReverseProxyEnabled { get; set; }
+
+        /// <summary>
+        /// Trusted reverse proxies.
+        /// </summary>
+        [JsonPropertyName("web_ui_reverse_proxies_list")]
+        public string ReverseProxiesList { get; set; }
+
+        /// <summary>
+        /// The WebUI API key, empty when there's none.
+        /// </summary>
+        [JsonPropertyName("web_ui_api_key")]
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
+        public string WebUIApiKey { get; set; }
+
+        /* Advanced */
+
+        /// <summary>
+        /// How resume data is stored: <c>Legacy</c> or <c>SQLite</c>.
+        /// </summary>
+        [JsonPropertyName("resume_data_storage_type")]
+        public string ResumeDataStorageType { get; set; }
+
+        /// <summary>
+        /// What removing a torrent with its content does: <c>Delete</c> or <c>MoveToTrash</c>.
+        /// </summary>
+        [JsonPropertyName("torrent_content_remove_option")]
+        public string TorrentContentRemoveOption { get; set; }
+
+        /// <summary>
+        /// Physical memory usage limit, in MiB.
+        /// </summary>
+        [JsonPropertyName("memory_working_set_limit")]
+        public int? MemoryWorkingSetLimit { get; set; }
+
+        /// <summary>
+        /// Interval of saving statistics, in minutes.
+        /// </summary>
+        [JsonPropertyName("save_statistics_interval")]
+        public int? SaveStatisticsInterval { get; set; }
+
+        /// <summary>
+        /// Size limit of .torrent files, in bytes.
+        /// </summary>
+        [JsonPropertyName("torrent_file_size_limit")]
+        public long? TorrentFileSizeLimit { get; set; }
+
+        /// <summary>
+        /// True if rechecking a torrent asks for confirmation.
+        /// </summary>
+        [JsonPropertyName("confirm_torrent_recheck")]
+        public bool? ConfirmTorrentRecheck { get; set; }
+
+        /// <summary>
+        /// Name of this qBittorrent instance.
+        /// </summary>
+        [JsonPropertyName("app_instance_name")]
+        public string AppInstanceName { get; set; }
+
+        /// <summary>
+        /// Refresh interval of the UI, in milliseconds.
+        /// </summary>
+        [JsonPropertyName("refresh_interval")]
+        public int? RefreshInterval { get; set; }
+
+        /// <summary>
+        /// True if trackers are reannounced to when the IP or port changes.
+        /// </summary>
+        [JsonPropertyName("reannounce_when_address_changed")]
+        public bool? ReannounceWhenAddressChanged { get; set; }
+
+        /// <summary>
+        /// True if the embedded tracker's port is forwarded.
+        /// </summary>
+        [JsonPropertyName("embedded_tracker_port_forwarding")]
+        public bool? EmbeddedTrackerPortForwarding { get; set; }
+
+        /// <summary>
+        /// True if SSL errors are ignored.
+        /// </summary>
+        [JsonPropertyName("ignore_ssl_errors")]
+        public bool? IgnoreSslErrors { get; set; }
+
+        /// <summary>
+        /// Path of the Python executable for search plugins.
+        /// </summary>
+        [JsonPropertyName("python_executable_path")]
+        public string PythonExecutablePath { get; set; }
+
+        /// <summary>
+        /// Disk IO read mode.
+        /// </summary>
+        [JsonPropertyName("disk_io_read_mode")]
+        public int? LibtorrentDiskIOReadMode { get; set; }
+
+        /// <summary>
+        /// Disk IO write mode.
+        /// </summary>
+        [JsonPropertyName("disk_io_write_mode")]
+        public int? LibtorrentDiskIOWriteMode { get; set; }
+
+        /// <summary>
+        /// Number of hashing threads.
+        /// </summary>
+        [JsonPropertyName("hashing_threads")]
+        public int? LibtorrentHashingThreads { get; set; }
+
+        /// <summary>
+        /// Disk queue size, in bytes.
+        /// </summary>
+        [JsonPropertyName("disk_queue_size")]
+        public long? LibtorrentDiskQueueSize { get; set; }
+
+        /// <summary>
+        /// Bdecode depth limit.
+        /// </summary>
+        [JsonPropertyName("bdecode_depth_limit")]
+        public int? LibtorrentBdecodeDepthLimit { get; set; }
+
+        /// <summary>
+        /// Bdecode token limit.
+        /// </summary>
+        [JsonPropertyName("bdecode_token_limit")]
+        public int? LibtorrentBdecodeTokenLimit { get; set; }
+
+        /// <summary>
+        /// Socket send buffer size, in bytes.
+        /// </summary>
+        [JsonPropertyName("socket_send_buffer_size")]
+        public int? LibtorrentSocketSendBufferSize { get; set; }
+
+        /// <summary>
+        /// Socket receive buffer size, in bytes.
+        /// </summary>
+        [JsonPropertyName("socket_receive_buffer_size")]
+        public int? LibtorrentSocketReceiveBufferSize { get; set; }
+
+        /// <summary>
+        /// Outgoing connections per second.
+        /// </summary>
+        [JsonPropertyName("connection_speed")]
+        public int? LibtorrentOutgoingConnectionsPerSecond { get; set; }
+
+        /// <summary>
+        /// UPnP lease duration, in seconds, 0 for permanent.
+        /// </summary>
+        [JsonPropertyName("upnp_lease_duration")]
+        public int? LibtorrentUpnpLeaseDuration { get; set; }
+
+        /// <summary>
+        /// Type of service (ToS) for connections to peers.
+        /// </summary>
+        [JsonPropertyName("peer_tos")]
+        public int? LibtorrentPeerTos { get; set; }
+
+        /// <summary>
+        /// True if internationalized domain names are supported.
+        /// </summary>
+        [JsonPropertyName("idn_support_enabled")]
+        public bool? LibtorrentIdnSupportEnabled { get; set; }
+
+        /// <summary>
+        /// True if HTTPS tracker certificates are validated.
+        /// </summary>
+        [JsonPropertyName("validate_https_tracker_certificate")]
+        public bool? LibtorrentValidateHttpsTrackerCertificate { get; set; }
+
+        /// <summary>
+        /// True if server-side request forgery mitigation is enabled.
+        /// </summary>
+        [JsonPropertyName("ssrf_mitigation")]
+        public bool? LibtorrentSsrfMitigation { get; set; }
+
+        /// <summary>
+        /// True if peers on privileged ports aren't connected to.
+        /// </summary>
+        [JsonPropertyName("block_peers_on_privileged_ports")]
+        public bool? LibtorrentBlockPeersOnPrivilegedPorts { get; set; }
+
+        /// <summary>
+        /// Port announced to trackers, 0 for the listening port.
+        /// </summary>
+        [JsonPropertyName("announce_port")]
+        public int? LibtorrentAnnouncePort { get; set; }
+
+        /// <summary>
+        /// Percentage of peers disconnected at each turnover.
+        /// </summary>
+        [JsonPropertyName("peer_turnover")]
+        public int? LibtorrentPeerTurnover { get; set; }
+
+        /// <summary>
+        /// Percentage of connected peers above which turnover happens.
+        /// </summary>
+        [JsonPropertyName("peer_turnover_cutoff")]
+        public int? LibtorrentPeerTurnoverCutoff { get; set; }
+
+        /// <summary>
+        /// Interval of peer turnover, in seconds.
+        /// </summary>
+        [JsonPropertyName("peer_turnover_interval")]
+        public int? LibtorrentPeerTurnoverInterval { get; set; }
+
+        /// <summary>
+        /// Maximum number of outstanding requests to a peer.
+        /// </summary>
+        [JsonPropertyName("request_queue_size")]
+        public int? LibtorrentRequestQueueSize { get; set; }
+
+        /// <summary>
+        /// DHT bootstrap nodes.
+        /// </summary>
+        [JsonPropertyName("dht_bootstrap_nodes")]
+        public string LibtorrentDhtBootstrapNodes { get; set; }
+
+        /// <summary>
+        /// I2P inbound tunnel quantity.
+        /// </summary>
+        [JsonPropertyName("i2p_inbound_quantity")]
+        public int? LibtorrentI2PInboundQuantity { get; set; }
+
+        /// <summary>
+        /// I2P outbound tunnel quantity.
+        /// </summary>
+        [JsonPropertyName("i2p_outbound_quantity")]
+        public int? LibtorrentI2POutboundQuantity { get; set; }
+
+        /// <summary>
+        /// I2P inbound tunnel length.
+        /// </summary>
+        [JsonPropertyName("i2p_inbound_length")]
+        public int? LibtorrentI2PInboundLength { get; set; }
+
+        /// <summary>
+        /// I2P outbound tunnel length.
+        /// </summary>
+        [JsonPropertyName("i2p_outbound_length")]
+        public int? LibtorrentI2POutboundLength { get; set; }
     }
 
     /// <summary>
-    /// JSON converter for the <see cref="ProxyType"/> preference.
+    /// JSON converter for the <see cref="ProxyType"/> preference, which is a number before API v2.9 and a name since.
+    /// Only writes.
     /// </summary>
-    public class ProxyTypeConverter : JsonConverter
+    public class ProxyTypeConverter : JsonConverter<ProxyType?>
     {
         private readonly ApiVersion _apiVersion;
 
@@ -1319,34 +1673,23 @@ namespace QBittorrent.Client
         }
 
         /// <summary>
-        /// Indicates whether this converter can write a type to JSON.
-        /// </summary>
-        /// <param name="type">The type.</param>
-        /// <returns>True if <paramref name="type"/> is nullable <see cref="ProxyType"/>.</returns>
-        public override bool CanConvert(Type type) => type == typeof(ProxyType?);
-
-        /// <summary>
-        /// Indicates whether this converter can read JSON.
-        /// </summary>
-        /// <returns>Always false.</returns>
-        public override bool CanRead => false;
-
-        /// <summary>
         /// Reads a value from JSON.
         /// </summary>
-        /// <exception cref="NotImplementedException">This converter is not capable of reading JSON.</exception>
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        /// <exception cref="NotSupportedException">This converter is not capable of reading JSON.</exception>
+        public override ProxyType? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
         /// Writes a value to JSON.
         /// </summary>
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, ProxyType? value, JsonSerializerOptions options)
         {
-            var proxyType = (ProxyType?)value;
-            writer.WriteValue(_apiVersion < new ApiVersion(2, 9) ? (int?)proxyType : proxyType?.ToString().ToUpper());
+            if (_apiVersion < new ApiVersion(2, 9))
+                writer.WriteNumberValue((int)value!.Value);
+            else
+                writer.WriteStringValue(value!.Value.ToString().ToUpper());
         }
     }
 }

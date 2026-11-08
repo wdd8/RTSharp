@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Runtime.Serialization;
-using JetBrains.Annotations;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client
 {
@@ -14,29 +10,26 @@ namespace QBittorrent.Client
         /// <summary>
         /// Category name.
         /// </summary>
-        [JsonProperty("name")]
+        [JsonPropertyName("name")]
         public string Name { get; set; }
 
         /// <summary>
         /// Category save path.
         /// </summary>
-        [JsonProperty("savePath")]
+        [JsonPropertyName("savePath")]
         public string SavePath { get; set; }
 
-        /// <summary>
-        /// Additional properties not handled by this library.
-        /// </summary>
-        [JsonExtensionData]
-        public IDictionary<string, JToken> AdditionalData { get; set; }
-
-        [OnDeserialized]
-        [UsedImplicitly]
-        private void OnDeserialized(StreamingContext context)
+        // Older versions name the save path "save_path"
+        [JsonPropertyName("save_path")]
+        [JsonInclude]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        private string LegacySavePath
         {
-            if (AdditionalData != null && AdditionalData.TryGetValue("save_path", out JToken savePath) && savePath.Type == JTokenType.String)
+            get => null;
+            set
             {
-                SavePath = savePath.ToObject<string>();
-                AdditionalData = null;
+                if (value != null)
+                    SavePath = value;
             }
         }
     }

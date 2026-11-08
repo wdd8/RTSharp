@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client.Converters;
 
@@ -26,49 +27,24 @@ internal class TorrentStateConverter : JsonConverter<TorrentState>
         StringToTorrentState.Add("stoppedDL", TorrentState.PausedDownload);
     }
 
-    public override void WriteJson(JsonWriter writer, TorrentState value, JsonSerializer serializer)
+    public override void Write(Utf8JsonWriter writer, TorrentState value, JsonSerializerOptions options)
     {
-        writer.WriteValue(TorrentStateToString.TryGetValue(value, out var s) ? s : value.ToString());
+        writer.WriteStringValue(TorrentStateToString.TryGetValue(value, out var s) ? s : value.ToString());
     }
 
-    public override TorrentState ReadJson(JsonReader reader, Type objectType, TorrentState existingValue, bool hasExistingValue,
-        JsonSerializer serializer)
+    public override TorrentState Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType != JsonToken.String)
-            throw new JsonSerializationException($"Unexpected token {reader.TokenType}.");
-            
-        var stringValue = (reader.Value as string)!.ToUpperInvariant();
+        if (reader.TokenType != JsonTokenType.String)
+            throw new JsonException($"Unexpected token {reader.TokenType}.");
+
+        var stringValue = reader.GetString()!;
         if (StringToTorrentState.TryGetValue(stringValue, out var torrentState))
             return torrentState;
 
+        stringValue = stringValue.ToUpperInvariant();
         if (Enum.TryParse(stringValue, out torrentState))
             return torrentState;
 
-        throw new JsonSerializationException($"Unexpected torrent state \"{stringValue}\".");
-
-        //return stringValue switch
-        //{
-        //    "UNKNOWN" => TorrentState.Unknown,
-        //    "ERROR" => TorrentState.Error,
-        //    "PAUSEDUP" or "STOPPEDUP" => TorrentState.PausedUpload,
-        //    "PAUSEDDL" or "STOPPEDDL" => TorrentState.PausedDownload,
-        //    "QUEUEDUP" => TorrentState.QueuedUpload,
-        //    "QUEUEDDL" => TorrentState.QueuedDownload,
-        //    "UPLOADING" => TorrentState.Uploading,
-        //    "STALLEDUP" => TorrentState.StalledUpload,
-        //    "CHECKINGUP" => TorrentState.CheckingUpload,
-        //    "CHECKINGDL" => TorrentState.CheckingDownload,
-        //    "DOWNLOADING" => TorrentState.Downloading,
-        //    "STALLEDDL" => TorrentState.StalledDownload,
-        //    "METADL" => TorrentState.FetchingMetadata,
-        //    "FORCEDMETADL" => TorrentState.ForcedFetchingMetadata,
-        //    "FORCEDUP" => TorrentState.ForcedUpload,
-        //    "FORCEDDL" => TorrentState.ForcedDownload,
-        //    "MISSINGFILES" => TorrentState.MissingFiles,
-        //    "ALLOCATING" => TorrentState.Allocating,
-        //    "QUEUEDFORCHECKING" => TorrentState.QueuedForChecking,
-        //    "CHECKINGRESUMEDATA" => TorrentState.CheckingResumeData,
-        //    "MOVING" => TorrentState.Moving
-        //};
+        throw new JsonException($"Unexpected torrent state \"{stringValue}\".");
     }
 }

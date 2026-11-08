@@ -50,7 +50,7 @@ namespace RTSharp.Core.Services.Database.TrackerDb
 
         public TrackerInfo? GetTrackerInfo(string Domain) => Cache.GetValueOrDefault(Domain);
 
-        public IEnumerable<TrackerInfo> GetTrackerInfo(IEnumerable<string> Domain) => Domain.Select(Cache.GetValueOrDefault).OfType<TrackerInfo>();
+        public IEnumerable<TrackerInfo> GetTrackerInfo(IEnumerable<string> Domain) => Domain.Distinct().Select(Cache.GetValueOrDefault).OfType<TrackerInfo>();
 
         public async Task ClearImageHashes()
         {

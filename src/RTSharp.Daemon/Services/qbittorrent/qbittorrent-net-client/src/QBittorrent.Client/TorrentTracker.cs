@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
-using JetBrains.Annotations;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using QBittorrent.Client.Converters;
 
 namespace QBittorrent.Client
@@ -27,7 +25,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// Tracker URL
         /// </summary>
-        [JsonProperty("url")]
+        [JsonPropertyName("url")]
         public Uri Url { get; set; }
 
         /// <summary>
@@ -54,14 +52,14 @@ namespace QBittorrent.Client
         /// <summary>
         /// Number of peers for current torrent reported by the tracker
         /// </summary>
-        [JsonProperty("num_peers")]
+        [JsonPropertyName("num_peers")]
         [JsonConverter(typeof(NegativeToNullConverter))]
         public int? Peers { get; set; }
 
         /// <summary>
         /// Number of seeds for current torrent reported by the tracker
         /// </summary>
-        [JsonProperty("num_seeds")]
+        [JsonPropertyName("num_seeds")]
         [JsonConverter(typeof(NegativeToNullConverter))]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public int? Seeds { get; set; }
@@ -69,7 +67,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// Number of leeches for current torrent reported by the tracker
         /// </summary>
-        [JsonProperty("num_leeches")]
+        [JsonPropertyName("num_leeches")]
         [JsonConverter(typeof(NegativeToNullConverter))]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public int? Leeches { get; set; }
@@ -77,7 +75,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// Number of completed downloads for current torrent reported by the tracker
         /// </summary>
-        [JsonProperty("num_downloaded")]
+        [JsonPropertyName("num_downloaded")]
         [JsonConverter(typeof(NegativeToNullConverter))]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public int? CompletedDownloads { get; set; }
@@ -85,46 +83,60 @@ namespace QBittorrent.Client
         /// <summary>
         /// Tracker priority tier. Lower tier trackers are tried before higher tiers
         /// </summary>
-        [JsonProperty("tier")]
+        [JsonPropertyName("tier")]
         [ApiLevel(ApiLevel.V2, MinVersion = "2.2.0")]
         public int? Tier { get; set; }
 
         /// <summary>
         /// Tracker message (there is no way of knowing what this message is - it's up to tracker admins)
         /// </summary>
-        [JsonProperty("msg")]
+        [JsonPropertyName("msg")]
         public string Message { get; set; }
 
+        [JsonPropertyName("status")]
+        [JsonInclude]
+        [JsonConverter(typeof(StatusConverter))]
+        private StatusJson StatusField
+        {
+            get => new(Status, TrackerStatus);
+            set => (Status, TrackerStatus) = (value.Text, value.Status);
+        }
+
+        private readonly record struct StatusJson(string Text, TorrentTrackerStatus? Status);
 
         /// <summary>
-        /// Additional properties not handled by this library.
+        /// Reads the status from a string before API v2.2.0, which may be localized, and from a number since.
         /// </summary>
-        [JsonExtensionData]
-        public IDictionary<string, JToken> AdditionalData { get; set; }
-
-        [OnDeserialized]
-        [UsedImplicitly]
-        private void OnDeserialized(StreamingContext context)
+        private sealed class StatusConverter : JsonConverter<StatusJson>
         {
-            const string statusKey = "status";
-            if (AdditionalData != null &&
-                AdditionalData.TryGetValue(statusKey, out JToken status))
+            public override StatusJson Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                if (status.Type == JTokenType.String)
+                switch (reader.TokenType)
                 {
-                    Status = status.ToObject<string>();
-                    TrackerStatus = StringToStatus(Status);
-                    AdditionalData.Remove(statusKey);
-                }
-                else if (status.Type == JTokenType.Integer)
-                {
-                    TrackerStatus = status.ToObject<TorrentTrackerStatus>();
-                    Status = StatusToString(TrackerStatus);
-                    AdditionalData.Remove(statusKey);
+                    case JsonTokenType.String:
+                        var text = reader.GetString();
+                        return new StatusJson(text, StringToStatus(text));
+                    case JsonTokenType.Number:
+                        var status = (TorrentTrackerStatus)reader.GetInt32();
+                        return new StatusJson(StatusToString(status), status);
+                    case JsonTokenType.Null:
+                        return default;
+                    default:
+                        throw new JsonException($"Unexpected token {reader.TokenType}.");
                 }
             }
+
+            public override void Write(Utf8JsonWriter writer, StatusJson value, JsonSerializerOptions options)
+            {
+                if (value.Status != null)
+                    writer.WriteNumberValue((int)value.Status.Value);
+                else if (value.Text != null)
+                    writer.WriteStringValue(value.Text);
+                else
+                    writer.WriteNullValue();
+            }
         }
-        
+
         private static string StatusToString(TorrentTrackerStatus? status)
         {
             return StatusMap.FirstOrDefault(x => x.Value == status).Key;

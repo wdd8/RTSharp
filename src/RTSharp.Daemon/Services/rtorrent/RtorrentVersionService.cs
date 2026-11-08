@@ -1,5 +1,3 @@
-using Newtonsoft.Json.Linq;
-
 using System.Buffers;
 
 namespace RTSharp.Daemon.Services.rtorrent

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 using QBittorrent.Client.Converters;
 
 namespace QBittorrent.Client
@@ -15,32 +15,32 @@ namespace QBittorrent.Client
         /// <summary>
         /// Gets or sets the ID of the peer.
         /// </summary>
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public int Id { get; set; }
 
         /// <summary>
         /// Gets or sets the IP address of the peer.
         /// </summary>
-        [JsonProperty("ip")]
+        [JsonPropertyName("ip")]
         [JsonConverter(typeof(StringToIpAddressConverter))]
         public IPAddress Address { get; set; }
 
         /// <summary>
         /// Gets or sets the timestamp (milliseconds since epoch).
         /// </summary>
-        [JsonProperty("timestamp")]
+        [JsonPropertyName("timestamp")]
         public long Timestamp { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the peer was blocked.
         /// </summary>
-        [JsonProperty("blocked")]
+        [JsonPropertyName("blocked")]
         public bool Blocked { get; set; }
 
         /// <summary>
         /// Gets or sets the reason of the block.
         /// </summary>
-        [JsonProperty("reason")]
+        [JsonPropertyName("reason")]
         public string Reason { get; set; }
     }
 }

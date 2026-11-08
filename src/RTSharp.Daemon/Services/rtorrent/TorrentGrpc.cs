@@ -18,6 +18,7 @@ using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Utils;
 
 using System.Buffers;
+using System.Buffers.Text;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO.Pipelines;
@@ -208,7 +209,10 @@ namespace RTSharp.Daemon.Services.rtorrent
         private async Task<TorrentsReply> AddTorrents(Dictionary<string, Torrent> Torrents)
         {
             var bencodeParser = new BencodeParser();
-            var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
+            var body = new ArrayBufferWriter<byte>(1024 + Torrents.Values.Sum(x => Base64.GetMaxEncodedToUtf8Length((int)x.Data.Length) + 1024));
+            void append(ReadOnlySpan<char> Text) => Encoding.UTF8.GetBytes(Text, body);
+
+            append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             var ret = new TorrentsReply();
             var hashes = new HashSet<string>();
             var rtsHashes = new List<byte[]>();
@@ -277,50 +281,48 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                 var command = magnetUri == null ? "load.raw" : "load.normal";
 
-                xml.Append("<value><struct><member><name>methodName</name><value><string>" + command + "</string></value></member><member><name>params</name><value><array><data><value><string></string></value>");
+                append("<value><struct><member><name>methodName</name><value><string>" + command + "</string></value></member><member><name>params</name><value><array><data><value><string></string></value>");
 
                 if (magnetUri == null) {
-                    byte[] rawTorrent;
+                    ReadOnlyMemory<byte> rawTorrent = torrent.Data.GetBuffer().AsMemory(0, (int)torrent.Data.Length);
 
                     if (torrent.FastResume) {
                         var fastResumeTorrent = await TryBuildFastResume(bTorrentDict!, torrent.Path);
                         if (fastResumeTorrent != null)
                             rawTorrent = fastResumeTorrent;
-                        else {
+                        else
                             Logger.LogWarning("Fast resume requested but could not be applied for {hash}, adding normally", Convert.ToHexString(v1));
-                            rawTorrent = torrent.Data.ToArray();
-                        }
-                    } else
-                        rawTorrent = torrent.Data.ToArray();
+                    }
 
-                    xml.Append("<value><base64>");
-                    xml.Append(Convert.ToBase64String(rawTorrent));
-                    xml.Append("</base64></value>");
+                    append("<value><base64>");
+                    Base64.EncodeToUtf8(rawTorrent.Span, body.GetSpan(Base64.GetMaxEncodedToUtf8Length(rawTorrent.Length)), out _, out var base64Length);
+                    body.Advance(base64Length);
+                    append("</base64></value>");
                 } else {
                     Logger.LogInformation($"{InstanceKey}: Adding magnet {Convert.ToHexString(v1)}");
 
-                    xml.Append("<value><string>" + XMLUtils.Encode(magnetUri) + "</string></value>");
+                    append("<value><string>" + XMLUtils.Encode(magnetUri) + "</string></value>");
                 }
 
                 if (!String.IsNullOrEmpty(torrent.Filename))
-                    xml.Append("<value><string>d.custom.set=x-filename," + XMLUtils.EncodeWithSpaces(torrent.Filename) + "</string></value>");
+                    append("<value><string>d.custom.set=x-filename," + XMLUtils.EncodeWithSpaces(torrent.Filename) + "</string></value>");
 
                 if (!String.IsNullOrEmpty(torrent.Path))
-                    xml.Append("<value><string>d.directory.set=\"" + XMLUtils.Encode(torrent.Path) + "\"</string></value>");
+                    append("<value><string>d.directory.set=\"" + XMLUtils.Encode(torrent.Path) + "\"</string></value>");
 
                 if (bTorrentDict != null) {
                     var comment = BencodeUtils.GetComment(bTorrentDict);
                     if (!String.IsNullOrEmpty(comment))
-                        xml.Append("<value><string>d.custom2.set=\"" + XMLUtils.Encode(comment) + "\"</string></value>");
+                        append("<value><string>d.custom2.set=\"" + XMLUtils.Encode(comment) + "\"</string></value>");
                 }
 
                 if (torrent.FastResume) {
                     // soos
-                    xml.Append("<value><string>d.hashing.set=1</string></value>");
-                    xml.Append("<value><string>view.filter_download=hashing</string></value>");
+                    append("<value><string>d.hashing.set=1</string></value>");
+                    append("<value><string>view.filter_download=hashing</string></value>");
                 }
 
-                xml.Append("</data></array></value></member></struct></value>");
+                append("</data></array></value></member></struct></value>");
 
                 torrent.Data.Dispose();
 
@@ -330,10 +332,10 @@ namespace RTSharp.Daemon.Services.rtorrent
                 });
             }
 
-            xml.Append("</data></array></value></param></params></methodCall>");
+            append("</data></array></value></param></params></methodCall>");
 
             // TODO: more error handling
-            using var response = await Scgi.Get(xml.ToString());
+            using var response = await Scgi.Get(body.WrittenMemory);
 
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<params>\r\n<param><value><array><data>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
             // <?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<methodResponse>\r\n<fault>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-503</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Call XML not a proper XML-RPC call.  Incorrect Base64 padding</string></value></member>\r\n</struct></value>\r\n</fault>\r\n</methodResponse>\r\n
@@ -359,8 +361,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 }
             }
 
-            xml.Clear();
-            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
+            var xml = new StringBuilder("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
             foreach (var hash in hashes) {
                 xml.Append("<value><struct><member><name>methodName</name><value><string>d.save_full_session</string></value></member><member><name>params</name><value><array><data><value><string>" + hash + "</string></value></data></array></value></member></struct></value>");
             }
@@ -402,7 +403,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                         torrents[chunk.TMetadata.Id] = new Torrent(chunk.TMetadata.Path, chunk.TMetadata.Filename, new MemoryStream(), chunk.TMetadata.FastResume, chunk.TMetadata.Magnet);
                         break;
                     case NewTorrentsData.DataOneofCase.TData:
-                        torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.ToByteArray());
+                        torrents[chunk.TData.Id].Data.Write(chunk.TData.Chunk.Span);
                         break;
                 }
             }
@@ -416,9 +417,9 @@ namespace RTSharp.Daemon.Services.rtorrent
             var ret = await TorrentOpService.GetTorrentsFiles(Req.Hashes.Select(x => x.ToByteArray()));
             
             var pieceSizes = Req.Hashes.ToInfoHashDictionary(x => x.ToByteArray(), x => {
-                var entry = TorrentPolling.GetLatestHistoryEntry(x.ToByteArray()) ?? throw new InvalidOperationException("No polling history entries");
+                var torrent = TorrentPolling.FindLatestTorrent(x.ToByteArray()) ?? throw new InvalidOperationException("No polling history entries");
 
-                return entry.Torrent.ChunkSize;
+                return torrent.ChunkSize;
             });
 
             foreach (var el in ret.Reply) {
@@ -710,16 +711,16 @@ namespace RTSharp.Daemon.Services.rtorrent
             XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
 
-            Protocols.DataProvider.Status? fault;
-            if ((fault = GrpcExtensions.ToStatus(XMLUtils.TryGetFaultStruct(ref result, "p.multicall"))) != null) {
-                throw new RpcException(new global::Grpc.Core.Status(StatusCode.Internal, fault.FaultCode + ": " + fault.FaultString));
-            }
-
-            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
-            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
-
             var ret = new TorrentsPeersReply();
             foreach (var hash in Req.Hashes) {
+                Protocols.DataProvider.Status? fault;
+                if ((fault = GrpcExtensions.ToStatus(XMLUtils.TryGetFaultStruct(ref result, "p.multicall"))) != null) {
+                    throw new RpcException(new global::Grpc.Core.Status(StatusCode.Internal, fault.FaultCode + ": " + fault.FaultString));
+                }
+
+                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
+
                 var torrent = new TorrentsPeersReply.Types.TorrentsPeers() {
                     InfoHash = hash
                 };
@@ -758,6 +759,9 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                     torrent.Peers.Add(peer);
                 }
+
+                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
+                XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
 
                 ret.Reply.Add(torrent);
             }
@@ -1306,7 +1310,7 @@ namespace RTSharp.Daemon.Services.rtorrent
             var isMeta = ReadEntry<bool>(ref result);
 
             return Mapper.MapFromRaw(
-                hash, name, totalSize, downloaded, completedBytes, uploaded, downSpeed,
+                Hash.Value, name, totalSize, downloaded, completedBytes, uploaded, downSpeed,
                 creationDateRaw, addDateRaw, finishedDateRaw, label, torrentComment,
                 isMultiFile, directory, priorityRaw, chunkSize, isComplete, wantedChunks, skippedTotal,
                 statusMessage, isOpen, isActive, isHashChecking, isPrivate,

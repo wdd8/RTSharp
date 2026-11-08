@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
+using System.Text.Json.Serialization;
+using QBittorrent.Client.Converters;
 
 namespace QBittorrent.Client
 {
@@ -15,65 +12,50 @@ namespace QBittorrent.Client
         /// <summary>
         /// The article id.
         /// </summary>
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
         /// The article date/time.
         /// </summary>
-        [JsonProperty("date")]
+        [JsonPropertyName("date")]
         public DateTimeOffset Date { get; set; }
 
         /// <summary>
         /// The title.
         /// </summary>
-        [JsonProperty("title")]
+        [JsonPropertyName("title")]
         public string Title { get; set; }
 
         /// <summary>
         /// The author.
         /// </summary>
-        [JsonProperty("author")]
+        [JsonPropertyName("author")]
         public string Author { get; set; }
 
         /// <summary>
         /// The description.
         /// </summary>
-        [JsonProperty("description")]
+        [JsonPropertyName("description")]
         public string Description { get; set; }
 
         /// <summary>
         /// The torrent URI.
         /// </summary>
-        [JsonProperty("torrentURL")]
+        [JsonPropertyName("torrentURL")]
+        [JsonConverter(typeof(NullableUriConverter))]
         public Uri TorrentUri { get; set; }
 
         /// <summary>
         /// The torrent link.
         /// </summary>
-        [JsonProperty("link")]
+        [JsonPropertyName("link")]
+        [JsonConverter(typeof(NullableUriConverter))]
         public Uri Link { get; set; }
 
         /// <summary>
         /// The value indicating whether the article has been read.
         /// </summary>
-        [JsonProperty("isRead")]
-        public bool IsRead { get; set; }
-
-        /// <summary>
-        /// Additional properties not handled by this library.
-        /// </summary>
-        [JsonExtensionData]
-        public IDictionary<string, JToken> AdditionalData { get; set; }
-
-        [OnError]
-        internal void OnError(StreamingContext context, ErrorContext errorContext)
-        {
-            var member = errorContext.Member as string;
-            if (member == "torrentURL" || member == "link")
-            {
-                errorContext.Handled = true;
-            }
-        }
-    }
+        [JsonPropertyName("isRead")]
+        public bool IsRead { get; set; }    }
 }

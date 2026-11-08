@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client
 {
@@ -14,21 +13,21 @@ namespace QBittorrent.Client
         /// <summary>
         /// Search results.
         /// </summary>
-        [JsonProperty("results")]
+        [JsonPropertyName("results")]
         public IReadOnlyList<SearchResult> Results { get; set; }
         
         /// <summary>
         /// Current status of the search job.
         /// </summary>
-        [JsonProperty("status")]
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonPropertyName("status")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public SearchJobStatus Status { get; set; }
 
         /// <summary>
         /// Total number of results.
         /// If the status is <see cref="SearchJobStatus.Running"/> this number may continue to increase.
         /// </summary>
-        [JsonProperty("total")]
+        [JsonPropertyName("total")]
         public int Total { get; set; }
     }
 }

@@ -1,36 +1,25 @@
 ﻿using System;
 using System.Net;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client.Converters
 {
     internal class StringToIpAddressConverter : JsonConverter<IPAddress>
     {
-        public override void WriteJson(JsonWriter writer, IPAddress value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, IPAddress value, JsonSerializerOptions options)
         {
-            if (value == null)
-            {
-                writer.WriteNull();
-                return;
-            }
-
-            writer.WriteValue(value.ToString());
+            writer.WriteStringValue(value.ToString());
         }
 
-        public override IPAddress ReadJson(JsonReader reader, Type objectType, IPAddress existingValue, bool hasExistingValue,
-            JsonSerializer serializer)
+        public override IPAddress Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonToken.Null)
+            if (reader.TokenType == JsonTokenType.String)
             {
-                return null;
+                return IPAddress.Parse(reader.GetString());
             }
 
-            if (reader.TokenType == JsonToken.String)
-            {
-                return IPAddress.Parse(reader.Value.ToString());
-            }
-
-            throw new JsonSerializationException($"Unexpected token {reader.TokenType}.");
+            throw new JsonException($"Unexpected token {reader.TokenType}.");
         }
     }
 }

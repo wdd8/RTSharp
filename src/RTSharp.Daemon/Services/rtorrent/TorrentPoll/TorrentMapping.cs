@@ -67,7 +67,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         }
 
         public static Torrent MapFromRaw(
-            byte[] Hash, string NameRaw, ulong TotalSize, ulong Downloaded, ulong CompletedBytes, ulong Uploaded,
+            ByteString Hash, string NameRaw, ulong TotalSize, ulong Downloaded, ulong CompletedBytes, ulong Uploaded,
             ulong DownSpeed, ulong CreationDateRaw, ulong AddDateRaw, ulong FinishedDateRaw,
             string Label, string TorrentCommentRaw, bool IsMultiFile,
             string DirectoryDecoded, ulong PriorityRaw, ulong ChunkSize, bool IsComplete, ulong WantedChunks, ulong SkippedTotal,
@@ -124,7 +124,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             }
 
             var torrent = new Torrent() {
-                Hash = ByteString.CopyFrom(Hash),
+                Hash = Hash,
                 Name = decodedName,
                 State = torrentState,
                 WantedSize = wantedSize,

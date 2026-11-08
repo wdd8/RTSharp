@@ -1,39 +1,39 @@
 ﻿using System;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client.Converters
 {
     internal class SaveLocationConverter : JsonConverter<SaveLocation>
     {
-        public override void WriteJson(JsonWriter writer, SaveLocation value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, SaveLocation value, JsonSerializerOptions options)
         {
             if (value.StandardFolder != null)
             {
-                writer.WriteValue(value.StandardFolder);
+                writer.WriteNumberValue((int)value.StandardFolder.Value);
             }
             else if (!string.IsNullOrWhiteSpace(value.CustomFolder))
             {
-                writer.WriteValue(value.CustomFolder);
+                writer.WriteStringValue(value.CustomFolder);
             }
             else
             {
-                throw new JsonSerializationException("Invalid save location object.");
+                throw new JsonException("Invalid save location object.");
             }
         }
 
-        public override SaveLocation ReadJson(JsonReader reader, Type objectType, SaveLocation existingValue, bool hasExistingValue,
-            JsonSerializer serializer)
+        public override SaveLocation Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonToken.Integer)
+            if (reader.TokenType == JsonTokenType.Number)
             {
-                return new SaveLocation((StandardSaveLocation)Convert.ToInt32(reader.Value));
+                return new SaveLocation((StandardSaveLocation)reader.GetInt32());
             }
-            if (reader.TokenType == JsonToken.String)
+            if (reader.TokenType == JsonTokenType.String)
             {
-                return new SaveLocation(reader.Value.ToString());
+                return new SaveLocation(reader.GetString());
             }
 
-            throw new JsonSerializationException($"Unexpected token {reader.TokenType}.");
+            throw new JsonException($"Unexpected token {reader.TokenType}.");
         }
     }
 }

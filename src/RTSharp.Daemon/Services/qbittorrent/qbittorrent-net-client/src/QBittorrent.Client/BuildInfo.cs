@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using System.Text.Json.Serialization;
 
 namespace QBittorrent.Client
 {
@@ -14,49 +10,42 @@ namespace QBittorrent.Client
         /// <summary>
         /// The version of Qt.
         /// </summary>
-        [JsonProperty("qt")]
+        [JsonPropertyName("qt")]
         public string QtVersion { get; set; }
         
         /// <summary>
         /// The version of libtorrent.
         /// </summary>
-        [JsonProperty("libtorrent")]
+        [JsonPropertyName("libtorrent")]
         public string LibtorrentVersion { get; set; }
 
         /// <summary>
         /// The version of Boost.
         /// </summary>
-        [JsonProperty("boost")]
+        [JsonPropertyName("boost")]
         public string BoostVersion { get; set; }
 
         /// <summary>
         /// The version of OpenSSL.
         /// </summary>
-        [JsonProperty("openssl")]
+        [JsonPropertyName("openssl")]
         public string OpenSslVersion { get; set; }
 
         /// <summary>
         /// The version of zlib.
         /// </summary>
-        [JsonProperty("zlib")]
+        [JsonPropertyName("zlib")]
         public string ZlibVersion { get; set; }
 
         /// <summary>
         /// QBittorrent bitness.
         /// </summary>
-        [JsonProperty("bitness")]
+        [JsonPropertyName("bitness")]
         public int Bitness { get; set; }
 
         /// <summary>
         /// The platform qBittorrent is running on.
         /// </summary>
-        [JsonProperty("platform")]
-        public string Platform { get; set; }
-
-        /// <summary>
-        /// Additional properties not handled by this library.
-        /// </summary>
-        [JsonExtensionData]
-        public IDictionary<string, JToken> AdditionalData { get; set; }
-    }
+        [JsonPropertyName("platform")]
+        public string Platform { get; set; }    }
 }

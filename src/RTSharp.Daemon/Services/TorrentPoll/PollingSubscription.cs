@@ -57,7 +57,7 @@ public sealed class PollingSubscription : IDisposable
         return Instance.BuildChanges(previous, current);
     }
 
-    public string? GetTorrentName(byte[] Hash) => Instance.GetLatestHistoryEntry(Hash)?.Torrent.Name;
+    public string? GetTorrentName(byte[] Hash) => Instance.FindLatestTorrent(Hash)?.Name;
 
     public void Dispose()
     {

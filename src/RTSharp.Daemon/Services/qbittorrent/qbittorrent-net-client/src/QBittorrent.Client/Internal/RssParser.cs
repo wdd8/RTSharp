@@ -1,29 +1,21 @@
-﻿using System.Globalization;
-using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using System.Linq;
+using System.Text.Json;
 
 namespace QBittorrent.Client.Internal
 {
     internal static class RssParser
     {
-        internal static RssFolder Parse(JObject root)
+        internal static RssFolder Parse(JsonElement root)
         {
-            var feedSerializer = new JsonSerializer
-            {
-                DateFormatString = "ddd, dd MMM yyyy HH:mm:ss zzz",
-                DateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind,
-                Culture = CultureInfo.InvariantCulture,
-            };
             return (RssFolder)Convert(root, string.Empty);
 
-            RssItem ConvertFeed(JObject jObject) => jObject.ToObject<RssFeed>(feedSerializer);
+            RssItem ConvertFeed(JsonElement element) => element.Deserialize<RssFeed>(QBittorrentJson.RssOptions);
 
-            RssItem ConvertFolder(JObject jObject) => new RssFolder(jObject.Properties().Select(p => Convert((JObject) p.Value, p.Name)));
+            RssItem ConvertFolder(JsonElement element) => new RssFolder(element.EnumerateObject().Select(p => Convert(p.Value, p.Name)));
 
-            RssItem Convert(JObject jObject, string name)
+            RssItem Convert(JsonElement element, string name)
             {
-                var item = jObject.ContainsKey("uid") ? ConvertFeed(jObject) : ConvertFolder(jObject);
+                var item = element.TryGetProperty("uid", out _) ? ConvertFeed(element) : ConvertFolder(element);
                 item.Name = name;
                 return item;
             }

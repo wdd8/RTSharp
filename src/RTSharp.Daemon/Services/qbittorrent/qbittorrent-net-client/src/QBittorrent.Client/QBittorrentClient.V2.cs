@@ -1,8 +1,5 @@
 ﻿using JetBrains.Annotations;
 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
 using QBittorrent.Client.Extensions;
 using QBittorrent.Client.Internal;
 
@@ -13,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -84,8 +82,7 @@ namespace QBittorrent.Client
             CancellationToken token = default)
         {
             var uri = await BuildUriAsync(p => p.GetPeerLog(afterId), token).ConfigureAwait(false);
-            var json = await _client.GetStringWithCancellationAsync(uri, token).ConfigureAwait(false);
-            return JsonConvert.DeserializeObject<IEnumerable<PeerLogEntry>>(json);
+            return await _client.GetJsonWithCancellationAsync<IEnumerable<PeerLogEntry>>(uri, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -694,9 +691,7 @@ namespace QBittorrent.Client
 
         private static async Task<IReadOnlyDictionary<string, PeerAddResult>> ParseAddTorrentPeersResponse(HttpResponseMessage response)
         {
-            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var result = JsonConvert.DeserializeObject<IReadOnlyDictionary<string, PeerAddResult>>(json);
-            return result;
+            return await response.Content.ReadJsonAsync<IReadOnlyDictionary<string, PeerAddResult>>().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1011,9 +1006,8 @@ namespace QBittorrent.Client
             await EnsureApiVersionAsync(provider, token, ApiLevel.V2, Version_2_1_0).ConfigureAwait(false);
 
             var uri = provider.Url.GetRssItems(withData);
-            var json = await _client.GetStringWithCancellationAsync(uri, token).ConfigureAwait(false);
-            var rootObject = JObject.Parse(json);
-            return RssParser.Parse(rootObject);
+            var root = await _client.GetJsonWithCancellationAsync<JsonElement>(uri, token).ConfigureAwait(false);
+            return RssParser.Parse(root);
         }
 
         /// <summary>
@@ -1031,7 +1025,7 @@ namespace QBittorrent.Client
             if (rule == null)
                 throw new ArgumentNullException(nameof(rule));
 
-            var ruleDefinition = JsonConvert.SerializeObject(rule);
+            var ruleDefinition = JsonSerializer.Serialize(rule, QBittorrentJson.Options);
             return PostAsync(p => p.SetRssAutoDownloadingRule(name, ruleDefinition), token, ApiLevel.V2, Version_2_1_0);
         }
 
@@ -1144,8 +1138,8 @@ namespace QBittorrent.Client
                 p => p.StartSearch(pattern, plugins, category), token, 
                 async response =>
                 {
-                    var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    return JObject.Parse(json)["id"].ToObject<int>();
+                    var json = await response.Content.ReadJsonAsync<JsonElement>().ConfigureAwait(false);
+                    return json.GetProperty("id").GetInt32();
                 },
                 ApiLevel.V2, Version_2_1_1);
         }

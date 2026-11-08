@@ -14,7 +14,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 
 using ISpeedMovingAverage = RTSharp.Shared.Abstractions.ISpeedMovingAverage;
-using ISpeedMovingAverageService = RTSharp.Shared.Abstractions.ISpeedMovingAverageService;
 using ScriptProgressState = RTSharp.Shared.Abstractions.ScriptProgressState;
 using TASK_STATE = RTSharp.Shared.Abstractions.TASK_STATE;
 
@@ -34,15 +33,13 @@ public class TorrentOpService
     private readonly ChannelsService Channels;
     private readonly FileTransferService FileTransfer;
     private readonly ILogger<TorrentOpService> Logger;
-    private readonly ISpeedMovingAverageService Smas;
 
-    public TorrentOpService(SessionsService Sessions, ChannelsService Channels, FileTransferService FileTransfer, ILogger<TorrentOpService> Logger, ISpeedMovingAverageService Smas, IServiceProvider Provider)
+    public TorrentOpService(SessionsService Sessions, ChannelsService Channels, FileTransferService FileTransfer, ILogger<TorrentOpService> Logger, IServiceProvider Provider)
     {
         this.Sessions = Sessions;
         this.Channels = Channels;
         this.FileTransfer = FileTransfer;
         this.Logger = Logger;
-        this.Smas = Smas;
         this.Remote = ActivatorUtilities.CreateInstance<RemoteOps>(Provider, this);
     }
     public async Task<Torrent> GetTorrent(RegisteredDataProvider RegisteredDataProvider, byte[] Hash)
@@ -384,7 +381,7 @@ public class TorrentOpService
                 // Don't like this reference but what can you do
                 await GRPCServices.FilesService.LinkFile(f.SourcePath, dst, Type, copied => {
                     if (speed == null) {
-                        speed = Smas.Get("FileTransfer", Guid.NewGuid().ToString(), itemsMax: 10);
+                        speed = new SpeedMovingAverage(10);
                         speed.Value(copied);
                     }
 

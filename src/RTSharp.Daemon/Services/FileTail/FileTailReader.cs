@@ -124,8 +124,10 @@ namespace RTSharp.Daemon.Services.FileTail
 
         private static string DecodeLine(ReadOnlySequence<byte> Line)
         {
-            var text = Line.IsSingleSegment ? Encoding.UTF8.GetString(Line.FirstSpan) : Encoding.UTF8.GetString(Line.ToArray());
-            return text.TrimEnd('\r');
+            while (Line.Length > 0 && Line.Slice(Line.Length - 1).FirstSpan[0] == (byte)'\r')
+                Line = Line.Slice(0, Line.Length - 1);
+
+            return Encoding.UTF8.GetString(Line);
         }
 
         private static Task WriteLineAsync(IServerStreamWriter<LogEntry> Res, string Message, CancellationToken Ct)

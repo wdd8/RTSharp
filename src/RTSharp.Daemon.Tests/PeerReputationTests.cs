@@ -83,7 +83,7 @@ public sealed class PeerReputationTests : IAsyncDisposable
             var peers = PeerLists.GetValueOrDefault(Provider.InstanceKey, ["8.8.8.8"]);
             Samples.AddOrUpdate(Provider.InstanceKey, 1, (_, value) => value + 1);
             return Task.FromResult(new TorrentsPeersReply { Reply = {
-                new TorrentsPeersReply.Types.TorrentsPeers { InfoHash = Request.Hashes.Single(), Peers = { peers.Select(Peer) } }
+                Request.Hashes.Select(hash => new TorrentsPeersReply.Types.TorrentsPeers { InfoHash = hash, Peers = { peers.Select(Peer) } })
             } });
         }
         protected override Task<Dictionary<IPAddress, uint>> ResolveAsns(HashSet<IPAddress> Peers, CancellationToken Token)

@@ -72,15 +72,15 @@ public class Main(ILogger<Main> Logger, DaemonDatabase Database, RegisteredDataP
     {
         using var subscription = Provider.TorrentPolling.Subscribe(PollInterval);
         var observations = new Dictionary<ByteString, TorrentObservation>();
+        var scan = 0L;
         while (!Token.IsCancellationRequested) {
             var changes = await subscription.GetChanges(true, Token);
             if (changes == null)
                 return;
 
-            var present = new HashSet<ByteString>();
-            var samples = new List<(Torrent Torrent, Task<bool> Result)>();
+            scan++;
+            var samples = new List<Torrent>();
             foreach (var torrent in changes.FullUpdate) {
-                present.Add(torrent.Hash);
                 var complete = (torrent.State & TorrentState.Complete) != 0;
                 var downloading = !complete && (torrent.State & TorrentState.Downloading) != 0;
                 var active = (torrent.State & TorrentState.Active) != 0;
@@ -89,17 +89,17 @@ public class Main(ILogger<Main> Logger, DaemonDatabase Database, RegisteredDataP
                         continue;
                     observations.Add(torrent.Hash, observation = new TorrentObservation());
                 }
+                observation.LastScan = scan;
 
                 observation.AddTrackers(Provider.TorrentPolling.GetTorrentTrackers(torrent.Hash.ToByteArray()).Select(x => x.Uri));
                 if (torrent.PrimaryTracker is { } primary)
                     observation.AddTrackers([primary.Uri]);
                 if (downloading || active || (complete && !observation.CompletionSampled))
-                    samples.Add((torrent, SamplePeers(Provider, torrent.Hash, observation, Token)));
+                    samples.Add(torrent);
             }
 
-            await Task.WhenAll(samples.Select(x => x.Result));
-            foreach (var (torrent, result) in samples) {
-                if (await result) {
+            if (samples.Count != 0 && await SamplePeers(Provider, samples, observations, Token)) {
+                foreach (var torrent in samples) {
                     var observation = observations[torrent.Hash];
                     if ((torrent.State & TorrentState.Complete) != 0)
                         observation.CompletionSampled = true;
@@ -116,25 +116,30 @@ public class Main(ILogger<Main> Logger, DaemonDatabase Database, RegisteredDataP
                     QueuePersistence(Provider, torrent.Hash, batch, Token);
                 }
             }
-            foreach (var hash in observations.Keys.Where(x => !present.Contains(x)).ToArray())
-                observations.Remove(hash);
+            foreach (var (hash, observation) in observations) {
+                if (observation.LastScan != scan)
+                    observations.Remove(hash);
+            }
         }
     }
 
-    private async Task<bool> SamplePeers(RegisteredDataProvider Provider, ByteString Hash, TorrentObservation Observation, CancellationToken Token)
+    private async Task<bool> SamplePeers(RegisteredDataProvider Provider, List<Torrent> Sampled, Dictionary<ByteString, TorrentObservation> Observations, CancellationToken Token)
     {
         try {
             var peers = await GetPeers(Provider, new Torrents {
                 Hashes = {
-                    Hash
+                    Sampled.Select(x => x.Hash)
                 }
             }).WaitAsync(TimeSpan.FromSeconds(30), Token);
-            Observation.AddPeers(peers.Reply.Where(x => x.InfoHash == Hash).SelectMany(x => x.Peers));
+            foreach (var reply in peers.Reply) {
+                if (Observations.TryGetValue(reply.InfoHash, out var observation))
+                    observation.AddPeers(reply.Peers);
+            }
             return true;
         } catch (OperationCanceledException) when (Token.IsCancellationRequested) {
             throw;
         } catch (Exception ex) {
-            Logger.LogWarning(ex, "Retrying peer sampling for {Provider}/{Hash}", Provider.InstanceKey, Hash);
+            Logger.LogWarning(ex, "Retrying peer sampling for {Provider} ({Count} torrents)", Provider.InstanceKey, Sampled.Count);
             return false;
         }
     }
@@ -264,6 +269,7 @@ public class Main(ILogger<Main> Logger, DaemonDatabase Database, RegisteredDataP
         public HashSet<IPAddress> QueuedPeers { get; } = [];
         public HashSet<string> Trackers { get; } = new(StringComparer.OrdinalIgnoreCase);
         public bool CompletionSampled { get; set; }
+        public long LastScan { get; set; }
 
         public void AddTrackers(IEnumerable<string> Uris)
         {

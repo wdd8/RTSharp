@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Net;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json.Serialization;
 using QBittorrent.Client.Converters;
 
 namespace QBittorrent.Client
@@ -17,7 +16,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The peer IP address.
         /// </value>
-        [JsonProperty("ip")]
+        [JsonPropertyName("ip")]
         [JsonConverter(typeof(StringToIpAddressConverter))]
         public IPAddress Address { get; set; }
 
@@ -27,7 +26,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The port.
         /// </value>
-        [JsonProperty("port")]
+        [JsonPropertyName("port")]
         public int? Port { get; set; }
 
         /// <summary>
@@ -36,7 +35,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The client.
         /// </value>
-        [JsonProperty("client")]
+        [JsonPropertyName("client")]
         public string Client { get; set; }
 
         /// <summary>
@@ -45,7 +44,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The progress.
         /// </value>
-        [JsonProperty("progress")]
+        [JsonPropertyName("progress")]
         public double? Progress { get; set; }
 
         /// <summary>
@@ -54,7 +53,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The download speed.
         /// </value>
-        [JsonProperty("dl_speed")]
+        [JsonPropertyName("dl_speed")]
         public int? DownloadSpeed { get; set; }
 
         /// <summary>
@@ -63,7 +62,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The upload speed.
         /// </value>
-        [JsonProperty("up_speed")]
+        [JsonPropertyName("up_speed")]
         public int? UploadSpeed { get; set; }
 
         /// <summary>
@@ -72,7 +71,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The amount of downloaded data.
         /// </value>
-        [JsonProperty("downloaded")]
+        [JsonPropertyName("downloaded")]
         public long? Downloaded { get; set; }
 
         /// <summary>
@@ -81,7 +80,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The amount of uploaded data.
         /// </value>
-        [JsonProperty("uploaded")]
+        [JsonPropertyName("uploaded")]
         public long? Uploaded { get; set; }
 
         /// <summary>
@@ -90,7 +89,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The type of the connection.
         /// </value>
-        [JsonProperty("connection")]
+        [JsonPropertyName("connection")]
         public string ConnectionType { get; set; }
 
         /// <summary>
@@ -99,7 +98,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The flags.
         /// </value>
-        [JsonProperty("flags")]
+        [JsonPropertyName("flags")]
         public string Flags { get; set; }
 
         /// <summary>
@@ -108,7 +107,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The flags description.
         /// </value>
-        [JsonProperty("flags_desc")]
+        [JsonPropertyName("flags_desc")]
         public string FlagsDescription { get; set; }
 
         /// <summary>
@@ -117,7 +116,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The relevance.
         /// </value>
-        [JsonProperty("relevance")]
+        [JsonPropertyName("relevance")]
         public double? Relevance { get; set; }
 
         /// <summary>
@@ -126,8 +125,8 @@ namespace QBittorrent.Client
         /// <value>
         /// The files.
         /// </value>
-        [JsonProperty("files")]
-        [JsonConverter(typeof(StringToListConverter), "\n", false)]
+        [JsonPropertyName("files")]
+        [StringToList("\n", false)]
         public IReadOnlyList<string> Files { get; set; }
 
         /// <summary>
@@ -136,7 +135,7 @@ namespace QBittorrent.Client
         /// <value>
         /// The country.
         /// </value>
-        [JsonProperty("country")]
+        [JsonPropertyName("country")]
         public string Country { get; set; }
 
         /// <summary>
@@ -145,13 +144,6 @@ namespace QBittorrent.Client
         /// <value>
         /// The country code.
         /// </value>
-        [JsonProperty("country_code")]
-        public string CountryCode { get; set; }
-
-        /// <summary>
-        /// Additional properties not handled by this library.
-        /// </summary>
-        [JsonExtensionData]
-        public IDictionary<string, JToken> AdditionalData { get; set; }
-    }
+        [JsonPropertyName("country_code")]
+        public string CountryCode { get; set; }    }
 }
