@@ -13,7 +13,7 @@
         Title="RT# - Edit bencode">
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="8">
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="0 0 0 8">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0 0 0 8">
             <Button Command="{Binding AddClickCommand}" CommandParameter="{Binding #Grid.SelectedItems}">Add</Button>
             <Button Command="{Binding DeleteClickCommand}" CommandParameter="{Binding #Grid.SelectedItems}">Delete</Button>
             <Button Command="{Binding DuplicateClickCommand}" CommandParameter="{Binding #Grid.SelectedItems}">Duplicate</Button>
@@ -93,7 +93,7 @@
             </DataGrid.Resources>
         </DataGrid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4" Margin="0 8 0 0">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0 8 0 0">
             <Button Command="{Binding OkClickCommand}">OK</Button>
             <Button Command="{Binding CancelClickCommand}">Cancel</Button>
         </StackPanel>

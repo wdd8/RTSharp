@@ -30,7 +30,7 @@
                     VerticalAlignment="Center"
                     TextTrimming="CharacterEllipsis"
                     ToolTip.Tip="{Binding MoveWarning}" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" >
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
                     <Button Command="{Binding CancelClickCommand}">Cancel</Button>
                     <Button Command="{Binding ConfirmClickCommand}">Confirm</Button>
                 </StackPanel>

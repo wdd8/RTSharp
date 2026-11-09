@@ -1,6 +1,3 @@
-using Avalonia.Controls;
-using Avalonia.Controls.DataGridHierarchical;
-
 using BencodeNET.Objects;
 using BencodeNET.Parsing;
 using BencodeNET.Torrents;
@@ -22,7 +19,6 @@ using Serilog;
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -64,9 +60,7 @@ public partial class TorrentEditorWindowViewModel : ObservableObject
 
     public Action CloseWindow { get; set; } = null!; // view set
 
-    public ObservableCollection<DataGridColumnDefinition> ColumnDefinitions { get; } = [];
-
-    public HierarchicalModel<Models.File> FilesModel { get; }
+    public TorrentFilesViewModel Files { get; } = new();
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
@@ -157,30 +151,7 @@ public partial class TorrentEditorWindowViewModel : ObservableObject
         OriginalName = BencodeUtils.GetName(info);
         OriginalFiles = BencodeUtils.GetFiles(info).Files;
 
-        FilesModel = new HierarchicalModel<Models.File>(new HierarchicalOptions<Models.File> {
-            ChildrenSelector = x => x.Children,
-            IsLeafSelector = x => !x.IsDirectory,
-            AutoExpandRoot = true,
-            MaxAutoExpandDepth = 2,
-            VirtualizeChildren = true
-        });
-
-        ColumnDefinitions.AddRange([
-            new DataGridHierarchicalColumnDefinition {
-                Header = "Name",
-                Binding = ColumnDefinitionBindingFactory.CreateBinding<HierarchicalNode, Models.File>("Item", node => (Models.File)node.Item),
-                CellTemplateKey = "FileNameTemplate",
-                ColumnKey = nameof(Models.File.Name),
-                SortMemberPath = nameof(Models.File.Name)
-            },
-            new DataGridTemplateColumnDefinition {
-                Header = nameof(Models.File.Size),
-                ValueAccessor = new DataGridColumnValueAccessor<Models.File, Models.File>(x => x),
-                CellTemplateKey = "FileSizeTemplate",
-                ColumnKey = nameof(Models.File.Size),
-                SortMemberPath = nameof(Models.File.Size)
-            }
-        ]);
+        Files.ColumnDefinitions.RemoveMany(Files.ColumnDefinitions.Where(x => x.ColumnKey is not (nameof(Models.File.Name) or nameof(Models.File.Size))).ToArray());
 
         LoadFields();
     }
@@ -297,7 +268,7 @@ public partial class TorrentEditorWindowViewModel : ObservableObject
             InfoTotalSize = Shared.Utils.Converters.GetSIDataSize((ulong)totalSize);
             InfoFileCount = files.Length.ToString();
 
-            FilesModel.SetRoot(Models.File.FromBencode(name, multiFile, files).Root);
+            Files.SetRoot(Models.File.FromBencode(name, multiFile, files).Root);
 
             FilesWarning = name == OriginalName
                 && files.Length == OriginalFiles.Length
@@ -306,7 +277,7 @@ public partial class TorrentEditorWindowViewModel : ObservableObject
                 : "Name or files changed: the content no longer matches the data on disk, so fast resume will fail and the torrent needs a recheck.";
         } catch (InvalidDataException) {
             InfoPieceLength = InfoPieceCount = InfoTotalSize = InfoFileCount = "?";
-            FilesModel.ClearAll();
+            Files.ClearRoot();
             FilesWarning = null;
         }
 

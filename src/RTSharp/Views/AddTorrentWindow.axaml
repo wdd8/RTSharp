@@ -11,10 +11,8 @@
 		x:DataType="vm:AddTorrentViewModel"
         Title="RT# - Add torrent"
         Width="420"
-        MinWidth="420"
-        Height="400"
-        MinHeight="400"
-        MaxHeight="400"
+        SizeToContent="Height"
+        CanResize="False"
         Name="window"
         Icon="/Assets/rtsharp.ico">
     <Design.DataContext>
@@ -28,7 +26,7 @@
             <TabItem.Header>
                 <TextBlock>Source</TextBlock>
             </TabItem.Header>
-            <StackPanel>
+            <StackPanel Name="sourcePage">
                 <GroupBox Header="Data provider">
                     <views:DataProviderSelection DataProviders="{Binding DataProviders}" SelectedProvider="{Binding SelectedProvider}" />
                 </GroupBox>
@@ -69,7 +67,7 @@
                     <StackPanel Grid.Column="0">
                         <CheckBox IsChecked="{Binding StartTorrent}" IsEnabled="{Binding !ForceStartTorrentOnAdd}">Start torrent</CheckBox>
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
                         <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding AddClickCommand}">Add</Button>
                         <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding CancelClickCommand}">Cancel</Button>
                     </StackPanel>
@@ -80,15 +78,15 @@
             <TabItem.Header>
                 <TextBlock>Duplication</TextBlock>
             </TabItem.Header>
-            <DockPanel Margin="8">
-                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+            <DockPanel Height="{Binding #sourcePage.Bounds.Height}">
+                <StackPanel DockPanel.Dock="Top" Margin="8">
                     <local:DuplicationTargetSelectorControl DataContext="{Binding DuplicationTargetSelector}" />
                     <Button Margin="0,8,0,0"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center"
                             Command="{Binding AddDuplicationTargetClickCommand}">Add target</Button>
                 </StackPanel>
-                <ListBox ItemsSource="{Binding DuplicationTargets}">
+                <ListBox Margin="8,0,8,8" ItemsSource="{Binding DuplicationTargets}">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="core:TorrentDuplication+DuplicationTarget">
                             <Grid ColumnDefinitions="*,Auto">

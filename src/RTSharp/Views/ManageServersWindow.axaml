@@ -59,7 +59,7 @@
                         <TextBlock Grid.Column="0" Text="{Binding DialogServer.ConnectionStatus}" IsVisible="{Binding DialogServer.ConnectionStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <TextBlock Grid.Column="1" Text="{Binding DialogServer.Latency}" IsVisible="{Binding DialogServer.Latency, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Opacity="0.6" VerticalAlignment="Center" Margin="8,0,0,0" />
                     </Grid>
-                    <Button Grid.Column="2" Content="{Binding DialogConfirmText}" Command="{Binding ConfirmDialogCommand}" IsEnabled="{Binding DialogServer.IsServerValid}" Margin="0,0,8,0" />
+                    <Button Grid.Column="2" Content="{Binding DialogConfirmText}" Command="{Binding ConfirmDialogCommand}" IsEnabled="{Binding DialogServer.IsServerValid}" Margin="0,0,10,0" />
                     <Button Grid.Column="3" Content="Cancel" Command="{Binding CancelDialogCommand}" />
                 </Grid>
             </StackPanel>
@@ -79,7 +79,7 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4" Margin="0,6,0,0">
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,6,0,0">
                     <Button Content="Add" Command="{Binding BeginAddCommand}" />
                     <Button Content="Edit" Command="{Binding BeginEditCommand}" />
                     <Button Content="Delete" Command="{Binding DeleteCommand}" />
@@ -90,7 +90,7 @@
 
             <Grid Grid.Column="2" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="8,0,0,0" IsVisible="{Binding SelectedServer, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <StackPanel Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
-                    <views:BuiltInIconImage Value="SERVER" Width="16" Height="16" Margin="0,0,6,0" />
+                    <views:BuiltInIconImage Value="SERVER" Width="32" Height="32" Margin="0,0,6,0" />
                     <TextBlock FontWeight="SemiBold" VerticalAlignment="Center">Connection</TextBlock>
                 </StackPanel>
 
@@ -105,7 +105,7 @@
                 <TextBlock Grid.Column="0" Grid.Row="3" Classes="label" IsVisible="{Binding SelectedServer.Latency, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">Latency:</TextBlock>
                 <TextBlock Grid.Column="1" Grid.Row="3" Classes="value" Text="{Binding SelectedServer.Latency}" IsVisible="{Binding SelectedServer.Latency, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                <StackPanel Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                <StackPanel Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
                     <Button Content="Test Connection" Command="{Binding TestConnectionCommand}" />
                     <Button Content="Browse file system" Command="{Binding BrowseFileSystemCommand}" />
                 </StackPanel>
@@ -113,7 +113,7 @@
                 <Separator Grid.Column="0" Grid.Row="5" Grid.ColumnSpan="2" />
 
                 <StackPanel Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6" IsVisible="{Binding SelectedServer.CertThumbprint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                    <views:BuiltInIconImage Value="CERTIFICATE" Width="16" Height="16" Margin="0,0,6,0" />
+                    <views:BuiltInIconImage Value="CERTIFICATE" Width="32" Height="32" Margin="0,0,6,0" />
                     <TextBlock FontWeight="SemiBold" VerticalAlignment="Center">Certificate</TextBlock>
                 </StackPanel>
 

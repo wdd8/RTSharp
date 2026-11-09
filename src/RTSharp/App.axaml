@@ -17,6 +17,13 @@
     <Application.Resources>
         <converters:IconConverter x:Key="IconConverter"/>
         <x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
+        <Thickness x:Key="TextControlThemePadding">4,2,4,2</Thickness>
+        <x:Double x:Key="TextControlThemeMinHeight">22</x:Double>
+        <Thickness x:Key="ButtonPadding">8,2,8,2</Thickness>
+        <Thickness x:Key="ComboBoxPadding">4,2,0,2</Thickness>
+        <x:Double x:Key="ComboBoxMinHeight">22</x:Double>
+        <Thickness x:Key="ComboBoxItemThemePadding">4,2,4,2</Thickness>
+        <x:Double x:Key="DataGridFilterEditorActionSpacing">10</x:Double>
     </Application.Resources>
 
     <Application.Styles>
@@ -25,6 +32,9 @@
         <dialogHostAvalonia:DialogHostStyles />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.v2.xaml" />
         <StyleInclude Source="avares://RTSharp/Themes/SlimDataGridThemes.axaml" />
+        <StyleInclude Source="avares://RTSharp/Themes/CompactButtonSpinnerTheme.axaml" />
+        <StyleInclude Source="avares://RTSharp/Themes/CompactCheckBoxTheme.axaml" />
+        <StyleInclude Source="avares://RTSharp/Themes/CompactRadioButtonTheme.axaml" />
         <StyleInclude Source="avares://MsBox.Avalonia.Markdown/Controls/MarkdownView.axaml" />
         <StyleInclude Source="avares://AvaloniaHex/Themes/Fluent/AvaloniaHex.axaml" />
 

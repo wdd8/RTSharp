@@ -2,10 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:dgh="using:Avalonia.Controls.DataGridHierarchical"
         xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
-        xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
-        xmlns:models="clr-namespace:RTSharp.Models"
+        xmlns:torrentListing="using:RTSharp.Views.TorrentListing"
         xmlns:vm="using:RTSharp.ViewModels.TorrentEditor"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
         Width="900" Height="700"
@@ -14,10 +12,6 @@
         x:Class="RTSharp.Views.TorrentEditor.TorrentEditorWindow"
         x:DataType="vm:TorrentEditorWindowViewModel"
         Title="RT# - Edit torrent">
-
-    <Window.Resources>
-        <converters:SIDataSizeConverter x:Key="SIDataSizeConverter" />
-    </Window.Resources>
 
     <Window.Styles>
         <Style Selector="TabItem Grid.Fields > TextBlock">
@@ -99,35 +93,7 @@
             </TabItem>
 
             <TabItem Header="Files">
-                <DataGrid
-                    AutoGenerateColumns="False"
-                    HierarchicalModel="{Binding FilesModel}"
-                    HierarchicalRowsEnabled="True"
-                    ColumnDefinitionsSource="{Binding ColumnDefinitions}"
-                    SelectionMode="Extended"
-                    UseLogicalScrollable="True"
-                    HeadersVisibility="All"
-                    IsReadOnly="True"
-                    CanUserAddRows="False"
-                    CanUserDeleteRows="False"
-                    CanUserReorderColumns="True"
-                    CanUserResizeColumns="True"
-                    CanUserSortColumns="True">
-                    <DataGrid.Resources>
-                        <DataTemplate x:Key="FileNameTemplate" x:DataType="models:File">
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                <Image Source="{Binding IconTask^}"
-                                       IsVisible="{Binding IconTask^, Converter={x:Static conv:ObjectConverters.IsNotNull}}"
-                                       Width="16" Height="16"
-                                       VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </DataTemplate>
-                        <DataTemplate x:Key="FileSizeTemplate" x:DataType="dgh:HierarchicalNode">
-                            <TextBlock Text="{Binding ((models:File)Item).Size, Converter={StaticResource SIDataSizeConverter}}" VerticalAlignment="Center" />
-                        </DataTemplate>
-                    </DataGrid.Resources>
-                </DataGrid>
+                <torrentListing:TorrentFilesView DataContext="{Binding Files}" />
             </TabItem>
 
             <TabItem Header="Info">
@@ -168,10 +134,10 @@
         </TabControl>
 
         <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="0 8 0 0">
-            <Button Grid.Column="0" Margin="0 0 4 0" Command="{Binding AdvancedClickCommand}">Advanced...</Button>
+            <Button Grid.Column="0" Margin="0 0 10 0" Command="{Binding AdvancedClickCommand}">Advanced...</Button>
             <Button Grid.Column="1" Command="{Binding RevertClickCommand}">Revert</Button>
-            <Button Grid.Column="3" Margin="0 0 4 0" Command="{Binding SaveAsClickCommand}">Save as...</Button>
-            <Button Grid.Column="4" Margin="0 0 4 0" Command="{Binding ApplyClickCommand}"
+            <Button Grid.Column="3" Margin="0 0 10 0" Command="{Binding SaveAsClickCommand}">Save as...</Button>
+            <Button Grid.Column="4" Margin="0 0 10 0" Command="{Binding ApplyClickCommand}"
                     Content="{Binding Torrent.DataOwner.Config.Plugin.Name, StringFormat='Apply to {0}'}" />
             <Button Grid.Column="5" Command="{Binding CancelClickCommand}">Cancel</Button>
         </Grid>

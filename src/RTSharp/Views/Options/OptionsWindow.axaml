@@ -47,7 +47,7 @@
             </ScrollViewer>
         </Grid>
         <Border Grid.Row="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="8,6">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
                 <Button Command="{Binding OkCommand}">OK</Button>
                 <Button Command="{Binding CancelCommand}">Cancel</Button>
                 <Button Command="{Binding ApplyCommand}">Apply</Button>

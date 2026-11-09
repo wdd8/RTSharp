@@ -32,7 +32,7 @@
             <TextBox Grid.Column="1" Width="180" Margin="4,0" Watermark="Service id"
                      Text="{Binding ServiceId}" />
             <Button Grid.Column="2" Content="Install as service" Command="{Binding InstallServiceCommand}" />
-            <Button Grid.Column="3" Content="Refresh" Margin="4,0,0,0" Command="{Binding RefreshInstalledCommand}" />
+            <Button Grid.Column="3" Content="Refresh" Margin="10,0,0,0" Command="{Binding RefreshInstalledCommand}" />
         </Grid>
 
         <Border Grid.Row="4" BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" Padding="4">
@@ -47,7 +47,7 @@
                                                Text="{Binding Name}" ToolTip.Tip="{Binding LastError}" />
                                     <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0"
                                                Text="{Binding State}" ToolTip.Tip="{Binding StatusText}" />
-                                    <Button Grid.Column="2" Content="Unorphan" Margin="0,0,4,0"
+                                    <Button Grid.Column="2" Content="Unorphan" Margin="0,0,10,0"
                                             IsVisible="{Binding OrphanAcknowledged}"
                                             Command="{Binding $parent[ItemsControl].((vm:PlaygroundWindowViewModel)DataContext).UnorphanServiceCommand}"
                                             CommandParameter="{Binding}" />

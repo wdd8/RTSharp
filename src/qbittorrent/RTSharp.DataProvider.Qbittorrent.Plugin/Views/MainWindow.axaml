@@ -179,7 +179,7 @@
                                         </DataGridTemplateColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
-                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
                                     <Button Content="Add" Command="{Binding AddScanDirectoryCommand}" />
                                     <Button Content="Remove" Command="{Binding RemoveScanDirectoryCommand}" IsEnabled="{Binding SelectedScanDirectory, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 </StackPanel>
@@ -545,12 +545,11 @@
 
                     <!-- WebUI -->
                     <StackPanel Orientation="Vertical" Spacing="4" IsVisible="{Binding WebUISelected}">
-                        <Border Background="#40FF8C00" BorderBrush="#FF8C00" BorderThickness="1" CornerRadius="4" Padding="10,8">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <views:BuiltInIconImage Grid.Column="0" Value="SERIOUS_EXCLAMATION" Width="24" Height="24" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="Warning: Changing settings that affect qBittorrent API access (address, port, credentials, HTTPS) may result in RTSharp losing connection to qBittorrent." VerticalAlignment="Center" />
-                            </Grid>
-                        </Border>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="12,0,0,0">
+                            <views:BuiltInIconImage Grid.Column="0" Value="SERIOUS_EXCLAMATION" Width="24" Height="24" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="Warning: Changing settings that affect qBittorrent API access (address, port, credentials, HTTPS) may result in RTSharp losing connection to qBittorrent." VerticalAlignment="Center" />
+                        </Grid>
+                        <Separator Margin="-8,4,-8,4" />
                         <GroupBox Header="Web User Interface">
                             <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="6">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="IP address:" />

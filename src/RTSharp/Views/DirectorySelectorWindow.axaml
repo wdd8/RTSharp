@@ -177,8 +177,8 @@
             </Grid>
             
             <Grid Grid.Column="1">
-                <StackPanel Orientation="Horizontal" IsVisible="{Binding !IsBrowser}">
-                    <Button Margin="0 0 4 0" Command="{Binding SelectCommand}">Select</Button>
+                <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding !IsBrowser}">
+                    <Button Command="{Binding SelectCommand}">Select</Button>
                     <Button Command="{Binding CancelCommand}">Cancel</Button>
                 </StackPanel>
             </Grid>

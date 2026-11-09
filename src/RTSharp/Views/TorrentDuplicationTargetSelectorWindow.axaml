@@ -7,11 +7,9 @@
 		xmlns:local="using:RTSharp.Views"
         Name="window"
         mc:Ignorable="d"
-        MinWidth="453"
         Width="453"
-        Height="203"
-        MinHeight="203"
-        MaxHeight="203"
+        SizeToContent="Height"
+        CanResize="False"
         x:Class="RTSharp.Views.TorrentDuplicationTargetSelectorWindow"
 		x:DataType="vm:TorrentDuplicationTargetSelectorWindowViewModel"
         Title="RT# - Select destination">
@@ -23,9 +21,9 @@
         <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
     </Window.Styles>
     
-    <StackPanel Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE-24)}" Margin="0 8 0 0">
+    <StackPanel Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE-24)}" Margin="0 8 0 12">
         <local:DuplicationTargetSelectorControl DataContext="{Binding Selector}" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 16 0 0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0 16 0 0">
             <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding ConfirmClickCommand}">Confirm</Button>
             <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding CancelClickCommand}">Cancel</Button>
         </StackPanel>

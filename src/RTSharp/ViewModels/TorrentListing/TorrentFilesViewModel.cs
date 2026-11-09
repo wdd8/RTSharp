@@ -194,6 +194,8 @@ public partial class TorrentFilesViewModel : ObservableObject
         SetPriorityDontDownloadCommand.NotifyCanExecuteChanged();
         SetPriorityNormalCommand.NotifyCanExecuteChanged();
         SetPriorityHighCommand.NotifyCanExecuteChanged();
+        PreviewCommand.NotifyCanExecuteChanged();
+        MediaInfoCommand.NotifyCanExecuteChanged();
     }
 
     private async Task SetPriority(IList? In, Shared.Abstractions.File.PRIORITY Priority)
@@ -225,7 +227,8 @@ public partial class TorrentFilesViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(AllowConcurrentExecutions = true)]
+    public bool CanExecuteRemoteFileCommand() => Torrent != null;
+    [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteRemoteFileCommand))]
     public async Task Preview(IList In)
     {
         var file = In.Cast<Models.File>().FirstOrDefault(x => !x.IsDirectory && x.Path != "./");
@@ -239,8 +242,7 @@ public partial class TorrentFilesViewModel : ObservableObject
         }
     }
 
-    public bool CanExecuteMediaInfo() => true;
-    [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteMediaInfo))]
+    [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteRemoteFileCommand))]
     public async Task MediaInfo(IList In)
     {
         var files = In.Cast<Models.File>().Where(x => x.Path != "./");

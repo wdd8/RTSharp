@@ -67,7 +67,7 @@
                                 Foreground="Gray"
                                 Text="[Drag and drop area]" />
                         </Panel>
-                        <Button Grid.Column="1" Command="{Binding SelectFileClick}" Margin="0 0 4 0">
+                        <Button Grid.Column="1" Command="{Binding SelectFileClick}" Margin="0 0 10 0">
                             Select file
                         </Button>
                         <Button Grid.Column="2" Command="{Binding SelectFolderClick}">
@@ -143,8 +143,8 @@
                     <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Source}" />
                 </Grid>
             </GroupBox>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 8 0 0">
-                <Button Margin="0 0 4 0" Command="{Binding CreateTorrentClickCommand}">Create Torrent</Button>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10" Margin="0 8 0 0">
+                <Button Command="{Binding CreateTorrentClickCommand}">Create Torrent</Button>
                 <Button Command="{Binding CancelClickCommand}">Cancel</Button>
             </StackPanel>
         </StackPanel>
