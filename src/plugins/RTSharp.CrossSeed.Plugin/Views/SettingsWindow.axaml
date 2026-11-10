@@ -13,9 +13,6 @@
     <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
   </Window.Resources>
 
-  <Window.Styles>
-    <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
-  </Window.Styles>
 
   <StackPanel Spacing="8" MinWidth="600">
     <GroupBox Header="Torznab indexers, as seen from the server">

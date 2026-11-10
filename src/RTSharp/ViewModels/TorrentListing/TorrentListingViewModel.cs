@@ -19,6 +19,7 @@ using RTSharp.Core.TorrentPolling;
 using RTSharp.Models;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Controls;
 using RTSharp.Shared.Controls.DataGridFilters;
 using RTSharp.Shared.Utils;
 using RTSharp.ViewModels.Options;
@@ -111,7 +112,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
     [ObservableProperty]
     public partial int SelectedTorrentDetailsTabIndex { get; set; }
 
-    private static readonly DrawingImage DefaultImage;
+    private static readonly IImage DefaultImage = BuiltInIcon.GetImage(BuiltInIcons.WEB);
 
     private bool StartTorrentAllowed => SelectedItems.Any() && SelectedItems[0].InternalState != TORRENT_STATE.SEEDING;
 
@@ -122,16 +123,6 @@ public partial class TorrentListingViewModel : ObservableViewModel
     public Func<string?>? CaptureGridState; // view set
     public Func<double[]?>? CaptureGridRowHeights; // view set
     public Action<object> ScrollToItem = null!; // view set
-
-    static TorrentListingViewModel()
-    {
-        DefaultImage = new DrawingImage() {
-            Drawing = new GeometryDrawing() {
-                Geometry = FontAwesomeIcons.Get("fa7-solid fa7-globe"),
-                Brush = Brushes.White
-            }
-        };
-    }
 
     private bool ContextPopulated;
 

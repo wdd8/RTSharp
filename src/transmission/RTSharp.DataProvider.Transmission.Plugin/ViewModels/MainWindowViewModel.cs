@@ -10,10 +10,11 @@ using RTSharp.DataProvider.Transmission.Plugin.Mappers;
 using RTSharp.DataProvider.Transmission.Plugin.Models;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Controls;
 
 namespace RTSharp.DataProvider.Transmission.Plugin.ViewModels;
 
-public record Category(string Name, string Icon);
+public record Category(string Name, BuiltInIcons Icon);
 
 public partial class MainWindowViewModel : ObservableObject
 {
@@ -82,11 +83,11 @@ public partial class MainWindowViewModel : ObservableObject
     public partial double ListUpdateIntervalSeconds { get; set; } = 1;
 
     public Category[] Categories { get; set; } = new Category[] {
-        new Category("Download", "fa7-solid fa7-download"),
-        new Category("Network (WAN)", "fa7-solid fa7-network-wired"),
-        new Category("Bandwidth", "fa7-solid fa7-signal"),
-        new Category("Queue", "fa7-solid fa7-lines-leaning"),
-        new Category("RT#", "fa7-solid fa7-stopwatch")
+        new Category("Download", BuiltInIcons.DOWNLOAD),
+        new Category("Network (WAN)", BuiltInIcons.NETWORK),
+        new Category("Bandwidth", BuiltInIcons.BANDWIDTH),
+        new Category("Queue", BuiltInIcons.QUEUE),
+        new Category("RT#", BuiltInIcons.UPDATE_INTERVAL)
     };
 
     [ObservableProperty]

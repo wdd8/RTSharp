@@ -10,11 +10,12 @@ using Microsoft.Extensions.DependencyInjection;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
+using RTSharp.Shared.Controls;
 using RTSharp.ViewModels.Options.Pages;
 
 namespace RTSharp.ViewModels.Options;
 
-public record OptionsItem(string Icon, string Path, string Text, IList<OptionsItem> Children);
+public record OptionsItem(BuiltInIcons Icon, string Path, string Text, IList<OptionsItem> Children);
 
 public partial class OptionsWindowViewModel : ObservableObject
 {
@@ -33,10 +34,10 @@ public partial class OptionsWindowViewModel : ObservableObject
     public OptionsWindowViewModel()
     {
         Items = [
-            new OptionsItem("fa7-solid fa7-gears", "Behavior", "Behavior", Array.Empty<OptionsItem>()),
-            new OptionsItem("fa7-solid fa7-book-bookmark", "Caching", "Caching", Array.Empty<OptionsItem>()),
-            new OptionsItem("fa7-solid fa7-palette", "Look", "Look", Array.Empty<OptionsItem>()),
-            new OptionsItem("fa7-solid fa7-network-wired", "Network", "Network", Array.Empty<OptionsItem>()),
+            new OptionsItem(BuiltInIcons.BEHAVIOR, "Behavior", "Behavior", Array.Empty<OptionsItem>()),
+            new OptionsItem(BuiltInIcons.CACHING, "Caching", "Caching", Array.Empty<OptionsItem>()),
+            new OptionsItem(BuiltInIcons.LOOK, "Look", "Look", Array.Empty<OptionsItem>()),
+            new OptionsItem(BuiltInIcons.NETWORK, "Network", "Network", Array.Empty<OptionsItem>()),
         ];
 
         Pages = new Dictionary<string, ISettingsLoadable> {

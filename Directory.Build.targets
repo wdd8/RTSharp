@@ -22,4 +22,25 @@
     <Error Condition="'$(_HarfBuzzVersionCount)' &gt; '1'"
            Text="HarfBuzzSharp packages must all resolve to one version, but found: @(_HarfBuzzPackage->Distinct(), ', ')" />
   </Target>
+
+  <PropertyGroup>
+    <AvaloniaXamlCompiledMarker>$(IntermediateOutputPath)Avalonia\xaml-compiled</AvaloniaXamlCompiledMarker>
+  </PropertyGroup>
+
+  <Target Name="InvalidateAvaloniaXamlCompiledMarker" BeforeTargets="CompileAvaloniaXaml">
+    <Delete Files="$(AvaloniaXamlCompiledMarker)" />
+  </Target>
+
+  <Target Name="WriteAvaloniaXamlCompiledMarker" AfterTargets="CompileAvaloniaXaml">
+    <Touch Files="$(AvaloniaXamlCompiledMarker)" AlwaysCreate="true" />
+    <ItemGroup>
+      <FileWrites Include="$(AvaloniaXamlCompiledMarker)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="RecompileWithoutCompiledAvaloniaXaml"
+          BeforeTargets="CoreCompile"
+          Condition="'@(AvaloniaResource)@(AvaloniaXaml)' != '' And '$(DesignTimeBuild)' != 'true' And '$(EnableAvaloniaXamlCompilation)' != 'false' And !Exists('$(AvaloniaXamlCompiledMarker)')">
+    <Delete Files="@(IntermediateAssembly)" />
+  </Target>
 </Project>

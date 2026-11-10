@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.DataGridHierarchical;
 using Avalonia.Controls.DataGridSelection;
 using Avalonia.Data.Core;
-using Avalonia.Media;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,7 +10,6 @@ using DynamicData;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using RTSharp.Core;
 using RTSharp.Core.Services;
 using RTSharp.Models;
 using RTSharp.Shared.Abstractions;
@@ -180,8 +178,6 @@ public partial class TorrentFilesViewModel : ObservableObject
         SetPriorityNormalCommand = new AsyncRelayCommand<IList>(In => SetPriority(In, Shared.Abstractions.File.PRIORITY.NORMAL), CanSetPriority);
         SetPriorityHighCommand = new AsyncRelayCommand<IList>(In => SetPriority(In, Shared.Abstractions.File.PRIORITY.HIGH), CanSetPriority);
     }
-
-    public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-file");
 
     public IAsyncRelayCommand SetPriorityDontDownloadCommand { get; }
     public IAsyncRelayCommand SetPriorityNormalCommand { get; }

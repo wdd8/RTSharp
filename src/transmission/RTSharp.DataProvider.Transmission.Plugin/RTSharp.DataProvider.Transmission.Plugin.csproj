@@ -33,7 +33,6 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.14" />
         <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
-        <PackageReference Include="Optris.Icons.Avalonia.FontAwesome7" Version="12.0.7" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\MessageBox.Avalonia\MsBox.Avalonia\MsBox.Avalonia.csproj" />

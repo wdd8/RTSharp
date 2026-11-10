@@ -1,0 +1,78 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="DataGridAlternatingRowBrush" Color="#F3F3F3" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="DataGridAlternatingRowBrush" Color="#2A2A2A" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+            <x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
+            <Thickness x:Key="TextControlThemePadding">4,2,4,2</Thickness>
+            <x:Double x:Key="TextControlThemeMinHeight">22</x:Double>
+            <Thickness x:Key="ButtonPadding">8,2,8,2</Thickness>
+            <Thickness x:Key="ComboBoxPadding">4,2,0,2</Thickness>
+            <x:Double x:Key="ComboBoxMinHeight">22</x:Double>
+            <Thickness x:Key="ComboBoxItemThemePadding">4,2,4,2</Thickness>
+            <x:Double x:Key="DataGridFilterEditorActionSpacing">10</x:Double>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <FluentTheme />
+    <DockFluentTheme />
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.v2.xaml" />
+    <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
+    <StyleInclude Source="avares://AvaloniaHex/Themes/Fluent/AvaloniaHex.axaml" />
+    <StyleInclude Source="SlimDataGridThemes.axaml" />
+    <StyleInclude Source="CompactButtonSpinnerTheme.axaml" />
+    <StyleInclude Source="CompactCheckBoxTheme.axaml" />
+    <StyleInclude Source="CompactRadioButtonTheme.axaml" />
+    <StyleInclude Source="GroupBox.axaml" />
+    <StyleInclude Source="Depth.axaml" />
+
+    <Style Selector="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style Selector="AccessText">
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style Selector="DataGridSearchTextBlock">
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style Selector="PathIcon">
+        <Setter Property="Width" Value="16" />
+        <Setter Property="Height" Value="16" />
+    </Style>
+
+    <Style Selector="DataGridCell">
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+
+    <Style Selector="DataGridCell:current /template/ Border#FocusVisual">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
+    <Style Selector="ScrollBar">
+        <Setter Property="AllowAutoHide" Value="False" />
+    </Style>
+
+    <Style Selector="ScrollViewer[AllowAutoHide=True] /template/ ScrollContentPresenter#PART_ContentPresenter">
+        <Setter Property="Grid.RowSpan" Value="1" />
+        <Setter Property="Grid.ColumnSpan" Value="1" />
+    </Style>
+
+    <Style Selector="TabItem">
+        <Setter Property="Padding" Value="6,2" />
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+
+    <Style Selector="TabItem:selected /template/ Border#PART_SelectedPipe">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+</Styles>

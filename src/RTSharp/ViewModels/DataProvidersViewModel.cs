@@ -42,8 +42,6 @@ namespace RTSharp.ViewModels
 
         public ObservableCollection<DataProviderItemViewModel> Items { get; } = new();
 
-        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-network-wired");
-
         public string HeaderName => "Data providers";
 
         public DataProvidersViewModel()

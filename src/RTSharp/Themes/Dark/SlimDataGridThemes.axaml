@@ -1,10 +1,3 @@
-<!--
-  Slimmer DataGrid themes. All DataGrids in RTSharp are read-only, so the default
-  ProDataGrid cell/row templates' validation components (DataValidationErrors
-  wrapper + InvalidVisualElement) are useless. Drop those parts and use
-  StaticResource for theme-independent resources. Brushes stay DynamicResource so
-  base theme changes still propagate.
--->
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Styles.Resources>
     <ResourceDictionary>

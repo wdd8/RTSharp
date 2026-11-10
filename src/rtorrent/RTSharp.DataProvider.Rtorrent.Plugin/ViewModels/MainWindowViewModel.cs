@@ -7,11 +7,12 @@ using CommunityToolkit.Mvvm.Input;
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Controls;
 using Serilog;
 
 namespace RTSharp.DataProvider.Rtorrent.Plugin.ViewModels;
 
-public record Category(string Name, string Icon);
+public record Category(string Name, BuiltInIcons Icon);
 
 public partial class MainWindowViewModel : ObservableObject
 {
@@ -84,10 +85,10 @@ public partial class MainWindowViewModel : ObservableObject
     public partial double ListUpdateIntervalSeconds { get; set; } = 1;
 
     public Category[] Categories { get; set; } = new Category[] {
-        new Category("General", "fa7-solid fa7-wrench"),
-        new Category("Peers", "fa7-solid fa7-download"),
-        new Category("Connection", "fa7-solid fa7-signal"),
-        new Category("Advanced", "fa7-solid fa7-tools"),
-        new Category("RT#", "fa7-solid fa7-stopwatch")
+        new Category("General", BuiltInIcons.GENERAL),
+        new Category("Peers", BuiltInIcons.DOWNLOAD),
+        new Category("Connection", BuiltInIcons.BANDWIDTH),
+        new Category("Advanced", BuiltInIcons.ADVANCED),
+        new Category("RT#", BuiltInIcons.UPDATE_INTERVAL)
     };
 }

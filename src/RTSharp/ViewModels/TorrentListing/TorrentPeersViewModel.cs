@@ -1,13 +1,10 @@
-﻿using Avalonia.Media;
-
-using Avalonia.Collections;
+﻿using Avalonia.Collections;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using DialogHostAvalonia;
 
-using RTSharp.Core;
 using RTSharp.Shared.Abstractions;
 
 using Serilog;
@@ -100,7 +97,5 @@ namespace RTSharp.ViewModels.TorrentListing
         {
             PeersView = new DataGridCollectionView(Peers);
         }
-
-        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-user-group");
     }
 }

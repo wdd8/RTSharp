@@ -1,6 +1,5 @@
 ﻿using Avalonia.Collections;
 using Avalonia.Controls;
-using Avalonia.Media;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,7 +8,6 @@ using DialogHostAvalonia;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using RTSharp.Core;
 using RTSharp.Core.Services.Cache.Images;
 using RTSharp.Core.Services.Database.TrackerDb;
 using RTSharp.Shared.Abstractions;
@@ -248,8 +246,6 @@ namespace RTSharp.ViewModels.TorrentListing
 
             await TorrentListingViewModel.UpdateTrackersInTorrents();
         }
-
-        public Geometry Icon { get; } = FontAwesomeIcons.Get("fa7-solid fa7-address-book");
 
         public bool CanExecuteReplaceTracker() => CanExecuteAction("Replace");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteReplaceTracker))]

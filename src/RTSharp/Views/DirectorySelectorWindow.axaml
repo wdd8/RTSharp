@@ -3,7 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RTSharp.ViewModels;assembly=RTSharp"
-        xmlns:i="https://github.com/projektanker/icons.avalonia"
+        xmlns:sc="using:RTSharp.Shared.Controls.Views"
         xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters"
         xmlns:sharedConverters="using:RTSharp.Shared.Controls.Converters"
         xmlns:models="clr-namespace:RTSharp.Models"
@@ -52,8 +52,12 @@
     <Grid ColumnDefinitions="*" RowDefinitions="Auto,*,Auto" Margin="8">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" RowDefinitions="*">
             <TextBox Name="PathTextBox" Text="{Binding Selected.Path, Mode=OneWay}" Grid.Column="0" Margin="0 0 8 0" />
-            <Button Grid.Column="1" Margin="0 0 4 0" Command="{Binding RefreshCommand}" HotKey="F5" ToolTip.Tip="Refresh" i:Attached.Icon="fa7-solid fa7-rotate-right" />
-            <Button Grid.Column="2" Command="{Binding SetCurrentFolderCommand}" CommandParameter="{Binding #PathTextBox.Text}" IsDefault="True" i:Attached.Icon="fa7-solid fa7-right-long" />
+            <Button Grid.Column="1" Margin="0 0 4 0" Command="{Binding RefreshCommand}" HotKey="F5" ToolTip.Tip="Refresh">
+                <sc:BuiltInPathIcon Value="REFRESH" />
+            </Button>
+            <Button Grid.Column="2" Command="{Binding SetCurrentFolderCommand}" CommandParameter="{Binding #PathTextBox.Text}" IsDefault="True">
+                <sc:BuiltInPathIcon Value="NAVIGATE" />
+            </Button>
         </Grid>
 
         <DataGrid
@@ -170,7 +174,7 @@
                 <Button
                     Command="{Binding CreateDirectoryCommand}">
                     <StackPanel Orientation="Horizontal">
-                        <i:Icon Value="fa7-solid fa7-folder-plus" Margin="0 0 4 0" />
+                        <sc:BuiltInPathIcon Value="NEW_FOLDER" Margin="0 0 4 0" />
                         <TextBlock>Create directory</TextBlock>
                     </StackPanel>
                 </Button>

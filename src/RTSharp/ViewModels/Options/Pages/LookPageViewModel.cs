@@ -2,6 +2,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using System.Collections.Generic;
+
 namespace RTSharp.ViewModels.Options.Pages;
 
 public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
@@ -11,6 +13,14 @@ public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
 
     [ObservableProperty]
     public partial int RowHeight { get; set; }
+
+    [ObservableProperty]
+    public partial bool AlternatingRowColors { get; set; }
+
+    public IReadOnlyList<string> Themes { get; } = Core.Themes.List();
+
+    [ObservableProperty]
+    public partial string Theme { get; set; } = Core.Themes.Standard;
 
     public LookPageViewModel()
     {
@@ -26,6 +36,8 @@ public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
 
         SpeedChartEnabled = look.DataProviders.SpeedChartEnabled;
         RowHeight = look.TorrentListing.RowHeight;
+        AlternatingRowColors = look.AlternatingRowColors;
+        Theme = look.Theme;
     }
 
     public void ApplyToConfig(Core.Config config)
@@ -33,5 +45,9 @@ public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
         var look = config.Look.Value;
         look.DataProviders.SpeedChartEnabled = SpeedChartEnabled;
         look.TorrentListing.RowHeight = RowHeight;
+        look.AlternatingRowColors = AlternatingRowColors;
+
+        if (Theme != null)
+            look.Theme = Theme;
     }
 }

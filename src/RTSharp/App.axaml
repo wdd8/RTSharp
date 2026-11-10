@@ -9,6 +9,7 @@
              xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
              xmlns:av="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
+             xmlns:sc="using:RTSharp.Shared.Controls.Views"
              x:DataType="vm:AppViewModel">
     <Application.DataTemplates>
         <local:ViewLocator />
@@ -16,76 +17,26 @@
 
     <Application.Resources>
         <converters:IconConverter x:Key="IconConverter"/>
-        <x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
-        <Thickness x:Key="TextControlThemePadding">4,2,4,2</Thickness>
-        <x:Double x:Key="TextControlThemeMinHeight">22</x:Double>
-        <Thickness x:Key="ButtonPadding">8,2,8,2</Thickness>
-        <Thickness x:Key="ComboBoxPadding">4,2,0,2</Thickness>
-        <x:Double x:Key="ComboBoxMinHeight">22</x:Double>
-        <Thickness x:Key="ComboBoxItemThemePadding">4,2,4,2</Thickness>
-        <x:Double x:Key="DataGridFilterEditorActionSpacing">10</x:Double>
     </Application.Resources>
 
     <Application.Styles>
-        <FluentTheme />
-        <DockFluentTheme />
         <dialogHostAvalonia:DialogHostStyles />
-        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.v2.xaml" />
-        <StyleInclude Source="avares://RTSharp/Themes/SlimDataGridThemes.axaml" />
-        <StyleInclude Source="avares://RTSharp/Themes/CompactButtonSpinnerTheme.axaml" />
-        <StyleInclude Source="avares://RTSharp/Themes/CompactCheckBoxTheme.axaml" />
-        <StyleInclude Source="avares://RTSharp/Themes/CompactRadioButtonTheme.axaml" />
         <StyleInclude Source="avares://MsBox.Avalonia.Markdown/Controls/MarkdownView.axaml" />
-        <StyleInclude Source="avares://AvaloniaHex/Themes/Fluent/AvaloniaHex.axaml" />
-
-        <Style Selector="TextBlock">
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-
-        <Style Selector="AccessText">
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-
-        <Style Selector="DataGridSearchTextBlock">
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-
-        <Style Selector="DataGridCell">
-            <Setter Property="MinHeight" Value="0" />
-        </Style>
-
-        <Style Selector="DataGridCell:current /template/ Border#FocusVisual">
-            <Setter Property="IsVisible" Value="False" />
-        </Style>
-
-        <Style Selector="ScrollBar">
-            <Setter Property="AllowAutoHide" Value="False" />
-        </Style>
-
-        <Style Selector="ScrollViewer[AllowAutoHide=True] /template/ ScrollContentPresenter#PART_ContentPresenter">
-            <Setter Property="Grid.RowSpan" Value="1" />
-            <Setter Property="Grid.ColumnSpan" Value="1" />
-        </Style>
-
-        <Style Selector="TabItem">
-            <Setter Property="Padding" Value="12,8" />
-            <Setter Property="MinHeight" Value="0" />
-        </Style>
-
-        <Style Selector="TabItem:selected /template/ Border#PART_SelectedPipe">
-            <Setter Property="IsVisible" Value="False" />
-        </Style>
 
         <Style Selector="DocumentControl">
           <Setter Property="IconTemplate">
             <DataTemplate x:DataType="dock:IDockable">
-                <PathIcon
-                    Data="{Binding ., Converter={StaticResource IconConverter}}"
+                <sc:BuiltInPathIcon
+                    Value="{Binding ., Converter={StaticResource IconConverter}}"
                     Width="16"
                     Height="16"
                     Margin="0" />
             </DataTemplate>
           </Setter>
+        </Style>
+
+        <Style Selector="DataGridRow.odd">
+            <Setter Property="Background" Value="{DynamicResource DataGridAlternatingRowBrush}" />
         </Style>
     </Application.Styles>
 

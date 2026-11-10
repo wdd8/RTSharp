@@ -4,7 +4,6 @@
 			 xmlns:dataGridEx="using:RTSharp.Views.DataGridEx"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:i="https://github.com/projektanker/icons.avalonia"
 			 xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
 			 xmlns:sharedConverters="using:RTSharp.Shared.Controls.Converters"
 			 xmlns:torrentListingVm="clr-namespace:RTSharp.ViewModels.TorrentListing;assembly=RTSharp"
@@ -217,30 +216,33 @@
 						 Watermark="Filter..."
 						 Text="{Binding FilterText}">
 					<TextBox.InnerLeftContent>
-						<i:Icon Value="fa7-solid fa7-filter"
+						<shared:BuiltInPathIcon Value="FILTER"
 								Margin="8 0 0 0"
 								Foreground="{DynamicResource TextControlPlaceholderForeground}" />
 					</TextBox.InnerLeftContent>
 				</TextBox>
 				<StackPanel Orientation="Horizontal">
 					<Button
-						i:Attached.Icon="fa7-solid fa7-play"
 						Command="{Binding StartTorrentsCommand}"
 						CommandParameter="{Binding #grid.SelectedItems}"
 						Background="Transparent"
-						ToolTip.Tip="Start" />
+						ToolTip.Tip="Start">
+						<shared:BuiltInPathIcon Value="START" />
+					</Button>
 					<Button
-						i:Attached.Icon="fa7-solid fa7-pause"
 						Command="{Binding PauseTorrentsCommand}"
 						CommandParameter="{Binding #grid.SelectedItems}"
 						Background="Transparent"
-						ToolTip.Tip="Pause" />
+						ToolTip.Tip="Pause">
+						<shared:BuiltInPathIcon Value="PAUSE" />
+					</Button>
 					<Button
-						i:Attached.Icon="fa7-solid fa7-stop"
 						Command="{Binding StopTorrentsCommand}"
 						CommandParameter="{Binding #grid.SelectedItems}"
 						Background="Transparent"
-						ToolTip.Tip="Stop" />
+						ToolTip.Tip="Stop">
+						<shared:BuiltInPathIcon Value="STOP" />
+					</Button>
 					<Panel Margin="-5 0 -30 0">
 						<Separator RenderTransformOrigin="0 0" VerticalAlignment="Top">
 							<Separator.RenderTransform>
@@ -249,9 +251,10 @@
 						</Separator>
 					</Panel>
 					<Button
-						i:Attached.Icon="fa7-solid fa7-gear"
 						Background="Transparent"
-						Command="{Binding ShowOptionsCommand}" />
+						Command="{Binding ShowOptionsCommand}">
+						<shared:BuiltInPathIcon Value="SETTINGS" />
+					</Button>
 				</StackPanel>
 			</DockPanel>
 			<DataGrid Grid.Row="1"

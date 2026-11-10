@@ -1,0 +1,18 @@
+Font Awesome Free License
+-------------------------
+
+The SVG icons of the built-in "Standard" theme are from Font Awesome Free 7 by Fonticons, Inc.
+https://fontawesome.com
+
+Full Font Awesome Free license: https://fontawesome.com/license/free
+
+# Icons: CC BY 4.0 License (https://creativecommons.org/licenses/by/4.0/)
+The CC BY 4.0 license applies to all icons packaged as SVG and JS file types.
+
+# Attribution
+Attribution is required by the CC BY license. Each Font Awesome icon file contains an embedded comment with
+attribution.
+
+# Brand Icons
+All brand icons are trademarks of their respective owners. The use of these trademarks does not indicate
+endorsement of the trademark holder by Font Awesome, nor vice versa.

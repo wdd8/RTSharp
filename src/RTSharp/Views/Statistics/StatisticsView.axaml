@@ -16,9 +16,6 @@
     <UserControl.Resources>
         <converters:SIDataSizeConverter x:Key="SIDataSizeConverter"/>
     </UserControl.Resources>
-    <UserControl.Styles>
-        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
-    </UserControl.Styles>
 
 	<Grid RowDefinitions="Auto,Auto,*">
 		<GroupBox Grid.Row="0" Header="Listing" Margin="4,4,4,4">

@@ -12,6 +12,7 @@ using Dock.Model.Core;
 using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Core;
+using RTSharp.Shared.Controls;
 using RTSharp.ViewModels.Statistics;
 using RTSharp.ViewModels.TorrentListing;
 using RTSharp.Views;
@@ -75,7 +76,7 @@ namespace RTSharp.ViewModels
             var torrentListing = new DocumentWithIcon {
                 Id = "TorrentListing",
                 Title = "Torrent listing",
-                Icon = FontAwesomeIcons.Get("fa7-solid fa7-list"),
+                Icon = BuiltInIcons.TORRENT_LISTING,
                 Content = new Func<IServiceProvider, object>(_ => CreateTorrentListingView()),
                 DockCapabilityOverrides = new()
             };
@@ -83,7 +84,7 @@ namespace RTSharp.ViewModels
             var actionQueue = new DocumentWithIcon {
                 Id = "ActionQueue",
                 Title = "Action queue",
-                Icon = FontAwesomeIcons.Get("fa7-solid fa7-bolt"),
+                Icon = BuiltInIcons.ACTION_QUEUE,
                 Content = new Func<IServiceProvider, object>(_ => new ActionQueuesView {
                     DataContext = actionQueuesViewModel
                 }),
@@ -93,7 +94,7 @@ namespace RTSharp.ViewModels
             var log = new DocumentWithIcon {
                 Id = "Log",
                 Title = "Log",
-                Icon = FontAwesomeIcons.Get("fa7-solid fa7-calendar-days"),
+                Icon = BuiltInIcons.LOG,
                 Content = new Func<IServiceProvider, object>(_ => new LogEntriesView {
                     DataContext = logEntriesViewModel
                 }),

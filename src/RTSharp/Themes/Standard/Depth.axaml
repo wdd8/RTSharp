@@ -1,0 +1,303 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <LinearGradientBrush x:Key="DepthRaisedBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#F2F2F2" />
+            <GradientStop Offset="0.5" Color="#EBEBEB" />
+            <GradientStop Offset="0.5" Color="#DDDDDD" />
+            <GradientStop Offset="1" Color="#CFCFCF" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthHoverBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#EAF6FD" />
+            <GradientStop Offset="0.5" Color="#D9F0FC" />
+            <GradientStop Offset="0.5" Color="#BEE6FD" />
+            <GradientStop Offset="1" Color="#A7D9F5" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthPressedBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#E5F4FC" />
+            <GradientStop Offset="0.5" Color="#C4E5F6" />
+            <GradientStop Offset="0.5" Color="#98D1EF" />
+            <GradientStop Offset="1" Color="#68B3DB" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthDisabledBrush" Color="#F4F4F4" />
+          <SolidColorBrush x:Key="DepthRaisedBorderBrush" Color="#707070" />
+          <SolidColorBrush x:Key="DepthHoverBorderBrush" Color="#3C7FB1" />
+          <SolidColorBrush x:Key="DepthPressedBorderBrush" Color="#2C628B" />
+          <SolidColorBrush x:Key="DepthDisabledBorderBrush" Color="#ADB2B5" />
+
+          <SolidColorBrush x:Key="DepthWellBrush" Color="White" />
+          <LinearGradientBrush x:Key="DepthWellBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#ABADB3" />
+            <GradientStop Offset="0.1" Color="#E2E3EA" />
+            <GradientStop Offset="1" Color="#E3E9EF" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthWellHoverBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#5794BF" />
+            <GradientStop Offset="0.1" Color="#B7D5EA" />
+            <GradientStop Offset="1" Color="#C7E2F1" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthWellFocusedBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#3D7BAD" />
+            <GradientStop Offset="0.1" Color="#A4C9E3" />
+            <GradientStop Offset="1" Color="#B7D9ED" />
+          </LinearGradientBrush>
+
+          <LinearGradientBrush x:Key="DepthHeaderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#FFFFFF" />
+            <GradientStop Offset="0.4" Color="#FFFFFF" />
+            <GradientStop Offset="0.4" Color="#F7F8FA" />
+            <GradientStop Offset="1" Color="#F1F2F4" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthHeaderHoverBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#E3F7FF" />
+            <GradientStop Offset="0.4" Color="#E3F7FF" />
+            <GradientStop Offset="0.4" Color="#BDEDFF" />
+            <GradientStop Offset="1" Color="#B7E7FB" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthHeaderPressedBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#BCE4F9" />
+            <GradientStop Offset="0.4" Color="#BCE4F9" />
+            <GradientStop Offset="0.4" Color="#8DD6F7" />
+            <GradientStop Offset="1" Color="#8AD1F5" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthHeaderSeparatorBrush" Color="#D5D5D5" />
+
+          <LinearGradientBrush x:Key="DepthTabBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#F3F3F3" />
+            <GradientStop Offset="0.5" Color="#EBEBEB" />
+            <GradientStop Offset="0.5" Color="#DDDDDD" />
+            <GradientStop Offset="1" Color="#CDCDCD" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthTabBorderBrush" Color="#898C95" />
+
+          <LinearGradientBrush x:Key="DepthMenuBarBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#FDFDFE" />
+            <GradientStop Offset="1" Color="#E6EAF0" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthMenuBarBorderBrush" Color="#B9C1CC" />
+          <!-- Fluent's brush keys, pointed at the brushes above -->
+          <StaticResource x:Key="ButtonBackground" ResourceKey="DepthRaisedBrush" />
+          <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="ButtonBackgroundDisabled" ResourceKey="DepthDisabledBrush" />
+          <StaticResource x:Key="ButtonBorderBrush" ResourceKey="DepthRaisedBorderBrush" />
+          <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="DepthHoverBorderBrush" />
+          <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="DepthPressedBorderBrush" />
+          <StaticResource x:Key="ButtonBorderBrushDisabled" ResourceKey="DepthDisabledBorderBrush" />
+          <StaticResource x:Key="RepeatButtonBackground" ResourceKey="DepthRaisedBrush" />
+          <StaticResource x:Key="RepeatButtonBackgroundPointerOver" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="RepeatButtonBackgroundPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="RepeatButtonBackgroundDisabled" ResourceKey="DepthDisabledBrush" />
+          <StaticResource x:Key="RepeatButtonBorderBrush" ResourceKey="DepthRaisedBorderBrush" />
+          <StaticResource x:Key="RepeatButtonBorderBrushPointerOver" ResourceKey="DepthHoverBorderBrush" />
+          <StaticResource x:Key="RepeatButtonBorderBrushPressed" ResourceKey="DepthPressedBorderBrush" />
+          <StaticResource x:Key="RepeatButtonBorderBrushDisabled" ResourceKey="DepthDisabledBorderBrush" />
+          <StaticResource x:Key="ComboBoxBackground" ResourceKey="DepthRaisedBrush" />
+          <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="ComboBoxBackgroundDisabled" ResourceKey="DepthDisabledBrush" />
+          <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="DepthRaisedBorderBrush" />
+          <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="DepthHoverBorderBrush" />
+          <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="DepthPressedBorderBrush" />
+          <StaticResource x:Key="ComboBoxBorderBrushDisabled" ResourceKey="DepthDisabledBorderBrush" />
+          <StaticResource x:Key="TextControlBackground" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="TextControlBorderBrush" ResourceKey="DepthWellBorderBrush" />
+          <StaticResource x:Key="TextControlBorderBrushPointerOver" ResourceKey="DepthWellHoverBorderBrush" />
+          <StaticResource x:Key="TextControlBorderBrushFocused" ResourceKey="DepthWellFocusedBorderBrush" />
+          <StaticResource x:Key="DataGridColumnHeaderBackgroundBrush" ResourceKey="DepthHeaderBrush" />
+          <StaticResource x:Key="DataGridColumnHeaderHoveredBackgroundBrush" ResourceKey="DepthHeaderHoverBrush" />
+          <StaticResource x:Key="DataGridColumnHeaderPressedBackgroundBrush" ResourceKey="DepthHeaderPressedBrush" />
+          <StaticResource x:Key="TabItemHeaderBackgroundUnselected" ResourceKey="DepthTabBrush" />
+          <StaticResource x:Key="TabItemHeaderBackgroundUnselectedPointerOver" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="TabItemHeaderBackgroundUnselectedPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="DockTabHoverBackgroundBrush" ResourceKey="DepthHoverBrush" />
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Dark">
+          <LinearGradientBrush x:Key="DepthRaisedBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#4C4C4C" />
+            <GradientStop Offset="0.5" Color="#444444" />
+            <GradientStop Offset="0.5" Color="#3A3A3A" />
+            <GradientStop Offset="1" Color="#333333" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthHoverBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#44617C" />
+            <GradientStop Offset="0.5" Color="#3B5873" />
+            <GradientStop Offset="0.5" Color="#2F4C69" />
+            <GradientStop Offset="1" Color="#2A4560" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthPressedBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#2A4A68" />
+            <GradientStop Offset="0.5" Color="#24425E" />
+            <GradientStop Offset="0.5" Color="#1C3854" />
+            <GradientStop Offset="1" Color="#18314B" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthDisabledBrush" Color="#2E2E2E" />
+          <SolidColorBrush x:Key="DepthRaisedBorderBrush" Color="#6E6E6E" />
+          <SolidColorBrush x:Key="DepthHoverBorderBrush" Color="#5B9BD5" />
+          <SolidColorBrush x:Key="DepthPressedBorderBrush" Color="#3C7FB1" />
+          <SolidColorBrush x:Key="DepthDisabledBorderBrush" Color="#444444" />
+
+          <SolidColorBrush x:Key="DepthWellBrush" Color="#1A1A1A" />
+          <LinearGradientBrush x:Key="DepthWellBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#0A0A0A" />
+            <GradientStop Offset="0.1" Color="#4A4A4A" />
+            <GradientStop Offset="1" Color="#575757" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthWellHoverBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#2C5578" />
+            <GradientStop Offset="0.1" Color="#4F7FA6" />
+            <GradientStop Offset="1" Color="#5B8DB5" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthWellFocusedBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#1F4E79" />
+            <GradientStop Offset="0.1" Color="#5B9BD5" />
+            <GradientStop Offset="1" Color="#6AA8DE" />
+          </LinearGradientBrush>
+
+          <LinearGradientBrush x:Key="DepthHeaderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#3A3A3A" />
+            <GradientStop Offset="0.4" Color="#3A3A3A" />
+            <GradientStop Offset="0.4" Color="#333333" />
+            <GradientStop Offset="1" Color="#2E2E2E" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthHeaderHoverBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#3E5A73" />
+            <GradientStop Offset="0.4" Color="#3E5A73" />
+            <GradientStop Offset="0.4" Color="#34506A" />
+            <GradientStop Offset="1" Color="#2F4A63" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthHeaderPressedBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#2A4A68" />
+            <GradientStop Offset="0.4" Color="#2A4A68" />
+            <GradientStop Offset="0.4" Color="#21405D" />
+            <GradientStop Offset="1" Color="#1C3854" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthHeaderSeparatorBrush" Color="#4D4D4D" />
+
+          <LinearGradientBrush x:Key="DepthTabBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#474747" />
+            <GradientStop Offset="0.5" Color="#404040" />
+            <GradientStop Offset="0.5" Color="#363636" />
+            <GradientStop Offset="1" Color="#303030" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthTabBorderBrush" Color="#5A5A5A" />
+
+          <LinearGradientBrush x:Key="DepthMenuBarBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#353535" />
+            <GradientStop Offset="1" Color="#2A2A2A" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthMenuBarBorderBrush" Color="#444444" />
+          <StaticResource x:Key="ButtonBackground" ResourceKey="DepthRaisedBrush" />
+          <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="ButtonBackgroundDisabled" ResourceKey="DepthDisabledBrush" />
+          <StaticResource x:Key="ButtonBorderBrush" ResourceKey="DepthRaisedBorderBrush" />
+          <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="DepthHoverBorderBrush" />
+          <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="DepthPressedBorderBrush" />
+          <StaticResource x:Key="ButtonBorderBrushDisabled" ResourceKey="DepthDisabledBorderBrush" />
+          <StaticResource x:Key="RepeatButtonBackground" ResourceKey="DepthRaisedBrush" />
+          <StaticResource x:Key="RepeatButtonBackgroundPointerOver" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="RepeatButtonBackgroundPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="RepeatButtonBackgroundDisabled" ResourceKey="DepthDisabledBrush" />
+          <StaticResource x:Key="RepeatButtonBorderBrush" ResourceKey="DepthRaisedBorderBrush" />
+          <StaticResource x:Key="RepeatButtonBorderBrushPointerOver" ResourceKey="DepthHoverBorderBrush" />
+          <StaticResource x:Key="RepeatButtonBorderBrushPressed" ResourceKey="DepthPressedBorderBrush" />
+          <StaticResource x:Key="RepeatButtonBorderBrushDisabled" ResourceKey="DepthDisabledBorderBrush" />
+          <StaticResource x:Key="ComboBoxBackground" ResourceKey="DepthRaisedBrush" />
+          <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="ComboBoxBackgroundDisabled" ResourceKey="DepthDisabledBrush" />
+          <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="DepthRaisedBorderBrush" />
+          <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="DepthHoverBorderBrush" />
+          <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="DepthPressedBorderBrush" />
+          <StaticResource x:Key="ComboBoxBorderBrushDisabled" ResourceKey="DepthDisabledBorderBrush" />
+          <StaticResource x:Key="TextControlBackground" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="TextControlBorderBrush" ResourceKey="DepthWellBorderBrush" />
+          <StaticResource x:Key="TextControlBorderBrushPointerOver" ResourceKey="DepthWellHoverBorderBrush" />
+          <StaticResource x:Key="TextControlBorderBrushFocused" ResourceKey="DepthWellFocusedBorderBrush" />
+          <StaticResource x:Key="DataGridColumnHeaderBackgroundBrush" ResourceKey="DepthHeaderBrush" />
+          <StaticResource x:Key="DataGridColumnHeaderHoveredBackgroundBrush" ResourceKey="DepthHeaderHoverBrush" />
+          <StaticResource x:Key="DataGridColumnHeaderPressedBackgroundBrush" ResourceKey="DepthHeaderPressedBrush" />
+          <StaticResource x:Key="TabItemHeaderBackgroundUnselected" ResourceKey="DepthTabBrush" />
+          <StaticResource x:Key="TabItemHeaderBackgroundUnselectedPointerOver" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="TabItemHeaderBackgroundUnselectedPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="DockTabHoverBackgroundBrush" ResourceKey="DepthHoverBrush" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+
+      <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
+      <Thickness x:Key="TabControlTopPlacementItemMargin">0</Thickness>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <Style Selector="DataGridColumnHeader">
+    <Setter Property="SeparatorBrush" Value="{DynamicResource DepthHeaderSeparatorBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DepthHeaderSeparatorBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+
+  <Style Selector="Menu">
+    <Setter Property="Background" Value="{DynamicResource DepthMenuBarBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DepthMenuBarBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+
+  <!-- Tabs stand on a bordered page; the selected one is taller, has the page's background and covers the page's top edge -->
+  <Style Selector="TabControl /template/ ContentPresenter#PART_SelectedContentHost, TabControl /template/ ContentPresenter#PART_SelectedContentHost2">
+    <Setter Property="Background" Value="{DynamicResource SystemRegionBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DepthTabBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="4" />
+  </Style>
+
+  <Style Selector="TabControl">
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <Style Selector="TabControl /template/ ItemsPresenter#PART_ItemsPresenter">
+    <Setter Property="ZIndex" Value="1" />
+  </Style>
+
+  <Style Selector="TabItem">
+    <Setter Property="BorderBrush" Value="{DynamicResource DepthTabBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1,1,1,0" />
+    <Setter Property="CornerRadius" Value="2,2,0,0" />
+    <Setter Property="Margin" Value="0,2,-1,0" />
+  </Style>
+
+  <Style Selector="TabItem:selected">
+    <Setter Property="Margin" Value="-2,0,-3,-1" />
+    <Setter Property="ZIndex" Value="1" />
+  </Style>
+
+  <Style Selector="TabItem:selected /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{DynamicResource SystemRegionBrush}" />
+  </Style>
+
+  <Style Selector="DocumentTabStripItem">
+    <Setter Property="BorderBrush" Value="{DynamicResource DepthTabBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1,1,1,0" />
+    <Setter Property="CornerRadius" Value="2,2,0,0" />
+    <Setter Property="Margin" Value="0,2,-1,0" />
+  </Style>
+
+  <Style Selector="DocumentTabStripItem:selected">
+    <Setter Property="Margin" Value="0,0,-1,0" />
+  </Style>
+
+  <Style Selector="DocumentTabStripItem:not(:selected):not(:pointerover):not(:dragging)">
+    <Setter Property="Background" Value="{DynamicResource DepthTabBrush}" />
+  </Style>
+
+  <Style Selector="DocumentTabStripItem /template/ Border#PART_TabSeparatorRight">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+</Styles>

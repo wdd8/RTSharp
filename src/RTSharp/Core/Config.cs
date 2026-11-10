@@ -148,6 +148,10 @@ public class Config
             public TorrentListingConfig TorrentListing { get; set; } = new() {
                 RowHeight = 32
             };
+
+            public bool AlternatingRowColors { get; set; }
+
+            public string Theme { get; set; } = Themes.Standard;
         }
     }
 
@@ -174,11 +178,11 @@ public class Config
         this.Provider = Provider;
     }
 
-    public static async Task WriteDefaultConfig()
+    public static void WriteDefaultConfig()
     {
         Directory.CreateDirectory(Shared.Abstractions.Consts.USER_DATA_PATH);
         if (!File.Exists(Shared.Abstractions.Consts.APP_CONFIG_PATH))
-            await File.WriteAllTextAsync(Shared.Abstractions.Consts.APP_CONFIG_PATH, DefaultConfig);
+            File.WriteAllText(Shared.Abstractions.Consts.APP_CONFIG_PATH, DefaultConfig);
     }
 
     public async Task Rewrite()
@@ -235,7 +239,9 @@ public class Config
     },
     "TorrentListing": {
       "RowHeight": 21
-    }
+    },
+    "AlternatingRowColors": false,
+    "Theme": "Standard"
   },
   "Proxy": {
     "Enabled": false,

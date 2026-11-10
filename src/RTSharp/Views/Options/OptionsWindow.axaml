@@ -3,7 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:options="clr-namespace:RTSharp.ViewModels.Options"
-        xmlns:i="https://github.com/projektanker/icons.avalonia"
+        xmlns:sc="using:RTSharp.Shared.Controls.Views"
         mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
         Width="700" Height="500"
         x:Class="RTSharp.Views.Options.OptionsWindow"
@@ -15,7 +15,6 @@
     </Design.DataContext>
 
     <Window.Styles>
-        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
         <Style Selector="TextBlock,TextBox">
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
@@ -35,7 +34,7 @@
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="options:OptionsItem" ItemsSource="{Binding Children}">
                         <StackPanel Orientation="Horizontal" MinWidth="150">
-                            <i:Icon FontSize="16" Value="{Binding Icon}" Margin="0 0 20 0" />
+                            <sc:BuiltInPathIcon Width="16" Height="16" Value="{Binding Icon}" Margin="0 0 20 0" />
                             <TextBlock TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding Text}"/>
                         </StackPanel>
                     </TreeDataTemplate>

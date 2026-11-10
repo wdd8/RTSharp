@@ -19,6 +19,10 @@
     </UserControl.Styles>
 
     <StackPanel Margin="8" Spacing="12">
+        <GroupBox Header="Theme">
+            <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}" MinWidth="150" />
+        </GroupBox>
+
         <GroupBox Header="Data providers">
             <CheckBox IsChecked="{Binding SpeedChartEnabled}">Show speed chart</CheckBox>
         </GroupBox>
@@ -29,6 +33,10 @@
                 <NumericUpDown Grid.Column="1" Value="{Binding RowHeight}" Minimum="8" Maximum="64" />
                 <TextBlock Grid.Column="2" Classes="unit">px</TextBlock>
             </Grid>
+        </GroupBox>
+
+        <GroupBox Header="Grids">
+            <CheckBox IsChecked="{Binding AlternatingRowColors}">Alternate row colors</CheckBox>
         </GroupBox>
     </StackPanel>
 </UserControl>

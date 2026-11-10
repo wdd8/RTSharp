@@ -20,7 +20,6 @@
     </Window.Resources>
 
     <Window.Styles>
-        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
         <Style Selector="TextBlock.label">
             <Setter Property="Padding" Value="0,0,8,0" />
             <Setter Property="VerticalAlignment" Value="Center" />

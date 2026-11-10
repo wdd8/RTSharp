@@ -3,6 +3,9 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Logging;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media.Imaging;
+using Avalonia.Styling;
+using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 
 using Dapper;
@@ -10,11 +13,12 @@ using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 using MsBox.Avalonia;
-
-using Optris.Icons.Avalonia;
-using Optris.Icons.Avalonia.FontAwesome7;
+using MsBox.Avalonia.Base;
+using MsBox.Avalonia.Dto;
+using MsBox.Avalonia.Models;
 
 using RTSharp.Core;
 using RTSharp.Core.Services.Cache.ASCache;
@@ -24,6 +28,7 @@ using RTSharp.Core.Services.Cache.TorrentPropertiesCache;
 using RTSharp.Core.Services.Daemon;
 using RTSharp.Core.Services.Database.TrackerDb;
 using RTSharp.Core.TorrentPolling;
+using RTSharp.Shared.Controls;
 using RTSharp.ViewModels;
 using RTSharp.Views;
 
@@ -68,18 +73,10 @@ public class App : Application
             .CreateLogger();
         Log.Logger = log;
 
-        IconProvider.Current.Register<FontAwesome7IconProvider>();
-
         try {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
         } catch (Exception ex) {
-            var msgbox = MessageBoxManager.GetMessageBoxStandard(
-                title: "RTSharp has crashed", 
-                text: $"RTSharp has crashed.\n{ex}", 
-                @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok, 
-                icon: MsBox.Avalonia.Enums.Icon.Error, 
-                windowStartupLocation: WindowStartupLocation.CenterOwner);
-            var task = msgbox.ShowAsync();
+            var task = CrashMessageBox(ex).ShowAsync();
             var cts = new CancellationTokenSource();
             task.ContinueWith((task) => cts.Cancel());
             Dispatcher.UIThread.MainLoop(cts.Token);
@@ -90,6 +87,25 @@ public class App : Application
         }
     }
 
+    private static IMsBox<string> CrashMessageBox(Exception ex)
+    {
+        Bitmap? icon = null;
+        try {
+            icon = BuiltInIcon.Get(BuiltInIcons.CRASH);
+        } catch (Exception iconEx) {
+            Log.Logger.Warning(iconEx, "Could not load crash icon");
+        }
+
+        return MessageBoxManager.GetMessageBoxCustom(new MessageBoxCustomParams {
+            ButtonDefinitions = [ new ButtonDefinition { Name = "OK", IsDefault = true } ],
+            ImageIcon = icon!,
+            Icon = icon == null ? MsBox.Avalonia.Enums.Icon.Error : MsBox.Avalonia.Enums.Icon.None,
+            ContentTitle = "RTSharp has crashed",
+            ContentMessage = $"RTSharp has crashed.\n{ex}",
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        });
+    }
+
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
                      .UsePlatformDetect()
@@ -97,26 +113,54 @@ public class App : Application
 
     public override void Initialize()
     {
-        _ = Task.Run(async () => {
-            try {
-                await PreInitServices();
-                PreInitServiceTcs.SetResult();
-            } catch (Exception ex) {
-                await Dispatcher.UIThread.InvokeAsync(async () => {
-                    var msgbox = MessageBoxManager.GetMessageBoxStandard(
-                        title: "RTSharp has crashed",
-                        text: $"RTSharp has crashed.\n{ex}",
-                        @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
-                        icon: MsBox.Avalonia.Enums.Icon.Error,
-                        windowStartupLocation: WindowStartupLocation.CenterOwner);
-                    await msgbox.ShowAsync();
-                });
-                Environment.Exit(1);
-                return;
-            }
-        });
-
         AvaloniaXamlLoader.Load(this);
+
+        try {
+            Core.Config.WriteDefaultConfig();
+            var config = new ConfigurationBuilder()
+                .AddJsonFile(RTSharp.Shared.Abstractions.Consts.APP_CONFIG_PATH, false, true)
+                .Build();
+
+            _ = Task.Run(async () => {
+                try {
+                    await PreInitServices(config);
+                    PreInitServiceTcs.SetResult();
+                } catch (Exception ex) {
+                    await Dispatcher.UIThread.InvokeAsync(async () => {
+                        await CrashMessageBox(ex).ShowAsync();
+                    });
+                    Environment.Exit(1);
+                    return;
+                }
+            });
+
+            Themes.CreateMissingBuiltInThemes();
+
+            string themeName;
+            try {
+                themeName = config.GetSection(nameof(Config.Models.Look))
+                    .Get<Config.Models.Look>()?.Theme ?? Themes.Standard;
+            } catch (Exception ex) {
+                Log.Logger.Warning(ex, "Could not read theme from config");
+                themeName = Themes.Standard;
+            }
+
+            IStyle theme;
+
+            try {
+                theme = Themes.Load(themeName);
+            } catch (Exception ex) when (themeName != Themes.Standard) {
+                Log.Logger.Error(ex, $"Theme {themeName} failed to load");
+                ThemeLoadError = ex.Message;
+                theme = Themes.Load(Themes.Standard);
+            }
+
+            Styles.Insert(0, theme);
+        } catch {
+            // Lets the crash dialog render
+            Styles.Insert(0, new FluentTheme());
+            throw;
+        }
 
 #if DEBUG
         this.AttachDeveloperTools();
@@ -129,6 +173,8 @@ public class App : Application
 
         diagnosticsExporter.Start();*/
     }
+
+    private static string? ThemeLoadError;
 
     private static ConcurrentDictionary<string, Func<ValueTask>> FxOnExit = new();
 
@@ -151,13 +197,7 @@ public class App : Application
                 await PostInitServices();
             } catch (Exception ex) {
                 await Dispatcher.UIThread.InvokeAsync(async () => {
-                    var msgbox = MessageBoxManager.GetMessageBoxStandard(
-                        title: "RTSharp has crashed",
-                        text: $"RTSharp has crashed.\n{ex}",
-                        @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
-                        icon: MsBox.Avalonia.Enums.Icon.Error,
-                        windowStartupLocation: WindowStartupLocation.CenterOwner);
-                    await msgbox.ShowAsync();
+                    await CrashMessageBox(ex).ShowAsync();
                 });
                 Environment.Exit(1);
                 return;
@@ -169,14 +209,8 @@ public class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    public static async Task PreInitServices()
+    public static async Task PreInitServices(IConfigurationRoot config)
     {
-        await Core.Config.WriteDefaultConfig();
-
-        var cfgBuilder = new ConfigurationBuilder();
-        cfgBuilder.AddJsonFile(RTSharp.Shared.Abstractions.Consts.APP_CONFIG_PATH, false, true);
-        var config = cfgBuilder.Build();
-
         Core.GlobalProxy.Install(config.GetSection(nameof(Config.Models.Proxy)).Get<Config.Models.Proxy>());
 
         await ConfigureServices.GenerateCertificatesIfNeeded();
@@ -243,6 +277,14 @@ public class App : Application
     private async Task InitUI()
     {
         try {
+            using (var scope = Core.ServiceProvider.CreateScope()) {
+                var lookMonitor = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<Config.Models.Look>>();
+                lookMonitor.OnChange(look => Dispatcher.UIThread.Post(() => SetAlternatingRowColors(look.AlternatingRowColors)));
+                SetAlternatingRowColors(lookMonitor.CurrentValue.AlternatingRowColors);
+            }
+            // Not :nth-child, the grid moves rows to other indexes without raising IChildIndexProvider.ChildIndexChanged, e.g. when refreshing hierarchical rows
+            DataGridRow.IndexProperty.Changed.AddClassHandler<DataGridRow>((row, _) => row.Classes.Set("odd", row.Index % 2 == 1));
+
             this.DataContext = new AppViewModel();
             MainWindowViewModel = new MainWindowViewModel();
             MainWindow = new MainWindow(MainWindowViewModel);
@@ -257,13 +299,7 @@ public class App : Application
 
             _ = Core.InstalledScriptsSync.CheckOrphans();
         } catch (Exception ex) {
-            var msgbox = MessageBoxManager.GetMessageBoxStandard(
-                title: "RTSharp has crashed",
-                text: $"RTSharp has crashed.\n{ex}",
-                @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
-                icon: MsBox.Avalonia.Enums.Icon.Error,
-                windowStartupLocation: WindowStartupLocation.CenterOwner);
-            await msgbox.ShowAsync();
+            await CrashMessageBox(ex).ShowAsync();
             Environment.Exit(1);
             return;
         }
@@ -287,6 +323,23 @@ public class App : Application
         }
 
         MainWindow.Show();
+
+        if (ThemeLoadError != null) {
+            await MessageBoxManager.GetMessageBoxStandard(
+                title: "RT# - Theme",
+                text: $"{ThemeLoadError}\n\nThe {Themes.Standard} theme is used instead.",
+                @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
+                icon: MsBox.Avalonia.Enums.Icon.Warning).ShowAsync();
+        }
+
+        void SetAlternatingRowColors(bool Enabled)
+        {
+            // Application resources are looked up before the theme's, so a null entry hides the theme's brush
+            if (Enabled)
+                Resources.Remove("DataGridAlternatingRowBrush");
+            else
+                Resources["DataGridAlternatingRowBrush"] = null;
+        }
     }
 
     public void Exit(object sender, EventArgs e)

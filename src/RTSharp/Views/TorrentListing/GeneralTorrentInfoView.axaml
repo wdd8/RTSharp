@@ -20,9 +20,6 @@
     <Design.DataContext>
         <torrentListing:GeneralTorrentInfoViewModel />
     </Design.DataContext>
-    <UserControl.Styles>
-        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
-    </UserControl.Styles>
 
     <Panel>
         <ContentControl Content="{Binding Torrent}">

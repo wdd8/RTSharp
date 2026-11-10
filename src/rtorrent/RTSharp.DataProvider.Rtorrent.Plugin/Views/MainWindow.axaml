@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RTSharp.DataProvider.Rtorrent.Plugin.ViewModels"
-        xmlns:i="https://github.com/projektanker/icons.avalonia"
+        xmlns:views="using:RTSharp.Shared.Controls.Views"
         mc:Ignorable="d"
         Width="650" Height="360"
         x:DataType="vm:MainWindowViewModel"
@@ -28,7 +28,7 @@
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:Category">
                     <StackPanel Orientation="Horizontal" MinWidth="150">
-                        <i:Icon Value="{Binding Icon}" Margin="0,0,20,0" />
+                        <views:BuiltInPathIcon Value="{Binding Icon}" Margin="0,0,20,0" />
                         <TextBlock TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding Name}" />
                     </StackPanel>
                 </DataTemplate>

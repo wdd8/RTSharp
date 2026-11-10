@@ -6,7 +6,6 @@
         xmlns:views="using:RTSharp.Shared.Controls.Views"
         xmlns:vm="clr-namespace:RTSharp.DataProvider.Qbittorrent.Plugin.ViewModels"
         xmlns:models="clr-namespace:RTSharp.DataProvider.Qbittorrent.Plugin.Models"
-        xmlns:i="https://github.com/projektanker/icons.avalonia"
         mc:Ignorable="d"
         Width="820" Height="600"
         x:DataType="vm:MainWindowViewModel"
@@ -18,7 +17,6 @@
     </Design.DataContext>
 
     <Window.Styles>
-        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
         <Style Selector="TextBlock,TextBox">
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
@@ -37,7 +35,7 @@
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:Category">
                     <StackPanel Orientation="Horizontal" MinWidth="150">
-                        <i:Icon Value="{Binding Icon}" Margin="0,0,20,0" />
+                        <views:BuiltInPathIcon Value="{Binding Icon}" Margin="0,0,20,0" />
                         <TextBlock TextWrapping="NoWrap" Text="{Binding Name}" />
                     </StackPanel>
                 </DataTemplate>
@@ -590,13 +588,13 @@
                                         <TextBlock Grid.Column="0" Text="Key:" VerticalAlignment="Center" />
                                         <TextBox Grid.Column="1" IsReadOnly="True" PlaceholderText="Generate a key" Text="{Binding Settings.WebUI.WebUIApiKeyMasked, Mode=OneWay}" />
                                         <Button Grid.Column="2" Command="{Binding CopyApiKeyCommand}" IsEnabled="{Binding Settings.WebUI.WebUIApiKey, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="Copy API key">
-                                            <i:Icon Value="fa7-solid fa7-copy" />
+                                            <views:BuiltInPathIcon Value="COPY" />
                                         </Button>
                                         <Button Grid.Column="3" Command="{Binding RotateApiKeyCommand}" ToolTip.Tip="Generate/Rotate API key">
-                                            <i:Icon Value="fa7-solid fa7-arrows-rotate" />
+                                            <views:BuiltInPathIcon Value="REGENERATE" />
                                         </Button>
                                         <Button Grid.Column="4" Command="{Binding DeleteApiKeyCommand}" IsEnabled="{Binding Settings.WebUI.WebUIApiKey, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="Delete API key">
-                                            <i:Icon Value="fa7-solid fa7-trash" />
+                                            <views:BuiltInPathIcon Value="DELETE" />
                                         </Button>
                                     </Grid>
                                 </GroupBox>

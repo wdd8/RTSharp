@@ -27,6 +27,21 @@
     <AvaloniaResource Include="Assets\**" />
     <AvaloniaResource Remove="Assets\rtsharp.png" />
   </ItemGroup>
+
+  <!-- Themes -->
+  <ItemGroup>
+    <AvaloniaXaml Remove="Themes\**" />
+    <EmbeddedResource Include="Themes\**" LogicalName="Themes/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Avalonia's XAML compiler also has public Avalonia.* types -->
+  <ItemGroup>
+    <Reference Include="Avalonia.Build.Tasks">
+      <HintPath>$(AvaloniaBuildTasksLocation)</HintPath>
+      <Aliases>AvaloniaBuildTasks</Aliases>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
   
   <ItemGroup>
     <None Remove="Assets\rtsharp.ico" />
@@ -306,6 +321,7 @@
     <PackageReference Include="Grpc.Net.ClientFactory" Version="2.84.0" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.5" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets" Version="2.3.13" />
+    <PackageReference Include="Microsoft.Build.Framework" Version="18.9.6" />
     <PackageReference Include="HtmlAgilityPack" Version="1.13.1" />
     <PackageReference Include="IPAddressRange" Version="6.3.0" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.1.0-dev-570" />
@@ -313,7 +329,6 @@
     <PackageReference Include="Nager.PublicSuffix" Version="3.8.0" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
     <PackageReference Include="Nito.Disposables" Version="2.5.0" />
-    <PackageReference Include="Optris.Icons.Avalonia.FontAwesome7" Version="12.0.7" />
     <PackageReference Include="Polly" Version="8.8.1" />
     <PackageReference Include="Svg.Skia" Version="5.0.0" />
     <PackageReference Include="Serilog" Version="4.4.0" />

@@ -3,7 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="600"
-             xmlns:i="https://github.com/projektanker/icons.avalonia"
              xmlns:sc="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
              xmlns:plugin="clr-namespace:RTSharp.Plugin"
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
@@ -47,10 +46,10 @@
                                 <TextBlock Text="{Binding DataProvider.ActiveTorrentCount}" Foreground="White" FontSize="11" />
                             </Border>
 
-                            <i:Icon Margin="0 0 4 0" Value="fa7-solid fa7-download" />
+                            <sc:BuiltInPathIcon Margin="0 0 4 0" Value="DOWNLOAD" />
                             <TextBlock Padding="0 0 8 0" Text="{Binding DataProvider.TotalDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
 
-                            <i:Icon Margin="0 0 4 0" Value="fa7-solid fa7-upload" />
+                            <sc:BuiltInPathIcon Margin="0 0 4 0" Value="UPLOAD" />
                             <TextBlock Text="{Binding DataProvider.TotalUPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" />
                         </StackPanel>
                         <Grid Height="76" MinHeight="76" Margin="0 4 0 2" IsVisible="{Binding SpeedChartEnabled}">

@@ -17,9 +17,6 @@
     <Window.Resources>
         <converters:MathConverter x:Key="MathConverter"/>
     </Window.Resources>
-    <Window.Styles>
-        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
-    </Window.Styles>
     
     <StackPanel Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE-24)}" Margin="0 8 0 12">
         <local:DuplicationTargetSelectorControl DataContext="{Binding Selector}" />

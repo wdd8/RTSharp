@@ -17,10 +17,11 @@ using RTSharp.DataProvider.Qbittorrent.Plugin.Mappers;
 using RTSharp.DataProvider.Qbittorrent.Plugin.Models;
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
+using RTSharp.Shared.Controls;
 
 namespace RTSharp.DataProvider.Qbittorrent.Plugin.ViewModels;
 
-public record Category(string Name, string Icon);
+public record Category(string Name, BuiltInIcons Icon);
 public record NetworkInterfaceItem(string Id, string DisplayName);
 
 public partial class MainWindowViewModel : ObservableObject
@@ -261,15 +262,15 @@ public partial class MainWindowViewModel : ObservableObject
     public partial double ListUpdateIntervalSeconds { get; set; } = 1;
 
     public static Category[] Categories { get; set; } = [
-        new Category("Behaviour", "fa7-solid fa7-sliders"),
-        new Category("Downloads", "fa7-solid fa7-download"),
-        new Category("Connection", "fa7-solid fa7-network-wired"),
-        new Category("Speed", "fa7-solid fa7-gauge"),
-        new Category("BitTorrent", "fa7-solid fa7-share-nodes"),
-        new Category("RSS", "fa7-solid fa7-rss"),
-        new Category("WebUI", "fa7-solid fa7-globe"),
-        new Category("Advanced", "fa7-solid fa7-screwdriver-wrench"),
-        new Category("RT#", "fa7-solid fa7-stopwatch")
+        new Category("Behaviour", BuiltInIcons.PREFERENCES),
+        new Category("Downloads", BuiltInIcons.DOWNLOAD),
+        new Category("Connection", BuiltInIcons.NETWORK),
+        new Category("Speed", BuiltInIcons.SPEED),
+        new Category("BitTorrent", BuiltInIcons.BITTORRENT),
+        new Category("RSS", BuiltInIcons.FEED),
+        new Category("WebUI", BuiltInIcons.WEB),
+        new Category("Advanced", BuiltInIcons.ADVANCED),
+        new Category("RT#", BuiltInIcons.UPDATE_INTERVAL)
     ];
 
     public static string[] LogAgeTypeOptions => SettingsMapper.LogAgeTypeOptions;

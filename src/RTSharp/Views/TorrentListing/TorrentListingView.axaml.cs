@@ -37,7 +37,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 {
     private int RowHeight { get; set; }
 
-    private static readonly Dictionary<string, (SolidColorBrush? Background, IBrush? Foreground)> RowBrushCache = new();
+    private static readonly Dictionary<string, (SolidColorBrush? Background, SolidColorBrush? AlternatingBackground, IBrush? Foreground)> RowBrushCache = new();
 
     public static ObservableCollection<Func<System.Collections.IList, MenuItem>> MenuItemInserts = new();
     public static ObservableCollection<Action<System.Collections.IList>> MenuItemRemoves = new();
@@ -239,12 +239,21 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             if (!RowBrushCache.TryGetValue(colorStr, out var brushes)) {
                 if (Color.TryParse(colorStr, out var color)) {
                     var luminance = color.R * 0.299 + color.G * 0.587 + color.B * 0.114;
-                    brushes = (new SolidColorBrush(color), luminance > 186 ? Brushes.Black : Brushes.White);
+                    var alternating = luminance > 128 ?
+                        Color.FromRgb((byte)(color.R * 0.92), (byte)(color.G * 0.92), (byte)(color.B * 0.92)) :
+                        Color.FromRgb((byte)(color.R + (255 - color.R) * 0.08), (byte)(color.G + (255 - color.G) * 0.08), (byte)(color.B + (255 - color.B) * 0.08));
+                    brushes = (new SolidColorBrush(color), new SolidColorBrush(alternating), luminance > 186 ? Brushes.Black : Brushes.White);
                 }
                 RowBrushCache[colorStr] = brushes;
             }
-            if (brushes.Background != null && !ReferenceEquals(e.Row.Background, brushes.Background)) {
-                e.Row.Background = brushes.Background;
+            if (brushes.Background != null && !ReferenceEquals(e.Row.Background, brushes.Background) && !ReferenceEquals(e.Row.Background, brushes.AlternatingBackground)) {
+                e.Row.Bind(BackgroundProperty, e.Row
+                    .GetObservable(DataGridRow.IndexProperty)
+                    .CombineLatest(
+                        e.Row.GetResourceObservable("DataGridAlternatingRowBrush"),
+                        (index, alternatingRowBrush) => (IBrush?)(alternatingRowBrush is IBrush && index % 2 == 1 ? brushes.AlternatingBackground : brushes.Background)
+                    )
+                );
                 e.Row.Foreground = brushes.Foreground;
             }
         }

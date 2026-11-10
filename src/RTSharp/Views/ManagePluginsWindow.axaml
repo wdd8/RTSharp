@@ -18,11 +18,6 @@
         <converters:MathConverter x:Key="MathConverter"/>
     </Window.Resources>
 
-    <Window.Styles>
-        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
-        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
-    </Window.Styles>
-
     <dialogHost:DialogHost IsOpen="{Binding IsDialogOpen, Mode=TwoWay}" CloseOnClickAway="True">
         <dialogHost:DialogHost.DialogContent>
             <StackPanel Spacing="6" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.75)}">

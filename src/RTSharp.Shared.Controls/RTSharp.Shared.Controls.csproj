@@ -36,12 +36,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <AvaloniaXaml Update="Themes\GroupBox.axaml">
-            <Generator>MSBuild:Compile</Generator>
-        </AvaloniaXaml>
-    </ItemGroup>
-
-    <ItemGroup>
         <Compile Update="Views\TextBlockWithLabel.axaml.cs">
             <DependentUpon>TextBlockWithLabel.axaml</DependentUpon>
         </Compile>

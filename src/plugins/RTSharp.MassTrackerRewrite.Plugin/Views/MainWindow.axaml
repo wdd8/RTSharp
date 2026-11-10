@@ -16,10 +16,6 @@
         <converters:MathConverter x:Key="MathConverter"/>
     </Window.Resources>
 
-	<Window.Styles>
-		<dialogHost:DialogHostStyles />
-		<StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
-	</Window.Styles>
 
 	<dialogHost:DialogHost IsOpen="{Binding ProgressDialogShown}">
         <dialogHost:DialogHost.DialogContent>

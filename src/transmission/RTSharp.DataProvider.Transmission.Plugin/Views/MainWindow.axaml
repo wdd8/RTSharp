@@ -5,7 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="using:RTSharp.Shared.Controls.Views"
         xmlns:vm="clr-namespace:RTSharp.DataProvider.Transmission.Plugin.ViewModels"
-        xmlns:i="https://github.com/projektanker/icons.avalonia"
         mc:Ignorable="d"
         Width="750" Height="450"
         x:DataType="vm:MainWindowViewModel"
@@ -17,7 +16,6 @@
     </Design.DataContext>
 
     <Window.Styles>
-        <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
         <Style Selector="TextBlock,TextBox">
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
@@ -33,7 +31,7 @@
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:Category">
                     <StackPanel Orientation="Horizontal" MinWidth="150">
-                        <i:Icon Value="{Binding Icon}" Margin="0,0,20,0" />
+                        <views:BuiltInPathIcon Value="{Binding Icon}" Margin="0,0,20,0" />
                         <TextBlock TextWrapping="NoWrap" Text="{Binding Name}" />
                     </StackPanel>
                 </DataTemplate>

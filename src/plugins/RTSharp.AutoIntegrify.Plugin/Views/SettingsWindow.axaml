@@ -17,9 +17,6 @@
     <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
   </Window.Resources>
 
-  <Window.Styles>
-	  <StyleInclude Source="avares://RTSharp.Shared.Controls/Themes/GroupBox.axaml" />
-  </Window.Styles>
 
   <Grid RowDefinitions="Auto" ColumnDefinitions="*,Auto">
 	<GroupBox Header="Search paths" Grid.RowSpan="2" Grid.Column="0">
