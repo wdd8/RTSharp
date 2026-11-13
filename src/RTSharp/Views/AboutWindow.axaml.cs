@@ -1,13 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels;
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 
 namespace RTSharp.Views;
 
@@ -20,19 +18,17 @@ public partial class AboutWindow : VmWindow<AboutWindowViewModel>
     private const double SPEED_Y = 2;
 
     private const double FRAME_TIME = 0.016;
+    private const double TRAIL_LAG = 0.07;
 
-    private readonly DispatcherTimer PlaneTimer;
-    private readonly Stopwatch Sw = new();
+    // Position of the plane
+    private readonly TranslateTransform Plane = new(-160, 64);
 
-    private double CurX;
-    private double CurY;
+    // Vertical offsets of the trail dots relative to the plane, closest to the plane first
+    private readonly TranslateTransform[] Trail;
+
+    private TimeSpan LastFrame;
     private double VelY;
     private double TargetY;
-
-    private TranslateTransform[]? TrailTransforms;
-    private int[]? TrailFrames;
-    private double[]? YHistory;
-    private int HistoryIndex;
 
     public AboutWindow()
     {
@@ -45,82 +41,34 @@ public partial class AboutWindow : VmWindow<AboutWindowViewModel>
             };
         });
 
-        PlaneTimer = new DispatcherTimer {
-            Interval = TimeSpan.FromMilliseconds(FRAME_TIME * 1000)
-        };
-        PlaneTimer.Tick += OnPlaneTick;
+        PlanePanel.RenderTransform = Plane;
+
+        Trail = [.. PlanePanel.Children.OfType<TextBlock>().Reverse().Select(dot => {
+            var transform = new TranslateTransform();
+            dot.RenderTransform = transform;
+            return transform;
+        })];
     }
 
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
 
-        SetupTrail();
-        ResetPlane();
-        Sw.Restart();
-        PlaneTimer.Start();
-    }
-
-    protected override void OnClosed(EventArgs e)
-    {
-        base.OnClosed(e);
-
-        PlaneTimer.Stop();
-        Sw.Stop();
-    }
-
-    private void SetupTrail()
-    {
-        var transforms = new List<TranslateTransform>();
-
-        foreach (var child in PlanePanel.Children) {
-            if (child is TextBlock dot) {
-                var transform = new TranslateTransform();
-                dot.RenderTransform = transform;
-                transforms.Add(transform);
-            }
-        }
-
-        TrailTransforms = [.. transforms];
-        TrailFrames = new int[TrailTransforms.Length];
-        YHistory = new double[128];
-
-        /*
-         * Leftmost dot lags the most, rightmost (closest to the plane) the least.
-         * Convert each lag into a number of frames to look back in the history.
-         */
-        for (var x = 0; x < TrailFrames.Length; x++) {
-            var lag = 0.07 * (TrailFrames.Length - x);
-            TrailFrames[x] = Math.Min(YHistory.Length - 1, (int)Math.Round(lag / FRAME_TIME));
-        }
-    }
-
-    private void UpdateTrail()
-    {
-        HistoryIndex = (HistoryIndex + 1) % YHistory!.Length;
-        YHistory[HistoryIndex] = CurY;
-
-        for (var x = 0; x < TrailTransforms!.Length; x++) {
-            var idx = (HistoryIndex - TrailFrames![x] + YHistory.Length) % YHistory.Length;
-            var offset = Math.Clamp(YHistory[idx] - CurY, -40, 40);
-            TrailTransforms[x].Y = offset;
-        }
-    }
-
-    private void ResetPlane()
-    {
         var planeWidth = PlanePanel.Bounds.Width;
         if (planeWidth <= 0)
             planeWidth = 140;
 
-        CurX = -planeWidth;
-        CurY = MIN_Y + Random.Shared.NextDouble() * (MAX_Y - MIN_Y);
+        Plane.X = -planeWidth;
+        Plane.Y = MIN_Y + Random.Shared.NextDouble() * (MAX_Y - MIN_Y);
         VelY = 0;
 
-        Array.Fill(YHistory!, CurY);
-        HistoryIndex = 0;
+        // Targets wander from the starting height, so no part of the range is favoured
+        TargetY = Plane.Y;
 
-        PickNewTarget();
+        foreach (var dot in Trail)
+            dot.Y = 0;
+
+        RequestAnimationFrame(OnPlaneFrame);
     }
 
     private void PickNewTarget()
@@ -129,42 +77,55 @@ public partial class AboutWindow : VmWindow<AboutWindowViewModel>
         TargetY = Math.Clamp(TargetY, MIN_Y, MAX_Y);
     }
 
-    private void OnPlaneTick(object? sender, EventArgs e)
+    private void OnPlaneFrame(TimeSpan time)
     {
-        var delta = Sw.Elapsed.TotalSeconds;
-        Sw.Restart();
+        if (!IsVisible)
+            return;
 
+        var delta = (time - LastFrame).TotalSeconds;
         if (delta <= 0 || delta > 0.1)
             delta = FRAME_TIME;
+        LastFrame = time;
 
-        var canvasWidth = PlaneCanvas.Bounds.Width;
-        var planeWidth = PlanePanel.Bounds.Width;
-
-        CurX += SPEED_X * delta;
-        if (CurX > canvasWidth) {
-            CurX = -planeWidth;
+        var x = Plane.X + SPEED_X * delta;
+        if (x > PlaneCanvas.Bounds.Width) {
+            x = -PlanePanel.Bounds.Width;
             VelY = 0;
             PickNewTarget();
         }
 
-        var kick = (Random.Shared.NextDouble() * 2 - 1) * 320;
-        VelY += (SPEED_Y * (TargetY - CurY) - 2.6 * VelY + kick) * delta;
-        CurY += VelY * delta;
+        var prevY = Plane.Y;
 
-        if (CurY < MIN_Y) {
-            CurY = MIN_Y;
-            VelY = 0;
-        } else if (CurY > MAX_Y) {
-            CurY = MAX_Y;
+        // Random kick scales with sqrt of the frame time so turbulence looks the same at any refresh rate
+        var kick = (Random.Shared.NextDouble() * 2 - 1) * 320 * Math.Sqrt(delta * FRAME_TIME);
+        VelY += (SPEED_Y * (TargetY - prevY) - 2.6 * VelY) * delta + kick;
+        var y = prevY + VelY * delta;
+
+        if (y < MIN_Y || y > MAX_Y) {
+            y = Math.Clamp(y, MIN_Y, MAX_Y);
             VelY = 0;
         }
 
-        if (Math.Abs(TargetY - CurY) < 10)
+        if (Math.Abs(TargetY - y) < 10)
             PickNewTarget();
 
-        UpdateTrail();
+        /*
+         * Each dot chases the height of whatever is in front of it (the plane for the first dot),
+         * so every dot further back trails TRAIL_LAG seconds more behind.
+         */
+        var follow = 1 - Math.Exp(-delta / TRAIL_LAG);
+        var leaderY = y;
+        foreach (var dot in Trail) {
+            var dotY = prevY + dot.Y;
+            dotY += (leaderY - dotY) * follow;
 
-        Canvas.SetLeft(PlanePanel, CurX);
-        Canvas.SetTop(PlanePanel, CurY);
+            dot.Y = Math.Clamp(dotY - y, -40, 40);
+            leaderY = dotY;
+        }
+
+        Plane.X = x;
+        Plane.Y = y;
+
+        RequestAnimationFrame(OnPlaneFrame);
     }
 }

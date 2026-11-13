@@ -63,8 +63,7 @@
                 </Panel>
 
                 <Canvas x:Name="PlaneCanvas" ClipToBounds="True">
-                    <StackPanel x:Name="PlanePanel" Classes="plane" Orientation="Horizontal" Spacing="6"
-                                Canvas.Left="-160" Canvas.Top="64">
+                    <StackPanel x:Name="PlanePanel" Classes="plane" Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="·" Foreground="White" Opacity="0.12" FontSize="22" VerticalAlignment="Center" />
                         <TextBlock Text="·" Foreground="White" Opacity="0.22" FontSize="22" VerticalAlignment="Center" />
                         <TextBlock Text="·" Foreground="White" Opacity="0.38" FontSize="22" VerticalAlignment="Center" />
