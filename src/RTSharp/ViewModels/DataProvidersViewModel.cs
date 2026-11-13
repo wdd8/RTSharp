@@ -30,6 +30,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Runtime.InteropServices;
 
 namespace RTSharp.ViewModels
@@ -55,21 +56,14 @@ namespace RTSharp.ViewModels
                 .Connect()
                 .AutoRefreshOnObservable(x => x.State)
                 .AutoRefreshOnObservable(x => x.AttachedDaemonService.Latency)
+                .ObserveOn(AvaloniaSynchronizationContext.Current!)
                 .Subscribe((Action<IChangeSet<RTSharpDataProvider>>)(x => {
-                    foreach (var change in x) {
-                        var item = Items.FirstOrDefault(i => i.DataProvider.InstanceId == change.Item.Current.InstanceId);
+                    // Data providers listed before this subscribes arrive as one range
+                    foreach (var change in x.Flatten()) {
+                        var item = Items.FirstOrDefault(i => i.DataProvider.InstanceId == change.Current.InstanceId);
                         if (item == default) {
-                            var model = new Models.DataProvider {
-                                DisplayName = change.Item.Current.Config.Plugin.Name,
-                                InstanceId = change.Item.Current.InstanceId,
-                                State = change.Item.Current.State.Value,
-                                Latency = Shared.Utils.Converters.ToAgoString(change.Item.Current.AttachedDaemonService.Latency.Value),
-                                TotalDLSpeed = 0,
-                                TotalUPSpeed = 0,
-                                ActiveTorrentCount = 0
-                            };
-
-                            Items.Add(new DataProviderItemViewModel(model, change.Item.Current, SpeedChartEnabled));
+                            if (change.Reason != ListChangeReason.Remove)
+                                AddItem(change.Current);
                         } else {
                             if (change.Reason == ListChangeReason.Remove) {
                                 Items.Remove(item);
@@ -77,9 +71,9 @@ namespace RTSharp.ViewModels
                                 continue;
                             }
 
-                            item.DataProvider.State = change.Item.Current.State.Value;
+                            item.DataProvider.State = change.Current.State.Value;
                             if (item.DataProvider.State != Shared.Abstractions.DataProviderState.INACTIVE)
-                                item.DataProvider.Latency = Shared.Utils.Converters.ToAgoString(change.Item.Current.AttachedDaemonService.Latency.Value);
+                                item.DataProvider.Latency = Shared.Utils.Converters.ToAgoString(change.Current.AttachedDaemonService.Latency.Value);
                             else
                                 item.DataProvider.Latency = "?";
                         }
@@ -108,13 +102,36 @@ namespace RTSharp.ViewModels
             }
         }
 
+        private DataProviderItemViewModel AddItem(RTSharpDataProvider DataProvider)
+        {
+            var model = new Models.DataProvider {
+                DisplayName = DataProvider.Config.Plugin.Name,
+                InstanceId = DataProvider.InstanceId,
+                State = DataProvider.State.Value,
+                Latency = Shared.Utils.Converters.ToAgoString(DataProvider.AttachedDaemonService.Latency.Value),
+                TotalDLSpeed = 0,
+                TotalUPSpeed = 0,
+                ActiveTorrentCount = 0
+            };
+
+            var item = new DataProviderItemViewModel(model, DataProvider, SpeedChartEnabled);
+            Items.Add(item);
+            return item;
+        }
+
         private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)
         {
             var vm = Items.FirstOrDefault(x => x.DataProvider.InstanceId == e.DataProvider.Host.InstanceId);
 
-            Debug.Assert(vm != null);
-            if (vm == null)
-                return;
+            /*
+             * Torrents and the list of data providers reach the UI thread separately, so a data provider's first torrents can
+             * come before it's listed here.
+             */
+            if (vm == null) {
+                if (!Plugins.DataProviders.Items.Contains(e.DataProvider))
+                    return;
+                vm = AddItem(e.DataProvider);
+            }
 
             vm.ApplyTorrentsChanges(e);
         }

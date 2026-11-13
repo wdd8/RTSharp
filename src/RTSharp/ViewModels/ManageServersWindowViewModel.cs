@@ -157,7 +157,7 @@ public partial class ManageServersWindowViewModel : ObservableObject
             servers.Remove(oldServerId);
         }
 
-        Core.Servers.Add(serverId, serverConfig);
+        Core.Servers.AddActionQueue(Core.Servers.Connect(serverId, serverConfig));
         servers[serverId] = serverConfig;
 
         IsDialogOpen = false;

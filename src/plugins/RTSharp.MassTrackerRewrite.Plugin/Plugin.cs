@@ -28,7 +28,7 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 
     IDisposable? Hook;
 
-    public override Task<IPlugin> Init(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, Action<(string Status, float Percentage)> Progress)
+    public override Task Init(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
         Progress(("Initializing...", 0f));
@@ -46,7 +46,7 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 
         Progress(("Done", 100f));
 
-        return Task.FromResult((IPlugin)this);
+        return Task.CompletedTask;
     }
 
     public override Task Unload()

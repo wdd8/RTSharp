@@ -35,7 +35,7 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         InitializeComponent();
     }
 
-    public MainWindow(MainWindowViewModel DataContext)
+    internal MainWindow(MainWindowViewModel DataContext, DockNodeDto? DockState)
     {
         ViewModel = DataContext;
         InitializeComponent();
@@ -54,12 +54,12 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         config.UIState.Value.RestoreWindowSize(this);
 
         bool restored = false;
-        if (!String.IsNullOrEmpty(config.UIState.Value.DockState)) {
+        if (DockState != null) {
             restored = Core.DockStateSerializer.Restore(
                 ViewModel!.RootDock,
                 ViewModel!.DockFactory,
                 ViewModel!.DockableRegistry,
-                config.UIState.Value.DockState);
+                DockState);
         }
         if (!restored)
             ViewModel!.DockFactory.InitLayout(ViewModel!.RootDock);

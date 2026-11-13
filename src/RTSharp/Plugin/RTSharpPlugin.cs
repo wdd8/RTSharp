@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 
+using DynamicData;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,7 +32,7 @@ public class RTSharpPlugin : IPluginHost
 {
     internal PluginAssemblyLoadContext AssemblyLoadContext { get; private set; }
     internal Assembly? Assembly { get; private set; }
-    internal IPlugin Instance { get; set; } = null!; // See Init
+    internal IPlugin Instance { get; set; } = null!; // Set by LoadPlugin
     internal IPluginInit? PluginInit { get; set; }
     public IPluginConfigContainer<PluginInstanceConfig> Config { get; private set; }
 
@@ -79,6 +81,9 @@ public class RTSharpPlugin : IPluginHost
         this.ModulePath = ModulePath;
     }
 
+    private readonly List<RTSharpDataProvider> PendingDataProviders = [];
+    private bool DataProvidersInitialized;
+
     public IDataProviderHost<TConfig> RegisterDataProvider<TConfig>(IDataProvider In) where TConfig : IPluginConfigContainer<DataProviderInstanceConfig>
     {
         var provider = new RTSharpDataProvider<TConfig>(this, In);
@@ -86,11 +91,19 @@ public class RTSharpPlugin : IPluginHost
         if (provider.Config.Plugin.ServerId == null)
             throw new InvalidOperationException($"{InstanceId} tried to register, but {nameof(provider.Config.Plugin.ServerId)} is missing");
 
-        Dispatcher.UIThread.Invoke(() => Plugin.Plugins.DataProviders.Edit(x => {
-            x.Add(provider);
-        }));
+        if (DataProvidersInitialized)
+            Plugin.Plugins.DataProviders.Add(provider);
+        else
+            PendingDataProviders.Add(provider);
 
         return provider;
+    }
+
+    internal void CompleteDataProvidersInit()
+    {
+        DataProvidersInitialized = true;
+        Plugin.Plugins.DataProviders.AddRange(PendingDataProviders);
+        PendingDataProviders.Clear();
     }
 
     public void UnregisterDataProvider(RTSharpDataProvider In)

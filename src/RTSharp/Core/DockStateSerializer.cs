@@ -2,6 +2,8 @@ using Dock.Model.Avalonia.Controls;
 using Dock.Model.Avalonia.Core;
 using Dock.Model.Core;
 
+using RTSharp.ViewModels;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -31,11 +33,19 @@ public static class DockStateSerializer
         return JsonSerializer.Serialize(BuildDto(root), DockNodeContext.Default.DockNodeDto);
     }
 
-    public static bool Restore(IDock root, IFactory factory, IReadOnlyDictionary<string, IDockable> registry, string json)
+    internal static DockNodeDto? Parse(string json)
     {
         try {
-            var dto = JsonSerializer.Deserialize(json, DockNodeContext.Default.DockNodeDto);
-            if (dto?.Children == null || dto.Children.Count == 0)
+            return JsonSerializer.Deserialize(json, DockNodeContext.Default.DockNodeDto);
+        } catch {
+            return null;
+        }
+    }
+
+    internal static bool Restore(IDock root, IFactory factory, IReadOnlyDictionary<string, IDockable> registry, DockNodeDto dto)
+    {
+        try {
+            if (dto.Children == null || dto.Children.Count == 0)
                 return false;
 
             var newChildren = BuildChildren(dto.Children, factory, registry);
@@ -72,12 +82,25 @@ public static class DockStateSerializer
         if (dockable is ToolDock toolDock)
             alignment = toolDock.Alignment;
 
-        if (dockable is ProportionalDock propDock)
+        if (dockable is ProportionalDock propDock) {
+            // Rearranging the layout leaves these behind, each a level of controls that only lays out the one below it
+            if (children is [{ TypeName: nameof(ProportionalDock) } only]) {
+                only.Proportion = double.IsNaN(dockable.Proportion) ? null : dockable.Proportion;
+                return only;
+            }
+
             orientation = propDock.Orientation;
+        }
 
         return new DockNodeDto {
             Id = string.IsNullOrEmpty(dockable.Id) ? null : dockable.Id,
-            TypeName = dockable.GetType().Name,
+            // Saved layouts name Dock's types, which the layout's nodes may be subclasses of
+            TypeName = dockable switch {
+                RootDock => nameof(RootDock),
+                ProportionalDock => nameof(ProportionalDock),
+                DocumentDock => nameof(DocumentDock),
+                _ => dockable.GetType().Name
+            },
             Proportion = double.IsNaN(dockable.Proportion) ? null : dockable.Proportion,
             ActiveDockableId = activeDockableId,
             Alignment = alignment,
@@ -117,7 +140,7 @@ public static class DockStateSerializer
                     Proportion = dto.Proportion ?? double.NaN
                 };
             case nameof(ProportionalDock):
-                dock = new ProportionalDock {
+                dock = new ImmediateProportionalDock {
                     Id = dto.Id!,
                     Proportion = dto.Proportion ?? double.NaN,
                     Orientation = dto.Orientation ?? Orientation.Horizontal,
@@ -156,7 +179,7 @@ public static class DockStateSerializer
                     : [];
                 if (children.Count == 0)
                     return null;
-                dock = new DocumentDock {
+                dock = new ImmediateDocumentDock {
                     Id = dto.Id!,
                     Proportion = dto.Proportion ?? double.NaN,
                     DockCapabilityPolicy = new(),

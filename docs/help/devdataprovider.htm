@@ -7,14 +7,14 @@
 </head>
 <body bgcolor="#FFFFFF">
 
-<p>A data provider is a plugin that connects RT# to a torrent daemon. It is written like any other plugin, except that its manifest declares "Type": "DATA_PROVIDER" and that it registers an implementation of IDataProvider during Init:</p>
+<p>A data provider is a plugin that connects RT# to a torrent daemon. It is written like any other plugin, except that its manifest declares "Type": "DATA_PROVIDER" and that it registers an implementation of IDataProvider during InitDataProviders:</p>
 
-<pre>public override async Task&lt;IPlugin&gt; Init(IPluginHost&lt;MyDataProviderConfig&gt; Host, Action&lt;(string Status, float Percentage)&gt; Progress)
+<pre>public override Task InitDataProviders(IPluginHost&lt;MyDataProviderConfig&gt; Host)
 {
     var dp = new DataProvider(this);
     this.Host = Host.RegisterDataProvider&lt;MyDataProviderConfig&gt;(dp);
     Disposables.Add(this.Host);
-    return this;
+    return Task.CompletedTask;
 }</pre>
 
 <p>The configuration class of a data provider derives from PluginConfigContainer&lt;DataProviderInstanceConfig&gt;, so it carries the server id, the data provider name on the daemon and the color of the instance. RegisterDataProvider returns an IDataProviderHost&lt;TConfig&gt;, which is the plugin host with some more functions for data providers, such as AttachedDaemonService (the server this instance is attached to) and GetBuiltInDataProviderGrpcHeaders (the headers that select this daemon on the server).</p>

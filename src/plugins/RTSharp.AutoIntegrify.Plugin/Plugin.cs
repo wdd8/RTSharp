@@ -33,7 +33,7 @@ public class Plugin : BasePlugin<AutoIntegrifyPluginConfig>
 
     public required IPluginHost<AutoIntegrifyPluginConfig> Host { get; set; }
 
-    public override Task<IPlugin> Init(IPluginHost<AutoIntegrifyPluginConfig> Host, Action<(string Status, float Percentage)> Progress)
+    public override Task Init(IPluginHost<AutoIntegrifyPluginConfig> Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
         Progress(("Initializing...", 0f));
@@ -71,7 +71,7 @@ public class Plugin : BasePlugin<AutoIntegrifyPluginConfig>
 
         Progress(("Done", 100f));
 
-        return Task.FromResult((IPlugin)this);
+        return Task.CompletedTask;
     }
 
     public async Task Do(IReadOnlyList<Torrent> In)

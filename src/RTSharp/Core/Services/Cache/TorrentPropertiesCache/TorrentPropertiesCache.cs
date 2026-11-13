@@ -20,7 +20,7 @@ namespace RTSharp.Core.Services.Cache.TorrentPropertiesCache
             return conn;
         }
 
-        public async Task Initialize()
+        public static async Task Migrate()
         {
             await using var conn = await New();
 

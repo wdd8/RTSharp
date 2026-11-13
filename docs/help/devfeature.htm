@@ -20,7 +20,7 @@
 
     IDisposable? MenuItem;
 
-    public override Task&lt;IPlugin&gt; Init(IPluginHost&lt;PluginConfigContainer&lt;PluginInstanceConfig&gt;&gt; Host, Action&lt;(string Status, float Percentage)&gt; Progress)
+    public override Task Init(IPluginHost&lt;PluginConfigContainer&lt;PluginInstanceConfig&gt;&gt; Host, Action&lt;(string Status, float Percentage)&gt; Progress)
     {
         Progress(("Initializing...", 0f));
 
@@ -32,7 +32,7 @@
         });
 
         Progress(("Done", 100f));
-        return Task.FromResult((IPlugin)this);
+        return Task.CompletedTask;
     }
 
     public override Task Unload()
@@ -49,7 +49,7 @@
 - RegisterRootMenuItem: Add a menu to the main menu bar<br>
 - RegisterToolsMenuItem: Add an item to the Tools menu<br>
 - RegisterTorrentContextMenuItem: Add an item to the torrent menu of the listing, the command receives the selected torrents<br>
-- HookTorrentListingEvLoadingRow / HookTorrentListingEvLoadingCell: Change the appearance of the lines or of the cells of one column of the listing (this is how the colored ratio plugin works)<br>
+- HookTorrentListingEvLoadingRow / HookTorrentListingEvLoadingCell: Change the appearance of the lines or of the cells of one column of the listing (this is how the colored ratio plugin works), call them in InitHooks<br>
 - HookAddTorrentEvDragDrop: Modify the Add torrent window when a file is dropped<br>
 - RegisterActionQueue: Display your own action queue<br>
 - RegisterDataProvider: Register a torrent data provider, see the next chapter<br>

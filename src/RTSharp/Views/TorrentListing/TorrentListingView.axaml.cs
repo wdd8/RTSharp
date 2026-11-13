@@ -24,6 +24,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,6 +39,10 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     private int RowHeight { get; set; }
 
     private static readonly Dictionary<string, (SolidColorBrush? Background, SolidColorBrush? AlternatingBackground, IBrush? Foreground)> RowBrushCache = new();
+
+    private sealed record RowColoring(SolidColorBrush Background, IDisposable Binding);
+
+    private static readonly ConditionalWeakTable<DataGridRow, RowColoring> RowColorings = new();
 
     public static ObservableCollection<Func<System.Collections.IList, MenuItem>> MenuItemInserts = new();
     public static ObservableCollection<Action<System.Collections.IList>> MenuItemRemoves = new();
@@ -136,15 +141,23 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         return serialized;
     }
 
-    public void RestoreGridState(string In)
+    public static DataGridPersistedState? ParseGridState(string? In)
     {
         try {
-            DataGridStatePersistence.RestoreStateFromString(
+            return DataGridStatePersistence.Deserialize(In ?? "{}", new SystemTextJsonDataGridStateSerializer());
+        } catch {
+            return null;
+        }
+    }
+
+    public void RestoreGridState(DataGridPersistedState In)
+    {
+        try {
+            DataGridStatePersistence.RestoreState(
                 grid,
                 In,
                 DataGridStateSections.Columns | DataGridStateSections.Sorting | DataGridStateSections.Filtering /*| DataGridStateSections.Grouping TODO: */,
                 new DataGridStateOptions { },
-                new SystemTextJsonDataGridStateSerializer(),
                 new DataGridStatePersistenceOptions {
                     TokenResolver = new TorrentListingViewModel.DataGridStatePersistenceTokenResolver()
                 }
@@ -235,27 +248,39 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     {
         var torrent = (Torrent)e.Row.DataContext!;
         var colorStr = torrent!.DataOwner.Config.Plugin.Color;
-        if (colorStr != null) {
-            if (!RowBrushCache.TryGetValue(colorStr, out var brushes)) {
-                if (Color.TryParse(colorStr, out var color)) {
-                    var luminance = color.R * 0.299 + color.G * 0.587 + color.B * 0.114;
-                    var alternating = luminance > 128 ?
-                        Color.FromRgb((byte)(color.R * 0.92), (byte)(color.G * 0.92), (byte)(color.B * 0.92)) :
-                        Color.FromRgb((byte)(color.R + (255 - color.R) * 0.08), (byte)(color.G + (255 - color.G) * 0.08), (byte)(color.B + (255 - color.B) * 0.08));
-                    brushes = (new SolidColorBrush(color), new SolidColorBrush(alternating), luminance > 186 ? Brushes.Black : Brushes.White);
-                }
-                RowBrushCache[colorStr] = brushes;
+        (SolidColorBrush? Background, SolidColorBrush? AlternatingBackground, IBrush? Foreground) brushes = default;
+        if (colorStr != null && !RowBrushCache.TryGetValue(colorStr, out brushes)) {
+            if (Color.TryParse(colorStr, out var color)) {
+                var luminance = color.R * 0.299 + color.G * 0.587 + color.B * 0.114;
+                var alternating = luminance > 128 ?
+                    Color.FromRgb((byte)(color.R * 0.92), (byte)(color.G * 0.92), (byte)(color.B * 0.92)) :
+                    Color.FromRgb((byte)(color.R + (255 - color.R) * 0.08), (byte)(color.G + (255 - color.G) * 0.08), (byte)(color.B + (255 - color.B) * 0.08));
+                brushes = (new SolidColorBrush(color), new SolidColorBrush(alternating), luminance > 186 ? Brushes.Black : Brushes.White);
             }
-            if (brushes.Background != null && !ReferenceEquals(e.Row.Background, brushes.Background) && !ReferenceEquals(e.Row.Background, brushes.AlternatingBackground)) {
-                e.Row.Bind(BackgroundProperty, e.Row
-                    .GetObservable(DataGridRow.IndexProperty)
-                    .CombineLatest(
-                        e.Row.GetResourceObservable("DataGridAlternatingRowBrush"),
-                        (index, alternatingRowBrush) => (IBrush?)(alternatingRowBrush is IBrush && index % 2 == 1 ? brushes.AlternatingBackground : brushes.Background)
-                    )
-                );
-                e.Row.Foreground = brushes.Foreground;
+            RowBrushCache[colorStr] = brushes;
+        }
+
+        RowColorings.TryGetValue(e.Row, out var coloring);
+        if (brushes.Background == null) {
+            // Clearing the value leaves the binding, which would set it again
+            if (coloring != null) {
+                coloring.Binding.Dispose();
+                RowColorings.Remove(e.Row);
+                e.Row.ClearValue(BackgroundProperty);
+                e.Row.ClearValue(ForegroundProperty);
             }
+        } else if (!ReferenceEquals(coloring?.Background, brushes.Background)) {
+            coloring?.Binding.Dispose();
+            var (background, alternatingBackground, foreground) = brushes;
+            var binding = e.Row.Bind(BackgroundProperty, e.Row
+                .GetObservable(DataGridRow.IndexProperty)
+                .CombineLatest(
+                    e.Row.GetResourceObservable("DataGridAlternatingRowBrush"),
+                    (index, alternatingRowBrush) => (IBrush?)(alternatingRowBrush is IBrush && index % 2 == 1 ? alternatingBackground : background)
+                )
+            );
+            RowColorings.AddOrUpdate(e.Row, new RowColoring(background, binding));
+            e.Row.Foreground = foreground;
         }
 
         for (var x = 0;x < e.Row.Cells.Count;x++) {

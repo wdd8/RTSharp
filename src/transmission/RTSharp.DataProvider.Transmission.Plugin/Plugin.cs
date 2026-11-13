@@ -7,7 +7,6 @@ using Avalonia.Platform;
 using RTSharp.Daemon.Protocols.DataProvider.Settings;
 using RTSharp.DataProvider.Transmission.Plugin.Mappers;
 using RTSharp.Shared.Abstractions.Client;
-using Avalonia.Threading;
 using System.Reactive.Disposables;
 
 namespace RTSharp.DataProvider.Transmission.Plugin;
@@ -36,10 +35,8 @@ public class Plugin : BasePlugin<TransmissionDataProviderInstanceConfig>
 
     private CompositeDisposable Disposables { get; set; } = new();
 
-    public override async Task<IPlugin> Init(IPluginHost<TransmissionDataProviderInstanceConfig> Host, Action<(string Status, float Percentage)> Progress)
+    public override Task InitDataProviders(IPluginHost<TransmissionDataProviderInstanceConfig> Host)
     {
-        Progress(("Registering data provider...", 0f));
-
         DataProviderActive = new();
         var dp = new DataProvider(this) {
             Active = DataProviderActive.Token
@@ -47,17 +44,12 @@ public class Plugin : BasePlugin<TransmissionDataProviderInstanceConfig>
         this.Host = Host.RegisterDataProvider<TransmissionDataProviderInstanceConfig>(dp);
         Disposables.Add(this.Host);
 
-        Progress(("Registering queue...", 50f));
-
-        await Dispatcher.UIThread.InvokeAsync(() => {
-            ActionQueue = new DefaultActionQueueRenderer(
-                this.Host.Config.Plugin.Name,
-                new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Transmission.Plugin/Assets/transmission.png"))));
-        });
+        ActionQueue = new DefaultActionQueueRenderer(
+            this.Host.Config.Plugin.Name,
+            new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Transmission.Plugin/Assets/transmission.png"))));
         Disposables.Add(this.Host.RegisterActionQueue(ActionQueue));
 
-        Progress(("Loaded", 100f));
-        return this;
+        return Task.CompletedTask;
     }
 
     public override async Task ShowPluginSettings(object ParentWindow)

@@ -38,6 +38,22 @@
     </ItemGroup>
   </Target>
 
+  <!--
+    ReadyToRun images are kept in obj whether they're composite or not, and a publish in the other mode reuses them.
+    Composite components shipped without their composite image make the app fail fast on start
+  -->
+  <PropertyGroup>
+    <ReadyToRunModeMarker>$(IntermediateOutputPath)R2R\composite-$(PublishReadyToRunComposite)</ReadyToRunModeMarker>
+  </PropertyGroup>
+
+  <Target Name="InvalidateReadyToRunOnModeChange"
+          BeforeTargets="_PrepareForReadyToRunCompilation"
+          Condition="!Exists('$(ReadyToRunModeMarker)')">
+    <RemoveDir Directories="$(IntermediateOutputPath)R2R" />
+    <MakeDir Directories="$(IntermediateOutputPath)R2R" />
+    <Touch Files="$(ReadyToRunModeMarker)" AlwaysCreate="true" />
+  </Target>
+
   <Target Name="RecompileWithoutCompiledAvaloniaXaml"
           BeforeTargets="CoreCompile"
           Condition="'@(AvaloniaResource)@(AvaloniaXaml)' != '' And '$(DesignTimeBuild)' != 'true' And '$(EnableAvaloniaXamlCompilation)' != 'false' And !Exists('$(AvaloniaXamlCompiledMarker)')">

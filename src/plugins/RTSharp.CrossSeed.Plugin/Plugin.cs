@@ -31,7 +31,7 @@ public class Plugin : BasePlugin<CrossSeedPluginConfig>
 
     const string MenuHeader = "Find cross-seeds";
 
-    public override Task<IPlugin> Init(IPluginHost<CrossSeedPluginConfig> Host, Action<(string Status, float Percentage)> Progress)
+    public override Task Init(IPluginHost<CrossSeedPluginConfig> Host, Action<(string Status, float Percentage)> Progress)
     {
         this.Host = Host;
         Progress(("Initializing...", 0f));
@@ -56,7 +56,7 @@ public class Plugin : BasePlugin<CrossSeedPluginConfig>
 
         Progress(("Done", 100f));
 
-        return Task.FromResult((IPlugin)this);
+        return Task.CompletedTask;
     }
 
     public void Do(IReadOnlyList<Torrent> In)

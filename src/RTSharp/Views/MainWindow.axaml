@@ -50,7 +50,7 @@
 
     <Grid RowDefinitions="Auto, *">
         <Menu Grid.Row="0" Name="RootMenu" ItemsSource="{Binding MenuItems}" />
-        <DockControl Layout="{Binding RootDock}" Grid.Row="1" />
+        <DockControl Layout="{Binding Layout}" Grid.Row="1" />
     </Grid>
 
 </Window>

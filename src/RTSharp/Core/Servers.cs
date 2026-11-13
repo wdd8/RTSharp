@@ -11,14 +11,18 @@ public static class Servers
 {
     public static ConcurrentDictionary<string, DaemonService> All { get; } = new();
 
-    public static void Add(string serverId, Config.Models.Server serverConfig)
+    public static DaemonService Connect(string serverId, Config.Models.Server serverConfig)
     {
         var channel = ConfigureServices.CreateChannel(serverId, serverConfig);
         var lifetime = ServiceProvider._provider.GetRequiredService<IHostApplicationLifetime>();
         var daemonService = new DaemonService(serverId, serverConfig, channel, lifetime);
         All[serverId] = daemonService;
+        return daemonService;
+    }
 
-        var renderer = new ServersActionQueueRenderer(serverId, daemonService);
+    public static void AddActionQueue(DaemonService daemonService)
+    {
+        var renderer = new ServersActionQueueRenderer(daemonService.Id, daemonService);
         ActionQueue.RegisterActionQueue(daemonService, renderer);
         _ = renderer.TrackServerActions(daemonService.CancellationToken);
     }

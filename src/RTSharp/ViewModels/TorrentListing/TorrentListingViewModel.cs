@@ -467,7 +467,10 @@ public partial class TorrentListingViewModel : ObservableViewModel
     [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Accesses Torrent")]
     public void AttachGridData()
     {
-        View = new DataGridCollectionView(VisibleTorrents);
+        var view = new DataGridCollectionView(VisibleTorrents);
+        // A view made of torrents already polled makes the first one current, which the grid would select
+        view.MoveCurrentToPosition(-1);
+        View = view;
     }
 
     [RelayCommand]

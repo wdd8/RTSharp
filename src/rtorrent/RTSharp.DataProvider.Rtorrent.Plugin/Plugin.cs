@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.Threading;
 
 using Nito.Disposables;
 
@@ -43,10 +42,8 @@ public class Plugin : BasePlugin<RtorrentDataProviderInstanceConfig>
 
     private CompositeDisposable Disposables { get; } = new();
 
-    public override async Task<IPlugin> Init(IPluginHost<RtorrentDataProviderInstanceConfig> Host, Action<(string Status, float Percentage)> Progress)
+    public override Task InitDataProviders(IPluginHost<RtorrentDataProviderInstanceConfig> Host)
     {
-        Progress(("Registering data provider...", 0f));
-
         DataProviderActive = new();
         var dp = new DataProvider(this)
         {
@@ -56,17 +53,12 @@ public class Plugin : BasePlugin<RtorrentDataProviderInstanceConfig>
         this.Host = Host.RegisterDataProvider<RtorrentDataProviderInstanceConfig>(dp);
         Disposables.Add(this.Host);
 
-        Progress(("Registering queue...", 50f));
-
-        await Dispatcher.UIThread.InvokeAsync(() => {
-            ActionQueue = new DefaultActionQueueRenderer(
-                this.Host.Config.Plugin.Name,
-                new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Rtorrent.Plugin/Assets/rtorrent.png"))));
-        });
+        ActionQueue = new DefaultActionQueueRenderer(
+            this.Host.Config.Plugin.Name,
+            new Bitmap(AssetLoader.Open(new Uri("avares://RTSharp.DataProvider.Rtorrent.Plugin/Assets/rtorrent.png"))));
         Disposables.Add(this.Host.RegisterActionQueue(ActionQueue));
 
-        Progress(("Loaded", 100f));
-        return this;
+        return Task.CompletedTask;
     }
 
     public override async Task ShowPluginSettings(object ParentWindow)

@@ -21,9 +21,7 @@ public static class InstalledScriptsSync
     public static async Task CheckOrphans()
     {
         var owners = Plugins.LoadedPlugins
-            .Select(x => (x.Instance ?? x.PluginInit as IPlugin)?.GUID)
-            .Where(x => x != null)
-            .Select(x => x!.Value)
+            .Select(x => x.Instance.GUID)
             .ToHashSet();
 
         owners.Add(Guid.Empty);

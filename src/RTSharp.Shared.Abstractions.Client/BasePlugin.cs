@@ -28,13 +28,22 @@ public abstract class BasePlugin<TConfig> : IPlugin, IPluginInit
     Type IPluginInit.ConfigType => typeof(TConfig);
 
     /// <inheritdoc />
-    Task<IPlugin> IPluginInit.Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress)
-        => Init(new PluginHostProxy<TConfig>(Host), Progress);
+    void IPluginInit.InitHooks(IPluginHost Host) => InitHooks(new PluginHostProxy<TConfig>(Host));
 
-    /// <summary>
-    /// Initialize plugin
-    /// </summary>
-    public abstract Task<IPlugin> Init(IPluginHost<TConfig> Host, Action<(string Status, float Percentage)> Progress);
+    /// <inheritdoc cref="IPluginInit.InitHooks" />
+    public virtual void InitHooks(IPluginHost<TConfig> Host) { }
+
+    /// <inheritdoc />
+    Task IPluginInit.InitDataProviders(IPluginHost Host) => InitDataProviders(new PluginHostProxy<TConfig>(Host));
+
+    /// <inheritdoc cref="IPluginInit.InitDataProviders" />
+    public virtual Task InitDataProviders(IPluginHost<TConfig> Host) => Task.CompletedTask;
+
+    /// <inheritdoc />
+    Task IPluginInit.Init(IPluginHost Host, Action<(string Status, float Percentage)> Progress) => Init(new PluginHostProxy<TConfig>(Host), Progress);
+
+    /// <inheritdoc cref="IPluginInit.Init" />
+    public virtual Task Init(IPluginHost<TConfig> Host, Action<(string Status, float Percentage)> Progress) => Task.CompletedTask;
 
     /// <inheritdoc />
     public virtual Task ShowPluginSettings(object ParentWindow) { throw new NotImplementedException(); }

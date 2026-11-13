@@ -199,6 +199,10 @@ public sealed class TorrentStore
             PendingRefreshed = [];
             PendingRemoved = [];
 
+            // Nothing shows or reads a new torrent before this lock is released, so it takes its values here, off the UI thread
+            foreach (var t in changeSet.Added)
+                t.CommitUIChanges();
+
             ApplyTotals(changeSet);
         }
 #if DEBUG
@@ -210,8 +214,6 @@ public sealed class TorrentStore
 
         Dispatcher.UIThread.Post(() => {
             lock (Lock) {
-                foreach (var t in changeSet.Added)
-                    t.CommitUIChanges();
                 foreach (var t in changeSet.Refreshed)
                     t.CommitUIChanges();
             }

@@ -11,6 +11,7 @@
             ""Build acceleration"" fucks up files sometimes
         -->
         <AccelerateBuildsInVisualStudio>false</AccelerateBuildsInVisualStudio>
+        <PublishReadyToRun>true</PublishReadyToRun>
     </PropertyGroup>
 
     <!--

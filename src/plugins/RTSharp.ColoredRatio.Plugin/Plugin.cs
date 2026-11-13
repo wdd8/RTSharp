@@ -56,10 +56,9 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
         return brush;
     }
 
-    public override Task<IPlugin> Init(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, Action<(string Status, float Percentage)> Progress)
+    public override void InitHooks(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host)
     {
         this.Host = Host;
-        Progress(("Initializing...", 0f));
 
         Hook = this.Host.HookTorrentListingEvLoadingCell(nameof(Torrent.Ratio), (dataContext, cell) => {
             var torrent = (Torrent)dataContext!;
@@ -73,10 +72,6 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
             if (cell.Background != background)
                 cell.Background = background;
         });
-
-        Progress(("Done", 100f));
-
-        return Task.FromResult((IPlugin)this);
     }
 
     public override Task Unload()

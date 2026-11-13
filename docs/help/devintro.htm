@@ -60,7 +60,14 @@
 <p>The plugin describes its own settings with a class deriving from PluginConfigContainer&lt;PluginInstanceConfig&gt; (or PluginConfigContainer&lt;DataProviderInstanceConfig&gt; for a data provider), RT# reads the file into this class and gives it to the plugin through Host.Config. To save the settings, call Host.SavePluginConfig.</p>
 
 <h3>5. Loading:</h3>
-<p>At startup, RT# reads all the configuration files, loads each module in its own load context, then calls ConfigureServices and Init on each plugin. If Init fails, RT# displays the error and continues with the other plugins. When RT# exits, it calls Unload. A plugin must declare the major version of RT# it has been made for in CompatibleMajorVersion.</p>
+<p>At startup, RT# reads all the configuration files, loads each module in its own load context, then calls the init functions of each plugin, one stage at a time:</p>
+<div class="list">
+- ConfigureServices: Register your own services in the dependency injection of RT#<br>
+- InitHooks: Hook the torrent listing, before it shows any torrents<br>
+- InitDataProviders: Register data providers, before the main window exists<br>
+- Init: Everything else, such as menu items, once the main window exists<br>
+</div>
+<p>A plugin must declare the major version of RT# it has been made for in CompatibleMajorVersion.</p>
 
 </body>
 </html>

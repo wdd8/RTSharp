@@ -433,6 +433,8 @@ public static class Plugins
             throw new PluginLoadException($"Invalid plugin {modulePath}", null);
         }
 
+        Core.Jit.CompileInBackground([pluginType, .. pluginType.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic)]);
+
         var init = (IPluginInit?)Activator.CreateInstance(pluginType);
 
         if (init == null) {
@@ -441,19 +443,30 @@ public static class Plugins
             ctx.Unload();
             throw new PluginLoadException($"Failed to load plugin {modulePath}", null);
         }
+        if (init is not IPlugin instance) {
+            Log.Logger.Error($"Plugin {modulePath} doesn't implement {nameof(IPlugin)}");
+
+            ctx.Unload();
+            throw new PluginLoadException($"Plugin {modulePath} doesn't implement {nameof(IPlugin)}", null);
+        }
         if (Global.Consts.Version.Major != init.CompatibleMajorVersion) {
-            var msgbox = MessageBoxManager.GetMessageBoxStandard(
-                title: "Plugin loader",
-                text: $"Plugin {modulePath}: Incompatible to RT# core version (RT# - {Global.Consts.Version.Major}, plugin - {init.CompatibleMajorVersion}), load anyways?",
-                @enum: ButtonEnum.YesNo,
-                icon: Icon.Error);
-            if (await msgbox.ShowWindowAsync() != ButtonResult.Yes) {
+            var res = await Dispatcher.UIThread.InvokeAsync(async () => {
+                var msgbox = MessageBoxManager.GetMessageBoxStandard(
+                    title: "Plugin loader",
+                    text: $"Plugin {modulePath}: Incompatible to RT# core version (RT# - {Global.Consts.Version.Major}, plugin - {init.CompatibleMajorVersion}), load anyways?",
+                    @enum: ButtonEnum.YesNo,
+                    icon: Icon.Error);
+
+                return await msgbox.ShowWindowAsync();
+            });
+            if (res != ButtonResult.Yes) {
                 throw new PluginLoadException($"Incompatible RT# core version for plugin {modulePath}", null);
             }
         }
 
         var plugin = new RTSharpPlugin(ctx, asm, configRaw, Path, config.InstanceId, modulePath, init.ConfigType) {
-            PluginInit = init
+            PluginInit = init,
+            Instance = instance
         };
         LoadedPlugins.Add(plugin);
 
@@ -498,26 +511,52 @@ public static class Plugins
         }
     }
 
-    [RequiresUnreferencedCode("Plugins")]
+    /// <summary>
+    /// Hooks the torrent listing, before it shows any torrents
+    /// </summary>
+    public static Task InitHooks() =>
+        InitEach(plugin => {
+            plugin.PluginInit!.InitHooks(plugin);
+            return Task.CompletedTask;
+        });
+
+    /// <summary>
+    /// Data providers need no main window, so they're listed, and polled, before it exists
+    /// </summary>
+    public static Task InitDataProviders() =>
+        InitEach(async plugin => {
+            await plugin.PluginInit!.InitDataProviders(plugin);
+            plugin.CompleteDataProvidersInit();
+        });
+
+    /// <summary>
+    /// Plugins may add to the main window's menus, so it must exist
+    /// </summary>
     public static async Task InitPlugins(Action<float, string> Progress)
     {
-        var pending = LoadedPlugins.Where(x => x.Instance == null).ToList();
+        var count = LoadedPlugins.Count;
+        var x = 0;
 
-        for (var x = 0; x < pending.Count; x++) {
-            var plugin = pending[x];
+        await InitEach(async plugin => {
             var pluginName = plugin.Config.Plugin.Name;
-            var init = plugin.PluginInit!;
 
-            Progress((int)((float)x / pending.Count * 100), $"Initializing plugin {pluginName}...");
+            Progress((int)((float)x++ / count * 100), $"Initializing plugin {pluginName}...");
             Log.Logger.Debug($"Initializing plugin {pluginName} ({plugin.PluginVersion})...");
 
-            void evPluginProgress((string Status, float Percentage) e)
-            {
-                Progress((int)(e.Percentage / pending.Count), $"{pluginName}: {e.Status}");
-            }
+            await plugin.PluginInit!.Init(plugin, e => Progress((int)(e.Percentage / count), $"{pluginName}: {e.Status}"));
+        });
 
+        Progress(100, "Plugins initialized");
+    }
+
+    /// <summary>
+    /// Runs an init function of each plugin
+    /// </summary>
+    private static async Task InitEach(Func<RTSharpPlugin, Task> Init)
+    {
+        foreach (var plugin in LoadedPlugins.ToArray()) {
             try {
-                plugin.Instance = await init.Init(plugin, evPluginProgress);
+                await Init(plugin);
             } catch (Exception ex) {
                 try {
                     await plugin.Unload();
@@ -535,8 +574,6 @@ public static class Plugins
                 );
             }
         }
-
-        Progress(100, "Plugins initialized");
     }
 
     public static async Task UnloadAll()

@@ -90,7 +90,7 @@ public static class Themes
         }
     }
 
-    public static IStyle Load(string Name)
+    static string Prepare(string Name)
     {
         var themeDir = Path.Combine(UserThemesPath, Name);
         if (!File.Exists(Path.Combine(themeDir, RootFile)))
@@ -109,14 +109,8 @@ public static class Themes
 
         var compiledPath = Path.Combine(UserThemesPath, $"{ThemeAssemblyName}.{themeHash}.dll");
 
-        if (File.Exists(compiledPath)) {
-            try {
-                return LoadCompiled(File.ReadAllBytes(compiledPath));
-            } catch (Exception ex) {
-                Log.Logger.Warning(ex, $"Stored theme {compiledPath} failed to load, compiling {Name} again");
-                File.Delete(compiledPath);
-            }
-        }
+        if (File.Exists(compiledPath))
+            return compiledPath;
 
         var temp = Compile(Name);
         try {
@@ -132,13 +126,34 @@ public static class Themes
             }
         }
 
-        return LoadCompiled(File.ReadAllBytes(compiledPath));
+        return compiledPath;
     }
 
-    static IStyle LoadCompiled(byte[] Image)
+    /// <summary>
+    /// Compiles the theme if it has no stored assembly, and loads the assembly.
+    /// </summary>
+    public static Assembly LoadAssembly(string Name)
     {
-        var assembly = Assembly.Load(Image);
-        var tryLoad = assembly.GetType("CompiledAvaloniaXaml.!XamlLoader")?.GetMethod("TryLoad", [typeof(IServiceProvider), typeof(string)]) ?? throw new InvalidOperationException("Compiled theme contains no XAML");
+        var compiledPath = Prepare(Name);
+
+        Assembly assembly;
+        try {
+            assembly = Assembly.Load(File.ReadAllBytes(compiledPath));
+        } catch (Exception ex) {
+            Log.Logger.Warning(ex, $"Stored theme {compiledPath} failed to load, compiling {Name} again");
+            File.Delete(compiledPath);
+            assembly = Assembly.Load(File.ReadAllBytes(Prepare(Name)));
+        }
+
+        // The UI thread runs this code as it builds the styles, and the templates of every control
+        Jit.CompileInBackground(assembly.GetTypes());
+
+        return assembly;
+    }
+
+    public static IStyle Load(Assembly Theme)
+    {
+        var tryLoad = Theme.GetType("CompiledAvaloniaXaml.!XamlLoader")?.GetMethod("TryLoad", [typeof(IServiceProvider), typeof(string)]) ?? throw new InvalidOperationException("Compiled theme contains no XAML");
 
         return tryLoad.Invoke(null, [null, $"avares://{ThemeAssemblyName}/{RootFile}"]) as IStyle ?? throw new InvalidOperationException($"{RootFile} must have Styles as its root element");
     }
@@ -179,8 +194,8 @@ public static class Themes
             var image = new BlobBuilder();
             pe.Serialize(image);
 
-            using var file = File.Create(inputPath);
-            image.WriteContentTo(file);
+            using (var file = File.Create(inputPath))
+                image.WriteContentTo(file);
 
             var input = new TaskItem(inputPath);
             input.SetMetadata("AvaloniaCompileOutput", outputPath);

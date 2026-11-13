@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -12,7 +12,15 @@
     <ApplicationIcon>Assets/rtsharp.ico</ApplicationIcon>
     <!-- Not compatible with plugin system -->
     <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishReadyToRunComposite Condition="'$(SelfContained)' == 'true'">true</PublishReadyToRunComposite>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <EventSourceSupport Condition="'$(EventSourceSupport)' == ''">false</EventSourceSupport>
+  </PropertyGroup>
+  <ItemGroup>
+    <PublishReadyToRunPgoFiles Include="startup.mibc" Condition="Exists('startup.mibc')" />
+  </ItemGroup>
   <PropertyGroup Label="Avalonia">
     <AvaloniaUseCompiledBindingsByDefault>True</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>

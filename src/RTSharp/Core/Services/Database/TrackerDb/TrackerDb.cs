@@ -23,7 +23,7 @@ namespace RTSharp.Core.Services.Database.TrackerDb
             return conn;
         }
 
-        public async Task Initialize()
+        public static async Task Migrate()
         {
             await using var conn = await New();
 
@@ -43,6 +43,11 @@ namespace RTSharp.Core.Services.Database.TrackerDb
 
             var runner = serviceCollection.BuildServiceProvider().GetRequiredService<IMigrationRunner>();
             runner.MigrateUp();
+        }
+
+        public async Task Initialize()
+        {
+            await using var conn = await New();
 
             foreach (var info in await conn.QueryAsync<TrackerInfo>("select Domain, Name, ImageHash from TrackerDb"))
                 Cache[info.Domain] = info;
