@@ -693,8 +693,8 @@ namespace RTSharp.Daemon.Services.transmission
                                         Client = i.ClientName,
                                         Flags = flags,
                                         Done = (float)(i.Progress! * 100f),
-                                        Downloaded = 0UL,
-                                        Uploaded = 0UL,
+                                        Downloaded = (ulong)(i.BytesToClient ?? 0),
+                                        Uploaded = (ulong)(i.BytesToPeer ?? 0),
                                         DLSpeed = (ulong)i.RateToClient!,
                                         UPSpeed = (ulong)i.RateToPeer!,
                                         PeerDLSpeed = peerDLSpeed

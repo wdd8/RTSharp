@@ -179,8 +179,8 @@ public class TorrentMapper
             Done = (float)In.Progress! * 100,
             Flags = In.FlagStr!.Select(flag).Aggregate((a, b) => a | b),
             UPSpeed = (ulong)In.RateToPeer!,
-            Downloaded = 0,
-            Uploaded = 0,
+            Downloaded = (ulong)(In.BytesToClient ?? 0),
+            Uploaded = (ulong)(In.BytesToPeer ?? 0),
             PeerDLSpeed = PeerDLSpeed
         };
     }
