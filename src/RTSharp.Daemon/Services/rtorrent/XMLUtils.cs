@@ -437,38 +437,6 @@ namespace RTSharp.Daemon.Services.rtorrent
             return sb.ToString();
         }
 
-        public static string Decode(string In)
-        {
-            var span = In.AsSpan();
-            var andIndex = span.IndexOf('&');
-            if (andIndex < 0)
-                return In;
-
-            var sb = new StringBuilder(In.Length);
-            sb.Append(span[..andIndex]);
-
-            var x = andIndex;
-            while (x < span.Length) {
-                var right = span[(x + 1)..];
-
-                if (right.StartsWith("amp;")) { sb.Append('&'); x += 1 + 4; }
-                else if (right.StartsWith("quot;")) { sb.Append('"'); x += 1 + 5; }
-                else if (right.StartsWith("apos;")) { sb.Append('\''); x += 1 + 5; }
-                else if (right.StartsWith("lt;")) { sb.Append('<'); x += 1 + 3; }
-                else if (right.StartsWith("gt;")) { sb.Append('>'); x += 1 + 3; }
-                else { sb.Append('&'); x += 1; }
-
-                var rest = span[x..];
-                var next = rest.IndexOf('&');
-                if (next < 0) {
-                    sb.Append(rest);
-                    break;
-                }
-                sb.Append(rest[..next]);
-                x += next;
-            }
-
-            return sb.ToString();
-        }
+        public static string Decode(string In) => WebUtility.HtmlDecode(In);
     }
 }

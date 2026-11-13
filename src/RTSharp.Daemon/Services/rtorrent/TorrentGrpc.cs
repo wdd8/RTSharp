@@ -448,194 +448,80 @@ namespace RTSharp.Daemon.Services.rtorrent
 
         public async Task<TorrentsReply> RemoveTorrentsAndData(Torrents Req)
         {
-            var ret = new TorrentsReply();
+            var hashes = Req.Hashes.Select(x => x.ToByteArray()).ToArray();
 
-            foreach (var hash in Req.Hashes) {
-                var torrentReply = new TorrentsReply.Types.TorrentReply() {
-                    InfoHash = hash
-                };
-                ret.Torrents.Add(torrentReply);
-            }
+            var basePaths = await TorrentOpService.GetTorrentsBasePath(hashes);
 
-            var dotTorrentPaths = await TorrentOpService.GetDotTorrentFilePaths(Req.Hashes.Select(x => x.ToByteArray()));
-            var dotTorrents = new InfoHashDictionary<byte[]>();
-
-            foreach (var (hash, path) in dotTorrentPaths) {
-                var torrentReply = ret.Torrents.Single(x => x.InfoHash.SequenceEqual(hash));
-
-                if (!System.IO.File.Exists(path)) {
-                    torrentReply.Status.Add(new Protocols.DataProvider.Status() {
-                        Command = "__file_deletion",
-                        FaultCode = "2",
-                        FaultString = ".torrent file doesn't exist"
-                    });
-                    continue;
-                }
-
-                byte[] torrent;
-                try {
-                    torrent = await File.ReadAllBytesAsync(path);
-                } catch {
-                    torrentReply.Status.Add(new Protocols.DataProvider.Status() {
-                        Command = "__file_deletion",
-                        FaultCode = "3",
-                        FaultString = "Cannot read .torrent file"
-                    });
-                    continue;
-                }
-
-                dotTorrents[hash] = torrent;
-            }
-
-            string[] actions = [ "d.base_path", "d.delete_tied", "d.erase" ];
-            var xml = new StringBuilder();
-            xml.Append("<?xml version=\"1.0\"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>");
-            foreach (var hash in Req.Hashes) {
-                var sHash = Convert.ToHexString(ToNative(hash.Span));
-
-                foreach (var action in actions) {
-                    xml.Append("<value><struct><member><name>methodName</name><value><string>" + action + "</string></value></member><member><name>params</name><value><array><data><value><string>" + sHash + "</string></value></data></array></value></member></struct></value>");
+            foreach (var (hash, basePath) in basePaths) {
+                if (!Path.IsPathRooted(basePath.BasePath)) {
+                    throw new RpcException(new Status(StatusCode.FailedPrecondition,
+                        $"Data of torrent {Convert.ToHexString(hash)} is in the relative directory \"{Path.Combine(basePath.BasePath, basePath.ContainerFolder ?? "")}\", so nothing was removed. " +
+                        "Torrent data should use absolute paths: set directory.default in the rtorrent configuration to an absolute path and move the torrents there."
+                    ));
                 }
             }
 
-            xml.Append("</data></array></value></param></params></methodCall>");
+            var files = await TorrentOpService.GetTorrentsFiles(hashes);
 
-            using var response = await Scgi.Get(xml.ToString());
-            var result = response.Reader();
+            var ret = ToTorrentsReply(await Scgi.XmlActionTorrents(Req.Hashes.Select(x => ToNative(x.Span)).ToArray(), "d.delete_tied", "d.erase"));
 
-            XMLUtils.SeekTo(ref result, XMLUtils.METHOD_RESPONSE);
-            XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_START);
+            foreach (var torrent in files.Reply) {
+                var torrentReply = ret.Torrents.Single(x => x.InfoHash == torrent.InfoHash);
 
-            var basePaths = new InfoHashDictionary<string>();
-
-            foreach (var hash in Req.Hashes) {
-                var torrentReply = ret.Torrents.Single(x => x.InfoHash.SequenceEqual(hash));
-
-                foreach (var action in actions) {
-                    if (XMLUtils.GetValueType(result) == SCGI_DATA_TYPE.STRUCT) {
-                        // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-506</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Method 'base_path' not defined</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
-                        // <value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n<value><struct>\r\n<member><name>faultCode</name>\r\n<value><i4>-501</i4></value></member>\r\n<member><name>faultString</name>\r\n<value><string>Unsupported target type found.</string></value></member>\r\n</struct></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
-
-                        var status = XMLUtils.GetFaultStruct(ref result, action);
-                        torrentReply.Status.Add(GrpcExtensions.ToStatus(status));
-
-                        continue;
-                    }
-
-                    // <value><array><data>\r\n<value><string></string></value>\r\n</data></array></value>\r\n<value><array><data>\r\n<value><i4>0</i4></value>\r\n</data></array></value>\r\n<value><array><data>\r\n<value><i4>0</i4></value>\r\n</data></array></value>\r\n</data></array></value></param>\r\n</params>\r\n</methodResponse>\r\n
-                    XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
-
-                    switch (action) {
-                        case "d.base_path":
-                            var basePath = XMLUtils.Decode(XMLUtils.GetValue<string>(ref result));
-                            basePaths[hash.ToByteArray()] = basePath;
-
-                            torrentReply.Status.Add(new Protocols.DataProvider.Status() {
-                                Command = action,
-                                FaultCode = "0",
-                                FaultString = ""
-                            });
-                            break;
-                        default:
-                            var resp = XMLUtils.GetValue<int>(ref result);
-
-                            if (resp == 0) {
-                                torrentReply.Status.Add(new Protocols.DataProvider.Status() {
-                                    Command = action,
-                                    FaultCode = "0",
-                                    FaultString = ""
-                                });
-                            } else {
-                                torrentReply.Status.Add(new Protocols.DataProvider.Status() {
-                                    Command = action,
-                                    FaultCode = resp.ToString(),
-                                    FaultString = "Response is not 0"
-                                });
-                            }
-                            break;
-                    }
-
-                    XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
-                }
-            }
-
-            var bencodeParser = new BencodeParser();
-
-            foreach (var (hash, torrent) in dotTorrents) {
-                var basePath = basePaths[hash];
-                var torrentReply = ret.Torrents.Single(x => x.InfoHash.SequenceEqual(hash));
-
-                if (String.IsNullOrEmpty(basePath)) {
-                    torrentReply.Status.Add(new Protocols.DataProvider.Status() {
-                        Command = "__file_deletion",
-                        FaultCode = "1",
-                        FaultString = "Base path is empty or null"
-                    });
+                if (!torrentReply.Status.Any(x => x.Command == "d.erase" && x.FaultCode == "0"))
                     continue;
-                }
 
-                if (basePath[^1] == '/')
-                    basePath = basePath[..^1];
+                var basePath = basePaths[torrent.InfoHash.ToByteArray()];
+                var contentDirectory = Path.Combine(basePath.BasePath, basePath.ContainerFolder ?? "");
 
-                BDictionary info;
-                try {
-                    using (var mem = new MemoryStream(torrent)) {
-                        info = bencodeParser.Parse<BDictionary>(mem).Get<BDictionary>(TorrentFields.Info)
-                            ?? throw new InvalidDataException("Torrent has no \"info\" dictionary");
-                    }
-                } catch {
-                    torrentReply.Status.Add(new Protocols.DataProvider.Status() {
-                        Command = "__file_deletion",
-                        FaultCode = "4",
-                        FaultString = "Cannot parse .torrent file"
-                    });
-                    continue;
-                }
-
-                if (!info.ContainsKey("files")) {
-                    if (!File.Exists(basePath)) {
+                if (basePath.ContainerFolder != null && !Directory.Exists(contentDirectory)) {
+                    if (torrent.Files.Any(x => x.DownloadedPieces != 0)) {
                         torrentReply.Status.Add(new Protocols.DataProvider.Status() {
                             Command = "__file_deletion",
                             FaultCode = "5",
-                            FaultString = $"File \"{basePath}\" doesn't exist"
+                            FaultString = $"Folder \"{contentDirectory}\" doesn't exist"
                         });
-                        continue;
                     }
-                    Logger.LogInformation($"Deleting file \"{basePath}\"");
-                    System.IO.File.Delete(basePath);
-                } else {
-                    var folders = new HashSet<string>() {
-                        basePath
-                    };
-                    foreach (var file in info.Get<BList>("files")!.Cast<BDictionary>()) {
-                        var componentsList = file.Get<BList>("path") ?? file.Get<BList>("path.utf-8");
+                    continue;
+                }
 
-                        if (componentsList == null) {
+                var folders = new HashSet<string>();
+                if (basePath.ContainerFolder != null)
+                    folders.Add(contentDirectory);
+
+                foreach (var file in torrent.Files) {
+                    var components = file.Path.Split('/');
+                    for (var x = 1; x < components.Length; x++)
+                        folders.Add(Path.Combine([ contentDirectory, ..components[..x] ]));
+
+                    var fullPath = Path.Combine(contentDirectory, file.Path);
+                    var info = new FileInfo(fullPath);
+
+                    if (!info.Exists) {
+                        if (basePath.ContainerFolder == null && file.DownloadedPieces != 0) {
                             torrentReply.Status.Add(new Protocols.DataProvider.Status() {
                                 Command = "__file_deletion",
-                                FaultCode = "6",
-                                FaultString = "Malformed multi-file torrent"
+                                FaultCode = "5",
+                                FaultString = $"File \"{fullPath}\" doesn't exist"
                             });
-                            continue;
                         }
-
-                        var components = componentsList.AsStrings().ToArray();
-
-                        var folder = components.Take(components.Length - 1);
-                        if (folder.Any())
-                            folders.Add(Path.Combine([ basePath, ..folder ]));
-
-                        var fullPath = Path.Combine([ basePath, ..components ]);
-                        Logger.LogInformation($"Deleting file \"{fullPath}\"");
-                        System.IO.File.Delete(fullPath);
+                        continue;
                     }
 
-                    foreach (var folder in folders.OrderByDescending(x => x.Length)) {
-                        Logger.LogInformation($"Checking for empty folder: \"{folder}\"");
-                        if (!Directory.EnumerateFileSystemEntries(folder).Any()) {
-                            Logger.LogInformation($"Deleting empty folder \"{folder}\"");
-                            Directory.Delete(folder);
-                        }
+                    // Only data rtorrent downloaded is deleted. Starting a torrent creates all of its files empty,
+                    // and those go too so that their folders can be removed.
+                    if (file.DownloadedPieces == 0 && info.Length != 0)
+                        continue;
+
+                    Logger.LogInformation($"Deleting file \"{fullPath}\"");
+                    info.Delete();
+                }
+
+                foreach (var folder in folders.OrderByDescending(x => x.Length)) {
+                    Logger.LogDebug($"Checking for empty folder: \"{folder}\"");
+                    if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any()) {
+                        Logger.LogInformation($"Deleting empty folder \"{folder}\"");
+                        Directory.Delete(folder);
                     }
                 }
             }
