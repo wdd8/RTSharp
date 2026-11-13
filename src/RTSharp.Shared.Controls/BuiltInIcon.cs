@@ -1,6 +1,4 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Labs.Gif;
+﻿using Avalonia.Labs.Gif;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -164,14 +162,37 @@ public static class BuiltInIcon
         { BuiltInIcons.UPDATE_INTERVAL, "update_interval" },
     }.ToFrozenDictionary();
 
-    private static readonly Lazy<FrozenDictionary<string, Uri>> Files = new(() =>
-        AssetLoader
-            .GetAssets(new Uri("avares://RTSharp.Theme/Icons/"), null)
-            .ToFrozenDictionary(x => Path.GetFileNameWithoutExtension(x.AbsolutePath))
-    );
+    private const string MaskSuffix = ".mask";
 
-    private static Uri Find(BuiltInIcons Icon) =>
-        Files.Value.TryGetValue(Icons[Icon], out var uri) ? uri : throw new FileNotFoundException($"The theme has no icon {Icons[Icon]} in its Icons folder");
+    private static FrozenDictionary<string, Uri>? Files;
+
+    /// <summary>
+    /// Changes each time the icons are cleared, so a control can tell its icon came from an earlier theme
+    /// </summary>
+    public static int Generation { get; private set; }
+
+    /// <summary>
+    /// Drops the loaded icons, for the next ones to come from the theme in use
+    /// </summary>
+    public static void Clear()
+    {
+        Files = null;
+        Cache.Clear();
+        GeometryCache.Clear();
+        Generation++;
+    }
+
+    private static Uri Find(BuiltInIcons Icon)
+    {
+        var files = Files ??= AssetLoader
+            .GetAssets(new Uri("avares://RTSharp.Theme/Icons/"), null)
+            .ToFrozenDictionary(x => {
+                var name = Path.GetFileNameWithoutExtension(x.AbsolutePath);
+                return name.EndsWith(MaskSuffix, StringComparison.Ordinal) ? name[..^MaskSuffix.Length] : name;
+            });
+
+        return files.TryGetValue(Icons[Icon], out var uri) ? uri : throw new FileNotFoundException($"The theme has no icon {Icons[Icon]} in its Icons folder");
+    }
 
     public static Bitmap Get(BuiltInIcons Icon) => Cache.GetOrAdd(Icon, icon => new Bitmap(AssetLoader.Open(Find(icon))));
 
@@ -179,19 +200,7 @@ public static class BuiltInIcon
 
     public static bool IsSvg(BuiltInIcons Icon) => Find(Icon).AbsolutePath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase);
 
-    public static IImage GetImage(BuiltInIcons Icon)
-    {
-        if (!IsSvg(Icon))
-            return Get(Icon);
-
-        var app = Application.Current!;
-        return new DrawingImage() {
-            Drawing = new GeometryDrawing() {
-                Geometry = GetGeometry(Icon),
-                Brush = (IBrush?)app.FindResource(app.ActualThemeVariant, "SystemControlForegroundBaseHighBrush")
-            }
-        };
-    }
+    public static bool IsMask(BuiltInIcons Icon) => Path.GetFileNameWithoutExtension(Find(Icon).AbsolutePath).EndsWith(MaskSuffix, StringComparison.Ordinal);
 
     public static Geometry GetGeometry(BuiltInIcons Icon) => GeometryCache.GetOrAdd(Icon, icon => {
         XDocument svg;

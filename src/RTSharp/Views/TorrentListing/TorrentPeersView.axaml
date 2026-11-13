@@ -6,6 +6,7 @@
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+             xmlns:sc="using:RTSharp.Shared.Controls.Views"
              d:DesignWidth="1100" d:DesignHeight="450"
 			 x:DataType="torrentListing:TorrentPeersViewModel">
 
@@ -58,7 +59,10 @@
             <DataGridTemplateColumn Header="Icon" CanUserSort="False">
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="models:Peer">
-                        <Image Source="{Binding Icon}" Width="16" Height="16" Stretch="Uniform" />
+                        <Panel>
+                            <Image Source="{Binding Icon}" Width="16" Height="16" Stretch="Uniform" />
+                            <sc:BuiltInPathIcon Value="WEB" Width="16" Height="16" IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNull}}" />
+                        </Panel>
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>

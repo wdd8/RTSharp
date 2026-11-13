@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace RTSharp.Core;
 
-public class ServersActionQueueRenderer(string ServerName, IDaemonService DaemonService) : DefaultActionQueueRenderer(ServerName, BuiltInIcon.Get(BuiltInIcons.SERVER))
+public class ServersActionQueueRenderer(string ServerName, IDaemonService DaemonService) : DefaultActionQueueRenderer(ServerName, BuiltInIcons.SERVER)
 {
     private readonly ConcurrentDictionary<Guid, TaskCompletionSource> ActionsTasks = new();
 

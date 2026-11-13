@@ -107,7 +107,9 @@ namespace RTSharp.ViewModels.TorrentListing
                             oldTracker.UpdateFromPluginModel(newTracker);
                         } else {
                             // Add
-                            TrackersViewModel.Trackers.Add(Models.Tracker.FromPluginModel(newTracker, trackerDb.GetTrackerInfo(UriUtils.GetDomainForTracker(newTracker.Uri))?.Name));
+                            var tracker = Models.Tracker.FromPluginModel(newTracker, trackerDb.GetTrackerInfo(UriUtils.GetDomainForTracker(newTracker.Uri))?.Name);
+                            TrackersViewModel.Trackers.Add(tracker);
+                            TrackerInfoFetches.Writer.TryWrite(tracker);
                         }
                     }
 
@@ -115,13 +117,6 @@ namespace RTSharp.ViewModels.TorrentListing
                         if (!@new.Contains(oldTracker.Uri)) {
                             // Remove
                             TrackersViewModel.Trackers.Remove(oldTracker);
-                        }
-                    }
-
-                    foreach (var tracker in TrackersViewModel.Trackers) {
-                        if (tracker.Icon == null) {
-                            tracker.Icon = DefaultImage;
-                            TrackerInfoFetches.Writer.TryWrite(tracker);
                         }
                     }
 
@@ -152,7 +147,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         Dispatcher.UIThread.Post(() => {
                             tracker.DisplayName = trackerInfo.Name;
                             tracker.UpdateDisplay();
-                            tracker.Icon = (IImage?)icon ?? DefaultImage;
+                            tracker.Icon = icon;
                         });
                         continue;
                     }

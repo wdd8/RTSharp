@@ -54,6 +54,12 @@ jobs:
       - name: Publish daemon ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
         if: startsWith(matrix.rid, 'linux-')
         run: dotnet publish ./src/RTSharp.Daemon -c Release -r ${{ matrix.rid }} ${{ matrix.self_contained == true && '--self-contained' || '--no-self-contained' }} -o ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}
+      - name: Test
+        if: matrix.rid == 'linux-x64' && matrix.self_contained == false
+        run: |
+          for PROJ in src/*.Tests/*.Tests.csproj; do
+            dotnet test "$PROJ" -c Release -r linux-x64 --no-self-contained
+          done
       - name: Upload build ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
         uses: actions/upload-artifact@v4
         with:
@@ -65,32 +71,6 @@ jobs:
         with:
           name: ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}
           path: ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}
-
-  verify-scripts:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Resolve .NET SDK version
-        id: dotnet
-        run: |
-          TFM=$(grep -oP '(?<=<TargetFramework>)[^<]+' src/RTSharp.Daemon.Scripts/RTSharp.Daemon.Scripts.csproj | head -1)
-          if [ -z "$TFM" ]; then echo "No <TargetFramework> in RTSharp.Daemon.Scripts.csproj" >&2; exit 1; fi
-          echo "version=${TFM#net}.x" >> "$GITHUB_OUTPUT"
-      - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ steps.dotnet.outputs.version }}
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-      - name: Verify daemon scripts
-        run: dotnet build ./src/RTSharp.Daemon.Scripts -c Debug -p:DebugType=none
 
   docker:
     needs: build

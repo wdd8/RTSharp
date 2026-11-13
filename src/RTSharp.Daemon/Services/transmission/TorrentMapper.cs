@@ -125,32 +125,6 @@ public class TorrentMapper
         };
     }
 
-    public static Shared.Abstractions.Tracker.TRACKER_STATUS MapFromExternal(global::Transmission.Net.Core.Enums.TrackerState In)
-    {
-        return In switch {
-            global::Transmission.Net.Core.Enums.TrackerState.Inactive => Shared.Abstractions.Tracker.TRACKER_STATUS.NOT_ACTIVE,
-            global::Transmission.Net.Core.Enums.TrackerState.Waiting => Shared.Abstractions.Tracker.TRACKER_STATUS.NOT_CONTACTED_YET,
-            global::Transmission.Net.Core.Enums.TrackerState.Queued => Shared.Abstractions.Tracker.TRACKER_STATUS.ENABLED,
-            global::Transmission.Net.Core.Enums.TrackerState.Active => Shared.Abstractions.Tracker.TRACKER_STATUS.ACTIVE,
-            _ => 0
-        };
-    }
-
-    public static Shared.Abstractions.Tracker MapFromExternal(global::Transmission.Net.Core.Entity.ITorrentTrackerStats In)
-    {
-        return new Shared.Abstractions.Tracker {
-            ID = In.Id!,
-            Uri = In.Announce!,
-            Status = In.AnnounceState == null ? MapFromExternal(In.ScrapeState!.Value) : MapFromExternal(In.AnnounceState!.Value),
-            Seeders = In.SeederCount == -1 ? 0 : (uint)In.SeederCount!,
-            Peers = In.LeecherCount == -1 ? 0 : (uint)In.LeecherCount!, // TODO: is this right?
-            Downloaded = (uint)In.LastAnnouncePeerCount!,
-            LastUpdated = In.LastAnnounceTime,
-            Interval = In.NextAnnounceTime == null || In.LastAnnounceTime == null ? TimeSpan.Zero : In.NextAnnounceTime.Value - In.LastAnnounceTime.Value,
-            StatusMsg = In.LastAnnounceResult ?? In.LastScrapeResult ?? ""
-        };
-    }
-
     public static Shared.Abstractions.Peer MapFromExternal(global::Transmission.Net.Core.Entity.Torrent.ITorrentPeers In, ulong PeerDLSpeed)
     {
         Shared.Abstractions.Peer.PEER_FLAGS flag(char In)
@@ -210,15 +184,4 @@ public class TorrentMapper
             PeerDLSpeed = PeerDLSpeed
         };
     }
-
-    /*public static Shared.Abstractions.Tracker MapFromExternal(global::Transmission.Net.Core.Entity.ITorrentTracker In)
-    {
-        return new Shared.Abstractions.Tracker {
-            ID = In.Id,
-            Uri = In.Announce,
-            Downloaded = 0,
-            Interval = TimeSpan.Zero,
-            LastUpdated
-        }
-    }*/
 }

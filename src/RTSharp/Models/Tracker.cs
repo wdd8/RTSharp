@@ -70,7 +70,13 @@ namespace RTSharp.Models
         /// Update interval
         /// </summary>
         [ObservableProperty]
-        public partial TimeSpan Interval { get; set; }
+        public partial TimeSpan? Interval { get; set; }
+
+        /// <summary>
+        /// Next announce
+        /// </summary>
+        [ObservableProperty]
+        public partial DateTime? NextAnnounceDate { get; set; }
 
         /// <summary>
         /// Tracker message
@@ -83,11 +89,11 @@ namespace RTSharp.Models
             this.StatusInternal = In.Status;
 
             this.Status = FlagsMapper.MapConcat(In.Status, x => x switch {
-                TRACKER_STATUS.ACTIVE => "Active",
-                TRACKER_STATUS.DISABLED => "Disabled",
-                TRACKER_STATUS.ENABLED => "Enabled",
-                TRACKER_STATUS.NOT_ACTIVE => "Not active",
+                TRACKER_STATUS.WORKING => "Working",
+                TRACKER_STATUS.NOT_WORKING => "Not working",
                 TRACKER_STATUS.NOT_CONTACTED_YET => "Not contacted yet",
+                TRACKER_STATUS.DISABLED => "Disabled",
+                TRACKER_STATUS.UPDATING => "Updating",
                 _ => throw new ArgumentOutOfRangeException()
             }, ", ");
             this.StatusInternal = In.Status;
@@ -95,8 +101,9 @@ namespace RTSharp.Models
             this.Seeders = In.Seeders;
             this.Peers = In.Peers;
             this.Downloaded = In.Downloaded;
-            this.LastUpdatedDate = In.LastUpdated;
+            this.LastUpdatedDate = In.LastUpdated?.ToLocalTime();
             this.Interval = In.Interval;
+            this.NextAnnounceDate = In.NextAnnounce?.ToLocalTime();
             this.Message = In.StatusMsg;
         }
 

@@ -824,24 +824,33 @@ namespace RTSharp.Daemon.Services.qbittorrent
                 return new TorrentsTrackersReply.Types.TorrentsTrackers {
                     InfoHash = x,
                     Trackers = {
-                        trackers.Select(x => new Protocols.DataProvider.TorrentTracker {
-                            ID = x.Url.OriginalString,
-                            Uri = x.Url.ToString(),
-                            Status = x.TrackerStatus!.Value switch {
-                                QBittorrent.Client.TorrentTrackerStatus.Working => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.Active,
-                                QBittorrent.Client.TorrentTrackerStatus.Updating => Protocols.DataProvider.TorrentTrackerStatus.Enabled,
-                                QBittorrent.Client.TorrentTrackerStatus.NotContacted => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.NotContactedYet,
-                                QBittorrent.Client.TorrentTrackerStatus.NotWorking => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.NotActive,
+                        // DHT, PeX and LSD come as pseudo-entries ("** [DHT] **") that aren't URLs
+                        trackers.Where(x => x.Url.IsAbsoluteUri).Select(x => {
+                            var status = x.TrackerStatus!.Value switch {
+                                QBittorrent.Client.TorrentTrackerStatus.Working => Protocols.DataProvider.TorrentTrackerStatus.Working,
+                                QBittorrent.Client.TorrentTrackerStatus.Updating => Protocols.DataProvider.TorrentTrackerStatus.Updating,
+                                QBittorrent.Client.TorrentTrackerStatus.NotContacted => Protocols.DataProvider.TorrentTrackerStatus.NotContactedYet,
+                                QBittorrent.Client.TorrentTrackerStatus.NotWorking or
+                                QBittorrent.Client.TorrentTrackerStatus.TrackerError or
+                                QBittorrent.Client.TorrentTrackerStatus.Unreachable => Protocols.DataProvider.TorrentTrackerStatus.NotWorking,
                                 QBittorrent.Client.TorrentTrackerStatus.Disabled => Protocols.DataProvider.TorrentTrackerStatus.Disabled,
                                 _ => Protocols.DataProvider.TorrentTrackerStatus.Placeholder
-                            },
-                            Seeders = (uint)(x.Seeds ?? 0),
-                            Peers = (uint)(x.Peers ?? 0),
-                            // Where do leeches come in?
-                            Downloaded = 0, // TODO: feature flag?
-                            LastUpdated = DateTime.UnixEpoch.ToTimestamp(),
-                            ScrapeInterval = TimeSpan.Zero.ToDuration(), // TODO: feature flag?
-                            StatusMessage = x.Message
+                            };
+                            if (x.Updating == true)
+                                status |= Protocols.DataProvider.TorrentTrackerStatus.Updating;
+
+                            var ret = new Protocols.DataProvider.TorrentTracker {
+                                ID = x.Url.OriginalString,
+                                Uri = x.Url.ToString(),
+                                Status = status,
+                                Seeders = (uint)(x.Seeds ?? 0),
+                                Peers = (uint)(x.Leeches ?? 0),
+                                Downloaded = (uint)(x.CompletedDownloads ?? 0),
+                                StatusMessage = x.Message ?? ""
+                            };
+                            if (x.NextAnnounce != null)
+                                ret.NextAnnounce = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds(x.NextAnnounce.Value));
+                            return ret;
                         })
                     }
                 };

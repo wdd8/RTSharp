@@ -1,5 +1,4 @@
 using Avalonia;
-using Avalonia.Media;
 using Avalonia.Threading;
 
 using RTSharp.Shared.Abstractions.Client.ViewModels;
@@ -24,7 +23,8 @@ public class DefaultActionQueueRenderer : IActionQueueRenderer
 
     protected DefaultActionQueueViewModel ActionQueueVm { get; private set; }
 
-    public DefaultActionQueueRenderer(string DisplayName, IImage? Icon = null)
+    /// <param name="Icon">An IImage, or a value a data template displays, such as a built-in icon</param>
+    public DefaultActionQueueRenderer(string DisplayName, object? Icon = null)
     {
         ActionQueueVm = new DefaultActionQueueViewModel {
             DisplayName = DisplayName,

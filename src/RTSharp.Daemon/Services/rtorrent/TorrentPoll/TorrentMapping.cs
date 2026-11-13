@@ -15,24 +15,10 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             TorrentTracker? best = null;
             foreach (var tracker in Trackers) {
                 if (best == null || tracker.Peers > best.Peers ||
-                    (tracker.Peers == best.Peers && tracker.Status == TorrentTrackerStatus.Active && best.Status != TorrentTrackerStatus.Active))
+                    (tracker.Peers == best.Peers && tracker.Status.HasFlag(TorrentTrackerStatus.Working) && !best.Status.HasFlag(TorrentTrackerStatus.Working)))
                     best = tracker;
             }
             return best;
-        }
-
-        private static string TrackerStatusMessage(ReadOnlySpan<char> Raw)
-        {
-            if (Raw.Length == 1) {
-                switch (Raw[0]) {
-                    case '0': return "NA";
-                    case '1': return "Completed";
-                    case '2': return "Started";
-                    case '3': return "Stopped";
-                    case '4': return "Scrape";
-                }
-            }
-            return Raw.ToString();
         }
 
         private static void ParseLabels(string Label, Google.Protobuf.Collections.RepeatedField<string> Labels)
@@ -49,20 +35,39 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 Labels.Add(XMLUtils.Decode(Label[start..]));
         }
 
-        public static TorrentTracker MapFromRaw(string Url, bool IsEnabled, bool IsUsable, uint Seeders, uint Peers, uint Downloaded, ulong LastUpdatedUnix, uint ScrapeInterval, string LatestEventRaw)
+        public static TorrentTracker MapFromRaw(string Url, bool IsEnabled, bool IsBusy, bool IsRunning, uint Seeders, uint Peers, uint Downloaded,
+            ulong SuccessTimeLastUnix, ulong FailedTimeLastUnix, uint NormalInterval, ulong ActivityTimeNextUnix)
         {
-            var tracker = new TorrentTracker();
+            var tracker = new TorrentTracker {
+                Seeders = Seeders,
+                Peers = Peers,
+                Downloaded = Downloaded,
+                StatusMessage = ""
+            };
             tracker.ID = tracker.Uri = XMLUtils.Decode(Url);
-            TorrentTrackerStatus status;
-            status = IsEnabled ? TorrentTrackerStatus.Enabled : TorrentTrackerStatus.Disabled;
-            status |= IsUsable ? TorrentTrackerStatus.Active : TorrentTrackerStatus.NotActive;
-            tracker.Status = status;
-            tracker.Seeders = Seeders;
-            tracker.Peers = Peers;
-            tracker.Downloaded = Downloaded;
-            tracker.LastUpdated = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)LastUpdatedUnix));
-            tracker.ScrapeInterval = Duration.FromTimeSpan(TimeSpan.FromSeconds(ScrapeInterval));
-            tracker.StatusMessage = TrackerStatusMessage(LatestEventRaw);
+
+            if (!IsEnabled) {
+                tracker.Status = TorrentTrackerStatus.Disabled;
+                return tracker;
+            }
+
+            if (!IsRunning || (SuccessTimeLastUnix == 0 && FailedTimeLastUnix == 0)) {
+                tracker.Status = TorrentTrackerStatus.NotContactedYet;
+            } else {
+                tracker.Status = FailedTimeLastUnix > SuccessTimeLastUnix ? TorrentTrackerStatus.NotWorking : TorrentTrackerStatus.Working;
+                tracker.LastUpdated = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)Math.Max(SuccessTimeLastUnix, FailedTimeLastUnix)));
+                if (SuccessTimeLastUnix != 0)
+                    tracker.Interval = Duration.FromTimeSpan(TimeSpan.FromSeconds(NormalInterval));
+            }
+
+            if (!IsRunning)
+                return tracker;
+
+            if (IsBusy)
+                tracker.Status |= TorrentTrackerStatus.Updating;
+            else if (ActivityTimeNextUnix != 0)
+                tracker.NextAnnounce = Timestamp.FromDateTimeOffset(DateTimeOffset.FromUnixTimeSeconds((long)ActivityTimeNextUnix));
+
             return tracker;
         }
 

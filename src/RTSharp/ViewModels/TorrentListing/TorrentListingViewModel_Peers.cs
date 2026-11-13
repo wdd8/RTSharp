@@ -86,7 +86,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         if (whois == null) {
                             Dispatcher.UIThread.Post(() => {
                                 foreach (var x in PeersViewModel.Peers.Where(x => x.IPPort.Address.Equals(peer.IPPort.Address))) {
-                                    x.Icon = DefaultImage;
+                                    x.Icon = null;
                                     x.Origin = "Unknown";
                                 }
                             }, DispatcherPriority.Default);
@@ -94,13 +94,12 @@ namespace RTSharp.ViewModels.TorrentListing
                         }
 
                         (byte[] Hash, Bitmap Image)? realImage = null, flagImage = null;
-                        IImage peerIcon;
+                        IImage? peerIcon = null;
 
                         if (whois.Country != null) {
                             realImage = flagImage = await imageCache.AddImage(AssetLoader.Open(new Uri($"avares://RTSharp/Assets/Icons/Flags/{whois.Country.ToLowerInvariant()}.png")));
                             peerIcon = realImage!.Value.Image;
-                        } else
-                            peerIcon = DefaultImage;
+                        }
 
                         Dispatcher.UIThread.Post(() => {
                             foreach (var x in PeersViewModel.Peers.Where(x => x.IPPort.Address.Equals(peer.IPPort.Address))) {

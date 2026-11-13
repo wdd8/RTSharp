@@ -17,21 +17,38 @@ public class BuiltInPathIcon : PathIcon
 
     private Bitmap? Image;
 
+    private ImageBrush? Mask;
+
+    private int Generation;
+
     protected override Type StyleKeyOverride => typeof(PathIcon);
 
     static BuiltInPathIcon()
     {
         ValueProperty.Changed.AddClassHandler<BuiltInPathIcon>((o, e) => o.OnValueChanged());
+        AffectsRender<BuiltInPathIcon>(ForegroundProperty);
+    }
+
+    public BuiltInPathIcon()
+    {
+        ResourcesChanged += (_, _) => {
+            if (Generation != BuiltInIcon.Generation)
+                OnValueChanged();
+        };
     }
 
     private void OnValueChanged()
     {
+        Generation = BuiltInIcon.Generation;
         Data = null;
         Image = null;
+        Mask = null;
 
         if (Value is { } icon) {
             if (BuiltInIcon.IsSvg(icon))
                 Data = BuiltInIcon.GetGeometry(icon);
+            else if (BuiltInIcon.IsMask(icon))
+                Mask = new ImageBrush(BuiltInIcon.Get(icon));
             else
                 Image = BuiltInIcon.Get(icon);
         }
@@ -43,7 +60,14 @@ public class BuiltInPathIcon : PathIcon
     {
         base.Render(Context);
 
+        var bounds = new Rect(Bounds.Size);
+
         if (Image != null)
-            Context.DrawImage(Image, new Rect(Bounds.Size));
+            Context.DrawImage(Image, bounds);
+
+        if (Mask != null && Foreground != null) {
+            using (Context.PushOpacityMask(Mask, bounds))
+                Context.FillRectangle(Foreground, bounds);
+        }
     }
 }

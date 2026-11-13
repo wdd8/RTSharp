@@ -1113,10 +1113,10 @@ namespace RTSharp.Daemon.Services.rtorrent
                 ("d.complete", []),
                 ("d.wanted_chunks", []),
                 ("d.skip.total", []),
-                ("t.multicall", [ "<string></string>", "t.url=", "t.is_enabled=", "t.is_usable=", "t.scrape_complete=", "t.scrape_incomplete=", "t.scrape_downloaded=", "t.scrape_time_last=", "t.normal_interval=", "t.latest_event=" ]),
-                ("d.message", []),
                 ("d.is_open", []),
                 ("d.is_active", []),
+                ("t.multicall", [ "<string></string>", "t.url=", "t.is_enabled=", "t.is_busy=", "t.scrape_complete=", "t.scrape_incomplete=", "t.scrape_downloaded=", "t.success_time_last=", "t.failed_time_last=", "t.normal_interval=", "t.activity_time_next=" ]),
+                ("d.message", []),
                 ("d.is_hash_checking", []),
                 ("d.is_private", []),
                 ("d.peers_complete", []),
@@ -1160,6 +1160,8 @@ namespace RTSharp.Daemon.Services.rtorrent
             var isComplete = ReadEntry<bool>(ref result);
             var wantedChunks = ReadEntry<ulong>(ref result);
             var skippedTotal = ReadEntry<ulong>(ref result);
+            var isOpen = ReadEntry<bool>(ref result);
+            var isActive = ReadEntry<bool>(ref result);
 
             var curTrackers = new List<TorrentTracker>();
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_START);
@@ -1170,25 +1172,25 @@ namespace RTSharp.Daemon.Services.rtorrent
 
                 var url = XMLUtils.GetValue<string>(ref result);
                 var isEnabled = XMLUtils.GetValue<bool>(ref result);
-                var isUsable = XMLUtils.GetValue<bool>(ref result);
+                var isBusy = XMLUtils.GetValue<bool>(ref result);
                 var scrapeComplete = XMLUtils.GetValue<ulong>(ref result);
                 var scrapeIncomplete = XMLUtils.GetValue<ulong>(ref result);
                 var scrapeDownloaded = XMLUtils.GetValue<ulong>(ref result);
-                var scrapeTimeLast = XMLUtils.GetValue<ulong>(ref result);
+                var successTimeLast = XMLUtils.GetValue<ulong>(ref result);
+                var failedTimeLast = XMLUtils.GetValue<ulong>(ref result);
                 var normalInterval = XMLUtils.GetValue<ulong>(ref result);
-                var latestEvent = XMLUtils.GetValue<ulong>(ref result);
+                var activityTimeNext = XMLUtils.GetValue<ulong>(ref result);
 
                 XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
 
-                curTrackers.Add(Mapper.MapFromRaw(url, isEnabled, isUsable, (uint)scrapeComplete, (uint)scrapeIncomplete, (uint)scrapeDownloaded, scrapeTimeLast, (uint)normalInterval, latestEvent.ToString()));
+                curTrackers.Add(Mapper.MapFromRaw(url, isEnabled, isBusy, isOpen && isActive, (uint)scrapeComplete, (uint)scrapeIncomplete, (uint)scrapeDownloaded,
+                    successTimeLast, failedTimeLast, (uint)normalInterval, activityTimeNext));
             }
 
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
             XMLUtils.SeekFixed(ref result, XMLUtils.MULTICALL_RESPONSE_ENTRY_END);
 
             var statusMessage = XMLUtils.Decode(ReadEntry<string>(ref result));
-            var isOpen = ReadEntry<bool>(ref result);
-            var isActive = ReadEntry<bool>(ref result);
             var isHashChecking = ReadEntry<bool>(ref result);
             var isPrivate = ReadEntry<bool>(ref result);
             var seedersConnected = ReadEntry<ulong>(ref result);

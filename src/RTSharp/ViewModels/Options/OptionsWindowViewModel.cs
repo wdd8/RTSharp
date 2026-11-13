@@ -24,7 +24,7 @@ public partial class OptionsWindowViewModel : ObservableObject
     public Dictionary<string, ISettingsLoadable> Pages { get; } = [];
 
     [ObservableProperty]
-    public partial OptionsItem CurrentlySelectedItem { get; set; }
+    public partial OptionsItem? CurrentlySelectedItem { get; set; }
 
     [ObservableProperty]
     public partial object? SettingsContent { get; set; }
@@ -50,8 +50,11 @@ public partial class OptionsWindowViewModel : ObservableObject
         CurrentlySelectedItem = Items[0];
     }
 
-    partial void OnCurrentlySelectedItemChanged(OptionsItem value)
+    partial void OnCurrentlySelectedItemChanged(OptionsItem? value)
     {
+        if (value is null)
+            return;
+
         SettingsContent = GetPage(value.Path);
     }
 

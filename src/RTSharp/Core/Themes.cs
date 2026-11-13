@@ -1,16 +1,21 @@
 extern alias AvaloniaBuildTasks;
 
+using Avalonia.Platform;
 using Avalonia.Styling;
 
 using AvaloniaBuildTasks::Avalonia.Build.Tasks;
 
 using Microsoft.Build.Framework;
 
+using RTSharp.Shared.Controls;
+
 using Serilog;
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -34,10 +39,16 @@ public static class Themes
 
     static readonly string UserThemesPath = Path.Combine(Shared.Abstractions.Consts.USER_DATA_PATH, "themes");
 
+    static readonly ConcurrentDictionary<string, Assembly> Loaded = new();
+
+    static ThemeAssetLoader? Assets;
+
     static Themes()
     {
-        // Avalonia.Build.Tasks' assembly name has a random suffix (Avalonia.Build.Tasks.<guid>), which doesn't match
-        // its file name, so the default probing can't find it. Registered here so it's in place before Compile is JIT compiled
+        /*
+         * Avalonia.Build.Tasks' assembly name has a random suffix (Avalonia.Build.Tasks.<guid>), which doesn't match
+         * its file name, so the default probing can't find it. Registered here so it's in place before Compile is JIT compiled
+         */
         AssemblyLoadContext.Default.Resolving += (Context, Name) =>
             Name.Name?.StartsWith("Avalonia.Build.Tasks.", StringComparison.Ordinal) == true ?
                 Context.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "Avalonia.Build.Tasks.dll")) :
@@ -105,21 +116,21 @@ public static class Themes
             hash.AppendData(BitConverter.GetBytes(file.LastWriteTimeUtc.Ticks));
         }
 
-        var themeHash = Convert.ToHexString(hash.GetHashAndReset(), 0, 8);
+        var moduleName = $"{ThemeAssemblyName}.{Convert.ToHexString(hash.GetHashAndReset(), 0, 8)}";
 
-        var compiledPath = Path.Combine(UserThemesPath, $"{ThemeAssemblyName}.{themeHash}.dll");
+        var compiledPath = Path.Combine(UserThemesPath, $"{moduleName}.dll");
 
         if (File.Exists(compiledPath))
             return compiledPath;
 
-        var temp = Compile(Name);
+        var temp = Compile(Name, moduleName);
         try {
             File.Move(temp, compiledPath);
         } catch (IOException) when (File.Exists(compiledPath)) {
             File.Delete(temp);
         }
 
-        foreach (var stale in Directory.EnumerateFiles(UserThemesPath, $"{ThemeAssemblyName}.*.dll").Where(x => x != compiledPath)) {
+        foreach (var stale in Directory.EnumerateFiles(UserThemesPath, $"{ThemeAssemblyName}.*.dll").Where(x => x != compiledPath && !Loaded.ContainsKey(x))) {
             try {
                 File.Delete(stale);
             } catch (IOException) {
@@ -135,6 +146,8 @@ public static class Themes
     public static Assembly LoadAssembly(string Name)
     {
         var compiledPath = Prepare(Name);
+        if (Loaded.TryGetValue(compiledPath, out var loaded))
+            return loaded;
 
         Assembly assembly;
         try {
@@ -145,20 +158,33 @@ public static class Themes
             assembly = Assembly.Load(File.ReadAllBytes(Prepare(Name)));
         }
 
-        // The UI thread runs this code as it builds the styles, and the templates of every control
-        Jit.CompileInBackground(assembly.GetTypes());
+        loaded = Loaded.GetOrAdd(compiledPath, assembly);
+        if (loaded == assembly) {
+            // The UI thread runs this code as it builds the styles, and the templates of every control
+            Jit.CompileInBackground(assembly.GetTypes());
+        }
 
-        return assembly;
+        return loaded;
     }
 
     public static IStyle Load(Assembly Theme)
     {
         var tryLoad = Theme.GetType("CompiledAvaloniaXaml.!XamlLoader")?.GetMethod("TryLoad", [typeof(IServiceProvider), typeof(string)]) ?? throw new InvalidOperationException("Compiled theme contains no XAML");
 
-        return tryLoad.Invoke(null, [null, $"avares://{ThemeAssemblyName}/{RootFile}"]) as IStyle ?? throw new InvalidOperationException($"{RootFile} must have Styles as its root element");
+        // Hack shit!
+        Assets ??= AvaloniaPrivateApi.ReplaceAssetLoader(inner => new ThemeAssetLoader(inner));
+
+        var previous = Assets.ModuleName;
+        Assets.ModuleName = Path.GetFileNameWithoutExtension(Theme.ManifestModule.ScopeName);
+        try {
+            return tryLoad.Invoke(null, [null, $"avares://{ThemeAssemblyName}/{RootFile}"]) as IStyle ?? throw new InvalidOperationException($"{RootFile} must have Styles as its root element");
+        } catch {
+            Assets.ModuleName = previous;
+            throw;
+        }
     }
 
-    static string Compile(string Name)
+    static string Compile(string Name, string ModuleName)
     {
         var themeDir = Path.Combine(UserThemesPath, Name);
         var id = Guid.NewGuid().ToString("N");
@@ -181,8 +207,12 @@ public static class Themes
 
             var avaloniaResources = File.ReadAllBytes(resourcesPath);
 
+            /*
+             * Every theme is the RTSharp.Theme assembly, so avares://RTSharp.Theme/ links compile into it. Avalonia looks an assembly
+             * up by the start of its module name, which is unique per compiled theme
+             */
             var builder = new PersistedAssemblyBuilder(new AssemblyName(ThemeAssemblyName), typeof(object).Assembly);
-            builder.DefineDynamicModule(ThemeAssemblyName + ".dll");
+            builder.DefineDynamicModule(ModuleName + ".dll");
             var metadata = builder.GenerateMetadata(out var ilStream, out var fieldData);
 
             var managedResources = new BlobBuilder();
@@ -231,6 +261,43 @@ public static class Themes
 
         return outputPath;
     }
+
+    /// <summary>
+    /// Resolves avares://RTSharp.Theme/ to the module of the theme in use. Avalonia finds an assembly by the start of its module
+    /// name and takes the first match, and every loaded theme stays loaded, so it would keep resolving to the first theme loaded
+    /// </summary>
+#pragma warning disable CS0618
+    sealed class ThemeAssetLoader(IAssetLoader Inner) : IAssetLoader
+    {
+        public volatile string? ModuleName;
+
+        [return: NotNullIfNotNull(nameof(Uri))]
+        Uri? Redirect(Uri? Uri)
+        {
+            var moduleName = ModuleName;
+            if (moduleName == null || Uri is not { IsAbsoluteUri: true } || Uri.Scheme != "avares" || !String.Equals(Uri.Authority, ThemeAssemblyName, StringComparison.OrdinalIgnoreCase))
+                return Uri;
+
+            return new Uri($"avares://{moduleName}{Uri.AbsolutePath}");
+        }
+
+        public void SetDefaultAssembly(Assembly assembly) => Inner.SetDefaultAssembly(assembly);
+
+        public bool Exists(Uri uri, Uri? baseUri = null) => Inner.Exists(Redirect(uri), Redirect(baseUri));
+
+        public Stream Open(Uri uri, Uri? baseUri = null) => Inner.Open(Redirect(uri), Redirect(baseUri));
+
+        public (Stream stream, Assembly assembly) OpenAndGetAssembly(Uri uri, Uri? baseUri = null) => Inner.OpenAndGetAssembly(Redirect(uri), Redirect(baseUri));
+
+        public Assembly? GetAssembly(Uri uri, Uri? baseUri = null) => Inner.GetAssembly(Redirect(uri), Redirect(baseUri));
+
+        public IEnumerable<Uri> GetAssets(Uri uri, Uri? baseUri) => Inner.GetAssets(Redirect(uri), Redirect(baseUri));
+
+        public void InvalidateAssemblyCache(string name) => Inner.InvalidateAssemblyCache(name);
+
+        public void InvalidateAssemblyCache() => Inner.InvalidateAssemblyCache();
+    }
+#pragma warning restore CS0618
 
     sealed class BuildEngine : IBuildEngine
     {

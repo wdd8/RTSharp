@@ -149,19 +149,20 @@ namespace RTSharp.Core.Services.Daemon
             {
                 ID = i.ID,
                 Uri = i.Uri,
-                Status = FlagsMapper.Map(i.Status, a => a switch {
-                    TorrentTrackerStatus.Active => Tracker.TRACKER_STATUS.ACTIVE,
-                    TorrentTrackerStatus.NotActive => Tracker.TRACKER_STATUS.NOT_ACTIVE,
+                Status = FlagsMapper.Map<TorrentTrackerStatus, Tracker.TRACKER_STATUS>(i.Status, a => a switch {
+                    TorrentTrackerStatus.Working => Tracker.TRACKER_STATUS.WORKING,
+                    TorrentTrackerStatus.NotWorking => Tracker.TRACKER_STATUS.NOT_WORKING,
                     TorrentTrackerStatus.NotContactedYet => Tracker.TRACKER_STATUS.NOT_CONTACTED_YET,
                     TorrentTrackerStatus.Disabled => Tracker.TRACKER_STATUS.DISABLED,
-                    TorrentTrackerStatus.Enabled => Tracker.TRACKER_STATUS.ENABLED,
-                    _ => throw new ArgumentOutOfRangeException()
+                    TorrentTrackerStatus.Updating => Tracker.TRACKER_STATUS.UPDATING,
+                    _ => 0
                 }),
                 Seeders = i.Seeders,
                 Peers = i.Peers,
                 Downloaded = i.Downloaded,
-                LastUpdated = i.LastUpdated.ToDateTime(),
-                Interval = i.ScrapeInterval.ToTimeSpan(),
+                LastUpdated = i.LastUpdated?.ToDateTime(),
+                Interval = i.Interval?.ToTimeSpan(),
+                NextAnnounce = i.NextAnnounce?.ToDateTime(),
                 StatusMsg = i.StatusMessage
             }).ToList());
         }

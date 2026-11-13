@@ -137,6 +137,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             public byte[] Raw = [];
             public byte[]? NativeHash;
             public string TrackersRaw = "";
+            public bool TrackersRunning;
             public TorrentsTrackersReply.Types.TorrentsTrackers? Trackers;
             public Torrent? Torrent;
             public long LastPoll;
@@ -198,7 +199,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 + "d.complete=</string></value></param><param><value><string>"
                 + "d.wanted_chunks=</string></value></param><param><value><string>"
                 + "d.skip.total=</string></value></param><param><value><string>"
-                + "cat=\"$t.multicall=d.hash=,t.url=,cat=^,t.is_enabled=,cat=^,t.is_usable=,cat=^,t.scrape_complete=,cat=^,t.scrape_incomplete=,cat=^,t.scrape_downloaded=,cat=^,t.scrape_time_last=,cat=^,t.normal_interval=,cat=^,t.latest_event=,cat=|\""
+                + "cat=\"$t.multicall=d.hash=,t.url=,cat=^,t.is_enabled=,cat=^,t.is_busy=,cat=^,t.scrape_complete=,cat=^,t.scrape_incomplete=,cat=^,t.scrape_downloaded=,cat=^,t.success_time_last=,cat=^,t.failed_time_last=,cat=^,t.normal_interval=,cat=^,t.activity_time_next=,cat=|\""
                 + "</string></value></param><param><value><string>"
                 + "d.message=</string></value></param><param><value><string>"
                 + "d.is_open=</string></value></param><param><value><string>"
@@ -255,7 +256,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
         /// Parses a torrent's entry of the d.multicall response
         /// </summary>
         /// <param name="Previous">What the poll loop kept of the torrent</param>
-        private (byte[] Hash, byte[] Key, Torrent Torrent, string TrackersRaw, TorrentsTrackersReply.Types.TorrentsTrackers Trackers) ParseEntry(SequenceReader<byte> Entry, PolledTorrent? Previous, List<byte[]> UnknownV1s)
+        private (byte[] Hash, byte[] Key, Torrent Torrent, string TrackersRaw, bool TrackersRunning, TorrentsTrackersReply.Types.TorrentsTrackers Trackers) ParseEntry(SequenceReader<byte> Entry, PolledTorrent? Previous, List<byte[]> UnknownV1s)
         {
             var hashRaw = XMLUtils.GetValue<string>(ref Entry);
             var name = XMLUtils.GetValue<string>(ref Entry);
@@ -298,9 +299,11 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             var hash = Previous?.NativeHash ?? Convert.FromHexString(hashRaw);
             var key = KeyOf(hash, isMeta, UnknownV1s);
 
+            var trackersRunning = isOpenRaw && isActiveRaw;
+
             // Trackers rarely change between polls
             TorrentsTrackersReply.Types.TorrentsTrackers torrentTrackers;
-            if (Previous is { Trackers: { } previousTrackers } && Previous.TrackersRaw == trackersRaw && previousTrackers.InfoHash.Span.SequenceEqual(key)) {
+            if (Previous is { Trackers: { } previousTrackers } && Previous.TrackersRaw == trackersRaw && Previous.TrackersRunning == trackersRunning && previousTrackers.InfoHash.Span.SequenceEqual(key)) {
                 torrentTrackers = previousTrackers;
             } else {
                 torrentTrackers = new TorrentsTrackersReply.Types.TorrentsTrackers {
@@ -308,7 +311,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 };
 
                 Span<Range> trackerRanges = stackalloc Range[64];
-                Span<Range> trackerPartRanges = stackalloc Range[9];
+                Span<Range> trackerPartRanges = stackalloc Range[10];
 
                 var trackersRawSpan = trackersRaw.AsSpan();
                 var trackerCount = trackersRawSpan.Split(trackerRanges, '|', StringSplitOptions.RemoveEmptyEntries);
@@ -316,18 +319,20 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 for (var x = 0; x < trackerCount; x++) {
                     var trackerRaw = trackersRawSpan[trackerRanges[x]];
                     var partCount = trackerRaw.Split(trackerPartRanges, '^', StringSplitOptions.RemoveEmptyEntries);
-                    Debug.Assert(partCount == 9);
+                    Debug.Assert(partCount == 10);
 
                     torrentTrackers.Trackers.Add(Mapper.MapFromRaw(
                         trackerRaw[trackerPartRanges[0]].ToString(),
                         trackerRaw[trackerPartRanges[1]] is "1",
                         trackerRaw[trackerPartRanges[2]] is "1",
+                        trackersRunning,
                         UInt32.Parse(trackerRaw[trackerPartRanges[3]]),
                         UInt32.Parse(trackerRaw[trackerPartRanges[4]]),
                         UInt32.Parse(trackerRaw[trackerPartRanges[5]]),
                         UInt64.Parse(trackerRaw[trackerPartRanges[6]]),
-                        UInt32.Parse(trackerRaw[trackerPartRanges[7]]),
-                        trackerRaw[trackerPartRanges[8]].ToString()));
+                        UInt64.Parse(trackerRaw[trackerPartRanges[7]]),
+                        UInt32.Parse(trackerRaw[trackerPartRanges[8]]),
+                        UInt64.Parse(trackerRaw[trackerPartRanges[9]])));
                 }
             }
 
@@ -338,7 +343,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 statusMessage, isOpenRaw, isActiveRaw, isHashCheckingRaw, isPrivateRaw,
                 seedersConnected, peersConnected, isMeta, torrentTrackers.Trackers);
 
-            return (hash, key, torrent, trackersRaw, torrentTrackers);
+            return (hash, key, torrent, trackersRaw, trackersRunning, torrentTrackers);
         }
 
         public async Task<(InfoHashDictionary<Torrent> List, InfoHashDictionary<TorrentsTrackersReply.Types.TorrentsTrackers> Trackers)> GetAllTorrents(CancellationToken CancellationToken = default)
@@ -354,7 +359,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
             XMLUtils.SeekFixed(ref xml, XMLUtils.MULTICALL_START);
 
             while (NextEntry(ref xml, out var entry)) {
-                var (_, key, torrent, _, torrentTrackers) = ParseEntry(new SequenceReader<byte>(entry), null, unknownV1s);
+                var (_, key, torrent, _, _, torrentTrackers) = ParseEntry(new SequenceReader<byte>(entry), null, unknownV1s);
                 trackers[key] = torrentTrackers;
                 torrents[key] = torrent;
             }
@@ -478,7 +483,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                         torrent.Hash = keyHash;
                     }
                 } else {
-                    (polled.NativeHash, key, torrent, polled.TrackersRaw, torrentTrackers) = ParseEntry(new SequenceReader<byte>(entry), polled, unknownV1s);
+                    (polled.NativeHash, key, torrent, polled.TrackersRaw, polled.TrackersRunning, torrentTrackers) = ParseEntry(new SequenceReader<byte>(entry), polled, unknownV1s);
                     polled.Raw = raw.ToArray();
                 }
 

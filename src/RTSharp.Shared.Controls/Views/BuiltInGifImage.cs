@@ -13,13 +13,24 @@ public class BuiltInGifImage : GifImage
         set => SetValue(ValueProperty, value);
     }
 
+    private int Generation;
+
     static BuiltInGifImage()
     {
         ValueProperty.Changed.AddClassHandler<BuiltInGifImage>((o, e) => o.OnValueChanged());
     }
 
+    public BuiltInGifImage()
+    {
+        ResourcesChanged += (_, _) => {
+            if (Generation != BuiltInIcon.Generation)
+                OnValueChanged();
+        };
+    }
+
     private void OnValueChanged()
     {
+        Generation = BuiltInIcon.Generation;
         Source = Value is { } icon ? BuiltInIcon.GetGif(icon) : null;
     }
 }

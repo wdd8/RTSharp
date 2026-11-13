@@ -78,6 +78,38 @@
             <GradientStop Offset="1" Color="#E6EAF0" />
           </LinearGradientBrush>
           <SolidColorBrush x:Key="DepthMenuBarBorderBrush" Color="#B9C1CC" />
+
+          <!-- Window and dialog face -->
+          <SolidColorBrush x:Key="DepthFaceBrush" Color="#F0F0F0" />
+          <!-- Page under a selected tab, and dock panel and document content -->
+          <SolidColorBrush x:Key="DepthTabPageBrush" Color="#F5F6F7" />
+          <SolidColorBrush x:Key="DepthTextBrush" Color="#000000" />
+
+          <!-- Command bar style strip, used for dock panel headers -->
+          <LinearGradientBrush x:Key="DepthBarBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#FAFBFD" />
+            <GradientStop Offset="1" Color="#E3E9F1" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthBarActiveBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#EEF5FD" />
+            <GradientStop Offset="1" Color="#CFE1F5" />
+          </LinearGradientBrush>
+
+          <SolidColorBrush x:Key="DepthPopupBrush" Color="#F0F0F0" />
+          <SolidColorBrush x:Key="DepthPopupBorderBrush" Color="#979797" />
+          <LinearGradientBrush x:Key="DepthMenuHoverBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#F2F8FE" />
+            <GradientStop Offset="1" Color="#DCEBFC" />
+          </LinearGradientBrush>
+
+          <LinearGradientBrush x:Key="DepthToolTipBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#FFFFFF" />
+            <GradientStop Offset="1" Color="#E4E5F0" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthToolTipBorderBrush" Color="#767676" />
+          <SolidColorBrush x:Key="DepthToolTipForegroundBrush" Color="#575757" />
+
+          <SolidColorBrush x:Key="DepthGroupBorderBrush" Color="#D5DFE5" />
           <!-- Fluent's brush keys, pointed at the brushes above -->
           <StaticResource x:Key="ButtonBackground" ResourceKey="DepthRaisedBrush" />
           <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="DepthHoverBrush" />
@@ -116,6 +148,33 @@
           <StaticResource x:Key="TabItemHeaderBackgroundUnselectedPointerOver" ResourceKey="DepthHoverBrush" />
           <StaticResource x:Key="TabItemHeaderBackgroundUnselectedPressed" ResourceKey="DepthPressedBrush" />
           <StaticResource x:Key="DockTabHoverBackgroundBrush" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="SystemControlBackgroundChromeMediumLowBrush" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="DataGridBackgroundBrush" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="MenuFlyoutPresenterBackground" ResourceKey="DepthPopupBrush" />
+          <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="DepthPopupBorderBrush" />
+          <StaticResource x:Key="MenuFlyoutItemBackgroundPointerOver" ResourceKey="DepthMenuHoverBrush" />
+          <StaticResource x:Key="MenuFlyoutItemBackgroundPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="FlyoutPresenterBackground" ResourceKey="DepthPopupBrush" />
+          <StaticResource x:Key="FlyoutBorderThemeBrush" ResourceKey="DepthPopupBorderBrush" />
+          <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="DepthPopupBorderBrush" />
+          <StaticResource x:Key="ToolTipBackground" ResourceKey="DepthToolTipBrush" />
+          <StaticResource x:Key="ToolTipBorderBrush" ResourceKey="DepthToolTipBorderBrush" />
+          <StaticResource x:Key="ToolTipForeground" ResourceKey="DepthToolTipForegroundBrush" />
+          <StaticResource x:Key="GroupBoxBorderBrush" ResourceKey="DepthGroupBorderBrush" />
+          <StaticResource x:Key="DockSurfaceWorkbenchBrush" ResourceKey="DepthFaceBrush" />
+          <StaticResource x:Key="DockSurfaceSidebarBrush" ResourceKey="DepthFaceBrush" />
+          <StaticResource x:Key="DockSurfacePanelBrush" ResourceKey="DepthTabPageBrush" />
+          <StaticResource x:Key="DockSurfaceEditorBrush" ResourceKey="DepthTabPageBrush" />
+          <StaticResource x:Key="DockSurfaceHeaderBrush" ResourceKey="DepthBarBrush" />
+          <StaticResource x:Key="DockSurfaceHeaderActiveBrush" ResourceKey="DepthBarActiveBrush" />
+          <StaticResource x:Key="DockDocumentTabStripBackgroundBrush" ResourceKey="DepthFaceBrush" />
+          <StaticResource x:Key="DockTabBackgroundBrush" ResourceKey="DepthTabBrush" />
+          <StaticResource x:Key="DockTabActiveBackgroundBrush" ResourceKey="DepthTabPageBrush" />
+          <!-- The active tab's page background and the active header already mark it; its text keeps the normal color -->
+          <StaticResource x:Key="DockTabActiveForegroundBrush" ResourceKey="DepthTextBrush" />
+          <StaticResource x:Key="DockTabSelectedForegroundBrush" ResourceKey="DepthTextBrush" />
+          <StaticResource x:Key="DockDocumentTabSelectedForegroundBrush" ResourceKey="DepthTextBrush" />
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
@@ -193,6 +252,32 @@
             <GradientStop Offset="1" Color="#2A2A2A" />
           </LinearGradientBrush>
           <SolidColorBrush x:Key="DepthMenuBarBorderBrush" Color="#444444" />
+
+          <SolidColorBrush x:Key="DepthFaceBrush" Color="#303030" />
+          <SolidColorBrush x:Key="DepthTabPageBrush" Color="#373737" />
+          <SolidColorBrush x:Key="DepthTextBrush" Color="#FFFFFF" />
+
+          <LinearGradientBrush x:Key="DepthBarBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#3E3F42" />
+            <GradientStop Offset="1" Color="#323335" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="DepthBarActiveBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#3E5A73" />
+            <GradientStop Offset="1" Color="#2F4A63" />
+          </LinearGradientBrush>
+
+          <SolidColorBrush x:Key="DepthPopupBrush" Color="#2B2B2B" />
+          <SolidColorBrush x:Key="DepthPopupBorderBrush" Color="#6E6E6E" />
+          <StaticResource x:Key="DepthMenuHoverBrush" ResourceKey="DepthHoverBrush" />
+
+          <LinearGradientBrush x:Key="DepthToolTipBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#454545" />
+            <GradientStop Offset="1" Color="#34353B" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="DepthToolTipBorderBrush" Color="#6E6E6E" />
+          <SolidColorBrush x:Key="DepthToolTipForegroundBrush" Color="#E0E0E0" />
+
+          <SolidColorBrush x:Key="DepthGroupBorderBrush" Color="#4F4F4F" />
           <StaticResource x:Key="ButtonBackground" ResourceKey="DepthRaisedBrush" />
           <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="DepthHoverBrush" />
           <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="DepthPressedBrush" />
@@ -230,6 +315,32 @@
           <StaticResource x:Key="TabItemHeaderBackgroundUnselectedPointerOver" ResourceKey="DepthHoverBrush" />
           <StaticResource x:Key="TabItemHeaderBackgroundUnselectedPressed" ResourceKey="DepthPressedBrush" />
           <StaticResource x:Key="DockTabHoverBackgroundBrush" ResourceKey="DepthHoverBrush" />
+          <StaticResource x:Key="SystemControlBackgroundChromeMediumLowBrush" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="DataGridBackgroundBrush" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="MenuFlyoutPresenterBackground" ResourceKey="DepthPopupBrush" />
+          <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="DepthPopupBorderBrush" />
+          <StaticResource x:Key="MenuFlyoutItemBackgroundPointerOver" ResourceKey="DepthMenuHoverBrush" />
+          <StaticResource x:Key="MenuFlyoutItemBackgroundPressed" ResourceKey="DepthPressedBrush" />
+          <StaticResource x:Key="FlyoutPresenterBackground" ResourceKey="DepthPopupBrush" />
+          <StaticResource x:Key="FlyoutBorderThemeBrush" ResourceKey="DepthPopupBorderBrush" />
+          <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="DepthWellBrush" />
+          <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="DepthPopupBorderBrush" />
+          <StaticResource x:Key="ToolTipBackground" ResourceKey="DepthToolTipBrush" />
+          <StaticResource x:Key="ToolTipBorderBrush" ResourceKey="DepthToolTipBorderBrush" />
+          <StaticResource x:Key="ToolTipForeground" ResourceKey="DepthToolTipForegroundBrush" />
+          <StaticResource x:Key="GroupBoxBorderBrush" ResourceKey="DepthGroupBorderBrush" />
+          <StaticResource x:Key="DockSurfaceWorkbenchBrush" ResourceKey="DepthFaceBrush" />
+          <StaticResource x:Key="DockSurfaceSidebarBrush" ResourceKey="DepthFaceBrush" />
+          <StaticResource x:Key="DockSurfacePanelBrush" ResourceKey="DepthTabPageBrush" />
+          <StaticResource x:Key="DockSurfaceEditorBrush" ResourceKey="DepthTabPageBrush" />
+          <StaticResource x:Key="DockSurfaceHeaderBrush" ResourceKey="DepthBarBrush" />
+          <StaticResource x:Key="DockSurfaceHeaderActiveBrush" ResourceKey="DepthBarActiveBrush" />
+          <StaticResource x:Key="DockDocumentTabStripBackgroundBrush" ResourceKey="DepthFaceBrush" />
+          <StaticResource x:Key="DockTabBackgroundBrush" ResourceKey="DepthTabBrush" />
+          <StaticResource x:Key="DockTabActiveBackgroundBrush" ResourceKey="DepthTabPageBrush" />
+          <StaticResource x:Key="DockTabActiveForegroundBrush" ResourceKey="DepthTextBrush" />
+          <StaticResource x:Key="DockTabSelectedForegroundBrush" ResourceKey="DepthTextBrush" />
+          <StaticResource x:Key="DockDocumentTabSelectedForegroundBrush" ResourceKey="DepthTextBrush" />
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
 
@@ -237,6 +348,10 @@
       <Thickness x:Key="TabControlTopPlacementItemMargin">0</Thickness>
     </ResourceDictionary>
   </Styles.Resources>
+
+  <Style Selector=":is(Window)">
+    <Setter Property="Background" Value="{DynamicResource DepthFaceBrush}" />
+  </Style>
 
   <Style Selector="DataGridColumnHeader">
     <Setter Property="SeparatorBrush" Value="{DynamicResource DepthHeaderSeparatorBrush}" />
@@ -252,7 +367,7 @@
 
   <!-- Tabs stand on a bordered page; the selected one is taller, has the page's background and covers the page's top edge -->
   <Style Selector="TabControl /template/ ContentPresenter#PART_SelectedContentHost, TabControl /template/ ContentPresenter#PART_SelectedContentHost2">
-    <Setter Property="Background" Value="{DynamicResource SystemRegionBrush}" />
+    <Setter Property="Background" Value="{DynamicResource DepthTabPageBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DepthTabBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="4" />
@@ -279,7 +394,7 @@
   </Style>
 
   <Style Selector="TabItem:selected /template/ Border#PART_LayoutRoot">
-    <Setter Property="Background" Value="{DynamicResource SystemRegionBrush}" />
+    <Setter Property="Background" Value="{DynamicResource DepthTabPageBrush}" />
   </Style>
 
   <Style Selector="DocumentTabStripItem">

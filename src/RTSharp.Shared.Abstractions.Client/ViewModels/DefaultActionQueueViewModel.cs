@@ -1,7 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Avalonia.Media;
-
 using System.Collections.ObjectModel;
 
 namespace RTSharp.Shared.Abstractions.Client.ViewModels;
@@ -10,7 +8,10 @@ public partial class DefaultActionQueueViewModel : ObservableObject
 {
     public required string DisplayName { get; set; }
 
-    public IImage? Icon { get; set; }
+    /// <summary>
+    /// An IImage, or a value a data template displays, such as a built-in icon
+    /// </summary>
+    public object? Icon { get; set; }
 
     public bool HasIcon => Icon != null;
 

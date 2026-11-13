@@ -152,6 +152,15 @@ public class Config
             public bool AlternatingRowColors { get; set; }
 
             public string Theme { get; set; } = Themes.Standard;
+
+            public enum Variant
+            {
+                System,
+                Light,
+                Dark
+            }
+
+            public Variant ThemeVariant { get; set; } = Variant.System;
         }
     }
 
@@ -241,7 +250,8 @@ public class Config
       "RowHeight": 21
     },
     "AlternatingRowColors": false,
-    "Theme": "Standard"
+    "Theme": "Standard",
+    "ThemeVariant": "System"
   },
   "Proxy": {
     "Enabled": false,

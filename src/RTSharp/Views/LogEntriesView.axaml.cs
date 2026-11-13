@@ -41,7 +41,7 @@ public partial class LogEntriesView : VmUserControl<LogEntriesViewModel>
                 e.Row.Background = Brushes.Gray;
                 break;
             case LogEventLevel.Information:
-                e.Row.Background = Brushes.Black;
+                e.Row.ClearValue(DataGridRow.BackgroundProperty);
                 break;
             case LogEventLevel.Warning:
                 e.Row.Background = DarkYellow;

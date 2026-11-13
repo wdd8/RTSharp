@@ -9,6 +9,7 @@
         xmlns:vmTorrentListing="using:RTSharp.ViewModels.TorrentListing"
         xmlns:torrentListing="using:RTSharp.Views.TorrentListing"
         xmlns:sharedControls="using:RTSharp.Shared.Controls"
+        xmlns:dockModel="using:Dock.Model.Controls"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:DataType="vm:MainWindowViewModel"
@@ -50,7 +51,13 @@
 
     <Grid RowDefinitions="Auto, *">
         <Menu Grid.Row="0" Name="RootMenu" ItemsSource="{Binding MenuItems}" />
-        <DockControl Layout="{Binding Layout}" Grid.Row="1" />
+        <DockControl Layout="{Binding Layout}" Grid.Row="1">
+            <DockControl.DataTemplates>
+                <DataTemplate DataType="dockModel:IRootDock">
+                    <RootDockControl />
+                </DataTemplate>
+            </DockControl.DataTemplates>
+        </DockControl>
     </Grid>
 
 </Window>

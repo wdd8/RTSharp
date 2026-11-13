@@ -36,6 +36,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="RTSharp.Shared.Controls.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Compile Update="Views\TextBlockWithLabel.axaml.cs">
             <DependentUpon>TextBlockWithLabel.axaml</DependentUpon>
         </Compile>

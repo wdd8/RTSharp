@@ -38,39 +38,6 @@ public static class Mapper
         };
     }
 
-    private static Shared.Abstractions.Tracker.TRACKER_STATUS MapFromProto(RTSharp.Daemon.Protocols.DataProvider.TorrentTrackerStatus In)
-    {
-        return FlagsMapper.Map(In, x => x switch {
-            RTSharp.Daemon.Protocols.DataProvider.TorrentTrackerStatus.Active => Shared.Abstractions.Tracker.TRACKER_STATUS.ACTIVE,
-            RTSharp.Daemon.Protocols.DataProvider.TorrentTrackerStatus.NotActive => Shared.Abstractions.Tracker.TRACKER_STATUS.NOT_ACTIVE,
-            RTSharp.Daemon.Protocols.DataProvider.TorrentTrackerStatus.NotContactedYet => Shared.Abstractions.Tracker.TRACKER_STATUS.NOT_CONTACTED_YET,
-            RTSharp.Daemon.Protocols.DataProvider.TorrentTrackerStatus.Disabled => Shared.Abstractions.Tracker.TRACKER_STATUS.DISABLED,
-            RTSharp.Daemon.Protocols.DataProvider.TorrentTrackerStatus.Enabled => Shared.Abstractions.Tracker.TRACKER_STATUS.ENABLED,
-            _ => Shared.Abstractions.Tracker.TRACKER_STATUS.DISABLED
-        });
-    }
-
-    public static Shared.Abstractions.Tracker MapFromProto(RTSharp.Daemon.Protocols.DataProvider.TorrentTracker In)
-    {
-        var ret = new Shared.Abstractions.Tracker {
-            ID = In.Uri,
-            Uri = In.Uri,
-            StatusMsg = ""
-        };
-        UpdateTracker(ret, In);
-        return ret;
-    }
-
-    public static void UpdateTracker(Shared.Abstractions.Tracker Bottom, RTSharp.Daemon.Protocols.DataProvider.TorrentTracker Top)
-    {
-        Bottom.Status = MapFromProto(Top.Status);
-        Bottom.Seeders = Top.Seeders;
-        Bottom.Peers = Top.Peers;
-        Bottom.Downloaded = Top.Downloaded;
-        Bottom.LastUpdated = Top.LastUpdated.ToDateTime();
-        Bottom.Interval = Top.ScrapeInterval.ToTimeSpan();
-    }
-
     public static Shared.Abstractions.Torrent MapFromProto(RTSharp.Daemon.Protocols.DataProvider.Torrent In, IDataProvider owner)
     {
         try {

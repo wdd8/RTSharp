@@ -721,22 +721,34 @@ namespace RTSharp.Daemon.Services.transmission
                         return new TorrentsTrackersReply.Types.TorrentsTrackers {
                             InfoHash = ToRTSHash(Convert.FromHexString(x.HashString!)).ToByteString(),
                             Trackers = {
-                                trackers!.Select(x => new Protocols.DataProvider.TorrentTracker {
-                                    ID = x.Id.ToString(),
-                                    Uri = x.Announce,
-                                    Status = (x.AnnounceState == null ? x.ScrapeState : x.AnnounceState) switch {
-                                        TrackerState.Inactive => Protocols.DataProvider.TorrentTrackerStatus.NotActive,
-                                        TrackerState.Waiting => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.NotContactedYet,
-                                        TrackerState.Queued => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.NotContactedYet,
-                                        TrackerState.Active => Protocols.DataProvider.TorrentTrackerStatus.Enabled | Protocols.DataProvider.TorrentTrackerStatus.Active,
-                                        _ => Protocols.DataProvider.TorrentTrackerStatus.Placeholder
-                                    },
-                                    Seeders = (uint)(x.SeederCount == -1 ? 0 : x.SeederCount)!,
-                                    Peers = (uint)(x.LeecherCount == -1 ? 0 : x.LeecherCount)!,
-                                    Downloaded = (uint)x.LastAnnouncePeerCount!,
-                                    LastUpdated = Timestamp.FromDateTime(x.LastAnnounceTime ?? x.LastScrapeTime!.Value),
-                                    ScrapeInterval = x.NextAnnounceTime == null || x.LastAnnounceTime == null ? Duration.FromTimeSpan(TimeSpan.Zero) : Duration.FromTimeSpan(x.NextAnnounceTime.Value - x.LastAnnounceTime.Value),
-                                    StatusMessage = x.LastAnnounceResult ?? x.LastScrapeResult ?? ""
+                                trackers!.Select(x => {
+                                    var ret = new Protocols.DataProvider.TorrentTracker {
+                                        ID = x.Id.ToString(),
+                                        Uri = x.Announce,
+                                        Seeders = (uint)(x.SeederCount is null or -1 ? 0 : x.SeederCount.Value),
+                                        Peers = (uint)(x.LeecherCount is null or -1 ? 0 : x.LeecherCount.Value),
+                                        Downloaded = (uint)(x.DownloadCount is null or -1 ? 0 : x.DownloadCount.Value),
+                                        StatusMessage = ""
+                                    };
+
+                                    if (x.AnnounceState is null or TrackerState.Inactive || x.HasAnnounced != true) {
+                                        ret.Status = Protocols.DataProvider.TorrentTrackerStatus.NotContactedYet;
+                                    } else {
+                                        ret.Status = x.LastAnnounceSucceeded == true ? Protocols.DataProvider.TorrentTrackerStatus.Working : Protocols.DataProvider.TorrentTrackerStatus.NotWorking;
+                                        ret.LastUpdated = Timestamp.FromDateTime(x.LastAnnounceTime!.Value);
+                                        if (x.LastAnnounceSucceeded == true && x.NextAnnounceTime > x.LastAnnounceTime)
+                                            ret.Interval = Duration.FromTimeSpan(x.NextAnnounceTime.Value - x.LastAnnounceTime.Value);
+                                        // "Success" unless the tracker sent a warning
+                                        if (!(x.LastAnnounceSucceeded == true && x.LastAnnounceResult == "Success"))
+                                            ret.StatusMessage = x.LastAnnounceResult ?? "";
+                                    }
+
+                                    if (x.AnnounceState == TrackerState.Active)
+                                        ret.Status |= Protocols.DataProvider.TorrentTrackerStatus.Updating;
+                                    else if (x.AnnounceState is TrackerState.Waiting or TrackerState.Queued && x.NextAnnounceTime > DateTime.UnixEpoch)
+                                        ret.NextAnnounce = Timestamp.FromDateTime(x.NextAnnounceTime.Value);
+
+                                    return ret;
                                 })
                             }
                         };

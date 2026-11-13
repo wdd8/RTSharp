@@ -27,11 +27,22 @@ namespace QBittorrent.Client
         /// <summary>
         /// Tracker is currently being updated
         /// </summary>
+        /// <remarks>Newer API versions report the state and <see cref="TorrentTracker.Updating"/> separately</remarks>
         Updating = 3,
 
         /// <summary>
         /// Tracker has been contacted, but it is not working (or doesn't send proper replies)
         /// </summary>
         NotWorking = 4,
+
+        /// <summary>
+        /// Tracker has been contacted and replied with an error
+        /// </summary>
+        TrackerError = 5,
+
+        /// <summary>
+        /// Announce to the tracker was skipped because it couldn't be reached
+        /// </summary>
+        Unreachable = 6,
     }
 }

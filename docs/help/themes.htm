@@ -2,12 +2,12 @@
 <html>
 <head>
    <title>Themes</title>
-   <meta name="keywords" content="Themes,Look,Styles,axaml,RTSharp.Theme,Icons,svg,ico">
+   <meta name="keywords" content="Themes,Look,Styles,axaml,RTSharp.Theme,Icons,svg,ico,mask">
    <link rel="stylesheet" type="text/css" href="help.css">
 </head>
 <body bgcolor="#FFFFFF">
 
-<p>The look of RT# (colors, fonts, sizes and control templates) is defined by a theme. The default theme is named "Standard". You select the theme in the <a href="optlook.htm">Look options</a>, and it takes effect the next time RT# starts.</p>
+<p>The look of RT# (colors, fonts, sizes and control templates) is defined by a theme. The default theme is named "Standard". You select the theme in the <a href="optlook.htm">Look options</a>.</p>
 
 <h3>Theme folders:</h3>
 <p>Each theme is a folder containing a Theme.axaml file and any other files it uses, located in the "themes" folder of the configuration folder (see <a href="installation.htm">Software installation</a>). RT# writes its built-in themes there when their folder does not exist, so deleting the "Standard" folder restores the original "Standard" theme.</p>
@@ -17,9 +17,7 @@
 
 <h3>Icons:</h3>
 <p>The icons of RT# are files in the "Icons" folder of the theme, and a theme changes an icon by replacing its file with one of the same name. svg, ico and gif images are supported.</p>
-
-<h3>Compiled theme:</h3>
-<p>RT# compiles the selected theme when it starts and stores the result in the "themes" folder of the configuration folder, as a file named RTSharp.Theme followed by a code. RT# compiles the theme again when it starts after RT# was updated or a file of the theme is removed.</p>
+<p>svg icons are drawn in the text color of the light or dark mode. An ico icon is drawn in its own colors, unless ".mask" is added before its extension, for example "start.mask.ico".</p>
 
 </body>
 </html>

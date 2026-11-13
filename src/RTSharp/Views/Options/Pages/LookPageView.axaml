@@ -20,7 +20,12 @@
 
     <StackPanel Margin="8" Spacing="12">
         <GroupBox Header="Theme">
-            <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}" MinWidth="150" />
+            <Grid ColumnDefinitions="150, Auto" RowDefinitions="Auto, Auto" RowSpacing="4">
+                <TextBlock Grid.Column="0" Grid.Row="0">Theme:</TextBlock>
+                <ComboBox Grid.Column="1" Grid.Row="0" ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}" MinWidth="150" />
+                <TextBlock Grid.Column="0" Grid.Row="1">Mode:</TextBlock>
+                <ComboBox Grid.Column="1" Grid.Row="1" ItemsSource="{Binding ThemeVariants}" SelectedItem="{Binding ThemeVariant}" MinWidth="150" />
+            </Grid>
         </GroupBox>
 
         <GroupBox Header="Data providers">

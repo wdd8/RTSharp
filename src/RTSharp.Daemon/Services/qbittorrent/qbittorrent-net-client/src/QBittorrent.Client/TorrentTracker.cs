@@ -93,6 +93,19 @@ namespace QBittorrent.Client
         [JsonPropertyName("msg")]
         public string Message { get; set; }
 
+        /// <summary>
+        /// Whether an announce to the tracker is in progress
+        /// </summary>
+        [JsonPropertyName("updating")]
+        public bool? Updating { get; set; }
+
+        /// <summary>
+        /// Next announce, as Unix time in seconds
+        /// </summary>
+        /// <remarks>Meaningless while the tracker hasn't been contacted</remarks>
+        [JsonPropertyName("next_announce")]
+        public long? NextAnnounce { get; set; }
+
         [JsonPropertyName("status")]
         [JsonInclude]
         [JsonConverter(typeof(StatusConverter))]

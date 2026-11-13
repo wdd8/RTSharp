@@ -43,6 +43,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
@@ -71,8 +72,10 @@ public class App : Application
             GC.TryStartNoGCRegion(240 * 1024 * 1024);
         } catch (ArgumentOutOfRangeException) { }
 
-        if (OperatingSystem.IsWindows())
+        if (OperatingSystem.IsWindows()) {
             _ = Task.Run(WarmUpDirect3D);
+            ReportWindowProcedureExceptions();
+        }
 
         var log = new LoggerConfiguration()
 #if DEBUG
@@ -141,6 +144,53 @@ public class App : Application
         static extern int D3D11CreateDevice(nint Adapter, int DriverType, nint Software, uint Flags, int[] FeatureLevels, uint FeatureLevelCount, uint SdkVersion, out nint Device, out int FeatureLevel, out nint ImmediateContext);
     }
 
+    private static readonly Dictionary<nint, nint> WindowProcedures = [];
+
+    [SupportedOSPlatform("windows")]
+    private static unsafe void ReportWindowProcedureExceptions()
+    {
+        const int GWLP_WNDPROC = -4;
+
+        Window.WindowOpenedEvent.AddClassHandler(typeof(Window), (sender, _) => {
+            if (((Window)sender!).TryGetPlatformHandle()?.Handle is not { } hWnd || hWnd == 0 || WindowProcedures.ContainsKey(hWnd))
+                return;
+
+            // In place before the window's procedure is replaced, for the first message the replacement gets
+            WindowProcedures[hWnd] = GetWindowLongPtrW(hWnd, GWLP_WNDPROC);
+            SetWindowLongPtrW(hWnd, GWLP_WNDPROC, (nint)(delegate* unmanaged<nint, uint, nint, nint, nint>)&WindowProcedure);
+        });
+
+        [DllImport("user32.dll")]
+        static extern nint GetWindowLongPtrW(nint hWnd, int Index);
+
+        [DllImport("user32.dll")]
+        static extern nint SetWindowLongPtrW(nint hWnd, int Index, nint NewLong);
+    }
+
+    [UnmanagedCallersOnly]
+    private static nint WindowProcedure(nint hWnd, uint Msg, nint wParam, nint lParam)
+    {
+        const uint WM_NCDESTROY = 0x0082;
+
+        var procedure = WindowProcedures[hWnd];
+        try {
+            return CallWindowProcW(procedure, hWnd, Msg, wParam, lParam);
+        } catch (Exception ex) {
+            var exception = ExceptionDispatchInfo.Capture(ex);
+            Dispatcher.UIThread.Post(exception.Throw, DispatcherPriority.Send);
+            return DefWindowProcW(hWnd, Msg, wParam, lParam);
+        } finally {
+            if (Msg == WM_NCDESTROY)
+                WindowProcedures.Remove(hWnd);
+        }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern nint CallWindowProcW(nint PrevWndFunc, nint hWnd, uint Msg, nint wParam, nint lParam);
+
+    [DllImport("user32.dll")]
+    private static extern nint DefWindowProcW(nint hWnd, uint Msg, nint wParam, nint lParam);
+
     private static IMsBox<string> CrashMsgBox(Exception ex)
     {
         Bitmap? icon = null;
@@ -183,6 +233,7 @@ public class App : Application
             }
 
             Styles.Insert(0, theme);
+            ThemeName = themeName;
         } catch {
             // Lets the crash dialog render
             Styles.Insert(0, new FluentTheme());
@@ -204,6 +255,10 @@ public class App : Application
     }
 
     private static string? ThemeLoadError;
+
+    private static string ThemeName = null!;
+
+    private static string? PendingThemeName;
 
     private static ConcurrentDictionary<string, Func<ValueTask>> FxOnExit = new();
 
@@ -381,8 +436,8 @@ public class App : Application
         try {
             using (var scope = Core.ServiceProvider.CreateScope()) {
                 var lookMonitor = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<Config.Models.Look>>();
-                lookMonitor.OnChange(look => Dispatcher.UIThread.Post(() => SetAlternatingRowColors(look.AlternatingRowColors)));
-                SetAlternatingRowColors(lookMonitor.CurrentValue.AlternatingRowColors);
+                lookMonitor.OnChange(look => Dispatcher.UIThread.Post(() => ApplyLook(look)));
+                ApplyLook(lookMonitor.CurrentValue);
             }
             // Not :nth-child, the grid moves rows to other indexes without raising IChildIndexProvider.ChildIndexChanged, e.g. when refreshing hierarchical rows
             DataGridRow.IndexProperty.Changed.AddClassHandler<DataGridRow>((row, _) => row.Classes.Set("odd", row.Index % 2 == 1));
@@ -452,13 +507,62 @@ public class App : Application
                 icon: MsBox.Avalonia.Enums.Icon.Warning).ShowAsync();
         }
 
-        void SetAlternatingRowColors(bool Enabled)
+        void ApplyLook(Config.Models.Look Look)
         {
             // Application resources are looked up before the theme's, so a null entry hides the theme's brush
-            if (Enabled)
+            if (Look.AlternatingRowColors)
                 Resources.Remove("DataGridAlternatingRowBrush");
             else
                 Resources["DataGridAlternatingRowBrush"] = null;
+
+            RequestedThemeVariant = Look.ThemeVariant switch {
+                Config.Models.Look.Variant.Light => ThemeVariant.Light,
+                Config.Models.Look.Variant.Dark => ThemeVariant.Dark,
+                _ => ThemeVariant.Default
+            };
+
+            if (Look.Theme != (PendingThemeName ?? ThemeName))
+                _ = SwitchTheme(Look.Theme);
+        }
+
+        async Task SwitchTheme(string Name)
+        {
+            PendingThemeName = Name;
+
+            IStyle theme;
+            try {
+                var assembly = await Task.Run(() => Themes.LoadAssembly(Name));
+
+                // Possible maybe programically, but UI thread is frozen while theme compiles
+                if (PendingThemeName != Name)
+                    return;
+
+                theme = Themes.Load(assembly);
+            } catch (Exception ex) {
+                Log.Logger.Error(ex, $"Theme {Name} failed to load");
+                if (PendingThemeName != Name)
+                    return;
+
+                PendingThemeName = null;
+                await MessageBoxManager.GetMessageBoxStandard(
+                    title: "RT# - Theme",
+                    text: $"{ex.Message}\n\nThe current theme is kept.",
+                    @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
+                    icon: MsBox.Avalonia.Enums.Icon.Warning).ShowAsync();
+                return;
+            }
+
+            PendingThemeName = null;
+            ThemeName = Name;
+
+            BuiltInIcon.Clear();
+
+            Styles[0] = theme;
+
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime) {
+                foreach (var window in desktopLifetime.Windows)
+                    AvaloniaPrivateApi.RefreshImplicitControlThemes(window);
+            }
         }
     }
 

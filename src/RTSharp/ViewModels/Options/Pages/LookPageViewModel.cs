@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using System;
 using System.Collections.Generic;
 
 namespace RTSharp.ViewModels.Options.Pages;
@@ -22,6 +23,11 @@ public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
     [ObservableProperty]
     public partial string Theme { get; set; } = Core.Themes.Standard;
 
+    public IReadOnlyList<Core.Config.Models.Look.Variant> ThemeVariants { get; } = Enum.GetValues<Core.Config.Models.Look.Variant>();
+
+    [ObservableProperty]
+    public partial Core.Config.Models.Look.Variant ThemeVariant { get; set; }
+
     public LookPageViewModel()
     {
         if (!Avalonia.Controls.Design.IsDesignMode)
@@ -38,6 +44,7 @@ public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
         RowHeight = look.TorrentListing.RowHeight;
         AlternatingRowColors = look.AlternatingRowColors;
         Theme = look.Theme;
+        ThemeVariant = look.ThemeVariant;
     }
 
     public void ApplyToConfig(Core.Config config)
@@ -46,6 +53,7 @@ public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
         look.DataProviders.SpeedChartEnabled = SpeedChartEnabled;
         look.TorrentListing.RowHeight = RowHeight;
         look.AlternatingRowColors = AlternatingRowColors;
+        look.ThemeVariant = ThemeVariant;
 
         if (Theme != null)
             look.Theme = Theme;

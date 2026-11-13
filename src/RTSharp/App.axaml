@@ -10,9 +10,13 @@
              xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
              xmlns:av="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
              xmlns:sc="using:RTSharp.Shared.Controls.Views"
+             xmlns:scc="using:RTSharp.Shared.Controls"
              x:DataType="vm:AppViewModel">
     <Application.DataTemplates>
         <local:ViewLocator />
+        <DataTemplate DataType="scc:BuiltInIcons">
+            <sc:BuiltInPathIcon Value="{Binding}" />
+        </DataTemplate>
     </Application.DataTemplates>
 
     <Application.Resources>
