@@ -270,7 +270,7 @@ public partial class MainWindowViewModel : ObservableObject
         new Category("RSS", BuiltInIcons.FEED),
         new Category("WebUI", BuiltInIcons.WEB),
         new Category("Advanced", BuiltInIcons.ADVANCED),
-        new Category("RT#", BuiltInIcons.UPDATE_INTERVAL)
+        new Category("RT#", BuiltInIcons.RTSHARP)
     ];
 
     public static string[] LogAgeTypeOptions => SettingsMapper.LogAgeTypeOptions;

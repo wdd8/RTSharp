@@ -89,6 +89,6 @@ public partial class MainWindowViewModel : ObservableObject
         new Category("Peers", BuiltInIcons.DOWNLOAD),
         new Category("Connection", BuiltInIcons.BANDWIDTH),
         new Category("Advanced", BuiltInIcons.ADVANCED),
-        new Category("RT#", BuiltInIcons.UPDATE_INTERVAL)
+        new Category("RT#", BuiltInIcons.RTSHARP)
     };
 }

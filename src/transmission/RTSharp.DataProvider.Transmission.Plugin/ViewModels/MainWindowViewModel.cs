@@ -87,7 +87,7 @@ public partial class MainWindowViewModel : ObservableObject
         new Category("Network (WAN)", BuiltInIcons.NETWORK),
         new Category("Bandwidth", BuiltInIcons.BANDWIDTH),
         new Category("Queue", BuiltInIcons.QUEUE),
-        new Category("RT#", BuiltInIcons.UPDATE_INTERVAL)
+        new Category("RT#", BuiltInIcons.RTSHARP)
     };
 
     [ObservableProperty]
