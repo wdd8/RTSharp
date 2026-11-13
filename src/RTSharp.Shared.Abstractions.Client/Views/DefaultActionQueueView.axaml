@@ -51,9 +51,12 @@
                                              VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12"
                                                VerticalAlignment="Center" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Column="2" Text="{Binding ProgressLabel}" FontSize="11" Opacity="0.6"
-                                               VerticalAlignment="Center" IsVisible="{Binding HasProgressText}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding ProgressDone, StringFormat={}{0:0.0}%}" FontSize="11" Opacity="0.6"
+                                               VerticalAlignment="Center" />
                                 </Grid>
+                                <TextBlock Text="{Binding ProgressString}" FontSize="11" Opacity="0.6"
+                                           Margin="13,0,0,0" TextWrapping="Wrap"
+                                           IsVisible="{Binding ProgressString, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                                 <ProgressBar Value="{Binding ProgressDone}" Maximum="100" Height="3"
                                              Margin="13,0,0,0"
                                              IsVisible="{Binding HasProgress}" />
