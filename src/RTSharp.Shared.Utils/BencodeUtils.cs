@@ -325,8 +325,9 @@ public static partial class BencodeUtils
     /// <param name="BTorrent">.torrent bencode root</param>
     /// <param name="GetDiskFiles">Resolves where each file is on disk from the info dictionary, in <see cref="GetFiles"/> order</param>
     /// <param name="Logger"></param>
+    /// <param name="ReportFileProgress">Called after each sampled piece of a file larger than 1 GiB with (file, pieces checked, pieces to check)</param>
     /// <returns></returns>
-    public static async Task<bool> FastVerifyFilesOnDisk(BDictionary BTorrent, Func<BDictionary, TorrentFile[]> GetDiskFiles, ILogger Logger)
+    public static async Task<bool> FastVerifyFilesOnDisk(BDictionary BTorrent, Func<BDictionary, TorrentFile[]> GetDiskFiles, ILogger Logger, Action<TorrentFile, int, int>? ReportFileProgress = null)
     {
         var info = BTorrent.Get<BDictionary>(TorrentFields.Info)
             ?? throw new InvalidDataException("Torrent has no \"info\" dictionary");
@@ -336,7 +337,7 @@ public static partial class BencodeUtils
          * that also carry v1 pieces, as the v1 path doesn't take them.
          */
         if (info.ContainsKey("file tree"))
-            return await FastVerifyFilesOnDiskV2(BTorrent, GetDiskFiles, Logger);
+            return await FastVerifyFilesOnDiskV2(BTorrent, GetDiskFiles, Logger, ReportFileProgress);
 
         var pieces = GetPieces(info);
         if (pieces == null || pieces.Length == 0) {
@@ -356,7 +357,7 @@ public static partial class BencodeUtils
         for (var x = 0;x < files.Length;x++)
             toVerify.Add(new FileToVerify(files[x], fileHashes[x].PieceHashes, static (Data, Expected) => SHA1.HashData(Data.Span).AsSpan().SequenceEqual(Expected)));
 
-        return await VerifyRandomPieces(toVerify, (int)pieceLength, Logger);
+        return await VerifyRandomPieces(toVerify, (int)pieceLength, Logger, ReportFileProgress);
     }
 
     private static bool CheckFilesExistWithSize(IReadOnlyList<TorrentFile> Files, ILogger Logger)
@@ -374,7 +375,7 @@ public static partial class BencodeUtils
 
     private record FileToVerify(TorrentFile File, PieceHash[] Pieces, Func<ReadOnlyMemory<byte>, byte[], bool> FxHashMatches);
 
-    private static async Task<bool> VerifyRandomPieces(IReadOnlyList<FileToVerify> Files, int BufferSize, ILogger Logger)
+    private static async Task<bool> VerifyRandomPieces(IReadOnlyList<FileToVerify> Files, int BufferSize, ILogger Logger, Action<TorrentFile, int, int>? ReportFileProgress)
     {
         var buf = ArrayPool<byte>.Shared.Rent(BufferSize);
         var verified = 0;
@@ -400,6 +401,9 @@ public static partial class BencodeUtils
                         }
 
                         verified++;
+
+                        if (file.File.FileSize > 1024L * 1024 * 1024)
+                            ReportFileProgress?.Invoke(file.File, i + 1, toCheck);
                     }
                 } catch (Exception ex) {
                     Logger.LogWarning(ex, $"Fast resume: failed to read piece in \"{file.File.Path}\"");

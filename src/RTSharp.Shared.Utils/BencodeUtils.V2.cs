@@ -129,7 +129,7 @@ public static partial class BencodeUtils
     /// <see cref="FastVerifyFilesOnDisk"/> for v2 only torrents, verifying pieces against the
     /// per file merkle trees instead of the v1 piece hash string
     /// </summary>
-    private static async Task<bool> FastVerifyFilesOnDiskV2(BDictionary BTorrent, Func<BDictionary, TorrentFile[]> GetDiskFiles, ILogger Logger)
+    private static async Task<bool> FastVerifyFilesOnDiskV2(BDictionary BTorrent, Func<BDictionary, TorrentFile[]> GetDiskFiles, ILogger Logger, Action<TorrentFile, int, int>? ReportFileProgress)
     {
         FilePieceHashesV2[] fileHashes;
         int pieceLen;
@@ -165,6 +165,6 @@ public static partial class BencodeUtils
             }));
         }
 
-        return await VerifyRandomPieces(toVerify, pieceLen, Logger);
+        return await VerifyRandomPieces(toVerify, pieceLen, Logger, ReportFileProgress);
     }
 }
