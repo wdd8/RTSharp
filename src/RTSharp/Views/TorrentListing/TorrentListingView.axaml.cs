@@ -101,7 +101,8 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
     private void grid_ScrollToItem(object item)
     {
-        grid.SelectedItem = item;
+        if (!grid.SelectedItems.Contains(item))
+            grid.SelectedItem = item;
         grid.ScrollIntoView(item, null);
     }
 

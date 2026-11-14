@@ -211,12 +211,17 @@ public partial class TorrentListingViewModel
     {
         if (String.IsNullOrEmpty(value)) {
             FilteringAdapterFactory.SetSearchPredicate(null);
+
+            Dispatcher.UIThread.Post(() => {
+                if (SelectedItems.Count > 0)
+                    ScrollToItem(SelectedItems[0]);
+            }, DispatcherPriority.Background);
             return;
         }
 
         FilteringAdapterFactory.SetSearchPredicate(x =>
-            x.Name.StartsWith(value, StringComparison.OrdinalIgnoreCase) ||
-            x.LabelsDisplay.StartsWith(value, StringComparison.OrdinalIgnoreCase));
+            x.Name.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+            x.LabelsDisplay.Contains(value, StringComparison.OrdinalIgnoreCase));
     }
 
     public void PostGridStateRestore()

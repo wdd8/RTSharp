@@ -1,3 +1,4 @@
+using Avalonia.Controls.DataGridSelection;
 using Avalonia.Threading;
 
 using RTSharp.Models;
@@ -56,7 +57,7 @@ public sealed class TorrentStore
 #endif
 
     private readonly VisibleCollection Visible = new();
-    private readonly ReadOnlyObservableCollection<Models.Torrent> _readOnly;
+    private readonly ReadOnlyVisibleCollection _readOnly;
     private Func<Models.Torrent, bool> FxFilter = static _ => true;
     private IComparer<Models.Torrent> SortComparer = Comparer<Models.Torrent>.Create(static (_, _) => 0);
     private bool HasSort;
@@ -65,7 +66,7 @@ public sealed class TorrentStore
 
     public TorrentStore()
     {
-        _readOnly = new ReadOnlyObservableCollection<Models.Torrent>(Visible);
+        _readOnly = new ReadOnlyVisibleCollection(Visible, this);
     }
 
     public ReadOnlyObservableCollection<Models.Torrent> VisibleItems => _readOnly;
@@ -359,6 +360,19 @@ public sealed class TorrentStore
 
         public int GetHashCode(GlobalTorrentKey obj)
             => HashCode.Combine(obj.DataProviderInstanceId, HashEqualityComparer.Instance.GetHashCode(obj.InfoHash));
+    }
+
+    private sealed class ReadOnlyVisibleCollection : ReadOnlyObservableCollection<Models.Torrent>, IDataGridSourceMembership
+    {
+        private readonly TorrentStore Store;
+
+        public ReadOnlyVisibleCollection(VisibleCollection list, TorrentStore store) : base(list)
+        {
+            Store = store;
+        }
+
+        public bool ContainsSourceItem(object item) =>
+            item is Models.Torrent torrent && Store.TryGet(GetKey(torrent), out var stored) && ReferenceEquals(stored, torrent);
     }
 
     private sealed class VisibleCollection : ObservableCollection<Models.Torrent>
