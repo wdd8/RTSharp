@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using System.Text;
 
-if (args.Length != 4) {
-    Console.Error.WriteLine("Usage: dotnet run scripts/package-linux.cs -- <deb|rpm|pkg.tar.zst> <linux-x64|linux-arm64> <version> <client|daemon>");
+if (args.Length < 4 || args.Length != (args[3] == "daemon" ? 5 : 4)) {
+    Console.Error.WriteLine("Usage: dotnet run scripts/package-linux.cs -- <deb|rpm|pkg.tar.zst> <linux-x64|linux-arm64> <version> client");
+    Console.Error.WriteLine("       dotnet run scripts/package-linux.cs -- <deb|rpm|pkg.tar.zst> <linux-x64|linux-arm64> <version> daemon <net10.0|net11.0>");
     return 1;
 }
 
@@ -10,6 +11,7 @@ var format = args[0];   // deb, rpm or pkg.tar.zst
 var rid = args[1];      // linux-x64 or linux-arm64
 var version = args[2];  // 0.0.1
 var type = args[3];     // client / daemon
+var tfm = type == "daemon" ? args[4] : ""; // daemon only: net10.0 / net11.0
 
 if (format is not ("deb" or "rpm" or "pkg.tar.zst"))
     throw new ArgumentException($"Unsupported format: {format}");
@@ -34,29 +36,31 @@ var pkg = type switch {
             new("xchm", "viewer for the RTSharp.chm help file opened with F1")
         ],
         Description: "RTSharp client GUI",
-        Csproj: "src/RTSharp/RTSharp.csproj",
+        DotnetVersion: TargetFrameworkVersion("src/RTSharp/RTSharp.csproj"),
+        Exclusive: null,
         IsDaemon: false
     ),
+    // One package per framework; all install the same files, so they provide and
+    // conflict with "rtsharp-daemon" and only one can be installed at a time.
     "daemon" => new Package(
-        PkgName: "rtsharp-daemon",
-        SrcDir: $"{rid}-daemon",
+        PkgName: $"rtsharp-daemon-{tfm[..tfm.IndexOf('.')]}",
+        SrcDir: Path.Combine($"{rid}-daemon", tfm),
         InstallDir: "usr/lib/rtsharp-daemon",
         ExecName: "RTSharp.Daemon",
         BinName: "rtsharp-daemon",
         Recommends: [],
-        Description: "RTSharp daemon service",
-        Csproj: "src/RTSharp.Daemon/RTSharp.Daemon.csproj",
+        Description: $"RTSharp daemon service (.NET {tfm[3..]})",
+        DotnetVersion: tfm[3..],
+        Exclusive: "rtsharp-daemon",
         IsDaemon: true
     ),
     _ => throw new ArgumentException($"Unknown type: {type}")
 };
 
-var dotnetVersion = TargetFrameworkVersion(pkg.Csproj);
-
 var runtimeDep = (format, pkg.IsDaemon) switch {
-    ("pkg.tar.zst", true)  => $"aspnet-runtime-{dotnetVersion}",
-    (_, true)            => $"aspnetcore-runtime-{dotnetVersion}",
-    (_, false)           => $"dotnet-runtime-{dotnetVersion}"
+    ("pkg.tar.zst", true)  => $"aspnet-runtime-{pkg.DotnetVersion}",
+    (_, true)            => $"aspnetcore-runtime-{pkg.DotnetVersion}",
+    (_, false)           => $"dotnet-runtime-{pkg.DotnetVersion}"
 };
 
 var outFile = format switch {
@@ -174,6 +178,11 @@ static void PackDeb(string Stage, Package Pkg, string Version, string Arch, stri
     control.AppendLine($"Maintainer: {Consts.Maintainer}");
     control.AppendLine($"Installed-Size: {InstalledSize(Stage) / 1024}");
     control.AppendLine($"Depends: {RuntimeDep}");
+    if (Pkg.Exclusive != null) {
+        control.AppendLine($"Provides: {Pkg.Exclusive}");
+        control.AppendLine($"Conflicts: {Pkg.Exclusive}");
+        control.AppendLine($"Replaces: {Pkg.Exclusive}");
+    }
     if (Pkg.Recommends.Length != 0)
         control.AppendLine($"Recommends: {String.Join(", ", Pkg.Recommends.Select(x => x.Name))}");
     control.AppendLine("Section: utils");
@@ -266,6 +275,10 @@ static void PackRpm(string Stage, Package Pkg, string Version, string Arch, stri
     spec.AppendLine($"URL:            {Consts.Url}");
     spec.AppendLine("AutoReqProv:    no");
     spec.AppendLine($"Requires:       {RuntimeDep}");
+    if (Pkg.Exclusive != null) {
+        spec.AppendLine($"Provides:       {Pkg.Exclusive}");
+        spec.AppendLine($"Conflicts:      {Pkg.Exclusive}");
+    }
     foreach (var recommendation in Pkg.Recommends)
         spec.AppendLine($"Recommends:     {recommendation.Name}");
     if (Pkg.IsDaemon)
@@ -333,6 +346,10 @@ static void PackPkgTarZst(string Stage, Package Pkg, string Version, string Arch
     info.AppendLine($"arch = {Arch}");
     info.AppendLine($"license = {Consts.License}");
     info.AppendLine($"depend = {RuntimeDep}");
+    if (Pkg.Exclusive != null) {
+        info.AppendLine($"provides = {Pkg.Exclusive}");
+        info.AppendLine($"conflicts = {Pkg.Exclusive}");
+    }
     foreach (var recommendation in Pkg.Recommends)
         info.AppendLine($"optdepend = {recommendation.Name}: {recommendation.Reason}");
     if (Pkg.IsDaemon)
@@ -447,7 +464,8 @@ record Package(
     string BinName,
     Recommendation[] Recommends,
     string Description,
-    string Csproj,
+    string DotnetVersion,
+    string? Exclusive,
     bool IsDaemon
 );
 

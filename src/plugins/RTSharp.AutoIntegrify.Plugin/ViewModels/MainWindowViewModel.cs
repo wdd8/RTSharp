@@ -55,11 +55,11 @@ public partial class FileInfo : ObservableObject
         set {
             field = value;
             StatusIcon = field switch {
-                RESOLVE_STATE.PENDING => BuiltInIcons.VISTA_WAIT,
-                RESOLVE_STATE.FILE_TOO_SMALL => BuiltInIcons.VISTA_BLOCK,
-                RESOLVE_STATE.UNRESOLVED => BuiltInIcons.SERIOUS_QUESTION,
-                RESOLVE_STATE.RESOLVED => BuiltInIcons.VISTA_OK,
-                RESOLVE_STATE.RESOLVED_HEURISTICS => BuiltInIcons.VISTA_OK_EXCLAMATION,
+                RESOLVE_STATE.PENDING => BuiltInIcons.WAIT,
+                RESOLVE_STATE.FILE_TOO_SMALL => BuiltInIcons.BLOCK,
+                RESOLVE_STATE.UNRESOLVED => BuiltInIcons.QUESTION,
+                RESOLVE_STATE.RESOLVED => BuiltInIcons.OK,
+                RESOLVE_STATE.RESOLVED_HEURISTICS => BuiltInIcons.OK_EXCLAMATION,
                 _ => null
             };
         }

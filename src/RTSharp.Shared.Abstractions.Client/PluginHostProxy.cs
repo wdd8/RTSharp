@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.DataProvider;
@@ -41,6 +42,7 @@ internal sealed class PluginHostProxy<TConfig>(IPluginHost Inner) : IPluginHost<
     public IReadOnlyCollection<Torrent> Torrents => Inner.Torrents;
     public IReadOnlyCollection<IPluginHost> Plugins => Inner.Plugins;
 
+    public IHostApplicationLifetime ApplicationLifetime => Inner.ApplicationLifetime;
     public ILogger Logger => Inner.Logger;
     public HttpClient HttpClient => Inner.HttpClient;
 

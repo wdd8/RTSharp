@@ -20,6 +20,7 @@ using RTSharp.Core.Services.Cache.Images;
 using RTSharp.Core.Services.Database.TrackerDb;
 using RTSharp.Plugin;
 using RTSharp.Shared.Abstractions;
+using RTSharp.Shared.Controls;
 using RTSharp.Shared.Utils;
 
 namespace RTSharp.Models
@@ -118,6 +119,9 @@ namespace RTSharp.Models
                 if (SetProperty(ref _internalState, value)) {
                     OnPropertyChanged(nameof(ShowSequentialDownloadMarker));
                     OnPropertyChanged(nameof(IsHashing));
+                    OnPropertyChanged(nameof(IsActive));
+                    OnPropertyChanged(nameof(IsErrored));
+                    OnPropertyChanged(nameof(StateIcon));
                 }
             }
         }
@@ -655,6 +659,21 @@ namespace RTSharp.Models
 
         public bool IsHashing => _internalState.HasFlag(TORRENT_STATE.HASHING);
 
+        public bool IsActive => _internalState.HasFlag(TORRENT_STATE.ACTIVE);
+
+        public bool IsErrored => _internalState.HasFlag(TORRENT_STATE.ERRORED);
+
+        public BuiltInIcons? StateIcon => _internalState.GetDisplayedState() switch {
+            TORRENT_STATE.MOVING => BuiltInIcons.STATE_MOVING,
+            TORRENT_STATE.HASHING => BuiltInIcons.STATE_HASHING,
+            TORRENT_STATE.PAUSED => BuiltInIcons.STATE_PAUSED,
+            TORRENT_STATE.DOWNLOADING => BuiltInIcons.STATE_DOWNLOADING,
+            TORRENT_STATE.COMPLETE => BuiltInIcons.STATE_COMPLETE,
+            TORRENT_STATE.STOPPED => BuiltInIcons.STATE_STOPPED,
+            TORRENT_STATE.SEEDING => BuiltInIcons.STATE_SEEDING,
+            _ => null
+        };
+
         internal Shared.Abstractions.Torrent? PendingChanges;
         private (IImage? Icon, string? DisplayName)? ResolvedTracker;
 
@@ -748,6 +767,9 @@ namespace RTSharp.Models
                 _internalState = changes.State;
                 OnPropertyChanged(nameof(ShowSequentialDownloadMarker));
                 OnPropertyChanged(nameof(IsHashing));
+                OnPropertyChanged(nameof(IsActive));
+                OnPropertyChanged(nameof(IsErrored));
+                OnPropertyChanged(nameof(StateIcon));
 
                 if (wasHashing && !changes.State.HasFlag(TORRENT_STATE.HASHING) && changes.IsCompleted) {
                     using var scope = Core.ServiceProvider.CreateScope();

@@ -16,6 +16,9 @@ public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
     public partial int RowHeight { get; set; }
 
     [ObservableProperty]
+    public partial bool StateIcons { get; set; }
+
+    [ObservableProperty]
     public partial bool AlternatingRowColors { get; set; }
 
     public IReadOnlyList<string> Themes { get; } = Core.Themes.List();
@@ -42,6 +45,7 @@ public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
 
         SpeedChartEnabled = look.DataProviders.SpeedChartEnabled;
         RowHeight = look.TorrentListing.RowHeight;
+        StateIcons = look.TorrentListing.StateIcons;
         AlternatingRowColors = look.AlternatingRowColors;
         Theme = look.Theme;
         ThemeVariant = look.ThemeVariant;
@@ -52,6 +56,7 @@ public partial class LookPageViewModel : ObservableObject, ISettingsLoadable
         var look = config.Look.Value;
         look.DataProviders.SpeedChartEnabled = SpeedChartEnabled;
         look.TorrentListing.RowHeight = RowHeight;
+        look.TorrentListing.StateIcons = StateIcons;
         look.AlternatingRowColors = AlternatingRowColors;
         look.ThemeVariant = ThemeVariant;
 

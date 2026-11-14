@@ -1,6 +1,5 @@
 using RTSharp.Shared.Abstractions.DataProvider;
 
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -227,32 +226,40 @@ public enum TORRENT_STATE
 
 public static class EnumExt
 {
-    private static readonly ConcurrentDictionary<TORRENT_STATE, string> StateCache = new();
+    /// <summary>
+    /// The one state a torrent is shown as, when several are set; <see cref="TORRENT_STATE.NONE"/> when none of them are
+    /// </summary>
+    public static TORRENT_STATE GetDisplayedState(this TORRENT_STATE In)
+    {
+        if (In.HasFlag(TORRENT_STATE.MOVING))
+            return TORRENT_STATE.MOVING;
+        if (In.HasFlag(TORRENT_STATE.HASHING))
+            return TORRENT_STATE.HASHING;
+        if (In.HasFlag(TORRENT_STATE.PAUSED))
+            return TORRENT_STATE.PAUSED;
+        if (In.HasFlag(TORRENT_STATE.DOWNLOADING))
+            return TORRENT_STATE.DOWNLOADING;
+        if (In.HasFlag(TORRENT_STATE.COMPLETE))
+            return TORRENT_STATE.COMPLETE;
+        if (In.HasFlag(TORRENT_STATE.STOPPED))
+            return TORRENT_STATE.STOPPED;
+        if (In.HasFlag(TORRENT_STATE.SEEDING))
+            return TORRENT_STATE.SEEDING;
+        return TORRENT_STATE.NONE;
+    }
 
     public static string ToString(this TORRENT_STATE In)
     {
-        return StateCache.GetOrAdd(In, static state => {
-            string stateStr = "N/A";
-            if ((state & TORRENT_STATE.SEEDING) == TORRENT_STATE.SEEDING)
-                stateStr = "Seeding";
-            if ((state & TORRENT_STATE.STOPPED) == TORRENT_STATE.STOPPED)
-                stateStr = "Stopped";
-            if ((state & TORRENT_STATE.COMPLETE) == TORRENT_STATE.COMPLETE)
-                stateStr = "Complete";
-            if ((state & TORRENT_STATE.DOWNLOADING) == TORRENT_STATE.DOWNLOADING)
-                stateStr = "Downloading";
-            if ((state & TORRENT_STATE.PAUSED) == TORRENT_STATE.PAUSED)
-                stateStr = "Paused";
-            if ((state & TORRENT_STATE.HASHING) == TORRENT_STATE.HASHING)
-                stateStr = "Hashing";
-            if ((state & TORRENT_STATE.MOVING) == TORRENT_STATE.MOVING)
-                stateStr = "Moving";
-            if ((state & TORRENT_STATE.ERRORED) == TORRENT_STATE.ERRORED)
-                stateStr = "☠ " + stateStr;
-            if ((state & TORRENT_STATE.ACTIVE) == TORRENT_STATE.ACTIVE)
-                stateStr = "⚡ " + stateStr;
-            return stateStr;
-        });
+        return In.GetDisplayedState() switch {
+            TORRENT_STATE.MOVING => "Moving",
+            TORRENT_STATE.HASHING => "Hashing",
+            TORRENT_STATE.PAUSED => "Paused",
+            TORRENT_STATE.DOWNLOADING => "Downloading",
+            TORRENT_STATE.COMPLETE => "Complete",
+            TORRENT_STATE.STOPPED => "Stopped",
+            TORRENT_STATE.SEEDING => "Seeding",
+            _ => "N/A"
+        };
     }
 
     public static TORRENT_STATE ToTorrentState(string Option)

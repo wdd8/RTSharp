@@ -19,6 +19,7 @@
         <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
         <PackageReference Include="Avalonia.Labs.Gif" Version="12.1.0" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+        <PackageReference Include="Sdcb.SimdCodecs.Ico" Version="2.0.0" />
     </ItemGroup>
 
     <ItemGroup>

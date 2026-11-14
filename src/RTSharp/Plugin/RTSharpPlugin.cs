@@ -25,6 +25,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using System.Threading;
+using Avalonia.Controls.ApplicationLifetimes;
+using Microsoft.Extensions.Hosting;
 
 namespace RTSharp.Plugin;
 
@@ -189,6 +192,8 @@ public class RTSharpPlugin : IPluginHost
     public IReadOnlyCollection<Torrent> Torrents => [.. Core.TorrentPolling.TorrentPolling.Torrents.GetSnapshot().Select(x => x.ToPluginModel())];
 
     public IReadOnlyCollection<IPluginHost> Plugins => [.. Plugin.Plugins.LoadedPlugins.ToArray() ];
+
+    public IHostApplicationLifetime ApplicationLifetime => Core.ServiceProvider.Root.GetRequiredService<IHostApplicationLifetime>();
 
     public HttpClient HttpClient => Core.Http.Client;
 

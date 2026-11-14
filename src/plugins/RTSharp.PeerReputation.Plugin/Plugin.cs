@@ -48,41 +48,53 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
         var scriptHash = SHA256.HashData(Encoding.UTF8.GetBytes(script));
         var scriptId = GUID.ToString();
         var daemons = Host.GetDaemonServices();
-        await Task.WhenAll(daemons.Select(async daemon => {
-            var installed = (await daemon.ListInstalledScripts()).FirstOrDefault(x => x.Id == scriptId && x.OwnerId == GUID);
-            if (installed is null)
-                notInstalled.Add(daemon);
-            else if (!installed.ScriptHash.AsSpan().SequenceEqual(scriptHash))
-                outdated.Add(daemon);
-        }));
 
-        await Dispatcher.UIThread.InvokeAsync(async () => {
-            if (!notInstalled.IsEmpty || !outdated.IsEmpty) {
-                var message = (notInstalled.IsEmpty, outdated.IsEmpty) switch {
-                    (false, true) => "The Peer Reputation script is not installed on one or more daemons. Do you want to install it?",
-                    (true, false) => "The Peer Reputation script differs from the bundled version on one or more daemons. Do you want to update it?",
-                    _ => "The Peer Reputation script is missing or differs from the bundled version on some daemons. Do you want to install or update it?"
-                };
-                var msgBox = MessageBoxManager.GetMessageBoxStandard("Peer Reputation", message, ButtonEnum.YesNo, Icon.Question);
-                if (await msgBox.ShowAsync() == ButtonResult.Yes) {
-                    _ = Task.WhenAll(notInstalled.Concat(outdated).Select(async daemon => {
-                        try {
-                            await daemon.InstallScript(scriptId, "Peer Reputation", GUID, script, []);
-                        } catch (Exception ex) {
-                            this.Host.Logger.Error(ex, "Could not install the Peer Reputation script on {Server}", daemon.Id);
-                            await Dispatcher.UIThread.InvokeAsync(() => MessageBoxManager.GetMessageBoxStandard("Peer Reputation", $"Could not install the script on {daemon.Id}:\n{ex.Message}", ButtonEnum.Ok, Icon.Error).ShowAsync());
-                        }
+        _ = Task.Run(async () => {
+            while (true) {
+                try {
+                    await Task.WhenAll(daemons.Select(async daemon => {
+                        var installed = (await daemon.ListInstalledScripts()).FirstOrDefault(x => x.Id == scriptId && x.OwnerId == GUID);
+                        if (installed is null)
+                            notInstalled.Add(daemon);
+                        else if (!installed.ScriptHash.AsSpan().SequenceEqual(scriptHash))
+                            outdated.Add(daemon);
                     }));
+
+                    break;
+                } catch (Exception ex) {
+                    this.Host.Logger.Error(ex, "An error occurred while checking daemon scripts");
+                    await Task.Delay(TimeSpan.FromSeconds(30), this.Host.ApplicationLifetime.ApplicationStopping);
                 }
             }
 
-            Hook = this.Host.RegisterToolsMenuItem(new MenuItem() {
-                Header = "Peer Reputation",
-                Command = new RelayCommand(() => {
-                    var wnd = new MainWindow();
-                    wnd.ViewModel = new ViewModels.MainWindowViewModel(this.Host.GetDaemonServices(), GUID);
-                    wnd.Show();
-                })
+            await Dispatcher.UIThread.InvokeAsync(async () => {
+                if (!notInstalled.IsEmpty || !outdated.IsEmpty) {
+                    var message = (notInstalled.IsEmpty, outdated.IsEmpty) switch {
+                        (false, true) => "The Peer Reputation script is not installed on one or more daemons. Do you want to install it?",
+                        (true, false) => "The Peer Reputation script differs from the bundled version on one or more daemons. Do you want to update it?",
+                        _ => "The Peer Reputation script is missing or differs from the bundled version on some daemons. Do you want to install or update it?"
+                    };
+                    var msgBox = MessageBoxManager.GetMessageBoxStandard("Peer Reputation", message, ButtonEnum.YesNo, Icon.Question);
+                    if (await msgBox.ShowAsync() == ButtonResult.Yes) {
+                        _ = Task.WhenAll(notInstalled.Concat(outdated).Select(async daemon => {
+                            try {
+                                await daemon.InstallScript(scriptId, "Peer Reputation", GUID, script, []);
+                            } catch (Exception ex) {
+                                this.Host.Logger.Error(ex, "Could not install the Peer Reputation script on {Server}", daemon.Id);
+                                await Dispatcher.UIThread.InvokeAsync(() => MessageBoxManager.GetMessageBoxStandard("Peer Reputation", $"Could not install the script on {daemon.Id}:\n{ex.Message}", ButtonEnum.Ok, Icon.Error).ShowAsync());
+                            }
+                        }));
+                    }
+                }
+
+                Hook = this.Host.RegisterToolsMenuItem(new MenuItem() {
+                    Header = "Peer Reputation",
+                    Command = new RelayCommand(() => {
+                        var wnd = new MainWindow();
+                        wnd.ViewModel = new ViewModels.MainWindowViewModel(this.Host.GetDaemonServices(), GUID);
+                        wnd.Show();
+                    })
+                });
             });
         });
 

@@ -14,7 +14,7 @@ public static class Servers
     public static DaemonService Connect(string serverId, Config.Models.Server serverConfig)
     {
         var channel = ConfigureServices.CreateChannel(serverId, serverConfig);
-        var lifetime = ServiceProvider._provider.GetRequiredService<IHostApplicationLifetime>();
+        var lifetime = ServiceProvider.Root.GetRequiredService<IHostApplicationLifetime>();
         var daemonService = new DaemonService(serverId, serverConfig, channel, lifetime);
         All[serverId] = daemonService;
         return daemonService;

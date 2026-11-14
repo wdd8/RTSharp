@@ -31,6 +31,17 @@ public class BuiltInIconImage : Image
     private void OnValueChanged()
     {
         Generation = BuiltInIcon.Generation;
-        Source = Value is { } icon ? BuiltInIcon.Get(icon) : null;
+        Source = null;
+        InvalidateMeasure();
+    }
+
+    protected override Size MeasureOverride(Size AvailableSize)
+    {
+        if (Value != null) {
+            var fit = Math.Min(AvailableSize.Width, AvailableSize.Height);
+            Source = BuiltInIcon.Get(Value.Value, Double.IsInfinity(fit) ? Int32.MaxValue : (int)Math.Ceiling(fit * (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1)));
+        }
+
+        return base.MeasureOverride(AvailableSize);
     }
 }

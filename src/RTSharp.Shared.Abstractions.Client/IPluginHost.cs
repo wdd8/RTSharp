@@ -1,6 +1,7 @@
 ﻿using Avalonia.Controls;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using RTSharp.Shared.Abstractions.Daemon;
 using RTSharp.Shared.Abstractions.DataProvider;
@@ -120,6 +121,8 @@ public interface IPluginHost
     IReadOnlyCollection<Torrent> Torrents { get; }
 
     IReadOnlyCollection<IPluginHost> Plugins { get; }
+
+    IHostApplicationLifetime ApplicationLifetime { get; }
 
     /// <summary>
     /// Plugin logger

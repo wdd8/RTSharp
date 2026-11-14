@@ -173,30 +173,30 @@ public partial class TorrentListingViewModel : ObservableViewModel
                     c.ReuseCellContent = true;
                 }
             )),
-            (NameColumn = builder.Text(
+            (NameColumn = builder.Template(
                 header: nameof(Torrent.Name),
-                property: Utils.CreateProperty<string>(nameof(Torrent.Name), x => ((Torrent)x).Name, null),
-                getter: x => x.Name,
-                setter: null,
+                cellTemplateKey: "TorrentNameTemplate",
                 configure: c =>
                 {
                     c.Width = new DataGridLength(600);
                     c.ColumnKey = nameof(Torrent.Name);
+                    c.ValueAccessor = new DataGridColumnValueAccessor<Torrent, string>(x => x.Name);
                     c.FilterFlyoutKey = "NameFilterFlyout";
                     c.CustomSortComparer = Comparer<string>.Default;
+                    c.ReuseCellContent = true;
                 }
             )),
-            (stateColumn = builder.Text(
+            (stateColumn = builder.Template(
                 header: "State",
-                property: Utils.CreateProperty<string>(nameof(Torrent.State), x => ((Torrent)x).State, null),
-                getter: x => x.State,
-                setter: null,
+                cellTemplateKey: "TorrentStateTemplate",
                 configure: c =>
                 {
                     c.Width = new DataGridLength(60);
                     c.ColumnKey = nameof(Torrent.State);
+                    c.ValueAccessor = new DataGridColumnValueAccessor<Torrent, string>(x => x.State);
                     c.FilterFlyoutKey = "StateFilterFlyout";
                     c.CustomSortComparer = Comparer<string>.Default;
+                    c.ReuseCellContent = true;
                 }
             )),
             builder.Text(

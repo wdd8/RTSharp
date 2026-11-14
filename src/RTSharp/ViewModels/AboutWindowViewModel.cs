@@ -60,6 +60,7 @@ public partial class AboutWindowViewModel : ObservableViewModel
             "Polly",
             "ProDataGrid",
             "QBittorrent.Client",
+            "Sdcb.SimdCodecs",
             "Serilog",
             "Serilog.Sinks.Debug",
             "SkiaSharp",

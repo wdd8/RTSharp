@@ -139,6 +139,8 @@ public class Config
             public class TorrentListingConfig
             {
                 public int RowHeight { get; set; }
+
+                public bool StateIcons { get; set; }
             }
 
             public DataProvidersConfig DataProviders { get; set; } = new() {
@@ -247,7 +249,8 @@ public class Config
       "SpeedChartEnabled": true
     },
     "TorrentListing": {
-      "RowHeight": 21
+      "RowHeight": 21,
+      "StateIcons": false
     },
     "AlternatingRowColors": false,
     "Theme": "Standard",

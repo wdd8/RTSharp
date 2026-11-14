@@ -241,15 +241,15 @@ public partial class TorrentListingViewModel
                     }
                 } else if (columnKey == nameof(Torrent.Hash)) {
                     HashFilter.Text = (string)desc.Value;
+                } else if (columnKey == nameof(Torrent.Name)) {
+                    NameFilter.Text = (string)desc.Value;
+                } else if (columnKey == nameof(Torrent.State)) {
+                    RefillSelectedOptions(desc, StateFilter);
                 }
             } else if (desc.ColumnId is DataGridTextColumnDefinition text) {
                 var columnKey = (string)text.ColumnKey;
                 if (columnKey == "Connection") {
                     RefillSelectedOptions(desc, ConnectionFilter);
-                } else if (columnKey == nameof(Torrent.Name)) {
-                    NameFilter.Text = (string)desc.Value;
-                }  else if (columnKey == nameof(Torrent.State)) {
-                    RefillSelectedOptions(desc, StateFilter);
                 } else if (columnKey == nameof(Torrent.Labels)) {
                     RefillSelectedOptions(desc, LabelsFilter);
                 }
@@ -342,6 +342,10 @@ public partial class TorrentListingViewModel
                 e.ClipboardRowContent[i] = new DataGridClipboardCellContent(cell.Item, cell.Column, formatted);
             } else if ((string?)cell.Column?.Header == "Tracker") {
                 e.ClipboardRowContent[i] = new DataGridClipboardCellContent(cell.Item, cell.Column, ((Torrent)e.Item).TrackerDisplayName ?? "");
+            } else if ((string?)cell.Column?.Header == nameof(Torrent.Name)) {
+                e.ClipboardRowContent[i] = new DataGridClipboardCellContent(cell.Item, cell.Column, ((Torrent)e.Item).Name);
+            } else if ((string?)cell.Column?.Header == "State") {
+                e.ClipboardRowContent[i] = new DataGridClipboardCellContent(cell.Item, cell.Column, ((Torrent)e.Item).State);
             }
         }
     }

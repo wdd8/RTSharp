@@ -12,6 +12,9 @@ var repo = args[1];
 
 string[] rids = ["linux-x64", "linux-arm64", "win-x64", "win-arm64"];
 
+var clientTfm = TargetFrameworks("src/RTSharp/RTSharp.csproj").Single();
+var daemonTfms = TargetFrameworks("src/RTSharp.Daemon/RTSharp.Daemon.csproj");
+
 var assets = new List<Asset>();
 foreach (var rid in rids) {
     var linux = rid.StartsWith("linux-");
@@ -21,19 +24,22 @@ foreach (var rid in rids) {
     foreach (var selfContained in new[] { false, true }) {
         var sc = selfContained ? "-self-contained" : "";
 
-        assets.Add(new Asset($"RTSharp-{rid}{sc}-v{version}.zip", COMPONENT.CLIENT, rid, selfContained, FORMAT.ZIP));
+        assets.Add(new Asset($"RTSharp-{rid}{sc}-v{version}.zip", COMPONENT.CLIENT, rid, clientTfm, selfContained, FORMAT.ZIP));
         if (!linux)
             continue;
 
-        assets.Add(new Asset($"RTSharp-Daemon-{rid}{sc}-v{version}.zip", COMPONENT.DAEMON, rid, selfContained, FORMAT.ZIP));
+        foreach (var tfm in daemonTfms)
+            assets.Add(new Asset($"RTSharp-Daemon-{rid}-{tfm}{sc}-v{version}.zip", COMPONENT.DAEMON, rid, tfm, selfContained, FORMAT.ZIP));
 
         if (selfContained)
             continue;
 
-        foreach (var (component, pkg) in new[] { (COMPONENT.CLIENT, "rtsharp"), (COMPONENT.DAEMON, "rtsharp-daemon") }) {
-            assets.Add(new Asset($"{pkg}_{version}_{debArch}.deb", component, rid, selfContained, FORMAT.DEB));
-            assets.Add(new Asset($"{pkg}-{version}-1.{pkgArch}.rpm", component, rid, selfContained, FORMAT.RPM));
-            assets.Add(new Asset($"{pkg}-{version}-1-{pkgArch}.pkg.tar.zst", component, rid, selfContained, FORMAT.PKG_TAR_ZST));
+        var packages = new[] { (COMPONENT.CLIENT, "rtsharp", clientTfm) }
+            .Concat(daemonTfms.Select(T => (COMPONENT.DAEMON, $"rtsharp-daemon-{T[..T.IndexOf('.')]}", T)));
+        foreach (var (component, pkg, tfm) in packages) {
+            assets.Add(new Asset($"{pkg}_{version}_{debArch}.deb", component, rid, tfm, selfContained, FORMAT.DEB));
+            assets.Add(new Asset($"{pkg}-{version}-1.{pkgArch}.rpm", component, rid, tfm, selfContained, FORMAT.RPM));
+            assets.Add(new Asset($"{pkg}-{version}-1-{pkgArch}.pkg.tar.zst", component, rid, tfm, selfContained, FORMAT.PKG_TAR_ZST));
         }
     }
 }
@@ -53,40 +59,34 @@ notes.AppendLine();
 foreach (var component in new[] { COMPONENT.CLIENT, COMPONENT.DAEMON }) {
     notes.AppendLine($"### {(component == COMPONENT.CLIENT ? "Client" : "Daemon")}");
     notes.AppendLine();
-    notes.AppendLine("| Platform | Runtime self-contained | zip | deb | rpm | pkg.tar.zst |");
-    notes.AppendLine("| --- | --- | :-: | :-: | :-: | :-: |");
+    notes.AppendLine("| Platform | .NET | Runtime self-contained | zip | deb | rpm | pkg.tar.zst |");
+    notes.AppendLine("| --- | --- | --- | :-: | :-: | :-: | :-: |");
 
-    foreach (var rid in rids) {
-        foreach (var selfContained in new[] { false, true }) {
-            var row = assets
-                .Where(x => x.Component == component && x.Rid == rid && x.SelfContained == selfContained)
-                .ToDictionary(x => x.Format);
+    foreach (var group in assets.Where(x => x.Component == component).GroupBy(x => (x.Rid, x.Framework, x.SelfContained))) {
+        var (rid, framework, selfContained) = group.Key;
+        var row = group.ToDictionary(x => x.Format);
 
-            if (row.Count == 0)
-                continue;
+        var platformLabel = rid switch {
+            "linux-x64" => "Linux x64",
+            "linux-arm64" => "Linux arm64",
+            "win-x64" => "Windows x64",
+            "win-arm64" => "Windows arm64",
+            _ => rid
+        };
 
-            var platformLabel = rid switch {
-                "linux-x64" => "Linux x64",
-                "linux-arm64" => "Linux arm64",
-                "win-x64" => "Windows x64",
-                "win-arm64" => "Windows arm64",
-                _ => rid
+        notes.Append($"| {platformLabel} | {framework[3..]} | {(selfContained ? "Yes" : "")} |");
+        foreach (var format in new[] { FORMAT.ZIP, FORMAT.DEB, FORMAT.RPM, FORMAT.PKG_TAR_ZST }) {
+            var formatLabel = format switch {
+                FORMAT.ZIP => ".zip",
+                FORMAT.DEB => ".deb",
+                FORMAT.RPM => ".rpm",
+                FORMAT.PKG_TAR_ZST => ".pkg.tar.zst",
+                _ => format.ToString()
             };
 
-            notes.Append($"| {platformLabel} | {(selfContained ? "Yes" : "")} |");
-            foreach (var format in new[] { FORMAT.ZIP, FORMAT.DEB, FORMAT.RPM, FORMAT.PKG_TAR_ZST }) {
-                var formatLabel = format switch {
-                    FORMAT.ZIP => ".zip",
-                    FORMAT.DEB => ".deb",
-                    FORMAT.RPM => ".rpm",
-                    FORMAT.PKG_TAR_ZST => ".pkg.tar.zst",
-                    _ => format.ToString()
-                };
-
-                notes.Append($" {(row.TryGetValue(format, out var asset) ? $"[{formatLabel}]({Url(asset.File)})" : "–")} |");
-            }
-            notes.AppendLine();
+            notes.Append($" {(row.TryGetValue(format, out var asset) ? $"[{formatLabel}]({Url(asset.File)})" : "–")} |");
         }
+        notes.AppendLine();
     }
     notes.AppendLine();
 }
@@ -137,7 +137,22 @@ static string Capture(string Cmd, string[] Arguments, bool AllowFailure = false)
     return output;
 }
 
-record Asset(string File, COMPONENT Component, string Rid, bool SelfContained, FORMAT Format);
+static string[] TargetFrameworks(string Csproj)
+{
+    var xml = File.ReadAllText(Csproj);
+    foreach (var tag in new[] { "TargetFrameworks", "TargetFramework" }) {
+        var open = $"<{tag}>";
+        var start = xml.IndexOf(open, StringComparison.Ordinal);
+        if (start < 0)
+            continue;
+        start += open.Length;
+        var end = xml.IndexOf($"</{tag}>", start, StringComparison.Ordinal);
+        return xml[start..end].Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+    }
+    throw new Exception($"No <TargetFramework(s)> found in {Csproj}");
+}
+
+record Asset(string File, COMPONENT Component, string Rid, string Framework, bool SelfContained, FORMAT Format);
 
 enum COMPONENT
 {

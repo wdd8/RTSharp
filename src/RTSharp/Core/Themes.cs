@@ -9,7 +9,11 @@ using Microsoft.Build.Framework;
 
 using RTSharp.Shared.Controls;
 
+using Sdcb.SimdCodecs.Ico;
+
 using Serilog;
+
+using SkiaSharp;
 
 using System;
 using System.Collections;
@@ -191,15 +195,69 @@ public static class Themes
         var resourcesPath = Path.Combine(UserThemesPath, $"{id}.resources");
         var inputPath = Path.Combine(UserThemesPath, $"{id}.input.dll");
         var outputPath = Path.Combine(UserThemesPath, $"{id}.dll");
+        var overlaysPath = Path.Combine(UserThemesPath, $"{id}.overlays");
         var engine = new BuildEngine();
+
+        IEnumerable<ITaskItem> GenerateOverlays()
+        {
+            var iconsDir = Path.Combine(themeDir, "Icons");
+            if (!Directory.Exists(iconsDir))
+                yield break;
+
+            foreach (var (overlay, source) in BuiltInIcon.Overlays) {
+                var name = BuiltInIcon.FileName(overlay);
+                if (Directory.EnumerateFiles(iconsDir, $"{name}.*").Any())
+                    continue;
+
+                var sourceName = BuiltInIcon.FileName(source);
+                var sourcePath = Directory.EnumerateFiles(iconsDir, $"{sourceName}.*").FirstOrDefault();
+                if (sourcePath == null)
+                    continue;
+
+                var file = name + Path.GetFileName(sourcePath)[sourceName.Length..];
+                Directory.CreateDirectory(overlaysPath);
+
+                if (file.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)) {
+                    File.Copy(sourcePath, Path.Combine(overlaysPath, file));
+                } else {
+                    var images = new List<SKImage>();
+                    try {
+                        if (file.EndsWith(".ico", StringComparison.OrdinalIgnoreCase)) {
+                            var data = File.ReadAllBytes(sourcePath);
+                            foreach (var (index, _) in IcoDecoder.ReadInfo(data).Entries.Index().GroupBy(x => x.Item.Width).Select(x => x.MaxBy(y => y.Item.BitsPerPixel))) {
+                                var decoded = IcoDecoder.Decode(data, index);
+                                images.Add(SKImage.FromPixelCopy(new SKImageInfo(decoded.Width, decoded.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul), decoded.Rgba));
+                            }
+                        } else {
+                            file = Path.ChangeExtension(file, ".ico");
+                            images.Add(SKImage.FromEncodedData(sourcePath) ?? throw new InvalidDataException($"{sourcePath} is not an image"));
+                        }
+
+                        File.WriteAllBytes(Path.Combine(overlaysPath, file), IcoEncoder.Encode([.. images.Select(image => {
+                            using var quarter = new SKBitmap(new SKImageInfo(Math.Max(1, image.Width / 2), Math.Max(1, image.Height / 2), SKColorType.Rgba8888, SKAlphaType.Unpremul));
+                            using var pixels = quarter.PeekPixels();
+                            if (!image.ScalePixels(pixels, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)))
+                                throw new InvalidOperationException($"{sourcePath} could not be scaled to {quarter.Width}x{quarter.Height}");
+                            return new IcoFrame(quarter.Bytes, quarter.Width, quarter.Height, Sdcb.SimdCodecs.Abstractions.PixelFormat.Rgba32, IcoImageEncoding.Png);
+                        })]));
+                    } finally {
+                        foreach (var image in images)
+                            image.Dispose();
+                    }
+                }
+
+                var item = new TaskItem(Path.Combine(overlaysPath, file));
+                item.SetMetadata("Link", $"Icons/{file}");
+                yield return item;
+            }
+        }
 
         try {
             var resources = new GenerateAvaloniaResourcesTask {
                 BuildEngine = engine,
                 Root = themeDir,
-                Resources = Directory.EnumerateFiles(themeDir, "*", SearchOption.AllDirectories)
-                    .Select(x => (ITaskItem)new TaskItem(Path.GetRelativePath(themeDir, x)))
-                    .ToArray(),
+                Resources = [.. Directory.EnumerateFiles(themeDir, "*", SearchOption.AllDirectories)
+                    .Select(x => (ITaskItem)new TaskItem(Path.GetRelativePath(themeDir, x))), .. GenerateOverlays()],
                 Output = resourcesPath
             };
             if (!resources.Execute())
@@ -257,6 +315,8 @@ public static class Themes
         } finally {
             File.Delete(resourcesPath);
             File.Delete(inputPath);
+            if (Directory.Exists(overlaysPath))
+                Directory.Delete(overlaysPath, recursive: true);
         }
 
         return outputPath;

@@ -379,8 +379,8 @@ public class App : Application
             })
             .Build();
 
-        Core.ServiceProvider._provider = host.Services;
-        Core.ServiceProvider._provider.UseMicrosoftDependencyResolver();
+        Core.ServiceProvider.Root = host.Services;
+        Core.ServiceProvider.Root.UseMicrosoftDependencyResolver();
     }
 
     public static async Task PostInitServices(Task ServiceProviderBuild, Task Databases)
@@ -514,6 +514,8 @@ public class App : Application
                 Resources.Remove("DataGridAlternatingRowBrush");
             else
                 Resources["DataGridAlternatingRowBrush"] = null;
+
+            Resources["TorrentListingStateIconsVisible"] = Look.TorrentListing.StateIcons;
 
             RequestedThemeVariant = Look.ThemeVariant switch {
                 Config.Models.Look.Variant.Light => ThemeVariant.Light,

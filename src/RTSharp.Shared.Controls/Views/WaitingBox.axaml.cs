@@ -6,7 +6,7 @@ namespace RTSharp.Shared.Controls.Views
     public partial class WaitingBox : Window
     {
         public WaitingBox()
-            : this("Operation in progress...", "Please wait while the operation is in progress.", BuiltInIcons.WIN10_INFO)
+            : this("Operation in progress...", "Please wait while the operation is in progress.", BuiltInIcons.WAIT)
         {
         }
 

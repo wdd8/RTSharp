@@ -44,16 +44,32 @@ public class BuiltInPathIcon : PathIcon
         Image = null;
         Mask = null;
 
-        if (Value is { } icon) {
-            if (BuiltInIcon.IsSvg(icon))
-                Data = BuiltInIcon.GetGeometry(icon);
-            else if (BuiltInIcon.IsMask(icon))
-                Mask = new ImageBrush(BuiltInIcon.Get(icon));
-            else
-                Image = BuiltInIcon.Get(icon);
+        if (Value != null && BuiltInIcon.IsSvg(Value.Value))
+            Data = BuiltInIcon.GetGeometry(Value.Value);
+
+        InvalidateArrange();
+        InvalidateVisual();
+    }
+
+    protected override Size ArrangeOverride(Size FinalSize)
+    {
+        var size = base.ArrangeOverride(FinalSize);
+
+        if (Value != null && Data == null) {
+            var bitmap = BuiltInIcon.Get(Value.Value, (int)Math.Ceiling(Math.Max(size.Width, size.Height) * (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1)));
+
+            if (BuiltInIcon.IsMask(Value.Value)) {
+                if (Mask?.Source != bitmap) {
+                    Mask = new ImageBrush(bitmap);
+                    InvalidateVisual();
+                }
+            } else if (Image != bitmap) {
+                Image = bitmap;
+                InvalidateVisual();
+            }
         }
 
-        InvalidateVisual();
+        return size;
     }
 
     public override void Render(DrawingContext Context)

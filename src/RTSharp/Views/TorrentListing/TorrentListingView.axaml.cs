@@ -106,9 +106,9 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         grid.ScrollIntoView(item, null);
     }
 
-    private double[] CaptureGridRowHeights()
+    private double[]? CaptureGridRowHeights()
     {
-        double[] result = null;
+        double[]? result = null;
         Dispatcher.UIThread.Invoke(() => {
             result = ContentGrid.RowDefinitions.Select(r => r.ActualHeight).ToArray();
         });
@@ -133,6 +133,9 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
                     }
                 );
             } catch {
+#if DEBUG
+                throw;
+#endif
                 // probe point
             }
             @lock.Set();
@@ -147,6 +150,9 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         try {
             return DataGridStatePersistence.Deserialize(In ?? "{}", new SystemTextJsonDataGridStateSerializer());
         } catch {
+#if DEBUG
+            throw;
+#endif
             return null;
         }
     }
@@ -166,6 +172,9 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
             ViewModel!.PostGridStateRestore();
         } catch {
+#if DEBUG
+            throw;
+#endif
             // probe point
         }
     }

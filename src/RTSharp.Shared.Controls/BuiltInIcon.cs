@@ -1,7 +1,10 @@
-﻿using Avalonia.Labs.Gif;
+﻿using Avalonia;
+using Avalonia.Labs.Gif;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+
+using Sdcb.SimdCodecs.Ico;
 
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
@@ -16,7 +19,6 @@ public enum BuiltInIcons
     COMPUTER_KEY,
     DID_YOU_KNOW,
     DYNAMITE,
-    FLAT_QUESTION_MARK,
     KEYS,
     SERVER,
     CERTIFICATE,
@@ -29,26 +31,17 @@ public enum BuiltInIcons
     SERIOUS_INFO,
     SERIOUS_QUESTION,
     SERIOUS_X,
-    SERIOUS2_INFO,
-    SERIOUS2_X,
 
-    VISTA_BLOCK,
-    VISTA_EXCLAMATION,
-    VISTA_INFO,
-    VISTA_OK,
-    VISTA_OK_EXCLAMATION,
-    VISTA_OK_WAIT,
-    VISTA_WAIT,
-    VISTA_X,
-    VISTA_X_EXCLAMATION,
-
-    WIN10_EXCLAMATION,
-    WIN10_EXCLAMATION_SHIELD,
-    WIN10_INFO,
-    WIN10_OK_SHIELD,
-    WIN10_QUESTION_SHIELD,
-    WIN10_X,
-    WIN10_X_SHIELD,
+    BLOCK,
+    EXCLAMATION,
+    INFO,
+    OK,
+    OK_EXCLAMATION,
+    OK_WAIT,
+    WAIT,
+    QUESTION,
+    X,
+    X_EXCLAMATION,
 
     FILTER,
     START,
@@ -80,12 +73,25 @@ public enum BuiltInIcons
     QUEUE,
     BITTORRENT,
     FEED,
-    UPDATE_INTERVAL
+
+    STATE_DOWNLOADING,
+    STATE_SEEDING,
+    STATE_COMPLETE,
+    STATE_PAUSED,
+    STATE_STOPPED,
+    STATE_HASHING,
+    STATE_MOVING,
+    STATE_ERRORED,
+    STATE_ACTIVE,
+    STATE_ERRORED_OVERLAY,
+    STATE_ACTIVE_OVERLAY
 }
 
 public static class BuiltInIcon
 {
-    private static readonly ConcurrentDictionary<BuiltInIcons, Bitmap> Cache = new();
+    private static readonly ConcurrentDictionary<(BuiltInIcons Icon, int Frame), Bitmap> Cache = new();
+
+    private static readonly ConcurrentDictionary<BuiltInIcons, (byte[] Data, IcoInfo Info)> IcoCache = new();
 
     private static readonly ConcurrentDictionary<BuiltInIcons, Geometry> GeometryCache = new();
 
@@ -95,7 +101,6 @@ public static class BuiltInIcon
         { BuiltInIcons.COMPUTER_KEY, "computer_key" },
         { BuiltInIcons.DID_YOU_KNOW, "did_you_know" },
         { BuiltInIcons.DYNAMITE, "dynamite" },
-        { BuiltInIcons.FLAT_QUESTION_MARK, "flat_question_mark" },
         { BuiltInIcons.KEYS, "keys" },
         { BuiltInIcons.SERVER, "server" },
         { BuiltInIcons.CERTIFICATE, "certificate" },
@@ -108,26 +113,17 @@ public static class BuiltInIcon
         { BuiltInIcons.SERIOUS_INFO, "serious_info" },
         { BuiltInIcons.SERIOUS_QUESTION, "serious_question" },
         { BuiltInIcons.SERIOUS_X, "serious_X" },
-        { BuiltInIcons.SERIOUS2_INFO, "serious2_info" },
-        { BuiltInIcons.SERIOUS2_X, "serious2_X" },
 
-        { BuiltInIcons.VISTA_BLOCK, "vista_block" },
-        { BuiltInIcons.VISTA_EXCLAMATION, "vista_exclamation" },
-        { BuiltInIcons.VISTA_INFO, "vista_info" },
-        { BuiltInIcons.VISTA_OK, "vista_ok" },
-        { BuiltInIcons.VISTA_OK_EXCLAMATION, "vista_ok_exclamation" },
-        { BuiltInIcons.VISTA_OK_WAIT, "vista_ok_wait" },
-        { BuiltInIcons.VISTA_WAIT, "vista_wait" },
-        { BuiltInIcons.VISTA_X, "vista_X" },
-        { BuiltInIcons.VISTA_X_EXCLAMATION, "vista_X_exclamation" },
-
-        { BuiltInIcons.WIN10_EXCLAMATION, "win10_exclamation" },
-        { BuiltInIcons.WIN10_EXCLAMATION_SHIELD, "win10_exclamation_shield" },
-        { BuiltInIcons.WIN10_INFO, "win10_info" },
-        { BuiltInIcons.WIN10_OK_SHIELD, "win10_ok_shield" },
-        { BuiltInIcons.WIN10_QUESTION_SHIELD, "win10_question_shield" },
-        { BuiltInIcons.WIN10_X, "win10_X" },
-        { BuiltInIcons.WIN10_X_SHIELD, "win10_X_shield" },
+        { BuiltInIcons.BLOCK, "block" },
+        { BuiltInIcons.EXCLAMATION, "exclamation" },
+        { BuiltInIcons.INFO, "info" },
+        { BuiltInIcons.OK, "ok" },
+        { BuiltInIcons.OK_EXCLAMATION, "ok_exclamation" },
+        { BuiltInIcons.OK_WAIT, "ok_wait" },
+        { BuiltInIcons.WAIT, "wait" },
+        { BuiltInIcons.QUESTION, "question" },
+        { BuiltInIcons.X, "X" },
+        { BuiltInIcons.X_EXCLAMATION, "X_exclamation" },
 
         { BuiltInIcons.FILTER, "filter" },
         { BuiltInIcons.START, "start" },
@@ -159,7 +155,23 @@ public static class BuiltInIcon
         { BuiltInIcons.QUEUE, "queue" },
         { BuiltInIcons.BITTORRENT, "bittorrent" },
         { BuiltInIcons.FEED, "feed" },
-        { BuiltInIcons.UPDATE_INTERVAL, "update_interval" },
+
+        { BuiltInIcons.STATE_DOWNLOADING, "state_downloading" },
+        { BuiltInIcons.STATE_SEEDING, "state_seeding" },
+        { BuiltInIcons.STATE_COMPLETE, "state_complete" },
+        { BuiltInIcons.STATE_PAUSED, "state_paused" },
+        { BuiltInIcons.STATE_STOPPED, "state_stopped" },
+        { BuiltInIcons.STATE_HASHING, "state_hashing" },
+        { BuiltInIcons.STATE_MOVING, "state_moving" },
+        { BuiltInIcons.STATE_ERRORED, "state_errored" },
+        { BuiltInIcons.STATE_ACTIVE, "state_active" },
+        { BuiltInIcons.STATE_ERRORED_OVERLAY, "state_errored_overlay" },
+        { BuiltInIcons.STATE_ACTIVE_OVERLAY, "state_active_overlay" },
+    }.ToFrozenDictionary();
+
+    public static readonly FrozenDictionary<BuiltInIcons, BuiltInIcons> Overlays = new Dictionary<BuiltInIcons, BuiltInIcons>() {
+        { BuiltInIcons.STATE_ERRORED_OVERLAY, BuiltInIcons.STATE_ERRORED },
+        { BuiltInIcons.STATE_ACTIVE_OVERLAY, BuiltInIcons.STATE_ACTIVE },
     }.ToFrozenDictionary();
 
     private const string MaskSuffix = ".mask";
@@ -178,9 +190,12 @@ public static class BuiltInIcon
     {
         Files = null;
         Cache.Clear();
+        IcoCache.Clear();
         GeometryCache.Clear();
         Generation++;
     }
+
+    public static string FileName(BuiltInIcons Icon) => Icons[Icon];
 
     private static Uri Find(BuiltInIcons Icon)
     {
@@ -194,7 +209,41 @@ public static class BuiltInIcon
         return files.TryGetValue(Icons[Icon], out var uri) ? uri : throw new FileNotFoundException($"The theme has no icon {Icons[Icon]} in its Icons folder");
     }
 
-    public static Bitmap Get(BuiltInIcons Icon) => Cache.GetOrAdd(Icon, icon => new Bitmap(AssetLoader.Open(Find(icon))));
+    public static Bitmap Get(BuiltInIcons Icon, int Size = Int32.MaxValue)
+    {
+        var uri = Find(Icon);
+        if (!uri.AbsolutePath.EndsWith(".ico", StringComparison.OrdinalIgnoreCase)) {
+            return Cache.GetOrAdd((Icon, 0), _ => {
+                using var stream = AssetLoader.Open(uri);
+                return new Bitmap(stream);
+            });
+        }
+
+        var (data, info) = IcoCache.GetOrAdd(Icon, _ => {
+            using var stream = AssetLoader.Open(uri);
+            using var memory = new MemoryStream();
+            stream.CopyTo(memory);
+            var bytes = memory.ToArray();
+            return (bytes, IcoDecoder.ReadInfo(bytes));
+        });
+
+        var (index, frame) = info.Entries
+            .Index()
+            .OrderBy(x => x.Item.Width < Size)
+            .ThenBy(x => x.Item.Width < Size ? -x.Item.Width : x.Item.Width)
+            .ThenByDescending(x => x.Item.BitsPerPixel)
+            .First();
+
+        return Cache.GetOrAdd((Icon, index), _ => {
+            var bitmap = new WriteableBitmap(new PixelSize(frame.Width, frame.Height), new Vector(96, 96), PixelFormats.Rgba8888, AlphaFormat.Unpremul);
+            using (var buffer = bitmap.Lock()) {
+                unsafe {
+                    IcoDecoder.DecodeTo(data, index, new Span<byte>((void*)buffer.Address, buffer.RowBytes * frame.Height), Sdcb.SimdCodecs.Abstractions.PixelFormat.Rgba32, buffer.RowBytes);
+                }
+            }
+            return bitmap;
+        });
+    }
 
     public static IGifSource GetGif(BuiltInIcons Icon) => GifStreamSource.FromUri(Find(Icon));
 

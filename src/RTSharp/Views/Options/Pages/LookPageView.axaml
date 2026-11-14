@@ -33,11 +33,14 @@
         </GroupBox>
 
         <GroupBox Header="Torrent listing">
-            <Grid ColumnDefinitions="150, Auto, Auto">
-                <TextBlock Grid.Column="0">Row height:</TextBlock>
-                <NumericUpDown Grid.Column="1" Value="{Binding RowHeight}" Minimum="8" Maximum="64" />
-                <TextBlock Grid.Column="2" Classes="unit">px</TextBlock>
-            </Grid>
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="150, Auto, Auto">
+                    <TextBlock Grid.Column="0">Row height:</TextBlock>
+                    <NumericUpDown Grid.Column="1" Value="{Binding RowHeight}" Minimum="8" Maximum="64" />
+                    <TextBlock Grid.Column="2" Classes="unit">px</TextBlock>
+                </Grid>
+                <CheckBox IsChecked="{Binding StateIcons}">Show state icon next to torrent name</CheckBox>
+            </StackPanel>
         </GroupBox>
 
         <GroupBox Header="Grids">

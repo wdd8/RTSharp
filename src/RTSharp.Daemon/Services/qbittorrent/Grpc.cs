@@ -900,7 +900,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
             return new Protocols.DataProvider.AllTimeDataStats {
                 Download = (ulong)stats.ServerState.AllTimeDownloaded!,
                 Upload = (ulong)stats.ServerState.AllTimeUploaded!,
-                ShareRatio = (float)stats.ServerState.AllTimeDownloaded.Value / stats.ServerState.AllTimeDownloaded.Value
+                ShareRatio = (float)stats.ServerState.AllTimeUploaded.Value / stats.ServerState.AllTimeDownloaded.Value
             };
         }
 

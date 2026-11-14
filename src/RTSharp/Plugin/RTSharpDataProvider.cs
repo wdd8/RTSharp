@@ -4,6 +4,7 @@ using Grpc.Core;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using RTSharp.Shared.Abstractions;
 using RTSharp.Shared.Abstractions.Client;
@@ -115,6 +116,7 @@ public abstract class RTSharpDataProvider : IDataProviderHost
     public IDisposable HookAddTorrentEvDragDrop(Func<object, ValueTask> fx) => Host.HookAddTorrentEvDragDrop(fx);
     public IReadOnlyCollection<Torrent> Torrents => Host.Torrents;
     public IReadOnlyCollection<IPluginHost> Plugins => Host.Plugins;
+    public IHostApplicationLifetime ApplicationLifetime => Host.ApplicationLifetime;
     public ILogger Logger => Host.Logger;
     public HttpClient HttpClient => Host.HttpClient;
     public IDaemonService? GetDaemonService(string serverId) => Host.GetDaemonService(serverId);

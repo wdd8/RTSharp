@@ -23,9 +23,9 @@ jobs:
           {
             echo "versions<<EOF"
             for PROJ in src/RTSharp/RTSharp.csproj src/RTSharp.Daemon/RTSharp.Daemon.csproj; do
-              TFM=$(grep -oP '(?<=<TargetFramework>)[^<]+' "$PROJ" | head -1)
-              if [ -z "$TFM" ]; then echo "No <TargetFramework> in $PROJ" >&2; exit 1; fi
-              echo "${TFM#net}.x"
+              TFMS=$(grep -oP '(?<=<TargetFramework>|<TargetFrameworks>)[^<]+' "$PROJ" | head -1)
+              if [ -z "$TFMS" ]; then echo "No <TargetFramework(s)> in $PROJ" >&2; exit 1; fi
+              for TFM in ${TFMS//;/ }; do echo "${TFM#net}.x"; done
             done | sort -u
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
@@ -53,7 +53,10 @@ jobs:
         run: pwsh scripts/publish.ps1 ${{ matrix.rid }}${{ matrix.self_contained == true && ' -SelfContained' || '' }}
       - name: Publish daemon ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
         if: startsWith(matrix.rid, 'linux-')
-        run: dotnet publish ./src/RTSharp.Daemon -c Release -r ${{ matrix.rid }} ${{ matrix.self_contained == true && '--self-contained' || '--no-self-contained' }} -o ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}
+        run: |
+          for TFM in $(dotnet msbuild ./src/RTSharp.Daemon/RTSharp.Daemon.csproj -getProperty:TargetFrameworks | tr ';' ' '); do
+            dotnet publish ./src/RTSharp.Daemon -c Release -f "$TFM" -r ${{ matrix.rid }} ${{ matrix.self_contained == true && '--self-contained' || '--no-self-contained' }} -o ${{ matrix.rid }}-daemon${{ matrix.self_contained == true && '-self-contained' || '' }}/$TFM
+          done
       - name: Test
         if: matrix.rid == 'linux-x64' && matrix.self_contained == false
         run: |
@@ -101,7 +104,7 @@ jobs:
         run: |
           ARCH="${PLATFORM#linux/}"
           mkdir -p "docker-context/${ARCH}"
-          cp -r "artifacts/${{ matrix.artifact }}/." "docker-context/${ARCH}/"
+          cp -r "artifacts/${{ matrix.artifact }}/net11.0/." "docker-context/${ARCH}/"
       - name: Compute image name
         id: image
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}/daemon" >> "$GITHUB_OUTPUT"
@@ -185,9 +188,9 @@ jobs:
           {
             echo "versions<<EOF"
             for PROJ in src/RTSharp/RTSharp.csproj src/RTSharp.Daemon/RTSharp.Daemon.csproj; do
-              TFM=$(grep -oP '(?<=<TargetFramework>)[^<]+' "$PROJ" | head -1)
-              if [ -z "$TFM" ]; then echo "No <TargetFramework> in $PROJ" >&2; exit 1; fi
-              echo "${TFM#net}.x"
+              TFMS=$(grep -oP '(?<=<TargetFramework>|<TargetFrameworks>)[^<]+' "$PROJ" | head -1)
+              if [ -z "$TFMS" ]; then echo "No <TargetFramework(s)> in $PROJ" >&2; exit 1; fi
+              for TFM in ${TFMS//;/ }; do echo "${TFM#net}.x"; done
             done | sort -u
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
@@ -216,12 +219,17 @@ jobs:
             (cd "${RID}-self-contained" && zip -r "../RTSharp-${RID}-self-contained-v${VERSION}.zip" .)
           done
           for RID in linux-x64 linux-arm64; do
-            chmod +x "${RID}-daemon/RTSharp.Daemon" "${RID}-daemon-self-contained/RTSharp.Daemon" "${RID}-daemon/rls" "${RID}-daemon-self-contained/rls"
-            (cd "${RID}-daemon" && zip -r "../RTSharp-Daemon-${RID}-v${VERSION}.zip" .)
-            (cd "${RID}-daemon-self-contained" && zip -r "../RTSharp-Daemon-${RID}-self-contained-v${VERSION}.zip" .)
+            for SC in "" "-self-contained"; do
+              for DIR in "${RID}-daemon${SC}"/*/; do
+                TFM=$(basename "$DIR")
+                chmod +x "${DIR}RTSharp.Daemon" "${DIR}rls"
+                (cd "$DIR" && zip -r "../../RTSharp-Daemon-${RID}-${TFM}${SC}-v${VERSION}.zip" .)
+              done
+            done
             for FORMAT in deb rpm pkg.tar.zst; do
-              for TYPE in client daemon; do
-                dotnet run scripts/package-linux.cs -- "$FORMAT" "$RID" "$VERSION" "$TYPE"
+              dotnet run scripts/package-linux.cs -- "$FORMAT" "$RID" "$VERSION" client
+              for DIR in "${RID}-daemon"/*/; do
+                dotnet run scripts/package-linux.cs -- "$FORMAT" "$RID" "$VERSION" daemon "$(basename "$DIR")"
               done
             done
           done

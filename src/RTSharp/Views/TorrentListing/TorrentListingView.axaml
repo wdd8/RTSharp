@@ -320,6 +320,25 @@
 				</ContextMenu>
 			  </DataGrid.ColumnHeaderContextMenu>
 			  <DataGrid.Resources>
+				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentNameTemplate">
+				  <StackPanel Orientation="Horizontal" Spacing="4" Margin="{DynamicResource DataGridCellTextBlockMargin}">
+					<Panel IsVisible="{DynamicResource TorrentListingStateIconsVisible}" VerticalAlignment="Center">
+					  <shared:BuiltInPathIcon Value="{Binding StateIcon, Mode=OneWay}" />
+					  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+						<shared:BuiltInPathIcon Classes="Overlay" Value="STATE_ACTIVE_OVERLAY" IsVisible="{Binding IsActive, Mode=OneWay}" />
+						<shared:BuiltInPathIcon Classes="Overlay" Value="STATE_ERRORED_OVERLAY" IsVisible="{Binding IsErrored, Mode=OneWay}" />
+					  </StackPanel>
+					</Panel>
+					<TextBlock Text="{Binding Name, Mode=OneWay}" VerticalAlignment="Center" />
+				  </StackPanel>
+				</DataTemplate>
+				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentStateTemplate">
+				  <StackPanel Orientation="Horizontal" Spacing="4" Margin="{DynamicResource DataGridCellTextBlockMargin}">
+					<shared:BuiltInPathIcon Value="STATE_ACTIVE" IsVisible="{Binding IsActive, Mode=OneWay}" VerticalAlignment="Center" ToolTip.Tip="Active" />
+					<shared:BuiltInPathIcon Value="STATE_ERRORED" IsVisible="{Binding IsErrored, Mode=OneWay}" VerticalAlignment="Center" ToolTip.Tip="Errored" />
+					<TextBlock Text="{Binding State, Mode=OneWay}" VerticalAlignment="Center" />
+				  </StackPanel>
+				</DataTemplate>
 				<DataTemplate x:DataType="models:Torrent" x:Key="TorrentDoneTemplate">
 				  <dataGridEx:TorrentProgressCell Value="{Binding Done, Mode=OneWay}" ShowSequentialMarker="{Binding ShowSequentialDownloadMarker, Mode=OneWay}" IsHashing="{Binding IsHashing, Mode=OneWay}" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
 				    FontSize="{DynamicResource ControlContentThemeFontSize}"

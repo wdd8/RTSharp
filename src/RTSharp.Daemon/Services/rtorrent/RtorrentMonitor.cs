@@ -125,7 +125,7 @@ namespace RTSharp.Daemon.Services.rtorrent
                 }
             }
 
-            Logger.LogInformation("Infohash cache populated: {Added} added, {Failed} failed, {Total} total", added, failed, total);
+            Logger.LogDebug("Infohash cache populated: {Added} added, {Failed} failed, {Total} total", added, failed, total);
         }
     }
 }

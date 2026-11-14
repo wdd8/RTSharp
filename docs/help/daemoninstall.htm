@@ -9,7 +9,7 @@
 
 <p>There are two ways to run RTSharp.Daemon on your server:</p>
 <div class="list">
-- Systemd service: install the rtsharp-daemon package (.deb, .rpm or .pkg.tar.zst). The package installs the ASP.NET Core .NET 10 runtime as a dependency, and the configuration file is /etc/rtsharp-daemon/appsettings.json. The service is not started or enabled by the installation, so you have to complete these steps:<br>
+- Systemd service: install the rtsharp-daemon-net10 or rtsharp-daemon-net11 package (.deb, .rpm or .pkg.tar.zst), depending on which ASP.NET Core runtime your distribution provides. The package installs that runtime as a dependency, and the configuration file is /etc/rtsharp-daemon/appsettings.json. The service is not started or enabled by the installation, so you have to complete these steps:<br>
 &nbsp;&nbsp;1. Set the user and group the daemon runs as: <code>systemctl edit rtsharp-daemon</code>, then add <code>User=</code> and <code>Group=</code> under <code>[Service]</code>. The .deb installer asks for the user and fills it in for you, but check it.<br>
 &nbsp;&nbsp;2. Enable and start the service: <code>systemctl enable --now rtsharp-daemon</code>.<br>
 - Docker container: see the docker-compose.yml file of the daemon for an example configuration. An example configuration will be created upon the first startup.<br>
