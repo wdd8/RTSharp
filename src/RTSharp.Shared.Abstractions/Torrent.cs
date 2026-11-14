@@ -84,9 +84,9 @@ public class Torrent
     public required ulong DLSpeed { get; set; }
 
     /// <summary>
-    /// Hash-check (verification) speed, B/s
+    /// Hash-check (verification) or data move speed, B/s
     /// </summary>
-    public required ulong HashingSpeed { get; set; }
+    public required ulong IOSpeed { get; set; }
 
     /// <summary>
     /// Upload speed, B/s
@@ -221,7 +221,8 @@ public enum TORRENT_STATE
     ACTIVE = 1 << 7,
     INACTIVE = 1 << 8,
     ERRORED = 1 << 9,
-    ALLOCATING = 1 << 10
+    ALLOCATING = 1 << 10,
+    MOVING = 1 << 11
 }
 
 public static class EnumExt
@@ -244,6 +245,8 @@ public static class EnumExt
                 stateStr = "Paused";
             if ((state & TORRENT_STATE.HASHING) == TORRENT_STATE.HASHING)
                 stateStr = "Hashing";
+            if ((state & TORRENT_STATE.MOVING) == TORRENT_STATE.MOVING)
+                stateStr = "Moving";
             if ((state & TORRENT_STATE.ERRORED) == TORRENT_STATE.ERRORED)
                 stateStr = "☠ " + stateStr;
             if ((state & TORRENT_STATE.ACTIVE) == TORRENT_STATE.ACTIVE)
@@ -267,6 +270,8 @@ public static class EnumExt
             ret |= TORRENT_STATE.PAUSED;
         if (Option == "Hashing")
             ret |= TORRENT_STATE.HASHING;
+        if (Option == "Moving")
+            ret |= TORRENT_STATE.MOVING;
         if (Option == "Errored")
             ret |= TORRENT_STATE.ERRORED;
         if (Option == "Active")
@@ -283,6 +288,7 @@ public static class EnumExt
             "Downloading",
             "Paused",
             "Hashing",
+            "Moving",
             "Errored",
             "Active"
         ];

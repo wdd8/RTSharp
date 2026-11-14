@@ -25,7 +25,7 @@
                 QBittorrent.Client.TorrentState.Allocating => Shared.Abstractions.TORRENT_STATE.ALLOCATING,
                 QBittorrent.Client.TorrentState.QueuedForChecking => Shared.Abstractions.TORRENT_STATE.HASHING,
                 QBittorrent.Client.TorrentState.CheckingResumeData => Shared.Abstractions.TORRENT_STATE.HASHING | Shared.Abstractions.TORRENT_STATE.ACTIVE,
-                QBittorrent.Client.TorrentState.Moving => Shared.Abstractions.TORRENT_STATE.ALLOCATING | Shared.Abstractions.TORRENT_STATE.HASHING, // ???
+                QBittorrent.Client.TorrentState.Moving => Shared.Abstractions.TORRENT_STATE.MOVING,
                 _ => throw new ArgumentOutOfRangeException(nameof(In))
             };
         }

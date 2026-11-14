@@ -13,6 +13,7 @@ using RTSharp.Shared.Utils;
 using System.Buffers;
 using System.Diagnostics;
 
+using SpeedMovingAverage = RTSharp.Shared.Abstractions.SpeedMovingAverage;
 
 namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 {
@@ -64,7 +65,7 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                     torrent.Downloaded != old.Downloaded ||
                     torrent.CompletedSize != old.CompletedSize ||
                     torrent.DLSpeed != old.DLSpeed ||
-                    torrent.HashingSpeed != old.HashingSpeed ||
+                    torrent.IOSpeed != old.IOSpeed ||
                     torrent.UPSpeed != old.UPSpeed ||
                     torrent.SeedersConnected != old.SeedersConnected ||
                     torrent.SeedersTotal != old.SeedersTotal ||
@@ -509,13 +510,13 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
                 }
                 var state = upSpeed > 0 || dlSpeed > 0 || hashingSpeed > 0 ? torrent.State | TorrentState.Active : torrent.State & ~TorrentState.Active;
 
-                if (torrent.UPSpeed != upSpeed || torrent.DLSpeed != dlSpeed || torrent.HashingSpeed != hashingSpeed || !Equals(torrent.ETA, eta) || torrent.State != state) {
+                if (torrent.UPSpeed != upSpeed || torrent.DLSpeed != dlSpeed || torrent.IOSpeed != hashingSpeed || !Equals(torrent.ETA, eta) || torrent.State != state) {
                     if (ReferenceEquals(torrent, shared))
                         torrent = shared.Clone();
 
                     torrent.UPSpeed = upSpeed;
                     torrent.DLSpeed = dlSpeed;
-                    torrent.HashingSpeed = hashingSpeed;
+                    torrent.IOSpeed = hashingSpeed;
                     torrent.ETA = eta;
                     torrent.State = state;
                 }

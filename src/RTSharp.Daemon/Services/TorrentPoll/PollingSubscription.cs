@@ -89,7 +89,7 @@ internal static class TorrentDeltaMessages
         CompletedSize = Torrent.CompletedSize,
         Uploaded = Torrent.Uploaded,
         DLSpeed = Torrent.DLSpeed,
-        HashingSpeed = Torrent.HashingSpeed,
+        IOSpeed = Torrent.IOSpeed,
         UPSpeed = Torrent.UPSpeed,
         ETA = Torrent.ETA?.Clone(),
         SeedersConnected = Torrent.SeedersConnected,

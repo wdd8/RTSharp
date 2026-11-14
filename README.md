@@ -74,6 +74,7 @@ See [setting up data providers](docs/setup-dataproviders.md)
 |Daemon log inspection|🟡Supported*|🟢Supported|🟡Supported*|
 |Fast recheck|🟢Supported|🟢Supported|🟢Supported|
 |Magnet links|🟢Supported|🟢Supported|🟢Supported|
+|Move progress|🔴Not implemented|🟢Supported|🔴Not implemented|
 
 _* - not directly supported by torrent daemon_
 

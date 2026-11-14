@@ -105,7 +105,7 @@ public class FileTransferService
 
                     if (sw.Elapsed > TimeSpan.FromSeconds(0.5)) {
                         speed!.ValueIfChanged(bytesTotal);
-                        var bytesPerSecond = Math.Max(0, speed.CalculateSpeed());
+                        var bytesPerSecond = speed.CalculateSpeed();
                         try { Progress(new(currentPath!, bytesTotal, currentTotalBytes, bytesPerSecond)); } catch { }
                         sw.Restart();
                     }

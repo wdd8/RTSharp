@@ -322,7 +322,7 @@ namespace RTSharp.Models
                 if (_dlSpeed == value) return;
                 _dlSpeed = value;
                 DLSpeedDisplay = Converters.GetSIDataSpeed(value);
-                DLPlusHashingSpeedDisplay = Converters.GetSIDataSpeed(_dlSpeed + _hashingSpeed);
+                DLPlusIOSpeedDisplay = Converters.GetSIDataSpeed(_dlSpeed + _ioSpeed);
             }
         }
 
@@ -336,30 +336,30 @@ namespace RTSharp.Models
         /// <summary>
         /// Hash-check (verification) speed, B/s
         /// </summary>
-        private ulong _hashingSpeed;
-        public ulong HashingSpeed
+        private ulong _ioSpeed;
+        public ulong IOSpeed
         {
-            get => _hashingSpeed;
+            get => _ioSpeed;
             set {
-                if (_hashingSpeed == value) return;
-                _hashingSpeed = value;
-                HashingSpeedDisplay = Converters.GetSIDataSpeed(value);
-                DLPlusHashingSpeedDisplay = Converters.GetSIDataSpeed(_dlSpeed + _hashingSpeed);
+                if (_ioSpeed == value) return;
+                _ioSpeed = value;
+                IOSpeedDisplay = Converters.GetSIDataSpeed(value);
+                DLPlusIOSpeedDisplay = Converters.GetSIDataSpeed(_dlSpeed + _ioSpeed);
             }
         }
 
-        private string _hashingSpeedDisplay = null!;
-        public string HashingSpeedDisplay
+        private string _ioSpeedDisplay = null!;
+        public string IOSpeedDisplay
         {
-            get => _hashingSpeedDisplay;
-            set => SetProperty(ref _hashingSpeedDisplay, value);
+            get => _ioSpeedDisplay;
+            set => SetProperty(ref _ioSpeedDisplay, value);
         }
 
-        private string _dlPlusHashingSpeedDisplay = null!;
-        public string DLPlusHashingSpeedDisplay
+        private string _dlPlusIOSpeedDisplay = null!;
+        public string DLPlusIOSpeedDisplay
         {
-            get => _dlPlusHashingSpeedDisplay;
-            set => SetProperty(ref _dlPlusHashingSpeedDisplay, value);
+            get => _dlPlusIOSpeedDisplay;
+            set => SetProperty(ref _dlPlusIOSpeedDisplay, value);
         }
 
         /// <summary>
@@ -669,8 +669,8 @@ namespace RTSharp.Models
             _uploadedDisplay = Converters.ZeroBytes;
             _ratioDisplay = "0.000";
             _dlSpeedDisplay = Converters.ZeroBytesPerSec;
-            _hashingSpeedDisplay = Converters.ZeroBytesPerSec;
-            _dlPlusHashingSpeedDisplay = Converters.ZeroBytesPerSec;
+            _ioSpeedDisplay = Converters.ZeroBytesPerSec;
+            _dlPlusIOSpeedDisplay = Converters.ZeroBytesPerSec;
             _upSpeedDisplay = Converters.ZeroBytesPerSec;
             _etaDisplay = Converters.ToAgoString(TimeSpan.Zero);
             _peersDisplay = new ConnectedTotalPair(0, 0).ToString();
@@ -796,8 +796,8 @@ namespace RTSharp.Models
             if (_dlSpeed != changes.DLSpeed) {
                 DLSpeed = changes.DLSpeed;
             }
-            if (_hashingSpeed != changes.HashingSpeed) {
-                HashingSpeed = changes.HashingSpeed;
+            if (_ioSpeed != changes.IOSpeed) {
+                IOSpeed = changes.IOSpeed;
             }
             if (_upSpeed != changes.UPSpeed) {
                 UPSpeed = changes.UPSpeed;
@@ -870,7 +870,7 @@ namespace RTSharp.Models
                 CompletedSize = _completedSize,
                 Uploaded = _uploaded,
                 DLSpeed = _dlSpeed,
-                HashingSpeed = _hashingSpeed,
+                IOSpeed = _ioSpeed,
                 UPSpeed = _upSpeed,
                 ETA = _eta,
                 Labels = [.. _labels],

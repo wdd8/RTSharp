@@ -641,6 +641,8 @@ namespace RTSharp.Daemon.Services.qbittorrent
                             ];
                         }
 
+                        var polling = ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey);
+                        polling.MoveRequested(req.InfoHash.Span, req.TargetDirectory);
                         try {
                             await client.SetLocationAsync(ToNativeHex(req.InfoHash.Span), req.TargetDirectory, cts.Token);
                         } catch (Exception ex) {
@@ -649,6 +651,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
                             progress.State = TASK_STATE.FAILED;
                             progress.Text = $"Failed to set location. {ex.Message}";
                         }
+                        polling.MoveIssued(req.InfoHash.Span);
 
                         session.Send(new MoveDownloadDirectoryProgress(req.InfoHash.ToByteArray(), req.TargetDirectory, exception?.ToString() ?? "", exception == null));
 

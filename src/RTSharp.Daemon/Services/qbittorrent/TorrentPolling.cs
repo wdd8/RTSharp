@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
+using Mono.Unix.Native;
 using RTSharp.Daemon.Protocols.DataProvider;
 using RTSharp.Daemon.Services.TorrentPoll;
 using RTSharp.Daemon.Exceptions;
@@ -18,6 +20,20 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
     private readonly ReaderWriterLockSlim LatestTorrentsLock = new();
     // Only used by the poll loop
     private InfoHashDictionary<Protocols.DataProvider.Torrent>? LastSnapshot;
+    // Moves we asked for, by native hex hash
+    private readonly ConcurrentDictionary<string, (string Target, DateTime? Issued)> RequestedMoves = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ActiveMove> ActiveMoves = new(StringComparer.OrdinalIgnoreCase);
+
+    private sealed class ActiveMove(byte[] NativeHash, string TargetDir, ulong CompletedSize)
+    {
+        public byte[] NativeHash { get; } = NativeHash;
+        public string TargetDir { get; } = TargetDir;
+        public ulong CompletedSize { get; } = CompletedSize;
+        public SpeedMovingAverage Speed { get; } = new(5);
+        public List<(string Path, ulong TotalBytes)>? Pending;
+        public ulong TotalCopiedBytes;
+        public ulong TotalTargetBytes;
+    }
 
     public Protocols.DataProvider.Torrent? GetLatestTorrent(ReadOnlySpan<byte> Hash)
     {
@@ -28,6 +44,16 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
         } finally {
             LatestTorrentsLock.ExitReadLock();
         }
+    }
+
+    public void MoveRequested(ReadOnlySpan<byte> Hash, string Target) =>
+        RequestedMoves[Convert.ToHexString(InfoHash.TruncateV2(Hash))] = (Path.TrimEndingDirectorySeparator(Target), null);
+
+    public void MoveIssued(ReadOnlySpan<byte> Hash)
+    {
+        var key = Convert.ToHexString(InfoHash.TruncateV2(Hash));
+        if (RequestedMoves.TryGetValue(key, out var requested))
+            RequestedMoves.TryUpdate(key, requested with { Issued = DateTime.UtcNow }, requested);
     }
 
     protected internal override DeltaTorrentsListResponse BuildChanges(HistoryEntry? Previous, HistoryEntry Current)
@@ -75,7 +101,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 torrent.Downloaded != old.Downloaded ||
                 torrent.CompletedSize != old.CompletedSize ||
                 torrent.DLSpeed != old.DLSpeed ||
-                torrent.HashingSpeed != old.HashingSpeed ||
+                torrent.IOSpeed != old.IOSpeed ||
                 torrent.UPSpeed != old.UPSpeed ||
                 torrent.SeedersConnected != old.SeedersConnected ||
                 torrent.SeedersTotal != old.SeedersTotal ||
@@ -103,7 +129,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
             var client = await backend.Init();
             var data = await client.GetPartialDataAsync(PollResponseId, CancellationToken);
 
-            if (!data.FullUpdate && LastSnapshot != null && (data.TorrentsChanged?.Count ?? 0) == 0 && (data.TorrentsRemoved?.Count ?? 0) == 0) {
+            if (!data.FullUpdate && LastSnapshot != null && ActiveMoves.Count == 0 && RequestedMoves.IsEmpty && (data.TorrentsChanged?.Count ?? 0) == 0 && (data.TorrentsRemoved?.Count ?? 0) == 0) {
                 PollResponseId = data.ResponseId;
                 return new HistoryEntry(DateTime.UtcNow, LastSnapshot);
             }
@@ -123,7 +149,9 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 foreach (var (nativeHex, external) in data.TorrentsChanged) {
                     var native = Convert.FromHexString(nativeHex);
                     Protocols.DataProvider.Torrent current;
+                    string? previousPath = null;
                     if (next.TryGetValue(native, out var previous)) {
+                        previousPath = previous.Torrent.RemotePath;
                         current = previous.Torrent.Clone();
                         // Magnet can acquire a full v2 hash after the first snapshot.
                         if (!String.IsNullOrEmpty(external.InfoHashV2))
@@ -146,21 +174,103 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                         };
                     }
                     TorrentMapper.ApplyFromExternal(current, external);
+
+                    if (current.State.HasFlag(Protocols.DataProvider.TorrentState.Moving)) {
+                        if (!ActiveMoves.ContainsKey(nativeHex)) {
+                            /*
+                             * Convert to active from our own source, otherwise in some cases torrent can
+                             * report its new save path as soon as the move starts
+                             */
+                            if (RequestedMoves.TryRemove(nativeHex, out var requested))
+                                ActiveMoves[nativeHex] = new ActiveMove(native, requested.Target, current.CompletedSize);
+                            else if (previousPath != null && previousPath != current.RemotePath)
+                                ActiveMoves[nativeHex] = new ActiveMove(native, current.RemotePath, current.CompletedSize);
+                        }
+                    } else {
+                        // Moving -> *
+                        if (ActiveMoves.Remove(nativeHex, out var ended) && external.CompletedSize == null)
+                            current.CompletedSize = ended.CompletedSize;
+                    }
                     UpdateHashingSpeed(current);
                     next[native] = (current, current.Hash.ToByteArray());
                 }
             }
             if (data.TorrentsRemoved != null) {
-                foreach (var native in data.TorrentsRemoved)
+                foreach (var native in data.TorrentsRemoved) {
                     next.Remove(Convert.FromHexString(native));
+                    ActiveMoves.Remove(native);
+                    RequestedMoves.TryRemove(native, out _);
+                }
             }
 
-            LatestTorrentsLock.EnterWriteLock();
-            try {
-                LatestTorrents = next;
-            } finally {
-                LatestTorrentsLock.ExitWriteLock();
+            // Remove lost
+            foreach (var (nativeHex, requested) in RequestedMoves) {
+                if (requested.Issued is { } issued && DateTime.UtcNow - issued > TimeSpan.FromMinutes(5))
+                    RequestedMoves.TryRemove(nativeHex, out _);
             }
+
+            static ulong allocated(string FilePath) => Syscall.stat(FilePath, out var stat) == 0 ? (ulong)stat.st_blocks * 512 : 0;
+
+            foreach (var (nativeHex, move) in ActiveMoves) {
+                if (!next.TryGetValue(move.NativeHash, out var entry))
+                    continue;
+
+                if (move.Pending == null) {
+                    IReadOnlyList<TorrentContent> files;
+                    try {
+                        files = await client.GetTorrentContentsAsync(nativeHex, null, CancellationToken);
+                    } catch (Exception ex) when (!CancellationToken.IsCancellationRequested) {
+                        Logger.LogTrace(ex, "Failed to get files of moving torrent {Hash}", nativeHex);
+                        continue;
+                    }
+
+                    // Each target file is reserved before copying, so progress is allocated bytes.
+                    // Only the downloaded data of unfinished files is copied, their holes stay unallocated.
+                    move.Pending = new(files.Count);
+                    foreach (var file in files) {
+                        if (file.Priority == TorrentContentPriority.Skip)
+                            continue;
+
+                        var bytes = (ulong)(file.Progress * file.Size);
+                        move.TotalTargetBytes += bytes;
+                        move.Pending.Add((Path.Combine(move.TargetDir, file.Name), bytes));
+                    }
+                }
+
+                ulong copying = 0;
+                move.Pending.RemoveAll(x => {
+                    var bytes = allocated(x.Path);
+                    if (bytes < x.TotalBytes) {
+                        copying += bytes;
+                        return false;
+                    }
+                    move.TotalCopiedBytes += x.TotalBytes;
+                    return true;
+                });
+
+                var copied = move.TotalCopiedBytes + copying;
+                move.Speed.Value(DateTime.UtcNow, (long)copied);
+                var speed = (ulong)move.Speed.CalculateSpeed();
+                Duration? eta = null;
+                if (speed != 0) {
+                    var secs = (double)(move.TotalTargetBytes - copied) / speed;
+                    eta = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
+                }
+
+                var completed = move.TotalTargetBytes == 0 ? move.CompletedSize : (ulong)((double)move.CompletedSize * copied / move.TotalTargetBytes);
+                if (entry.Torrent.IOSpeed == speed && Equals(entry.Torrent.ETA, eta) && entry.Torrent.CompletedSize == completed)
+                    continue;
+
+                var moving = entry.Torrent.Clone();
+                moving.IOSpeed = speed;
+                moving.ETA = eta;
+                moving.CompletedSize = completed;
+                next[move.NativeHash] = (moving, entry.Key);
+            }
+
+            LatestTorrentsLock.EnterWriteLock(); try {
+                LatestTorrents = next;
+            } finally { LatestTorrentsLock.ExitWriteLock(); }
             PollResponseId = data.ResponseId;
             LastSnapshot = next.Values.ToInfoHashDictionary(x => x.Key, x => x.Torrent);
             return new HistoryEntry(DateTime.UtcNow, LastSnapshot);
@@ -177,8 +287,8 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
         if (Torrent.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing)) {
             var sma = Services.GetRequiredService<ISpeedMovingAverageService>().Get(InstanceKey, $"HashingSpeed_{Convert.ToHexString(Torrent.Hash.Span)}");
             sma.ValueIfChanged(DateTime.UtcNow, (long)Torrent.CompletedSize);
-            var hashingSpeed = (ulong)Math.Max(0, sma.CalculateSpeed());
-            Torrent.HashingSpeed = hashingSpeed;
+            var hashingSpeed = (ulong)sma.CalculateSpeed();
+            Torrent.IOSpeed = hashingSpeed;
 
             // No native ETA for hashing state
             if (hashingSpeed == 0 || Torrent.IsCompleted) {
@@ -188,7 +298,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 Torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
             }
         } else {
-            Torrent.HashingSpeed = 0;
+            Torrent.IOSpeed = 0;
         }
     }
 }

@@ -14,6 +14,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 
 using ISpeedMovingAverage = RTSharp.Shared.Abstractions.ISpeedMovingAverage;
+using SpeedMovingAverage = RTSharp.Shared.Abstractions.SpeedMovingAverage;
 using ScriptProgressState = RTSharp.Shared.Abstractions.ScriptProgressState;
 using TASK_STATE = RTSharp.Shared.Abstractions.TASK_STATE;
 
@@ -389,7 +390,7 @@ public class TorrentOpService
                         return;
 
                     speed.ValueIfChanged(copied);
-                    var bytesPerSecond = Math.Max(0, speed.CalculateSpeed());
+                    var bytesPerSecond = speed.CalculateSpeed();
 
                     Progress.Progress = totalBytes > 0 ? (completedBytes + copied) / (float)totalBytes * 100f : 0f;
                     Progress.Text = bytesPerSecond > 0 ? $"{Converters.GetSIDataSize((ulong)bytesPerSecond)}/s" : "Copying files...";

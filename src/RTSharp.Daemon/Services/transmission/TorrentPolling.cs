@@ -70,7 +70,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 torrent.Downloaded != old.Downloaded ||
                 torrent.CompletedSize != old.CompletedSize ||
                 torrent.DLSpeed != old.DLSpeed ||
-                torrent.HashingSpeed != old.HashingSpeed ||
+                torrent.IOSpeed != old.IOSpeed ||
                 torrent.UPSpeed != old.UPSpeed ||
                 torrent.SeedersConnected != old.SeedersConnected ||
                 torrent.SeedersTotal != old.SeedersTotal ||
@@ -168,8 +168,8 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
         if (Torrent.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing)) {
             var sma = Services.GetRequiredService<ISpeedMovingAverageService>().Get(InstanceKey, $"HashingSpeed_{Convert.ToHexString(Torrent.Hash.Span)}");
             sma.ValueIfChanged(DateTime.UtcNow, (long)Torrent.CompletedSize);
-            var hashingSpeed = (ulong)Math.Max(0, sma.CalculateSpeed());
-            Torrent.HashingSpeed = hashingSpeed;
+            var hashingSpeed = (ulong)sma.CalculateSpeed();
+            Torrent.IOSpeed = hashingSpeed;
 
             // No native ETA for hashing state
             if (hashingSpeed == 0 || Torrent.IsCompleted) {
@@ -179,7 +179,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 Torrent.ETA = secs >= Duration.MaxSeconds ? null : Duration.FromTimeSpan(TimeSpan.FromSeconds(secs));
             }
         } else {
-            Torrent.HashingSpeed = 0;
+            Torrent.IOSpeed = 0;
         }
     }
 }

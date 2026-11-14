@@ -406,6 +406,13 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
     [RelayCommand]
     public async Task ActionButton()
     {
+        var current = await Torrent.DataOwner.GetTorrent(Torrent.Hash);
+        var stopped = current.State.HasFlag(TORRENT_STATE.STOPPED) || current.State.HasFlag(TORRENT_STATE.COMPLETE) || current.State.HasFlag(TORRENT_STATE.PAUSED);
+        if (!stopped) {
+            Dispatcher.UIThread.Invoke(() => StatusText = "Stop the torrent first");
+            return;
+        }
+
         if (PendingLinks.Count != 0) {
             await Torrent.DataOwner.Host.AttachedDaemonService!.LinkFiles([.. PendingLinks], Reflink, Hardlink);
         } else if (Files.All(x => x.Resolved == RESOLVE_STATE.RESOLVED || x.Resolved == RESOLVE_STATE.RESOLVED_HEURISTICS)) {

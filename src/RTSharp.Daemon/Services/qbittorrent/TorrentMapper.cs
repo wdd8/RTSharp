@@ -27,7 +27,7 @@ public class TorrentMapper
             QBittorrent.Client.TorrentState.Allocating => Protocols.DataProvider.TorrentState.Allocating,
             QBittorrent.Client.TorrentState.QueuedForChecking => Protocols.DataProvider.TorrentState.Hashing,
             QBittorrent.Client.TorrentState.CheckingResumeData => Protocols.DataProvider.TorrentState.Hashing | Protocols.DataProvider.TorrentState.Active,
-            QBittorrent.Client.TorrentState.Moving => Protocols.DataProvider.TorrentState.Allocating | Protocols.DataProvider.TorrentState.Hashing, // ???
+            QBittorrent.Client.TorrentState.Moving => Protocols.DataProvider.TorrentState.Moving,
             _ => throw new ArgumentOutOfRangeException(),
         };
     }

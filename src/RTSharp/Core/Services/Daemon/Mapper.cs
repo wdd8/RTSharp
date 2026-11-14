@@ -23,6 +23,7 @@ public static class Mapper
             RTSharp.Daemon.Protocols.DataProvider.TorrentState.Active => Shared.Abstractions.TORRENT_STATE.ACTIVE,
             RTSharp.Daemon.Protocols.DataProvider.TorrentState.Inactive => Shared.Abstractions.TORRENT_STATE.INACTIVE,
             RTSharp.Daemon.Protocols.DataProvider.TorrentState.Errored => Shared.Abstractions.TORRENT_STATE.ERRORED,
+            RTSharp.Daemon.Protocols.DataProvider.TorrentState.Moving => Shared.Abstractions.TORRENT_STATE.MOVING,
             _ => Shared.Abstractions.TORRENT_STATE.NONE
         });
     }
@@ -55,7 +56,7 @@ public static class Mapper
                 CompletedSize = In.CompletedSize,
                 Uploaded = In.Uploaded,
                 DLSpeed = In.DLSpeed,
-                HashingSpeed = In.HashingSpeed,
+                IOSpeed = In.IOSpeed,
                 UPSpeed = In.UPSpeed,
                 ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan(),
                 Labels = InternLabels(In.Labels),
@@ -88,7 +89,7 @@ public static class Mapper
             Existing.CompletedSize = In.CompletedSize;
             Existing.Uploaded = In.Uploaded;
             Existing.DLSpeed = In.DLSpeed;
-            Existing.HashingSpeed = In.HashingSpeed;
+            Existing.IOSpeed = In.IOSpeed;
             Existing.UPSpeed = In.UPSpeed;
             Existing.ETA = In.ETA == null ? TimeSpan.MaxValue : In.ETA.ToTimeSpan();
             Existing.Peers = (In.PeersConnected, In.PeersTotal);

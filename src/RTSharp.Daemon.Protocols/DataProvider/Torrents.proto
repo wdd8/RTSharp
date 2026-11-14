@@ -38,7 +38,7 @@ message IncompleteDeltaTorrentResponse {
     uint32 PeersConnected = 10;
     uint32 PeersTotal = 11;
     uint64 Wasted = 12;
-    uint64 HashingSpeed = 13;
+    uint64 IOSpeed = 13;
 }
 
 message CompleteDeltaTorrentResponse {
@@ -88,7 +88,7 @@ message Torrent {
     string StatusMessage = 27;
     bool MagnetDummy = 28;
     bool SequentialDownload = 29;
-    uint64 HashingSpeed = 30;
+    uint64 IOSpeed = 30;
 }
 
 enum TorrentState {
@@ -106,7 +106,8 @@ enum TorrentState {
     TorrentState_ERRORED = 0x200;
     TorrentState_ALLOCATING = 0x400;
     TorrentState_QUEUED = 0x800;
-    TorrentState_MAX = 0x800;
+    TorrentState_MOVING = 0x1000;
+    TorrentState_MAX = 0x1000;
 }
 
 enum TorrentPriority {
