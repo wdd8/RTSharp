@@ -67,6 +67,9 @@ namespace RTSharp.Models
         [ObservableProperty]
         public partial string AddedOnDisplay { get; set; } = "";
 
+        [ObservableProperty]
+        public partial string RemotePathDisplay { get; set; } = "";
+
         public void Update(IReadOnlyList<Torrent> Torrents)
         {
             ulong wantedSize = 0, completedSize = 0, downloaded = 0, uploaded = 0, remainingSize = 0, wasted = 0;
@@ -120,6 +123,15 @@ namespace RTSharp.Models
                 foreach (var label in torrent.Labels)
                     labels.Add(label);
             }
+
+            var commonPath = Torrents.Count == 0 ? "" : Torrents[0].RemotePath;
+            foreach (var torrent in Torrents) {
+                if (torrent.RemotePath != commonPath) {
+                    commonPath = "";
+                    break;
+                }
+            }
+            RemotePathDisplay = commonPath ?? "";
 
             CountDisplay = $"{Torrents.Count} torrents selected";
             Done = wantedSize == 0 ? 100 : (float)completedSize / wantedSize * 100;

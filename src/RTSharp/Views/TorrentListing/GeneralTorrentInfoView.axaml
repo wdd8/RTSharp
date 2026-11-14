@@ -100,12 +100,13 @@
                             </Grid>
                         </GroupBox>
                         <GroupBox Header="Torrent info">
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" FontWeight="Bold" Text="{Binding StatesDisplay}" />
 
                                 <views:TextBlockWithLabel Grid.Row="1" Grid.Column="0" Label="Wanted Size:" Text="{Binding WantedSizeDisplay}" />
                                 <views:TextBlockWithLabel Grid.Row="2" Grid.Column="0" Label="Added on:" Text="{Binding AddedOnDisplay}" />
                                 <views:TextBlockWithLabel Grid.Row="3" Grid.Column="0" Label="Connections:" Text="{Binding ConnectionsDisplay}" />
+                                <views:TextBlockWithLabel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Label="Remote path:" Text="{Binding RemotePathDisplay}" IsVisible="{Binding RemotePathDisplay, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                                 <views:TextBlockWithLabel Grid.Row="1" Grid.Column="1" Label="Trackers:" Text="{Binding TrackersDisplay}" />
                                 <views:TextBlockWithLabel Grid.Row="2" Grid.Column="1" Label="Labels:" Text="{Binding LabelsDisplay}" />
