@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
@@ -40,7 +40,7 @@
   <ItemGroup>
     <PackageReference Update="Dapper" Version="2.1.89" />
     <PackageReference Update="Dapper.AOT" Version="1.1.0" />
-    <PackageReference Update="Microsoft.Data.Sqlite" Version="10.0.14" />
+    <PackageReference Update="Microsoft.Data.Sqlite" Version="11.0.0" />
     <PackageReference Update="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
   </ItemGroup>
 </Project>

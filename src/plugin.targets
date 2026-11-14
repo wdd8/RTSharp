@@ -14,6 +14,10 @@
         <PublishReadyToRun>true</PublishReadyToRun>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <Features>runtime-async=on</Features>
+    </PropertyGroup>
+
     <!--
         Ghost reference to main project to enforce build order.
         To actually refer to main project, RTSharpPluginReferencesHost prop
