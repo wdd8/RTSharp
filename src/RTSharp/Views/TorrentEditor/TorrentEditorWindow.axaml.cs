@@ -31,7 +31,7 @@ public partial class TorrentEditorWindow : VmWindow<TorrentEditorWindowViewModel
                     Patterns = [ "*.torrent" ]
                 }
             ],
-            Title = "Save .torrent as...",
+            Title = "Save As",
             ShowOverwritePrompt = true,
             SuggestedFileName = SuggestedName
         });

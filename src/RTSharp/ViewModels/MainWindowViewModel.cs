@@ -91,7 +91,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         var torrentListing = new DocumentWithIcon {
             Id = "TorrentListing",
-            Title = "Torrent listing",
+            Title = "Torrent Listing",
             Icon = BuiltInIcons.TORRENT_LISTING,
             // Built in the same pass as the dock layout, rather than in a later background priority pass
             DeferContentPresentation = false,
@@ -101,7 +101,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         var actionQueue = new DocumentWithIcon {
             Id = "ActionQueue",
-            Title = "Action queue",
+            Title = "Action Queue",
             Icon = BuiltInIcons.ACTION_QUEUE,
             Content = new Func<IServiceProvider, object>(_ => new ActionQueuesView {
                 DataContext = actionQueuesViewModel
@@ -121,7 +121,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         var rightTool = new Tool {
             Id = "DataProviders",
-            Title = "Data providers",
+            Title = "Data Providers",
             Content = new Func<IServiceProvider, object>(_ => new DataProvidersView {
                 DataContext = dataProvidersViewModel
             }),
@@ -188,7 +188,7 @@ public partial class MainWindowViewModel : ObservableObject
         var optionsWindow = new OptionsWindow() {
             ViewModel = new()
         };
-        optionsWindow.Show();
+        optionsWindow.Show(App.MainWindow);
     }
 
     [RelayCommand]
@@ -197,7 +197,7 @@ public partial class MainWindowViewModel : ObservableObject
         var aboutWindow = new AboutWindow() {
             ViewModel = new()
         };
-        aboutWindow.Show();
+        aboutWindow.Show(App.MainWindow);
     }
 
     [RelayCommand]
@@ -206,7 +206,7 @@ public partial class MainWindowViewModel : ObservableObject
         var addTorrentWindow = new AddTorrentWindow() {
             ViewModel = new()
         };
-        addTorrentWindow.Show();
+        addTorrentWindow.Show(App.MainWindow);
     }
 
     [RelayCommand]
@@ -221,7 +221,7 @@ public partial class MainWindowViewModel : ObservableObject
         var wnd = new ManageServersWindow {
             ViewModel = new()
         };
-        wnd.Show();
+        wnd.Show(App.MainWindow);
     }
 
     [RelayCommand]
@@ -230,7 +230,7 @@ public partial class MainWindowViewModel : ObservableObject
         var torrentCreatorWindow = new TorrentCreatorWindow() {
             ViewModel = new()
         };
-        torrentCreatorWindow.Show();
+        torrentCreatorWindow.Show(App.MainWindow);
     }
 
     [RelayCommand]

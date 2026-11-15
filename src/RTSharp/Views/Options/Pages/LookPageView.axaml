@@ -11,40 +11,36 @@
     <UserControl.Styles>
         <Style Selector="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0 0 8 0" />
-        </Style>
-        <Style Selector="TextBlock.unit">
-            <Setter Property="Margin" Value="4 0 0 6" />
         </Style>
     </UserControl.Styles>
 
-    <StackPanel Margin="8" Spacing="12">
+    <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}">
         <GroupBox Header="Theme">
-            <Grid ColumnDefinitions="150, Auto" RowDefinitions="Auto, Auto" RowSpacing="4">
-                <TextBlock Grid.Column="0" Grid.Row="0">Theme:</TextBlock>
-                <ComboBox Grid.Column="1" Grid.Row="0" ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}" MinWidth="150" />
-                <TextBlock Grid.Column="0" Grid.Row="1">Mode:</TextBlock>
-                <ComboBox Grid.Column="1" Grid.Row="1" ItemsSource="{Binding ThemeVariants}" SelectedItem="{Binding ThemeVariant}" MinWidth="150" />
+            <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}" RowSpacing="{StaticResource ControlSpacing}">
+                <Label Grid.Column="0" Grid.Row="0" Target="{Binding #ThemeBox}">_Theme:</Label>
+                <ComboBox Grid.Column="1" Grid.Row="0" Name="ThemeBox" ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}" MinWidth="150" />
+                <Label Grid.Column="0" Grid.Row="1" Target="{Binding #ModeBox}">_Mode:</Label>
+                <ComboBox Grid.Column="1" Grid.Row="1" Name="ModeBox" ItemsSource="{Binding ThemeVariants}" SelectedItem="{Binding ThemeVariant}" MinWidth="150" />
             </Grid>
         </GroupBox>
 
         <GroupBox Header="Data providers">
-            <CheckBox IsChecked="{Binding SpeedChartEnabled}">Show speed chart</CheckBox>
+            <CheckBox IsChecked="{Binding SpeedChartEnabled}">Show speed _chart</CheckBox>
         </GroupBox>
 
         <GroupBox Header="Torrent listing">
-            <StackPanel Spacing="4">
-                <Grid ColumnDefinitions="150, Auto, Auto">
-                    <TextBlock Grid.Column="0">Row height:</TextBlock>
-                    <NumericUpDown Grid.Column="1" Value="{Binding RowHeight}" Minimum="8" Maximum="64" />
-                    <TextBlock Grid.Column="2" Classes="unit">px</TextBlock>
+            <StackPanel Spacing="{StaticResource ControlSpacing}">
+                <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}">
+                    <Label Grid.Column="0" Target="{Binding #RowHeightBox}">Row _height:</Label>
+                    <NumericUpDown Grid.Column="1" Name="RowHeightBox" Value="{Binding RowHeight}" Minimum="8" Maximum="64" />
+                    <TextBlock Grid.Column="2">px</TextBlock>
                 </Grid>
-                <CheckBox IsChecked="{Binding StateIcons}">Show state icon next to torrent name</CheckBox>
+                <CheckBox IsChecked="{Binding StateIcons}">Show state _icon next to torrent name</CheckBox>
             </StackPanel>
         </GroupBox>
 
         <GroupBox Header="Grids">
-            <CheckBox IsChecked="{Binding AlternatingRowColors}">Alternate row colors</CheckBox>
+            <CheckBox IsChecked="{Binding AlternatingRowColors}">Alternate _row colors</CheckBox>
         </GroupBox>
     </StackPanel>
 </UserControl>

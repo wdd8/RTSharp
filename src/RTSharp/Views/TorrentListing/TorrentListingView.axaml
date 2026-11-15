@@ -51,52 +51,54 @@
 				CommandParameter="{Binding #grid.SelectedItems}" />
 			<Separator />
 			<MenuItem
-				Header="Force _recheck"
+				Header="Force _Recheck"
 				Command="{Binding ForceRecheckTorrentsCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
 			<MenuItem
-				Header="Reannounce to all trackers"
+				Header="Reannounce to _All Trackers"
 				Command="{Binding ReannounceToAllTrackersCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
 			<Separator />
 			<MenuItem
-				Header="Set _label..."
+				Header="Set _Label"
 				ItemsSource="{Binding LabelsWithAdd}"
 				SubmenuOpened="EvLabelsMenuOpening" />
-			<MenuItem IsEnabled="False" Header="_Set priority...">
+			<MenuItem IsEnabled="False" Header="Set Pr_iority">
 				<MenuItem Header="yoo" />
 				<MenuItem Header="yoo" />
 				<MenuItem Header="yoo" />
 			</MenuItem>
 			<MenuItem
-				Header="Move download directory..."
+				Header="_Move Download Directory..."
 				Command="{Binding MoveDownloadDirectoryCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
 			<MenuItem
-				Header="{Binding SequentialDownloadMenuHeader}"
+				Header="Download Se_quentially"
+				ToggleType="CheckBox"
+				IsChecked="{Binding SequentialDownloadChecked}"
 				Command="{Binding SetSequentialDownloadCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
 			<Separator />
 			<MenuItem
-				Header="Remove torrent"
+				Header="Remo_ve Torrent"
 				Command="{Binding RemoveTorrentsCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
 			<MenuItem
-				Header="Remove torrent &amp; data"
+				Header="Remove Torrent &amp; _Data"
 				Command="{Binding RemoveTorrentsAndDataCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
 			<Separator />
 			<MenuItem
-				Header="Get .torrent"
+				Header="_Get .torrent"
 				Command="{Binding GetDotTorrentsCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
 			<MenuItem
-				Header="Edit torrent..."
+				Header="_Edit Torrent..."
 				Command="{Binding EditTorrentCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
-			<MenuItem Name="DuplicateMenu" Header="_Duplicate">
+			<MenuItem Name="DuplicateMenu" Header="D_uplicate">
 				<MenuItem
-					Header="Duplicate torrent &amp; data to..."
+					Header="_Duplicate Torrent &amp; Data To..."
 					Command="{Binding DuplicateTorrentToCommand}"
 					CommandParameter="{Binding #grid.SelectedItems}" />
 			</MenuItem>
@@ -189,7 +191,7 @@
 	<dialogHost:DialogHost Name="AddLabelDialogHost" Identifier="AddLabelDialog" CloseOnClickAway="True">
 		<dialogHost:DialogHost.DialogContent>
 			<StackPanel>
-				<TextBlock FontWeight="Bold" Margin="0 0 0 10">Add label</TextBlock>
+				<TextBlock FontWeight="Bold" Margin="0 0 0 10">Add Label</TextBlock>
 				<TextBox Name="LabelName" />
 				<Button
 					Margin="0 -6 0 -7"

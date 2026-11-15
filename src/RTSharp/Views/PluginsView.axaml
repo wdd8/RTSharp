@@ -5,10 +5,13 @@
         xmlns:vm="clr-namespace:RTSharp.ViewModels"
         xmlns:models="clr-namespace:RTSharp.Models"
         xmlns:plugin="clr-namespace:RTSharp.Plugin"
+        xmlns:util="using:RTSharp.Views.Util"
         mc:Ignorable="d" d:DesignWidth="570" d:DesignHeight="250"
         x:DataType="vm:PluginsViewModel"
         x:CompileBindings="True"
         Width="570" Height="250"
+        WindowStartupLocation="CenterOwner"
+        util:WindowPlacement.Remember="True"
         x:Class="RTSharp.Views.PluginsView"
         Icon="/Assets/rtsharp.ico"
         Title="RT# - Plugins">
@@ -27,7 +30,7 @@
         <models:PluginInfo x:Key="PluginInfo"/>
     </Window.Resources>
 
-    <Grid Margin="12">
+    <Grid Margin="{StaticResource DialogMargin}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="2*" MinWidth="100" />
             <ColumnDefinition Width="4" />
@@ -41,7 +44,7 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-            <Button Grid.Row="1" Margin="0,8,0,0" Content="Manage..." Command="{Binding ManagePluginsClickCommand}" />
+            <Button Grid.Row="1" Margin="0,7,0,0" Content="_Manage..." Command="{Binding ManagePluginsClickCommand}" />
         </Grid>
         <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
         <Panel Grid.Column="2">
@@ -65,7 +68,7 @@
                     HorizontalAlignment="Stretch"
                     Grid.Row="1"
                     Command="{Binding PluginsSettingsClickCommand}">
-                    Settings
+                    _Settings
                 </Button>
             </Grid>
         </Panel>

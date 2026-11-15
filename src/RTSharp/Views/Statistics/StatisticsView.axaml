@@ -33,7 +33,7 @@
 			</Grid>
 		</GroupBox>
 
-		<TextBlock Grid.Row="1" Padding="8,8,8,8" Text="One or more daemons do not support all-time statstics" IsVisible="{Binding SomeDontSupport}" />
+		<TextBlock Grid.Row="1" Padding="8,8,8,8" Text="One or more daemons do not support all-time statistics" IsVisible="{Binding SomeDontSupport}" />
 
 		<GroupBox Grid.Row="2" Header="Daemons" Margin="4,4,4,4">
 			<Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" VerticalAlignment="Top">

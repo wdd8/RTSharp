@@ -2,27 +2,24 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
 		xmlns:vm="using:RTSharp.ViewModels"
 		xmlns:local="using:RTSharp.Views"
-        Name="window"
+        xmlns:util="using:RTSharp.Views.Util"
         mc:Ignorable="d"
         Width="453"
         SizeToContent="Height"
         CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        util:WindowPlacement.Remember="True"
         x:Class="RTSharp.Views.TorrentDuplicationTargetSelectorWindow"
 		x:DataType="vm:TorrentDuplicationTargetSelectorWindowViewModel"
-        Title="RT# - Select destination">
+        Title="RT# - Select Destination">
 
-    <Window.Resources>
-        <converters:MathConverter x:Key="MathConverter"/>
-    </Window.Resources>
-    
-    <StackPanel Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE-24)}" Margin="0 8 0 12">
+    <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}">
         <local:DuplicationTargetSelectorControl DataContext="{Binding Selector}" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0 16 0 0">
-            <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding ConfirmClickCommand}">Confirm</Button>
-            <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding CancelClickCommand}">Cancel</Button>
+        <StackPanel Classes="DialogButtons">
+            <Button IsDefault="True" Command="{Binding ConfirmClickCommand}">OK</Button>
+            <Button IsCancel="True" Command="{Binding CancelClickCommand}">Cancel</Button>
         </StackPanel>
     </StackPanel>
 </Window>

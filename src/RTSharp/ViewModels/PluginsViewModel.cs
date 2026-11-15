@@ -65,11 +65,11 @@ namespace RTSharp.ViewModels
                 await CurrentlySelectedPlugin!.Instance.ShowPluginSettings(ThisWindow);
             } catch (Exception ex) {
                 var msgBox = MessageBoxManager.GetMessageBoxStandard(
-                    title: "Plugin manager", 
-                    text: $"Failed to show plugin settings:\n{ex}", 
-                    @enum: ButtonEnum.Ok, 
-                    icon: Icon.Error, 
-                    windowStartupLocation: WindowStartupLocation.CenterScreen);
+                    title: "RT# - Plugins",
+                    text: $"Failed to show plugin settings:\n{ex}",
+                    @enum: ButtonEnum.Ok,
+                    icon: Icon.Error,
+                    windowStartupLocation: WindowStartupLocation.CenterOwner);
                 await msgBox.ShowWindowDialogAsync(ThisWindow);
             }
         }
@@ -80,7 +80,7 @@ namespace RTSharp.ViewModels
             var wnd = new ManagePluginsWindow {
                 ViewModel = new()
             };
-            wnd.Show();
+            wnd.Show(App.MainWindow);
         }
     }
 }

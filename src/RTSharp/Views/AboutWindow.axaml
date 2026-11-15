@@ -5,12 +5,14 @@
         xmlns:vm="clr-namespace:RTSharp.ViewModels"
         xmlns:sc="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
 	    xmlns:sys="using:System"
+        xmlns:util="using:RTSharp.Views.Util"
         mc:Ignorable="d" d:DesignWidth="780" d:DesignHeight="540"
         Width="840" Height="310"
         MaxWidth="840" MaxHeight="310"
         x:Class="RTSharp.Views.AboutWindow"
         x:DataType="vm:AboutWindowViewModel"
         WindowStartupLocation="CenterOwner"
+        util:WindowPlacement.Remember="True"
         Icon="/Assets/rtsharp.ico"
         Title="About RT#">
 

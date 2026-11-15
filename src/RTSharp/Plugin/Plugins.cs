@@ -454,10 +454,10 @@ public static class Plugins
         if (Global.Consts.Version.Major != init.CompatibleMajorVersion) {
             var res = await Dispatcher.UIThread.InvokeAsync(async () => {
                 var msgbox = MessageBoxManager.GetMessageBoxStandard(
-                    title: "Plugin loader",
+                    title: "RT# - Plugins",
                     text: $"Plugin {modulePath}: Incompatible to RT# core version (RT# - {Global.Consts.Version.Major}, plugin - {init.CompatibleMajorVersion}), load anyways?",
                     @enum: ButtonEnum.YesNo,
-                    icon: Icon.Error);
+                    icon: Icon.Warning);
 
                 return await msgbox.ShowWindowAsync();
             });
@@ -567,7 +567,7 @@ public static class Plugins
                 Log.Logger.Error($"Failed to initialize plugin {plugin.ModulePath}: {ex}");
                 await Dispatcher.UIThread.InvokeAsync(() =>
                     MessageBoxManager.GetMessageBoxStandard(
-                        title: "RT# - Failed to load plugin",
+                        title: "RT# - Plugins",
                         text: $"Failed to load plugin {plugin.ModulePath}\n{ex}",
                         @enum: ButtonEnum.Ok,
                         icon: Icon.Error,

@@ -71,8 +71,8 @@ public class MediaPreviewService
             reply = await Server.Mediainfo(RemotePaths);
         } catch (RpcException ex) when (ex.StatusCode == StatusCode.DeadlineExceeded) {
             await MessageBoxManager.GetMessageBoxStandard(
-                title: "Timeout",
-                text: $"mediainfo has timed out.",
+                title: "RT# - MediaInfo",
+                text: "MediaInfo did not respond in time. Try again, or select fewer files.",
                 @enum: ButtonEnum.Ok,
                 icon: Icon.Error
             ).ShowAsync();
@@ -83,11 +83,12 @@ public class MediaPreviewService
         }
 
         new TextPreviewWindow {
+            Title = "RT# - MediaInfo",
             ViewModel = new TextPreviewWindowViewModel {
                 Text = string.Join('\n', reply),
                 Monospace = true
             }
-        }.Show();
+        }.Show(App.MainWindow);
     }
 
     public async Task OpenPreview(IDaemonService Server, string remotePath, ulong fileSize)
@@ -116,7 +117,7 @@ public class MediaPreviewService
         } catch (Win32Exception ex) when (ex.NativeErrorCode == 2) {
             await Dispatcher.UIThread.InvokeAsync(() =>
                 MessageBoxManager.GetMessageBoxStandard(
-                    title: "mpv not found",
+                    title: "RT# - Preview with mpv",
                     text: "mpv is not installed or not found in PATH.\n\nPlease install mpv to use the preview feature.",
                     @enum: ButtonEnum.Ok,
                     icon: Icon.Error

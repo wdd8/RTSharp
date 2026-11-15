@@ -11,33 +11,34 @@
     <UserControl.Styles>
         <Style Selector="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0 0 8 0" />
         </Style>
         <Style Selector="TextBox">
-            <Setter Property="Margin" Value="0 0 0 6" />
+            <Setter Property="Margin" Value="0 0 0 7" />
         </Style>
     </UserControl.Styles>
 
-    <StackPanel Margin="8" Spacing="12">
+    <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}">
         <GroupBox Header="Proxy">
-            <StackPanel Spacing="8">
-                <CheckBox IsChecked="{Binding ProxyEnabled}">Use proxy</CheckBox>
+            <StackPanel Spacing="{StaticResource ControlSpacing}">
+                <CheckBox IsChecked="{Binding ProxyEnabled}">_Use proxy</CheckBox>
 
-                <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" IsEnabled="{Binding ProxyEnabled}">
-                    <TextBlock Grid.Column="0" Grid.Row="0">Address:</TextBlock>
+                <!-- Rows are spaced by the text boxes' margin so the hidden validation row takes no space -->
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}" IsEnabled="{Binding ProxyEnabled}">
+                    <Label Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Margin="0 4 0 0" Target="{Binding #AddressBox}">A_ddress:</Label>
                     <TextBox Grid.Column="1" Grid.Row="0"
+                             Name="AddressBox"
                              Text="{Binding ProxyAddress}"
                              Watermark="socks5://127.0.0.1:1080"
                              ToolTip.Tip="Supported schemes: socks4, socks4a, socks5" />
 
-                    <TextBlock Grid.Column="1" Grid.Row="1" Margin="0 0 0 6" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                    <TextBlock Grid.Column="1" Grid.Row="1" Margin="0 0 0 7" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                                IsVisible="{Binding !ProxyAddressValid}">Invalid proxy address</TextBlock>
 
-                    <TextBlock Grid.Column="0" Grid.Row="2">Username:</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding ProxyUsername}" />
+                    <Label Grid.Column="0" Grid.Row="2" VerticalAlignment="Top" Margin="0 4 0 0" Target="{Binding #UsernameBox}">User_name:</Label>
+                    <TextBox Grid.Column="1" Grid.Row="2" Name="UsernameBox" Text="{Binding ProxyUsername}" />
 
-                    <TextBlock Grid.Column="0" Grid.Row="3">Password:</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding ProxyPassword}" PasswordChar="•"
+                    <Label Grid.Column="0" Grid.Row="3" VerticalAlignment="Top" Margin="0 4 0 0" Target="{Binding #PasswordBox}">Pass_word:</Label>
+                    <TextBox Grid.Column="1" Grid.Row="3" Name="PasswordBox" Text="{Binding ProxyPassword}" PasswordChar="•"
                              ToolTip.Tip="Stored in plain text" />
                 </Grid>
             </StackPanel>

@@ -111,11 +111,14 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
     }
 
     [RelayCommand]
+    private void Exit() => ((App)Avalonia.Application.Current!).Exit(this, EventArgs.Empty);
+
+    [RelayCommand]
     private async Task OpenHelp(string? Topic)
     {
         if (!File.Exists(HelpFile)) {
             var msgbox = MessageBoxManager.GetMessageBoxStandard(
-                title: "RTSharp",
+                title: "RT#",
                 text: $"Help file not found at {HelpFile}",
                 @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
                 icon: MsBox.Avalonia.Enums.Icon.Error);
@@ -183,6 +186,6 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
             }
         }
 
-        addTorrentWindow.Show();
+        addTorrentWindow.Show(this);
     }
 }

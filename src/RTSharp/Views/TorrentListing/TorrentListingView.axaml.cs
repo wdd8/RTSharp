@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
+using MsBox.Avalonia.Models;
 
 using RTSharp.Shared.Abstractions.Client;
 using RTSharp.ViewModels;
@@ -379,7 +380,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             ContentMessage = $"Are you sure you want to recheck {Count} torrent{(Count == 1 ? "" : "s")} ({Shared.Utils.Converters.GetSIDataSize(Size)})?",
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Icon = Icon.Question
+            Icon = Icon.Warning
         });
 
         return (await window.ShowWindowDialogAsync(BaseWindow)) == ButtonResult.Yes;
@@ -412,16 +413,19 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
     private async Task<bool> ShowDeleteTorrentsConfirmationDialog(Window BaseWindow, ulong Size, int Count, bool AndData)
     {
-        var window = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams() {
-            ButtonDefinitions = ButtonEnum.YesNo,
+        var window = MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams() {
+            ButtonDefinitions = [
+                new ButtonDefinition { Name = "Yes" },
+                new ButtonDefinition { Name = "No", IsDefault = true, IsCancel = true }
+            ],
             ContentTitle = "RT#",
-            ContentMessage = $"Are you sure you want to delete {Count} torrent{(Count == 1 ? "" : "s")}{(AndData ? $" and their data ({Shared.Utils.Converters.GetSIDataSize(Size)})" : "")}?",
+            ContentMessage = $"Are you sure you want to remove {Count} torrent{(Count == 1 ? "" : "s")}{(AndData ? $" and their data ({Shared.Utils.Converters.GetSIDataSize(Size)})" : "")}?",
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Icon = Icon.Question
+            Icon = Icon.Warning
         });
 
-        return (await window.ShowWindowDialogAsync(BaseWindow)) == ButtonResult.Yes;
+        return (await window.ShowWindowDialogAsync(BaseWindow)) == "Yes";
     }
 
     private async Task<string?> ShowSelectRemoteDirectoryDialog(Window Owner, string Title, IDataProvider DataProvider, string? StartingDir)
@@ -439,7 +443,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
     public void EvLabelsMenuOpening(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ViewModel!.RefreshLabelCheckedState();
 
-    public void EvGridContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e) => ViewModel!.RefreshSequentialDownloadMenuHeader();
+    public void EvGridContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e) => ViewModel!.RefreshSequentialDownloadChecked();
 
     public void EvGridTextInput(object? sender, Avalonia.Input.TextInputEventArgs e) => ViewModel!.EvGridTextInput(e);
 

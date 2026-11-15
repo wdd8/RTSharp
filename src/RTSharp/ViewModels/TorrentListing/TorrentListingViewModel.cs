@@ -483,7 +483,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
         var optionsWindow = new OptionsWindow() {
             DataContext = new OptionsWindowViewModel()
         };
-        optionsWindow.Show();
+        optionsWindow.Show(App.MainWindow);
     }
 
     private void UpdateLabelsWithAdd(string[] allLabels)
@@ -525,13 +525,11 @@ public partial class TorrentListingViewModel : ObservableViewModel
     }
 
     [ObservableProperty]
-    public partial string SequentialDownloadMenuHeader { get; set; } = "Download sequentially";
+    public partial bool SequentialDownloadChecked { get; set; }
 
-    public void RefreshSequentialDownloadMenuHeader()
+    public void RefreshSequentialDownloadChecked()
     {
-        SequentialDownloadMenuHeader = SelectedItems.Count > 0 && SelectedItems.All(x => x.IsSequentialDownload)
-            ? "Do not download sequentially"
-            : "Download sequentially";
+        SequentialDownloadChecked = SelectedItems.Count > 0 && SelectedItems.All(x => x.IsSequentialDownload);
     }
 
     public void RefreshLabelCheckedState()

@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 
 using Microsoft.Extensions.Configuration;
@@ -76,6 +77,13 @@ public class Config
             /// </summary>
             public Dictionary<string, WindowSize> WindowSizes { get; set; } = new();
 
+            /// <summary>
+            /// PixelPoint, keyed by window type name
+            /// </summary>
+            public Dictionary<string, string> WindowPositions { get; set; } = new();
+
+            public Dictionary<string, string> WindowPages { get; set; } = new();
+
             public bool TrayIconVisible { get; set; }
 
             public double[]? TorrentListingGridRowHeights { get; set; }
@@ -105,6 +113,32 @@ public class Config
                     return false;
 
                 WindowSizes[key] = size;
+                return true;
+            }
+
+            public void RestoreWindowPosition(Window Window)
+            {
+                if (!WindowPositions.TryGetValue(Window.GetType().Name, out var position))
+                    return;
+
+                var point = PixelPoint.Parse(position);
+                if (Window.Screens.ScreenFromPoint(point) == null)
+                    return;
+
+                Window.WindowStartupLocation = WindowStartupLocation.Manual;
+                Window.Position = point;
+            }
+
+            /// <returns>Whether the stored position changed</returns>
+            public bool StoreWindowPosition(Window Window)
+            {
+                var key = Window.GetType().Name;
+                var position = Window.Position.ToString();
+
+                if (WindowPositions.TryGetValue(key, out var previous) && previous == position)
+                    return false;
+
+                WindowPositions[key] = position;
                 return true;
             }
         }
@@ -245,7 +279,9 @@ public class Config
     "DockState": null,
     "LastPosX": null,
     "LastPosY": null,
-    "WindowSizes": {}
+    "WindowSizes": {},
+    "WindowPositions": {},
+    "WindowPages": {}
   },
   "Look": {
     "DataProviders": {

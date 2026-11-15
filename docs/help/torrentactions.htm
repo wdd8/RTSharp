@@ -13,15 +13,15 @@
 - Start: Start the torrents<br>
 - Pause: Pause the torrents, they stay connected to the peers but stop transferring<br>
 - Stop: Stop the torrents completely<br>
-- Force recheck: Verify the data of the torrents on the disk. RT# asks you to confirm with the number of torrents and the amount of data to check<br>
-- Reannounce to all trackers: Ask the trackers for new peers immediately<br>
-- Set label...: Add or remove labels, see the "Labels" chapter<br>
-- Move download directory...: Move the data of the torrents to another directory of the server, see the "Moving the download directory" chapter<br>
-- Download sequentially: Download the pieces in order, this is useful if you want to preview a video while it is downloading. When all the selected torrents already download sequentially, this item becomes "Do not download sequentially"<br>
-- Remove torrent: Remove the torrents from the daemon, the data stays on the disk<br>
-- Remove torrent &amp; data: Remove the torrents and delete their data<br>
+- Force Recheck: Verify the data of the torrents on the disk. RT# asks you to confirm with the number of torrents and the amount of data to check<br>
+- Reannounce to All Trackers: Ask the trackers for new peers immediately<br>
+- Set Label: Add or remove labels, see the "Labels" chapter<br>
+- Move Download Directory...: Move the data of the torrents to another directory of the server, see the "Moving the download directory" chapter<br>
+- Download Sequentially: Download the pieces in order, this is useful if you want to preview a video while it is downloading. The item is checked when all the selected torrents download sequentially, and choosing it then turns sequential download off<br>
+- Remove Torrent: Remove the torrents from the daemon, the data stays on the disk<br>
+- Remove Torrent &amp; Data: Remove the torrents and delete their data<br>
 - Get .torrent: Save the .torrent files of the torrents into a folder of your computer, each file is named after the info hash of its torrent<br>
-- Duplicate torrent &amp; data to...: Add the torrent and its data to another data provider, see the "Duplicating torrents" chapter<br>
+- Duplicate Torrent &amp; Data To...: Add the torrent and its data to another data provider, see the "Duplicating torrents" chapter<br>
 </div>
 
 <p>When a torrent finishes rechecking and is fully complete, RT# can start it automatically for you. You can activate this in the Behavior options.</p>
@@ -31,7 +31,7 @@
 <h3>Removing the data:</h3>
 <p>Before removing the data, RT# always asks you to confirm with the number of torrents and the amount of data that will be deleted. Moreover, if the data of a torrent is also used by another torrent on the same server (for example after a duplication on the same server), RT# displays the list of these torrents and warns you that removing the data will cause data access errors for them.</p>
 
-<p>Plugins can add their own items to this menu, for example the auto integrify plugin adds "Align file integrity &amp; recheck" just after "Force recheck".</p>
+<p>Plugins can add their own items to this menu, for example the auto integrify plugin adds "Align file integrity &amp; recheck" just after "Force Recheck".</p>
 
 </body>
 </html>

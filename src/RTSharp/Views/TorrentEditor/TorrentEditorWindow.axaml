@@ -5,21 +5,29 @@
         xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
         xmlns:torrentListing="using:RTSharp.Views.TorrentListing"
         xmlns:vm="using:RTSharp.ViewModels.TorrentEditor"
+        xmlns:util="using:RTSharp.Views.Util"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
         Width="900" Height="700"
         MinWidth="700" MinHeight="500"
         WindowStartupLocation="CenterOwner"
+        util:WindowPlacement.Remember="True"
+        util:WindowPlacement.Page="{Binding #Tabs.SelectedIndex}"
         x:Class="RTSharp.Views.TorrentEditor.TorrentEditorWindow"
         x:DataType="vm:TorrentEditorWindowViewModel"
-        Title="RT# - Edit torrent">
+        Title="RT# - Edit Torrent">
 
     <Window.Styles>
+        <Style Selector="TabItem Grid.Fields">
+            <Setter Property="ColumnSpacing" Value="{StaticResource ControlSpacing}" />
+            <Setter Property="RowSpacing" Value="{StaticResource ControlSpacing}" />
+        </Style>
         <Style Selector="TabItem Grid.Fields > TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0 0 8 0" />
         </Style>
-        <Style Selector="TabItem Grid.Fields > TextBox">
-            <Setter Property="Margin" Value="0 0 0 4" />
+        <!-- Labels of multi-line boxes sit beside their first line -->
+        <Style Selector="TabItem Grid.Fields > Label.Top">
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Margin" Value="0 4 0 0" />
         </Style>
         <Style Selector="TextBlock.Warning">
             <Setter Property="TextWrapping" Value="Wrap" />
@@ -28,7 +36,7 @@
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto,*,Auto" Margin="8" IsEnabled="{Binding !IsBusy}">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="{StaticResource DialogMargin}" IsEnabled="{Binding !IsBusy}">
         <StackPanel Grid.Row="0">
             <TextBlock Classes="Warning"
                        Text="{Binding HashWarning}"
@@ -38,57 +46,60 @@
                        IsVisible="{Binding FilesWarning, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
         </StackPanel>
 
-        <TabControl Grid.Row="1">
+        <TabControl Grid.Row="1" Name="Tabs">
             <TabItem Header="General">
-                <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="8">
-                    <TextBlock Grid.Column="0" Grid.Row="0">Name:</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Name}"
+                <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="{StaticResource DialogMargin}">
+                    <Label Grid.Column="0" Grid.Row="0" Target="{Binding #NameBox}">_Name:</Label>
+                    <TextBox Grid.Column="1" Grid.Row="0" Name="NameBox" Text="{Binding Name}"
                              ToolTip.Tip="Changes the info hash" />
 
-                    <TextBlock Grid.Column="0" Grid.Row="1">Source:</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Source}"
+                    <Label Grid.Column="0" Grid.Row="1" Target="{Binding #SourceBox}">S_ource:</Label>
+                    <TextBox Grid.Column="1" Grid.Row="1" Name="SourceBox" Text="{Binding Source}"
                              ToolTip.Tip="Changes the info hash" />
 
                     <TextBlock Grid.Column="0" Grid.Row="2">Private:</TextBlock>
                     <CheckBox Grid.Column="1" Grid.Row="2" IsChecked="{Binding IsPrivate}"
-                              ToolTip.Tip="Changes the info hash">Private torrent (won't distribute on DHT network)</CheckBox>
+                              ToolTip.Tip="Changes the info hash">Pr_ivate torrent (won't distribute on DHT network)</CheckBox>
 
-                    <TextBlock Grid.Column="0" Grid.Row="3">Comment:</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="3" AcceptsReturn="True" Height="100" Text="{Binding Comment}" />
+                    <Label Grid.Column="0" Grid.Row="3" Classes="Top" Target="{Binding #CommentBox}">_Comment:</Label>
+                    <TextBox Grid.Column="1" Grid.Row="3" Name="CommentBox" AcceptsReturn="True" Height="100" Text="{Binding Comment}" />
 
-                    <TextBlock Grid.Column="0" Grid.Row="4">Created by:</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding CreatedBy}" />
+                    <Label Grid.Column="0" Grid.Row="4" Target="{Binding #CreatedByBox}">Created _by:</Label>
+                    <TextBox Grid.Column="1" Grid.Row="4" Name="CreatedByBox" Text="{Binding CreatedBy}" />
 
-                    <TextBlock Grid.Column="0" Grid.Row="5">Creation date:</TextBlock>
-                    <Grid Grid.Column="1" Grid.Row="5" ColumnDefinitions="*,Auto" Margin="0 0 0 4">
+                    <Label Grid.Column="0" Grid.Row="5" Target="{Binding #CreationDateBox}">Creation _date:</Label>
+                    <Grid Grid.Column="1" Grid.Row="5" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource ControlSpacing}">
                         <TextBox Grid.Column="0"
+                                 Name="CreationDateBox"
                                  Watermark="yyyy-MM-dd HH:mm:ss (UTC)"
                                  Text="{Binding CreationDate, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
-                        <Button Grid.Column="1" Margin="4 0 0 0" Command="{Binding SetCreationDateNowClickCommand}">Now</Button>
+                        <Button Grid.Column="1" Command="{Binding SetCreationDateNowClickCommand}">No_w</Button>
                     </Grid>
 
-                    <TextBlock Grid.Column="0" Grid.Row="6">Encoding:</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Encoding}" />
+                    <Label Grid.Column="0" Grid.Row="6" Target="{Binding #EncodingBox}">_Encoding:</Label>
+                    <TextBox Grid.Column="1" Grid.Row="6" Name="EncodingBox" Text="{Binding Encoding}" />
                 </Grid>
             </TabItem>
 
             <TabItem Header="Trackers">
-                <Grid RowDefinitions="Auto,*" Margin="8">
-                    <TextBlock Grid.Row="0" Margin="0 0 0 4" TextWrapping="Wrap">One URL per line. Separate tiers with a blank line.</TextBlock>
-                    <TextBox Grid.Row="1" AcceptsReturn="True" FontFamily="monospace" Text="{Binding TrackersText}" />
+                <Grid RowDefinitions="Auto,*" RowSpacing="{StaticResource ControlSpacing}" Margin="{StaticResource DialogMargin}">
+                    <Label Grid.Row="0" Target="{Binding #TrackersBox}">
+                        <AccessText TextWrapping="Wrap" Text="_Trackers, one URL per line. Separate tiers with a blank line." />
+                    </Label>
+                    <TextBox Grid.Row="1" Name="TrackersBox" AcceptsReturn="True" FontFamily="monospace" Text="{Binding TrackersText}" />
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Seeds &amp; nodes">
-                <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="*,*,*" Margin="8">
-                    <TextBlock Grid.Column="0" Grid.Row="0">Web seeds (url-list):</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="0" AcceptsReturn="True" FontFamily="monospace" Text="{Binding WebSeedsText}" />
+            <TabItem Header="Seeds &amp; Nodes">
+                <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="*,*,*" Margin="{StaticResource DialogMargin}">
+                    <Label Grid.Column="0" Grid.Row="0" Classes="Top" Target="{Binding #WebSeedsBox}">_Web seeds (url-list):</Label>
+                    <TextBox Grid.Column="1" Grid.Row="0" Name="WebSeedsBox" AcceptsReturn="True" FontFamily="monospace" Text="{Binding WebSeedsText}" />
 
-                    <TextBlock Grid.Column="0" Grid.Row="1">HTTP seeds (httpseeds):</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="1" AcceptsReturn="True" FontFamily="monospace" Text="{Binding HttpSeedsText}" />
+                    <Label Grid.Column="0" Grid.Row="1" Classes="Top" Target="{Binding #HttpSeedsBox}">_HTTP seeds (httpseeds):</Label>
+                    <TextBox Grid.Column="1" Grid.Row="1" Name="HttpSeedsBox" AcceptsReturn="True" FontFamily="monospace" Text="{Binding HttpSeedsText}" />
 
-                    <TextBlock Grid.Column="0" Grid.Row="2">DHT nodes (IP:port):</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="2" AcceptsReturn="True" FontFamily="monospace" Text="{Binding NodesText}" />
+                    <Label Grid.Column="0" Grid.Row="2" Classes="Top" Target="{Binding #NodesBox}">DHT _nodes (IP:port):</Label>
+                    <TextBox Grid.Column="1" Grid.Row="2" Name="NodesBox" AcceptsReturn="True" FontFamily="monospace" Text="{Binding NodesText}" />
                 </Grid>
             </TabItem>
 
@@ -98,7 +109,7 @@
 
             <TabItem Header="Info">
                 <ScrollViewer>
-                    <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="8">
+                    <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="{StaticResource DialogMargin}">
                         <TextBlock Grid.Column="0" Grid.Row="0" FontWeight="SemiBold">Version:</TextBlock>
                         <SelectableTextBlock Grid.Column="1" Grid.Row="0" Text="{Binding InfoVersion}" />
 
@@ -133,13 +144,18 @@
             </TabItem>
         </TabControl>
 
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="0 8 0 0">
-            <Button Grid.Column="0" Margin="0 0 10 0" Command="{Binding AdvancedClickCommand}">Advanced...</Button>
-            <Button Grid.Column="1" Command="{Binding RevertClickCommand}">Revert</Button>
-            <Button Grid.Column="3" Margin="0 0 10 0" Command="{Binding SaveAsClickCommand}">Save as...</Button>
-            <Button Grid.Column="4" Margin="0 0 10 0" Command="{Binding ApplyClickCommand}"
-                    Content="{Binding Torrent.DataOwner.Config.Plugin.Name, StringFormat='Apply to {0}'}" />
-            <Button Grid.Column="5" Command="{Binding CancelClickCommand}">Cancel</Button>
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="0 11 0 0">
+            <StackPanel Grid.Column="0" Classes="DialogButtons" HorizontalAlignment="Left">
+                <Button Command="{Binding AdvancedClickCommand}">_Advanced...</Button>
+                <Button Command="{Binding RevertClickCommand}">_Revert</Button>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Classes="DialogButtons">
+                <Button Command="{Binding SaveAsClickCommand}">Save A_s...</Button>
+                <!-- No access key: the plugin name may contain underscores -->
+                <Button Command="{Binding ApplyClickCommand}"
+                        Content="{Binding Torrent.DataOwner.Config.Plugin.Name, StringFormat='Apply to {0}'}" />
+                <Button IsCancel="True" Command="{Binding CancelClickCommand}">Cancel</Button>
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>

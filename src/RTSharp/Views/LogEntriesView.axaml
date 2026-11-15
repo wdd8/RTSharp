@@ -27,7 +27,7 @@
               LoadingRow="EvLoadingRow">
         <DataGrid.ContextMenu>
             <ContextMenu>
-                <MenuItem Header="Copy exception"
+                <MenuItem Header="_Copy Exception"
                     Command="{Binding CopyExceptionCommand}"
                     CommandParameter="{Binding #MainGrid.SelectedItems}"
                     IsEnabled="{Binding #MainGrid.((models:LogEntry)SelectedItem).HasException}"

@@ -229,6 +229,6 @@ public partial class DirectorySelectorWindowViewModel : ObservableViewModel
 public static class ExampleDirectorySelectorWindowViewModel
 {
     public static DirectorySelectorWindowViewModel ViewModel { get; } = new(null!) {
-        WindowTitle = "Directory selector"
+        WindowTitle = "Directory Selector"
     };
 }

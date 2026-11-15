@@ -6,7 +6,8 @@
         Width="400" Height="300"
         xmlns:vm="clr-namespace:RTSharp.Shared.Controls.ViewModels"
         x:Class="RTSharp.Shared.Controls.Views.TextPreviewWindow"
-        Title="TextPreviewWindow"
+        WindowStartupLocation="CenterOwner"
+        Title="RT# - Text Preview"
         x:DataType="vm:TextPreviewWindowViewModel"
         x:CompileBindings="True">
     <TextBox IsReadOnly="True"

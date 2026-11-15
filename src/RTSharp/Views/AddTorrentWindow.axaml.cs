@@ -34,7 +34,7 @@ namespace RTSharp.Views
             {
                 ViewModel = new DirectorySelectorWindowViewModel(ViewModel!.SelectedProvider!.Host.AttachedDaemonService)
                 {
-                    WindowTitle = $"RT# - Select directory ({ViewModel!.SelectedProvider!.Host.Config.Plugin.Name})"
+                    WindowTitle = $"RT# - Select Directory ({ViewModel!.SelectedProvider!.Host.Config.Plugin.Name})"
                 }
             };
 
@@ -61,7 +61,7 @@ namespace RTSharp.Views
                         }
                     }
                 },
-                Title = "Select .torrent files...",
+                Title = "Select Torrent Files",
                 SuggestedStartLocation = folder
             });
 
@@ -77,10 +77,10 @@ namespace RTSharp.Views
             var clipboard = await clipboardObj.TryGetTextAsync();
             var textPreview = new TextPreviewWindow() {
                 DataContext = clipboard,
-                Title = "Clipboard preview"
+                Title = "RT# - Clipboard Preview"
             };
 
-            textPreview.Show();
+            textPreview.Show(this);
         }
 
         public async Task<string?> GetClipboardAsync()

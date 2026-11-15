@@ -42,7 +42,7 @@
                         <Border Margin="{Binding IndentMargin}" Padding="0,2">
                             <Border.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Cancel" Command="{Binding CancelCommand}" IsEnabled="{Binding CanCancel}" />
+                                    <MenuItem Header="_Cancel" Command="{Binding CancelCommand}" IsEnabled="{Binding CanCancel}" />
                                 </ContextMenu>
                             </Border.ContextMenu>
                             <StackPanel Spacing="3">

@@ -220,7 +220,7 @@ public partial class TorrentListingViewModel
             var commonPrefix = getCommonPrefix(data.Select(x => x.BasePath));
             var dataProvider = allTorrents[torrentFiles.First().Key].DataOwner;
             var dataProviderName = dataProvider.Config.Plugin.Name;
-            var targetDir = await SelectRemoteDirectoryDialog(App.MainWindow, $"RT# - Target directory ({dataProviderName})", dataProvider.Instance, String.IsNullOrEmpty(commonPrefix) ? "/" : commonPrefix);
+            var targetDir = await SelectRemoteDirectoryDialog(App.MainWindow, $"RT# - Target Directory ({dataProviderName})", dataProvider.Instance, String.IsNullOrEmpty(commonPrefix) ? "/" : commonPrefix);
             if (targetDir == null)
                 continue;
 
@@ -382,7 +382,7 @@ public partial class TorrentListingViewModel
             viewModel = new TorrentEditorWindowViewModel(torrent, dotTorrent);
         } catch (Exception ex) {
             Log.Logger.Error(ex, "Failed to load .torrent for editing");
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit torrent", "Failed to load .torrent:\n" + ex.Message, MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error).ShowWindowAsync();
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit Torrent","Failed to load .torrent:\n" + ex.Message, MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error).ShowWindowAsync();
             return;
         }
 

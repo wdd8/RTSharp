@@ -7,6 +7,7 @@
         xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters"
         xmlns:sharedConverters="using:RTSharp.Shared.Controls.Converters"
         xmlns:models="clr-namespace:RTSharp.Models"
+        xmlns:util="using:RTSharp.Views.Util"
         d:DataContext="{x:Static vm:ExampleDirectorySelectorWindowViewModel.ViewModel}"
         x:DataType="vm:DirectorySelectorWindowViewModel"
         mc:Ignorable="d"
@@ -14,6 +15,8 @@
         MinHeight="200"
         Width="760"
         Height="480"
+        WindowStartupLocation="CenterOwner"
+        util:WindowPlacement.Remember="True"
         x:Class="RTSharp.Views.DirectorySelectorWindow"
         Icon="/Assets/rtsharp.ico"
         Title="{Binding WindowTitle}">
@@ -49,10 +52,10 @@
         </Style>
     </Window.Styles>
 
-    <Grid ColumnDefinitions="*" RowDefinitions="Auto,*,Auto" Margin="8">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" RowDefinitions="*">
-            <TextBox Name="PathTextBox" Text="{Binding Selected.Path, Mode=OneWay}" Grid.Column="0" Margin="0 0 8 0" />
-            <Button Grid.Column="1" Margin="0 0 4 0" Command="{Binding RefreshCommand}" HotKey="F5" ToolTip.Tip="Refresh">
+    <Grid ColumnDefinitions="*" RowDefinitions="Auto,*,Auto" RowSpacing="{StaticResource ControlSpacing}" Margin="{StaticResource DialogMargin}">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" RowDefinitions="*" ColumnSpacing="{StaticResource ControlSpacing}">
+            <TextBox Name="PathTextBox" Text="{Binding Selected.Path, Mode=OneWay}" Grid.Column="0" />
+            <Button Grid.Column="1" Command="{Binding RefreshCommand}" HotKey="F5" ToolTip.Tip="Refresh">
                 <sc:BuiltInPathIcon Value="REFRESH" />
             </Button>
             <Button Grid.Column="2" Command="{Binding SetCurrentFolderCommand}" CommandParameter="{Binding #PathTextBox.Text}" IsDefault="True">
@@ -63,7 +66,6 @@
         <DataGrid
             Name="MainGrid"
             Grid.Row="1"
-            Margin="0 8 0 8"
             BorderBrush="Gray"
             BorderThickness="1"
             AutoGenerateColumns="False"
@@ -79,7 +81,7 @@
 
             <DataGrid.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="Media_info"
+                    <MenuItem Header="Media_Info"
                               Command="{Binding MediaInfoCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
@@ -89,7 +91,7 @@
                               IsEnabled="{Binding PreviewAllowed}"
                     />
                     <Separator />
-                    <MenuItem Header="Remove directory"
+                    <MenuItem Header="_Remove Directory"
                               Command="{Binding RemoveEmptyDirectoryCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                               IsEnabled="{Binding RemoveDirectoryAllowed}"
@@ -169,23 +171,19 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
-            <Grid Grid.Column="0">
-                <Button
-                    Command="{Binding CreateDirectoryCommand}">
-                    <StackPanel Orientation="Horizontal">
-                        <sc:BuiltInPathIcon Value="NEW_FOLDER" Margin="0 0 4 0" />
-                        <TextBlock>Create directory</TextBlock>
-                    </StackPanel>
-                </Button>
-            </Grid>
-            
-            <Grid Grid.Column="1">
-                <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding !IsBrowser}">
-                    <Button Command="{Binding SelectCommand}">Select</Button>
-                    <Button Command="{Binding CancelCommand}">Cancel</Button>
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0 4 0 0">
+            <Button Grid.Column="0" Command="{Binding CreateDirectoryCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <sc:BuiltInPathIcon Value="NEW_FOLDER" Margin="0 0 4 0" />
+                    <AccessText Text="_Create Directory" />
                 </StackPanel>
-            </Grid>
+            </Button>
+
+            <!-- Enter goes to the path box, so Select has an access key instead of being the default button -->
+            <StackPanel Grid.Column="1" Classes="DialogButtons" IsVisible="{Binding !IsBrowser}">
+                <Button Command="{Binding SelectCommand}">_Select</Button>
+                <Button IsCancel="True" Command="{Binding CancelCommand}">Cancel</Button>
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>

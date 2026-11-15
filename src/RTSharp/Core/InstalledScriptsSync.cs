@@ -47,23 +47,25 @@ public static class InstalledScriptsSync
             string? answer = null;
             await Dispatcher.UIThread.InvokeAsync(async () => {
                 answer = await MessageBoxManager.GetMessageBoxCustom(new() {
-                    ContentTitle = "RT# - Orphaned server scripts",
+                    ContentTitle = "RT# - Server Scripts",
                     ContentMessage = text,
                     ButtonDefinitions = [
                         new MsBox.Avalonia.Models.ButtonDefinition() {
                             Name = "Yes",
-                            IsDefault = true
-                        },
-                        new MsBox.Avalonia.Models.ButtonDefinition() {
-                            Name = "No, do not ask again",
                             IsDefault = false
                         },
+                        new MsBox.Avalonia.Models.ButtonDefinition() {
+                            Name = "No, Don't Ask Again",
+                            IsDefault = false
+                        },
+                        // Removing scripts from the server can't be undone, so the least destructive choice is the default
                         new MsBox.Avalonia.Models.ButtonDefinition() {
                             Name = "Ignore",
-                            IsDefault = false
+                            IsDefault = true,
+                            IsCancel = true
                         }
                     ],
-                    Icon = Icon.Question,
+                    Icon = Icon.Warning,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 }).ShowWindowDialogAsync(App.MainWindow);
             });
@@ -72,7 +74,7 @@ public static class InstalledScriptsSync
                 try {
                     if (answer == "Yes")
                         await daemon.UninstallScript(orphan.Id);
-                    else if (answer == "No, do not ask again")
+                    else if (answer == "No, Don't Ask Again")
                         await daemon.SetOrphanAcknowledged(orphan.Id, true);
                 } catch (Exception ex) {
                     Log.Logger.Error(ex, $"Could not resolve orphaned script {orphan.Id} on {serverId}");

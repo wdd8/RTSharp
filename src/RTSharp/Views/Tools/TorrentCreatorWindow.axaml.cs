@@ -41,7 +41,7 @@ public partial class TorrentCreatorWindow : VmWindow<TorrentCreatorWindowViewMod
                     }
                 }
             },
-            Title = "Select file..."
+            Title = "Select File"
         });
 
         var path = res.Select(x => x.Path.AbsolutePath).FirstOrDefault();
@@ -59,7 +59,7 @@ public partial class TorrentCreatorWindow : VmWindow<TorrentCreatorWindowViewMod
                     }
                 }
             },
-            Title = "Select file...",
+            Title = "Save As",
             ShowOverwritePrompt = true,
             SuggestedFileName = SuggestedName
         });
@@ -71,7 +71,7 @@ public partial class TorrentCreatorWindow : VmWindow<TorrentCreatorWindowViewMod
     {
         var res = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
             AllowMultiple = false,
-            Title = "Select folder..."
+            Title = "Select Folder"
         });
 
         var path = res.Select(x => x.Path.AbsolutePath).FirstOrDefault();

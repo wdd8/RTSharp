@@ -316,6 +316,7 @@
     <PackageReference Include="AvaloniaHex" Version="0.1.13" />
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" Condition="'$(Configuration)' == 'Debug'" />
     <PackageReference Include="Ben.StringIntern" Version="0.1.8" />
+    <PackageReference Include="Chrome.DevTools.Avalonia" Version="0.1.0" Condition="'$(Configuration)' == 'Debug'" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="ConcurrentHashSet" Version="1.3.0" />
     <PackageReference Include="Dapper" Version="2.1.89" />

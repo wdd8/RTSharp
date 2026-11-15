@@ -4,11 +4,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:options="clr-namespace:RTSharp.ViewModels.Options"
         xmlns:sc="using:RTSharp.Shared.Controls.Views"
+        xmlns:util="using:RTSharp.Views.Util"
         mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
         Width="700" Height="500"
+        WindowStartupLocation="CenterOwner"
+        util:WindowPlacement.Remember="True"
+        util:WindowPlacement.Page="{Binding CurrentPage}"
         x:Class="RTSharp.Views.Options.OptionsWindow"
         x:DataType="options:OptionsWindowViewModel"
-        Title="Options">
+        Title="RT# - Options">
 
     <Design.DataContext>
         <options:OptionsWindowViewModel />
@@ -45,11 +49,11 @@
                 <ContentControl Content="{Binding SettingsContent}" />
             </ScrollViewer>
         </Grid>
-        <Border Grid.Row="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="8,6">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-                <Button Command="{Binding OkCommand}">OK</Button>
-                <Button Command="{Binding CancelCommand}">Cancel</Button>
-                <Button Command="{Binding ApplyCommand}">Apply</Button>
+        <Border Grid.Row="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="{StaticResource DialogMargin}">
+            <StackPanel Classes="DialogButtons">
+                <Button IsDefault="True" Command="{Binding OkCommand}">OK</Button>
+                <Button IsCancel="True" Command="{Binding CancelCommand}">Cancel</Button>
+                <Button Command="{Binding ApplyCommand}">_Apply</Button>
             </StackPanel>
         </Border>
     </Grid>

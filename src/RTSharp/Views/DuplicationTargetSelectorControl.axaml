@@ -11,10 +11,13 @@
         <GroupBox Header="Plugin">
             <views:DataProviderSelection DataProviders="{Binding DataProviders}" SelectedProvider="{Binding SelectedProvider}" HorizontalAlignment="Stretch" />
         </GroupBox>
-        <GroupBox Header="Remote directory">
+        <GroupBox>
+            <GroupBox.Header>
+                <Label Target="{Binding #RemoteTargetPathBox}">_Remote directory</Label>
+            </GroupBox.Header>
             <DockPanel>
-                <Button DockPanel.Dock="Right" Margin="5,0,0,0" Command="{Binding BrowseRemoteDirectoryClickCommand}">Browse...</Button>
-                <TextBox Text="{Binding RemoteTargetPath}" IsEnabled="{Binding RemoteTargetPathEnabled}" />
+                <Button DockPanel.Dock="Right" Margin="7,0,0,0" Command="{Binding BrowseRemoteDirectoryClickCommand}">_Browse...</Button>
+                <TextBox Name="RemoteTargetPathBox" Text="{Binding RemoteTargetPath}" IsEnabled="{Binding RemoteTargetPathEnabled}" />
             </DockPanel>
         </GroupBox>
     </StackPanel>

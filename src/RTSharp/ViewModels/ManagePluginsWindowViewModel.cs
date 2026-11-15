@@ -64,7 +64,7 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasChanges { get; set; }
 
-    public string DialogTitle => IsDialogForNew ? "Configure new plugin" : "Configure plugin";
+    public string DialogTitle => IsDialogForNew ? "Configure New Plugin" : "Configure Plugin";
     public string DialogConfirmText => IsDialogForNew ? "Create" : "Save";
 
     public ManagePluginsWindowViewModel()
@@ -140,7 +140,7 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
                     SelectedAvailable.IsDataProvider ? DialogColor : null
                 );
             } catch (Exception ex) {
-                await MessageBoxManager.GetMessageBoxStandard("RT# - Manage plugins", ex.Message, ButtonEnum.Ok, Icon.Stop).ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("RT# - Manage Plugins", ex.Message, ButtonEnum.Ok, Icon.Stop).ShowWindowAsync();
                 return;
             }
         }
@@ -158,7 +158,7 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
                     DialogIsDataProvider ? DialogColor : null
                 );
             } catch (Exception ex) {
-                await MessageBoxManager.GetMessageBoxStandard("RT# - Manage plugins", ex.Message, ButtonEnum.Ok, Icon.Stop).ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("RT# - Manage Plugins", ex.Message, ButtonEnum.Ok, Icon.Stop).ShowWindowAsync();
                 return;
             }
         }
@@ -180,7 +180,7 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
         IsDialogOpen = false;
 
         var box = MessageBoxManager.GetMessageBoxStandard(
-            title: "RT# - Delete plugin configuration",
+            title: "RT# - Manage Plugins",
             text: $"Delete configuration \"{instance.InstanceName}\"?\n\n{instance.ConfigPath}",
             @enum: ButtonEnum.YesNo,
             icon: Icon.Warning,

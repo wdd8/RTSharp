@@ -21,7 +21,7 @@ public partial class DuplicationTargetSelectorControl : UserControl
 
         var dialog = new DirectorySelectorWindow() {
             ViewModel = new DirectorySelectorWindowViewModel(SelectedProvider.Host.AttachedDaemonService) {
-                WindowTitle = $"RT# - Select directory ({SelectedProvider.Host.Config.Plugin.Name})"
+                WindowTitle = $"RT# - Select Directory ({SelectedProvider.Host.Config.Plugin.Name})"
             }
         };
 

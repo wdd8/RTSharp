@@ -10,7 +10,8 @@
         Width="350" Height="140"
         MinWidth="350" MinHeight="140"
         MaxWidth="350" MaxHeight="140"
-        Title="Processing...">
+        WindowStartupLocation="CenterOwner"
+        Title="Processing">
   <Panel>
     <StackPanel Orientation="Horizontal">
       <views:BuiltInIconImage

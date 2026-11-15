@@ -4,12 +4,9 @@ using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Nito.AsyncEx;
-using RTSharp.Core;
 using RTSharp.Models;
 using RTSharp.Shared.Abstractions.Client;
-using Serilog;
 
 namespace RTSharp.Views
 {
@@ -24,23 +21,6 @@ namespace RTSharp.Views
                 vm!.CloseDialog = CloseDialog;
                 vm!.DoCreateDirectory = CreateDirectory;
             });
-
-            if (Design.IsDesignMode)
-                return;
-
-            using (var scope = Core.ServiceProvider.CreateScope())
-                scope.ServiceProvider.GetRequiredService<Config>().UIState.Value.RestoreWindowSize(this);
-
-            Closing += async (_, _) => {
-                try {
-                    using var scope = Core.ServiceProvider.CreateScope();
-                    var config = scope.ServiceProvider.GetRequiredService<Config>();
-                    if (config.UIState.Value.StoreWindowSize(this))
-                        await config.Rewrite();
-                } catch (Exception ex) {
-                    Log.Logger.Error(ex, "Failed to save {Window} size", nameof(DirectorySelectorWindow));
-                }
-            };
         }
 
         private void ClearSelection()

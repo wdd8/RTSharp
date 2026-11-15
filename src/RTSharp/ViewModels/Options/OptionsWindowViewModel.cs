@@ -24,7 +24,13 @@ public partial class OptionsWindowViewModel : ObservableObject
     public Dictionary<string, ISettingsLoadable> Pages { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CurrentPage))]
     public partial OptionsItem? CurrentlySelectedItem { get; set; }
+
+    public string? CurrentPage {
+        get => CurrentlySelectedItem?.Path;
+        set => CurrentlySelectedItem = Items.Find(x => x.Path == value) ?? CurrentlySelectedItem;
+    }
 
     [ObservableProperty]
     public partial object? SettingsContent { get; set; }

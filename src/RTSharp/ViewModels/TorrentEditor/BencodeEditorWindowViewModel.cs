@@ -120,7 +120,7 @@ public partial class BencodeEditorWindowViewModel : ObservableViewModel
         try {
             value = node.ToBObject();
         } catch (InvalidDataException ex) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit bencode", ex.Message, ButtonEnum.Ok, Icon.Error).ShowWindowAsync();
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit Bencode", ex.Message, ButtonEnum.Ok, Icon.Error).ShowWindowAsync();
             return;
         }
 
@@ -176,7 +176,7 @@ public partial class BencodeEditorWindowViewModel : ObservableViewModel
         try {
             bytes = ((BString)node.ToBObject()).Value.ToArray();
         } catch (InvalidDataException ex) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit bencode", ex.Message, ButtonEnum.Ok, Icon.Error).ShowWindowAsync();
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit Bencode", ex.Message, ButtonEnum.Ok, Icon.Error).ShowWindowAsync();
             return;
         }
 
@@ -190,7 +190,7 @@ public partial class BencodeEditorWindowViewModel : ObservableViewModel
         try {
             CloseWindow((BDictionary)root.ToBObject());
         } catch (InvalidDataException ex) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit bencode", ex.Message, ButtonEnum.Ok, Icon.Error).ShowWindowAsync();
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit Bencode", ex.Message, ButtonEnum.Ok, Icon.Error).ShowWindowAsync();
         }
     }
 

@@ -80,4 +80,20 @@
     <Style Selector="TabItem:selected /template/ Border#PART_SelectedPipe">
         <Setter Property="IsVisible" Value="False" />
     </Style>
+
+    <Style Selector="StackPanel.DialogButtons">
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="Spacing" Value="{DynamicResource ControlSpacing}" />
+    </Style>
+    <Style Selector="StackPanel.DialogButtons > Button">
+        <Setter Property="MinWidth" Value="75" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- Field captions sit in a label column or above their field, aligned with its text -->
+    <Style Selector="Label">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
 </Styles>

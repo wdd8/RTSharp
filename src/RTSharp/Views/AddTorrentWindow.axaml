@@ -6,99 +6,105 @@
         xmlns:vm="clr-namespace:RTSharp.ViewModels"
         xmlns:core="clr-namespace:RTSharp.Core"
         xmlns:local="clr-namespace:RTSharp.Views"
+        xmlns:util="using:RTSharp.Views.Util"
         mc:Ignorable="d"
         x:Class="RTSharp.Views.AddTorrentWindow"
 		x:DataType="vm:AddTorrentViewModel"
-        Title="RT# - Add torrent"
+        Title="RT# - Add Torrent"
         Width="420"
         SizeToContent="Height"
         CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        util:WindowPlacement.Remember="True"
+        util:WindowPlacement.Page="{Binding #Tabs.SelectedIndex}"
         Name="window"
         Icon="/Assets/rtsharp.ico">
     <Design.DataContext>
         <vm:AddTorrentViewModel />
     </Design.DataContext>
-    <TabControl>
-        <TabItem>
-            <TabItem.Header>
-                <TextBlock>Source</TextBlock>
-            </TabItem.Header>
-            <StackPanel Name="sourcePage">
-                <GroupBox Header="Data provider">
-                    <views:DataProviderSelection DataProviders="{Binding DataProviders}" SelectedProvider="{Binding SelectedProvider}" />
-                </GroupBox>
-                <GroupBox Header="Remote directory">
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" Margin="5,0,0,0" Command="{Binding BrowseRemoteDirectoryClickCommand}">Browse...</Button>
-                        <TextBox Text="{Binding RemoteTargetPath}" />
-                    </DockPanel>
-                </GroupBox>
-                <GroupBox>
-                    <GroupBox.Header>
-                        <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromFileSelected}">From file</RadioButton>
-                    </GroupBox.Header>
-                    <DockPanel>
-                        <Button IsEnabled="{Binding FromFileSelected}"
-                                Margin="5,0,0,0"
-                                DockPanel.Dock="Right"
-                                Command="{Binding BrowseLocalFileClickCommand}">Browse...</Button>
-                        <TextBox IsEnabled="{Binding FromFileSelected}" Text="{Binding SelectedFileTextBox}" />
-                    </DockPanel>
-                </GroupBox>
-                <GroupBox>
-                    <GroupBox.Header>
-                        <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromUriSelected}">From URI</RadioButton>
-                    </GroupBox.Header>
-                    <TextBox IsEnabled="{Binding FromUriSelected}" ClipToBounds="True" Text="{Binding Uri}" />
-                </GroupBox>
-                <GroupBox>
-                    <GroupBox.Header>
-                        <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromClipboardSelected}">From clipboard (URI's)</RadioButton>
-                    </GroupBox.Header>
-                    <Button IsEnabled="{Binding FromClipboardSelected}"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            Command="{Binding PreviewClipboardClickCommand}">Preview</Button>
-                </GroupBox>
-                <Grid ColumnDefinitions="*,Auto" Margin="0,15,0,15">
-                    <StackPanel Grid.Column="0">
-                        <CheckBox IsChecked="{Binding StartTorrent}" IsEnabled="{Binding !ForceStartTorrentOnAdd}">Start torrent</CheckBox>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                        <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding AddClickCommand}">Add</Button>
-                        <Button HorizontalContentAlignment="Center" Width="73" Command="{Binding CancelClickCommand}">Cancel</Button>
-                    </StackPanel>
-                </Grid>
+    <DockPanel>
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="{StaticResource DialogMargin}">
+            <CheckBox Grid.Column="0" IsChecked="{Binding StartTorrent}" IsEnabled="{Binding !ForceStartTorrentOnAdd}">_Start torrent</CheckBox>
+            <StackPanel Grid.Column="1" Classes="DialogButtons">
+                <Button IsDefault="True" Command="{Binding AddClickCommand}">Add</Button>
+                <Button IsCancel="True" Command="{Binding CancelClickCommand}">Cancel</Button>
             </StackPanel>
-        </TabItem>
-        <TabItem>
-            <TabItem.Header>
-                <TextBlock>Duplication</TextBlock>
-            </TabItem.Header>
-            <DockPanel Height="{Binding #sourcePage.Bounds.Height}">
-                <StackPanel DockPanel.Dock="Top" Margin="8">
-                    <local:DuplicationTargetSelectorControl DataContext="{Binding DuplicationTargetSelector}" />
-                    <Button Margin="0,8,0,0"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            Command="{Binding AddDuplicationTargetClickCommand}">Add target</Button>
+        </Grid>
+        <TabControl Name="Tabs">
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock>Source</TextBlock>
+                </TabItem.Header>
+                <StackPanel Name="sourcePage">
+                    <GroupBox Header="Data provider">
+                        <views:DataProviderSelection DataProviders="{Binding DataProviders}" SelectedProvider="{Binding SelectedProvider}" />
+                    </GroupBox>
+                    <GroupBox>
+                        <GroupBox.Header>
+                            <Label Target="{Binding #RemoteTargetPathBox}">_Remote directory</Label>
+                        </GroupBox.Header>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Margin="7,0,0,0" Command="{Binding BrowseRemoteDirectoryClickCommand}">_Browse...</Button>
+                            <TextBox Name="RemoteTargetPathBox" Text="{Binding RemoteTargetPath}" />
+                        </DockPanel>
+                    </GroupBox>
+                    <GroupBox>
+                        <GroupBox.Header>
+                            <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromFileSelected}">From _file</RadioButton>
+                        </GroupBox.Header>
+                        <DockPanel>
+                            <Button IsEnabled="{Binding FromFileSelected}"
+                                    Margin="7,0,0,0"
+                                    DockPanel.Dock="Right"
+                                    Command="{Binding BrowseLocalFileClickCommand}">Br_owse...</Button>
+                            <TextBox IsEnabled="{Binding FromFileSelected}" Text="{Binding SelectedFileTextBox}" />
+                        </DockPanel>
+                    </GroupBox>
+                    <GroupBox>
+                        <GroupBox.Header>
+                            <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromUriSelected}">From _URI</RadioButton>
+                        </GroupBox.Header>
+                        <TextBox IsEnabled="{Binding FromUriSelected}" ClipToBounds="True" Text="{Binding Uri}" />
+                    </GroupBox>
+                    <GroupBox>
+                        <GroupBox.Header>
+                            <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromClipboardSelected}">From _clipboard (URI's)</RadioButton>
+                        </GroupBox.Header>
+                        <Button IsEnabled="{Binding FromClipboardSelected}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding PreviewClipboardClickCommand}">_Preview</Button>
+                    </GroupBox>
                 </StackPanel>
-                <ListBox Margin="8,0,8,8" ItemsSource="{Binding DuplicationTargets}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="core:TorrentDuplication+DuplicationTarget">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Grid.Column="0" Margin="0,0,5,0">
-                                    <TextBlock FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding Provider.Host.Config.Plugin.Name}" />
-                                    <TextBlock TextTrimming="CharacterEllipsis" Text="{Binding RemoteTargetPath}" />
-                                </StackPanel>
-                                <Button Grid.Column="1"
-                                        Command="{Binding $parent[Window].((vm:AddTorrentViewModel)DataContext).RemoveDuplicationTargetClickCommand}"
-                                        CommandParameter="{Binding}">Remove</Button>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
-        </TabItem>
-    </TabControl>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock>Duplication</TextBlock>
+                </TabItem.Header>
+                <DockPanel Height="{Binding #sourcePage.Bounds.Height}">
+                    <StackPanel DockPanel.Dock="Top" Margin="{StaticResource DialogMargin}" Spacing="{StaticResource ControlSpacing}">
+                        <local:DuplicationTargetSelectorControl DataContext="{Binding DuplicationTargetSelector}" />
+                        <Button HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding AddDuplicationTargetClickCommand}">Add _Target</Button>
+                    </StackPanel>
+                    <ListBox Margin="11,0,11,0" ItemsSource="{Binding DuplicationTargets}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="core:TorrentDuplication+DuplicationTarget">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource ControlSpacing}">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock FontWeight="Bold" TextTrimming="CharacterEllipsis" Text="{Binding Provider.Host.Config.Plugin.Name}" />
+                                        <TextBlock TextTrimming="CharacterEllipsis" Text="{Binding RemoteTargetPath}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Command="{Binding $parent[Window].((vm:AddTorrentViewModel)DataContext).RemoveDuplicationTargetClickCommand}"
+                                            CommandParameter="{Binding}">Remove</Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
 </Window>

@@ -23,7 +23,7 @@
         <dialogHost:DialogHost.DialogContent>
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
-                    <TextBlock FontWeight="Bold">Set a new name for tracker</TextBlock>
+                    <TextBlock FontWeight="Bold">Set Name for</TextBlock>
                     <TextBlock FontWeight="Bold" Margin="4 0 0 0" Text="{Binding #MainGrid.((models:Tracker)SelectedItem).Domain}" />
                 </StackPanel>
                 <TextBox Name="TrackerName" Text="{Binding #MainGrid.((models:Tracker)SelectedItem).DisplayName, Mode=OneTime}" />
@@ -45,7 +45,7 @@
 	<dialogHost:DialogHost Name="DialogHostReplace" Identifier="ReplaceTrackerHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
         <dialogHost:DialogHost.DialogContent>
             <StackPanel>
-                <TextBlock FontWeight="Bold">Replace tracker to</TextBlock>
+                <TextBlock FontWeight="Bold">Replace Tracker With</TextBlock>
                 <TextBox Name="NewTracker" Text="{Binding #MainGrid.((models:Tracker)SelectedItem).Uri, Mode=OneTime}" />
                 <Button
                     Margin="0 -6 0 -7"
@@ -65,7 +65,7 @@
 	<dialogHost:DialogHost Name="DialogHostAddNew" Identifier="AddNewTrackerHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
         <dialogHost:DialogHost.DialogContent>
             <StackPanel>
-                <TextBlock FontWeight="Bold">Add new tracker</TextBlock>
+                <TextBlock FontWeight="Bold">Add a New Tracker</TextBlock>
                 <TextBox Name="AddNewTrackerText" />
                 <Button
                     Margin="0 -6 0 -7"
@@ -90,41 +90,41 @@
                       SelectionMode="Extended">
             <DataGrid.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="Add a new tracker..."
+                    <MenuItem Header="_Add a New Tracker..."
                               Command="{Binding #DialogHostAddNew.OpenDialogCommand}"
                     />
                     <Separator />
-                    <MenuItem Header="Enable"
+                    <MenuItem Header="_Enable"
                               Command="{Binding EnableCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
-                    <MenuItem Header="Disable"
+                    <MenuItem Header="_Disable"
                               Command="{Binding DisableCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
-                    <MenuItem Header="Remove"
+                    <MenuItem Header="_Remove"
                               Command="{Binding RemoveCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
-                    <MenuItem Header="Replace"
+                    <MenuItem Header="Re_place..."
                               Command="{Binding #DialogHostReplace.OpenDialogCommand}"
                               IsEnabled="{Binding HasSelectedItem}"
                     />
                     <Separator />
-                    <MenuItem Header="Reannounce"
+                    <MenuItem Header="Rea_nnounce"
                               Command="{Binding ReannounceCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
                     <Separator />
-                    <MenuItem Header="Set name..."
+                    <MenuItem Header="Set _Name..."
                               Command="{Binding #DialogHost.OpenDialogCommand}"
                               IsEnabled="{Binding HasSelectedItem}"
                     />
-                    <MenuItem Header="Set icon..."
+                    <MenuItem Header="Set _Icon..."
                               Command="{Binding SetIconCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
-                    <MenuItem Header="Fetch icon"
+                    <MenuItem Header="_Fetch Icon"
                               Command="{Binding FetchIconCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />

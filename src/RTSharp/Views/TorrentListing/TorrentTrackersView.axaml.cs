@@ -41,7 +41,7 @@ public partial class TorrentTrackersView : VmUserControl<TorrentTrackersViewMode
     private async Task<string?> ShowBrowserForIconDialog(Window Input)
     {
         var dialog = await Input.StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions() {
-            Title = "RT# - Browse for icon...",
+            Title = "RT# - Set Icon",
             AllowMultiple = false,
             FileTypeFilter = new List<FilePickerFileType> {
                 new("Image files") {

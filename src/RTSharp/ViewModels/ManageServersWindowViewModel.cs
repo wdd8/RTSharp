@@ -50,7 +50,7 @@ public partial class ManageServersWindowViewModel : ObservableObject
     [ObservableProperty]
     public partial Server? DialogServer { get; set; }
 
-    public string DialogTitle => IsDialogForNew ? "Add server" : "Edit server";
+    public string DialogTitle => IsDialogForNew ? "Add Server" : "Edit Server";
     public string DialogConfirmText => IsDialogForNew ? "Add" : "Save";
 
     public ManageServersWindowViewModel()
@@ -215,11 +215,11 @@ public partial class ManageServersWindowViewModel : ObservableObject
         IsDialogOpen = false;
 
         var box = MessageBoxManager.GetMessageBoxStandard(
-            title: "RT# - Manage Servers",
+            title: "RT# - Servers",
             text: $"Delete server \"{server.ServerId}\" ({server.Host}:{server.Port})?",
             @enum: ButtonEnum.YesNo,
             icon: Icon.Warning,
-            windowStartupLocation: WindowStartupLocation.CenterScreen);
+            windowStartupLocation: WindowStartupLocation.CenterOwner);
 
         if (await box.ShowAsync() != ButtonResult.Yes)
             return;
@@ -246,13 +246,13 @@ public partial class ManageServersWindowViewModel : ObservableObject
 
         var wnd = new DirectorySelectorWindow {
             ViewModel = new DirectorySelectorWindowViewModel(daemonService) {
-                WindowTitle = $"RT# - Browse file system ({SelectedServer.ServerId})",
+                WindowTitle = $"RT# - Browse File System ({SelectedServer.ServerId})",
                 IsBrowser = true
             }
         };
 
         await wnd.ViewModel.SetCurrentFolder("/");
-        wnd.Show();
+        wnd.Show(App.MainWindow);
     }
 
     public bool CanTestConnection() => SelectedServer != null;

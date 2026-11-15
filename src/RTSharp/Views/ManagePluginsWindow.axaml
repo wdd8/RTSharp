@@ -7,10 +7,13 @@
 		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
 		xmlns:sc="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
 		xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+		xmlns:util="using:RTSharp.Views.Util"
         mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="440"
 		x:Name="window"
         Width="640"
         Height="440"
+        WindowStartupLocation="CenterOwner"
+        util:WindowPlacement.Remember="True"
         x:Class="RTSharp.ManagePluginsWindow"
 		x:DataType="vm:ManagePluginsWindowViewModel"
         Title="RT# - Manage Plugins">
@@ -23,28 +26,29 @@
             <StackPanel Spacing="6" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.75)}">
                 <TextBlock Text="{Binding DialogTitle}" FontWeight="SemiBold" Margin="0,0,0,4" />
 
-                <TextBlock Text="Instance name" Opacity="0.6" FontSize="11" />
-                <TextBox Text="{Binding DialogInstanceName}" />
+                <Label Opacity="0.6" FontSize="11" Target="{Binding #InstanceNameBox}">_Instance name</Label>
+                <TextBox Name="InstanceNameBox" Text="{Binding DialogInstanceName}" />
 
                 <StackPanel Spacing="6" IsVisible="{Binding DialogIsDataProvider}">
-                    <TextBlock Text="Server" Opacity="0.6" FontSize="11" Margin="0,4,0,0" />
+                    <Label Opacity="0.6" FontSize="11" Margin="0,4,0,0" Target="{Binding #ServerBox}">_Server</Label>
                     <ComboBox HorizontalAlignment="Stretch"
-                                ItemsSource="{Binding AvailableServers}"
-                                SelectedItem="{Binding DialogServerId}" />
-                    <TextBlock Text="Data provider name (on daemon)" Opacity="0.6" FontSize="11" Margin="0,4,0,0" />
-                    <TextBox Text="{Binding DialogDataProviderName}" />
-                    <TextBlock Text="Color" Opacity="0.6" FontSize="11" Margin="0,4,0,0" />
-                    <ColorPicker Color="{Binding DialogColor, Mode=TwoWay}" IsAlphaEnabled="False" HorizontalAlignment="Left" />
+                              Name="ServerBox"
+                              ItemsSource="{Binding AvailableServers}"
+                              SelectedItem="{Binding DialogServerId}" />
+                    <Label Opacity="0.6" FontSize="11" Margin="0,4,0,0" Target="{Binding #DataProviderNameBox}">_Data provider name (on daemon)</Label>
+                    <TextBox Name="DataProviderNameBox" Text="{Binding DialogDataProviderName}" />
+                    <Label Opacity="0.6" FontSize="11" Margin="0,4,0,0" Target="{Binding #ColorBox}">_Color</Label>
+                    <ColorPicker Name="ColorBox" Color="{Binding DialogColor, Mode=TwoWay}" IsAlphaEnabled="False" HorizontalAlignment="Left" />
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,12,0,0">
+                <StackPanel Classes="DialogButtons" Margin="0,11,0,0">
                     <Button Content="{Binding DialogConfirmText}" Command="{Binding ConfirmDialogCommand}" />
                     <Button Content="Cancel" Command="{Binding CancelDialogCommand}" />
                 </StackPanel>
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
 
-        <Grid ColumnDefinitions="*,Auto,*">
+        <Grid ColumnDefinitions="*,Auto,*" Margin="{StaticResource DialogMargin}">
             <GroupBox Grid.Column="0" Header="Available plugins">
                 <ListBox ItemsSource="{Binding AvailablePlugins}" SelectedItem="{Binding SelectedAvailable}">
                     <ListBox.ItemTemplate>

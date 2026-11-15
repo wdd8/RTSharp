@@ -69,7 +69,7 @@
         </DataGrid.Resources>
         <DataGrid.ContextMenu>
             <ContextMenu>
-                <MenuItem Header="Media_info"
+                <MenuItem Header="Media_Info"
                           Command="{Binding MediaInfoCommand}"
                           CommandParameter="{Binding #MainGrid.SelectedItems}"
                         />
@@ -79,7 +79,7 @@
                         />
                 <Separator />
                 <MenuItem Header="_Priority">
-                    <MenuItem Header="_Don't download"
+                    <MenuItem Header="_Don't Download"
                               Command="{Binding SetPriorityDontDownloadCommand}"
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                             />

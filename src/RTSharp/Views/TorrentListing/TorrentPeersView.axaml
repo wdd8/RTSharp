@@ -22,7 +22,7 @@
     <dialogHost:DialogHost Name="DialogHostAddPeer" Identifier="AddPeerHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
         <dialogHost:DialogHost.DialogContent>
             <StackPanel>
-                <TextBlock FontWeight="Bold">Add peer</TextBlock>
+                <TextBlock FontWeight="Bold">Add Peer</TextBlock>
                 <TextBox Name="AddPeerEndpoint" PlaceholderText="IP:Port" Text="{Binding AddPeerEndpointText}" />
                 <Button
                     Margin="0 -6 0 -7"
@@ -46,11 +46,11 @@
                   VerticalAlignment="Stretch">
         <DataGrid.ContextMenu>
             <ContextMenu x:DataType="torrentListing:TorrentPeersViewModel">
-                <MenuItem Header="Add peer..."
+                <MenuItem Header="_Add Peer..."
                           Command="{Binding #DialogHostAddPeer.OpenDialogCommand}"
                     />
                 <Separator />
-                <MenuItem Header="Ban peer"
+                <MenuItem Header="_Ban Peer"
                           Command="{Binding BanPeerCommand}"
                           CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />

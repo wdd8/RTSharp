@@ -28,14 +28,12 @@
 
     <Window.Resources>
         <MenuItem x:Key="FileMenu" Header="_File">
-            <MenuItem Header="_Add torrent..." Command="{Binding AddTorrentClickCommand}" />
+            <MenuItem Header="_Add Torrent..." Command="{Binding AddTorrentClickCommand}" />
             <Separator />
-            <MenuItem Header="About" Command="{Binding AboutClickCommand}" />
-            <MenuItem Header="About framework" Command="{Binding AboutFrameworkClickCommand}" />
-            <MenuItem Header="_Exit" />
+            <MenuItem Header="E_xit" Command="{Binding #Root.ExitCommand}" />
         </MenuItem>
         <MenuItem x:Key="ViewMenu" Header="_View">
-            <MenuItem Header="Statistics" Command="{Binding ShowStatisticsWindowCommand}" />
+            <MenuItem Header="_Statistics" Command="{Binding ShowStatisticsWindowCommand}" />
         </MenuItem>
         <MenuItem x:Key="ToolsMenu" Name="ToolsMenu" Header="_Tools">
             <MenuItem Header="Torrent _Creator" Command="{Binding TorrentCreatorClickCommand}" />
@@ -46,6 +44,9 @@
         <MenuItem x:Key="PluginsMenu" Header="_Plugins" Command="{Binding PluginsClickCommand}" />
         <MenuItem x:Key="HelpMenu" Header="_Help">
             <MenuItem Header="_Contents" InputGesture="F1" Command="{Binding #Root.OpenHelpCommand}" />
+            <Separator />
+            <MenuItem Header="_About RT#" Command="{Binding AboutClickCommand}" />
+            <MenuItem Header="About _Avalonia" Command="{Binding AboutFrameworkClickCommand}" />
         </MenuItem>
     </Window.Resources>
 

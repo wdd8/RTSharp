@@ -12,53 +12,46 @@
     <UserControl.Styles>
         <Style Selector="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0 0 8 0" />
         </Style>
     </UserControl.Styles>
 
     <dialogHost:DialogHost Name="AddReplacementDialog" Identifier="AddReplacementDialog" CloseOnClickAway="True">
         <dialogHost:DialogHost.DialogContent>
-            <StackPanel Margin="16" Spacing="10" MinWidth="280">
-                <TextBlock FontWeight="Bold">Add peer origin replacement</TextBlock>
-                <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,Auto">
-                    <TextBlock Grid.Column="0" Grid.Row="0">Pattern:</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding NewReplacementPattern}" />
-                    <TextBlock Grid.Column="0" Grid.Row="1">Replacement:</TextBlock>
-                    <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding NewReplacementReplacement}" />
+            <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}" MinWidth="280">
+                <TextBlock FontWeight="Bold">Add Peer Origin Replacement</TextBlock>
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}" RowSpacing="{StaticResource ControlSpacing}">
+                    <Label Grid.Column="0" Grid.Row="0" Target="{Binding #PatternBox}">Patt_ern:</Label>
+                    <TextBox Grid.Column="1" Grid.Row="0" Name="PatternBox" Text="{Binding NewReplacementPattern}" />
+                    <Label Grid.Column="0" Grid.Row="1" Target="{Binding #ReplacementBox}">Repla_cement:</Label>
+                    <TextBox Grid.Column="1" Grid.Row="1" Name="ReplacementBox" Text="{Binding NewReplacementReplacement}" />
                 </Grid>
                 <Button Width="0" Margin="0 -6 0 -7" IsDefault="True" Command="{Binding AddReplacementCommand}" />
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
 
-        <StackPanel Margin="8" Spacing="12">
+        <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}">
             <GroupBox Header="Polling intervals">
-                <StackPanel Spacing="8">
-                    <Grid ColumnDefinitions="170,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
-                        <Grid.Styles>
-                            <Style Selector="TextBlock.unit">
-                                <Setter Property="Margin" Value="4 0 0 6" />
-                            </Style>
-                        </Grid.Styles>
+                <StackPanel Spacing="{StaticResource ControlSpacing}">
+                    <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}" RowSpacing="{StaticResource ControlSpacing}">
+                        <Label Grid.Column="0" Grid.Row="0" Target="{Binding #FilesPollingBox}">_Files polling interval:</Label>
+                        <NumericUpDown Grid.Column="1" Grid.Row="0" Name="FilesPollingBox" Value="{Binding FilesPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
+                        <TextBlock Grid.Column="2" Grid.Row="0">seconds</TextBlock>
 
-                        <TextBlock Grid.Column="0" Grid.Row="0">Files polling interval:</TextBlock>
-                        <NumericUpDown Grid.Column="1" Grid.Row="0" Value="{Binding FilesPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
-                        <TextBlock Grid.Column="2" Grid.Row="0" Classes="unit">seconds</TextBlock>
+                        <Label Grid.Column="0" Grid.Row="1" Target="{Binding #PeersPollingBox}">_Peers polling interval:</Label>
+                        <NumericUpDown Grid.Column="1" Grid.Row="1" Name="PeersPollingBox" Value="{Binding PeersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
+                        <TextBlock Grid.Column="2" Grid.Row="1">seconds</TextBlock>
 
-                        <TextBlock Grid.Column="0" Grid.Row="1">Peers polling interval:</TextBlock>
-                        <NumericUpDown Grid.Column="1" Grid.Row="1" Value="{Binding PeersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
-                        <TextBlock Grid.Column="2" Grid.Row="1" Classes="unit">seconds</TextBlock>
+                        <Label Grid.Column="0" Grid.Row="2" Target="{Binding #TrackersPollingBox}">_Trackers polling interval:</Label>
+                        <NumericUpDown Grid.Column="1" Grid.Row="2" Name="TrackersPollingBox" Value="{Binding TrackersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
+                        <TextBlock Grid.Column="2" Grid.Row="2">seconds</TextBlock>
 
-                        <TextBlock Grid.Column="0" Grid.Row="2">Trackers polling interval:</TextBlock>
-                        <NumericUpDown Grid.Column="1" Grid.Row="2" Value="{Binding TrackersPollingIntervalSeconds}" Minimum="0.1" FormatString="F1" />
-                        <TextBlock Grid.Column="2" Grid.Row="2" Classes="unit">seconds</TextBlock>
-
-                        <TextBlock Grid.Column="0" Grid.Row="3">Search-as-you-go delay:</TextBlock>
-                        <NumericUpDown Grid.Column="1" Grid.Row="3" Value="{Binding SearchAsYouGoDelaySeconds}" Minimum="0" FormatString="F1" />
-                        <TextBlock Grid.Column="2" Grid.Row="3" Classes="unit">seconds</TextBlock>
+                        <Label Grid.Column="0" Grid.Row="3" Target="{Binding #SearchDelayBox}">_Search-as-you-go delay:</Label>
+                        <NumericUpDown Grid.Column="1" Grid.Row="3" Name="SearchDelayBox" Value="{Binding SearchAsYouGoDelaySeconds}" Minimum="0" FormatString="F1" />
+                        <TextBlock Grid.Column="2" Grid.Row="3">seconds</TextBlock>
                     </Grid>
 
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <CheckBox IsChecked="{Binding PollActiveTabOnly}">Poll selected torrent's active detail tab only</CheckBox>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource ControlSpacing}">
+                        <CheckBox IsChecked="{Binding PollActiveTabOnly}">P_oll selected torrent's active detail tab only</CheckBox>
                         <views:BuiltInIconImage Value="QUESTION" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
                             ToolTip.Tip="When enabled, only the details tab currently in view (Files, Peers or Trackers) is polled for the selected torrent, instead of all of them at once." />
                     </StackPanel>
@@ -66,25 +59,29 @@
             </GroupBox>
 
             <GroupBox Header="Torrents">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <CheckBox IsChecked="{Binding AutoStartRecheckedTorrents}">Automatically start torrents after a recheck</CheckBox>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource ControlSpacing}">
+                    <CheckBox IsChecked="{Binding AutoStartRecheckedTorrents}">Automatically sta_rt torrents after a recheck</CheckBox>
                     <views:BuiltInIconImage Value="QUESTION" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
                            ToolTip.Tip="When enabled, a torrent that finishes rechecking/hash-verifying and is fully complete will be started automatically." />
                 </StackPanel>
             </GroupBox>
 
             <GroupBox Header="Favicons">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <CheckBox IsChecked="{Binding UseFaviconGoogleAPI}">Use Google favicon API</CheckBox>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource ControlSpacing}">
+                    <CheckBox IsChecked="{Binding UseFaviconGoogleAPI}">Use _Google favicon API</CheckBox>
                     <views:BuiltInIconImage Value="QUESTION"
                            Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
                            ToolTip.Tip="Fetching favicons via Google is more stable, but sends the domain you're looking up to Google." />
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Peer origin lookup">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <ComboBox ItemsSource="{Binding WhoisProviders}"
+            <GroupBox>
+                <GroupBox.Header>
+                    <Label Target="{Binding #WhoisProviderBox}">Peer origin _lookup</Label>
+                </GroupBox.Header>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource ControlSpacing}">
+                    <ComboBox Name="WhoisProviderBox"
+                              ItemsSource="{Binding WhoisProviders}"
                               SelectedItem="{Binding SelectedWhoisProvider}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="pages:WhoisProviderItem">
@@ -98,7 +95,7 @@
             </GroupBox>
 
             <GroupBox Header="Peer origin replacements">
-                <StackPanel Spacing="6">
+                <StackPanel Spacing="{StaticResource ControlSpacing}">
                     <DataGrid ItemsSource="{Binding PeerOriginReplacements}"
                               SelectedItem="{Binding SelectedPeerOriginReplacement}"
                               AutoGenerateColumns="False"
@@ -113,11 +110,11 @@
                             <DataGridTextColumn Header="Replacement" Binding="{Binding Replacement}" Width="*" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <Button Command="{Binding #AddReplacementDialog.OpenDialogCommand}">Add</Button>
+                    <StackPanel Classes="DialogButtons" HorizontalAlignment="Left">
+                        <Button Command="{Binding #AddReplacementDialog.OpenDialogCommand}">A_dd...</Button>
                         <Button Command="{Binding RemoveReplacementCommand}"
                                 CommandParameter="{Binding SelectedPeerOriginReplacement}"
-                                IsEnabled="{Binding SelectedPeerOriginReplacement, Converter={x:Static ObjectConverters.IsNotNull}}">Remove</Button>
+                                IsEnabled="{Binding SelectedPeerOriginReplacement, Converter={x:Static ObjectConverters.IsNotNull}}">Re_move</Button>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>

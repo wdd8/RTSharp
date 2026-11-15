@@ -16,11 +16,11 @@ public partial class BytesEditorWindow : VmWindow<BytesEditorWindowViewModel>
         BindViewModelActions(vm => {
             vm!.OpenFileDialog = async () => (await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions {
                 AllowMultiple = false,
-                Title = "Import bytes from file..."
+                Title = "Import File"
             })).FirstOrDefault()?.TryGetLocalPath();
             vm!.SaveFileDialog = async () => (await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions {
                 ShowOverwritePrompt = true,
-                Title = "Export bytes to file..."
+                Title = "Export File"
             }))?.TryGetLocalPath();
             vm!.CloseWindow = Close;
         });

@@ -168,7 +168,7 @@ public partial class TorrentEditorWindowViewModel : ObservableObject
     {
         var msgBox = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
             ButtonDefinitions = Buttons,
-            ContentTitle = "RT# - Edit torrent",
+            ContentTitle = "RT# - Edit Torrent",
             ContentMessage = Message,
             Icon = Icon
         });

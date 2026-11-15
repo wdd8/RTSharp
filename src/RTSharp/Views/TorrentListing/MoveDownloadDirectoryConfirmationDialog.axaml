@@ -4,37 +4,42 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RTSharp.ViewModels.TorrentListing"
         xmlns:sc="using:RTSharp.Shared.Controls.Views"
+        xmlns:util="using:RTSharp.Views.Util"
         mc:Ignorable="d"
         MinHeight="150"
         Width="450" Height="300"
+        WindowStartupLocation="CenterOwner"
+        util:WindowPlacement.Remember="True"
         x:Class="RTSharp.Views.TorrentListing.MoveDownloadDirectoryConfirmationDialog"
         x:DataType="vm:MoveDownloadDirectoryConfirmationDialogViewModel"
         d:DataContext="{x:Static vm:ExampleMoveDownloadDirectoryConfirmationDialogViewModel.ViewModel}"
         Icon="/Assets/rtsharp.ico"
-        Title="RT# - Move download directory">
-    <Panel Margin="10">
-        <Grid RowDefinitions="*,Auto,Auto" ColumnDefinitions="*">
-            <Grid Grid.Row="0" ColumnDefinitions="*,Auto,*">
-                <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Padding="4">
-                    <TextBlock IsEnabled="False" Text="{Binding LeftSide}" />
-                </Border>
-                <GridSplitter Grid.Column="1" Margin="4,0,4,0" />
-                <sc:BuiltInPathIcon Grid.Column="1" Margin="4,0,4,0" Value="ARROW_RIGHT" />
-                <Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" Padding="4">
-                    <TextBlock IsEnabled="False" Text="{Binding RightSide}" />
-                </Border>
-            </Grid>
-            <Grid Grid.Row="1" Margin="0,10,0,0" ColumnDefinitions="*,Auto">
-                <TextBlock
-                    Text="{Binding MoveWarning}"
-                    VerticalAlignment="Center"
-                    TextTrimming="CharacterEllipsis"
-                    ToolTip.Tip="{Binding MoveWarning}" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                    <Button Command="{Binding CancelClickCommand}">Cancel</Button>
-                    <Button Command="{Binding ConfirmClickCommand}">Confirm</Button>
-                </StackPanel>
-            </Grid>
+        Title="RT# - Move Download Directory">
+    <Grid Margin="{StaticResource DialogMargin}" RowSpacing="{StaticResource GroupSpacing}" RowDefinitions="*,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,*">
+            <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="1">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                    <TextBlock Margin="4" IsEnabled="False" Text="{Binding LeftSide}" />
+                </ScrollViewer>
+            </Border>
+            <GridSplitter Grid.Column="1" Margin="4,0,4,0" />
+            <sc:BuiltInPathIcon Grid.Column="1" Margin="4,0,4,0" Value="ARROW_RIGHT" />
+            <Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                    <TextBlock Margin="4" IsEnabled="False" Text="{Binding RightSide}" />
+                </ScrollViewer>
+            </Border>
         </Grid>
-    </Panel>
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource GroupSpacing}">
+            <TextBlock
+                Text="{Binding MoveWarning}"
+                VerticalAlignment="Center"
+                TextTrimming="CharacterEllipsis"
+                ToolTip.Tip="{Binding MoveWarning}" />
+            <StackPanel Grid.Column="1" Classes="DialogButtons">
+                <Button IsDefault="True" Command="{Binding ConfirmClickCommand}">Move</Button>
+                <Button IsCancel="True" Command="{Binding CancelClickCommand}">Cancel</Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
 </Window>

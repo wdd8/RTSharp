@@ -31,7 +31,7 @@
                 <DockPanel>
                     <DockPanel.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="Logs" Command="{Binding ShowLogsCommand}" IsVisible="{Binding CanShowLogs}" />
+                            <MenuItem Header="_Logs" Command="{Binding ShowLogsCommand}" IsVisible="{Binding CanShowLogs}" />
                         </ContextMenu>
                     </DockPanel.ContextMenu>
                     <Rectangle DockPanel.Dock="Left" Width="2" Fill="{Binding PluginColor}" />

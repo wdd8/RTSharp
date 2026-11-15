@@ -204,7 +204,7 @@ public class App : Application
             ButtonDefinitions = [ new ButtonDefinition { Name = "OK", IsDefault = true } ],
             ImageIcon = icon!,
             Icon = icon == null ? MsBox.Avalonia.Enums.Icon.Error : MsBox.Avalonia.Enums.Icon.None,
-            ContentTitle = "RTSharp has crashed",
+            ContentTitle = "RT#",
             ContentMessage = $"RTSharp has crashed.\n{ex}",
             WindowStartupLocation = WindowStartupLocation.CenterOwner
         });
@@ -244,6 +244,7 @@ public class App : Application
 
 #if DEBUG
         this.AttachDeveloperTools();
+        Avalonia.Diagnostics.Cdp.CdpServer.Start(9222);
 #endif
 
         /*var diagnosticsExporter = new DiagnosticsUdpExporter(new DiagnosticsUdpOptions {

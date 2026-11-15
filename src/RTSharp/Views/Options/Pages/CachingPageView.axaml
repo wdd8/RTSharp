@@ -11,32 +11,29 @@
     <UserControl.Styles>
         <Style Selector="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0 0 8 0" />
-        </Style>
-        <Style Selector="NumericUpDown">
-            <Setter Property="Margin" Value="0 0 0 6" />
         </Style>
     </UserControl.Styles>
 
-    <StackPanel Margin="8" Spacing="12">
+    <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}">
         <GroupBox Header="Files cache">
-            <StackPanel Spacing="8">
-                <CheckBox IsChecked="{Binding FilesCachingEnabled}">Enable files caching</CheckBox>
-                <Grid ColumnDefinitions="200,Auto" RowDefinitions="Auto,Auto">
-                    <TextBlock Grid.Column="0" Grid.Row="0">Concurrent peer caching requests:</TextBlock>
+            <StackPanel Spacing="{StaticResource ControlSpacing}">
+                <CheckBox IsChecked="{Binding FilesCachingEnabled}">Enable files _caching</CheckBox>
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}" RowSpacing="{StaticResource ControlSpacing}">
+                    <Label Grid.Column="0" Grid.Row="0" Target="{Binding #ConcurrentRequestsBox}">Concurrent peer caching _requests:</Label>
                     <NumericUpDown Grid.Column="1" Grid.Row="0"
+                                   Name="ConcurrentRequestsBox"
                                    Value="{Binding ConcurrentPeerCachingRequests}"
                                    Minimum="1"
                                    IsEnabled="{Binding FilesCachingEnabled}" />
 
-                    <TextBlock Grid.Column="0" Grid.Row="1">In-memory images:</TextBlock>
-                    <NumericUpDown Grid.Column="1" Grid.Row="1" Value="{Binding InMemoryImages}" Minimum="0" ToolTip.Tip="Set to 0 to disable in-memory image caching." />
+                    <Label Grid.Column="0" Grid.Row="1" Target="{Binding #InMemoryImagesBox}">In-memory _images:</Label>
+                    <NumericUpDown Grid.Column="1" Grid.Row="1" Name="InMemoryImagesBox" Value="{Binding InMemoryImages}" Minimum="0" ToolTip.Tip="Set to 0 to disable in-memory image caching." />
                 </Grid>
             </StackPanel>
         </GroupBox>
 
         <GroupBox Header="Cached data">
-            <StackPanel Spacing="6">
+            <StackPanel Spacing="{StaticResource ControlSpacing}">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
                         <TextBlock>AS cache</TextBlock>
