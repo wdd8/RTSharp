@@ -43,16 +43,21 @@ public class TorrentMapper
         };
     }
 
-    public static void ApplyFromExternal(Protocols.DataProvider.Torrent Stored, QBittorrent.Client.TorrentPartialInfo External)
+    public record struct StatusParts(string? Error, bool TrackerError, bool OtherAnnounceError, bool TrackerWarning);
+    public static void ApplyFromExternal(Protocols.DataProvider.Torrent Stored, QBittorrent.Client.TorrentPartialInfo External, ref StatusParts Status)
     {
         var etaExists = External.EstimatedTime != null && External.EstimatedTime.Value > TimeSpan.Zero && External.EstimatedTime.Value != TimeSpan.FromDays(100) && External.EstimatedTime.Value != TimeSpan.MaxValue;
         var wasHashing = Stored.State.HasFlag(Protocols.DataProvider.TorrentState.Hashing);
         var wasErrored = Stored.State.HasFlag(Protocols.DataProvider.TorrentState.Errored);
 
-        // PieceSize = ?
-        // Wasted = ?
-        // CreatedOnDate = ?
-        // Comment = ?
+        if (External.PieceSize != null)
+            Stored.ChunkSize = (uint)External.PieceSize.Value;
+        if (External.TotalWasted != null)
+            Stored.Wasted = (ulong)External.TotalWasted.Value;
+        if (External.CreationDate != null)
+            Stored.CreatedOn = Timestamp.FromDateTime(DateTime.SpecifyKind(External.CreationDate.Value, DateTimeKind.Utc));
+        if (External.Comment != null)
+            Stored.Comment = External.Comment;
         if (External.Private != null)
             Stored.IsPrivate = External.Private.Value;
         if (External.Name != null)
@@ -113,16 +118,25 @@ public class TorrentMapper
         if (External.SequentialDownload != null)
             Stored.SequentialDownload = External.SequentialDownload.Value;
 
-        if (External.HasTrackerError != null || External.HasOtherAnnounceError != null || External.HasTrackerWarning != null) {
-            if (External.HasTrackerError == true)
-                Stored.StatusMessage = "Tracker: [Announce rejected by tracker]";
-            else if (External.HasOtherAnnounceError == true)
-                Stored.StatusMessage = "Tracker: [Tracker unreachable]";
-            else if (External.HasTrackerWarning == true)
-                Stored.StatusMessage = "Tracker: [Announced with warning]";
-            else
-                Stored.StatusMessage = "";
-        }
+        if (External.Error != null)
+            Status.Error = External.Error;
+        if (External.HasTrackerError != null)
+            Status.TrackerError = External.HasTrackerError.Value;
+        if (External.HasOtherAnnounceError != null)
+            Status.OtherAnnounceError = External.HasOtherAnnounceError.Value;
+        if (External.HasTrackerWarning != null)
+            Status.TrackerWarning = External.HasTrackerWarning.Value;
+
+        if (!String.IsNullOrEmpty(Status.Error))
+            Stored.StatusMessage = Status.Error;
+        else if (Status.TrackerError)
+            Stored.StatusMessage = "Tracker: [Announce rejected by tracker]";
+        else if (Status.OtherAnnounceError)
+            Stored.StatusMessage = "Tracker: [Tracker unreachable]";
+        else if (Status.TrackerWarning)
+            Stored.StatusMessage = "Tracker: [Announced with warning]";
+        else
+            Stored.StatusMessage = "";
 
         if (External.HasTrackerError == null && External.HasOtherAnnounceError == null) {
             if (wasErrored)
@@ -154,6 +168,16 @@ public class TorrentMapper
 
     public static void ApplyFromExternal(Protocols.DataProvider.Torrent Stored, QBittorrent.Client.TorrentInfo External)
     {
+        if (External.PieceSize != null)
+            Stored.ChunkSize = (uint)External.PieceSize.Value;
+        if (External.TotalWasted != null)
+            Stored.Wasted = (ulong)External.TotalWasted.Value;
+        if (External.CreationDate != null)
+            Stored.CreatedOn = Timestamp.FromDateTime(DateTime.SpecifyKind(External.CreationDate.Value, DateTimeKind.Utc));
+        if (External.Comment != null)
+            Stored.Comment = External.Comment;
+        if (External.Error != null)
+            Stored.StatusMessage = External.Error;
         if (External.Private != null)
             Stored.IsPrivate = External.Private.Value;
         if (External.Name != null)

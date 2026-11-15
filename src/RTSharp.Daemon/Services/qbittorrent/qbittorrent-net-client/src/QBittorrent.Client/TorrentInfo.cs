@@ -296,6 +296,39 @@ namespace QBittorrent.Client
         /// </summary>
         [JsonPropertyName("private")]
         public bool? Private { get; set; }
+
+        /// <summary>
+        /// Torrent comment
+        /// </summary>
+        [JsonPropertyName("comment")]
+        public string Comment { get; set; }
+
+        /// <summary>
+        /// Why the torrent is in the error state, empty otherwise. Available on WebUI API >= 2.17.0.
+        /// </summary>
+        [JsonPropertyName("error")]
+        public string Error { get; set; }
+
+        /// <summary>
+        /// Piece size (bytes), 0 until the metadata is downloaded
+        /// </summary>
+        [JsonPropertyName("piece_size")]
+        public long? PieceSize { get; set; }
+
+        /// <summary>
+        /// Total data wasted (bytes)
+        /// </summary>
+        [JsonPropertyName("total_wasted")]
+        [JsonConverter(typeof(NegativeToNullConverter))]
+        public long? TotalWasted { get; set; }
+
+        /// <summary>
+        /// Torrent creation date, null when the torrent doesn't have one
+        /// </summary>
+        [JsonPropertyName("creation_date")]
+        [JsonConverter(typeof(UnixTimeToNullableDateTimeConverter))]
+        public DateTime? CreationDate { get; set; }
+
         /// <inheritdoc />
         public override string ToString()
         {

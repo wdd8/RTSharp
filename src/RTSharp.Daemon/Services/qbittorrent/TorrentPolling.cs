@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Mono.Unix.Native;
@@ -23,6 +24,8 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
     // Moves we asked for, by native hex hash
     private readonly ConcurrentDictionary<string, (string Target, DateTime? Issued)> RequestedMoves = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ActiveMove> ActiveMoves = new(StringComparer.OrdinalIgnoreCase);
+    // By native hex hash
+    private readonly Dictionary<string, TorrentMapper.StatusParts> StatusParts = new(StringComparer.OrdinalIgnoreCase);
 
     private sealed class ActiveMove(byte[] NativeHash, string TargetDir, ulong CompletedSize)
     {
@@ -84,6 +87,8 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 torrent.SequentialDownload != old.SequentialDownload ||
                 torrent.RemotePath != old.RemotePath ||
                 torrent.StatusMessage != old.StatusMessage ||
+                torrent.Comment != old.Comment ||
+                !Equals(torrent.CreatedOn, old.CreatedOn) ||
                 !Equals(torrent.FinishedOn, old.FinishedOn) ||
                 !torrent.Labels.Equals(old.Labels) ||
                 torrent.PrimaryTracker?.Uri != old.PrimaryTracker?.Uri) {
@@ -135,7 +140,9 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
             }
 
             var next = new InfoHashDictionary<(Protocols.DataProvider.Torrent Torrent, byte[] Key)>(data.FullUpdate ? 0 : LatestTorrents.Count);
-            if (!data.FullUpdate) {
+            if (data.FullUpdate)
+                StatusParts.Clear();
+            else {
                 LatestTorrentsLock.EnterReadLock();
                 try {
                     foreach (var (hash, torrent) in LatestTorrents)
@@ -173,7 +180,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                             Hash = hash.ToByteString()
                         };
                     }
-                    TorrentMapper.ApplyFromExternal(current, external);
+                    TorrentMapper.ApplyFromExternal(current, external, ref CollectionsMarshal.GetValueRefOrAddDefault(StatusParts, nativeHex, out _));
 
                     if (current.State.HasFlag(Protocols.DataProvider.TorrentState.Moving)) {
                         if (!ActiveMoves.ContainsKey(nativeHex)) {
@@ -199,6 +206,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                 foreach (var native in data.TorrentsRemoved) {
                     next.Remove(Convert.FromHexString(native));
                     ActiveMoves.Remove(native);
+                    StatusParts.Remove(native);
                     RequestedMoves.TryRemove(native, out _);
                 }
             }
@@ -224,8 +232,6 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                         continue;
                     }
 
-                    // Each target file is reserved before copying, so progress is allocated bytes.
-                    // Only the downloaded data of unfinished files is copied, their holes stay unallocated.
                     move.Pending = new(files.Count);
                     foreach (var file in files) {
                         if (file.Priority == TorrentContentPriority.Skip)
@@ -237,6 +243,7 @@ public sealed class TorrentPolling([ServiceKey] string InstanceKey, IServiceProv
                     }
                 }
 
+                // Use allocated bytes due to pre-allocation, but compression might make this unreliable
                 ulong copying = 0;
                 move.Pending.RemoveAll(x => {
                     var bytes = allocated(x.Path);
