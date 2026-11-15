@@ -65,14 +65,20 @@ public partial class SettingsWindowViewModel(IPluginHost<CrossSeedPluginConfig> 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(LinkOptions))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CrossSeedIndexer))]
     [RelayCommand]
-    public async Task Save()
+    public async Task Ok()
     {
         await PluginHost.SavePluginConfig(settings => {
             settings.Indexers = [.. Indexers];
             settings.LinkOptions = LinkOptions;
             settings.SearchDelaySeconds = SearchDelaySeconds;
         });
+        FxClose();
     }
+
+    [RelayCommand]
+    public void Cancel() => FxClose();
+
+    public Action FxClose { get; set; } = null!; // view set
 
     public override void OnContextPopulated()
     {

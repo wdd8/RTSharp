@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Input;
@@ -41,7 +41,7 @@ public class Plugin : BasePlugin<AutoIntegrifyPluginConfig>
         Dispatcher.UIThread.Invoke(() => {
             MenuItem = this.Host.RegisterTorrentContextMenuItem(list => {
                 var newMenuItem = new MenuItem {
-                    Header = "Align file integrity & recheck",
+                    Header = "Align File I_ntegrity & Recheck",
                     Command = new AsyncRelayCommand<IReadOnlyList<Torrent>>(selected => {
                         return Do(selected!);
                     })
@@ -49,7 +49,7 @@ public class Plugin : BasePlugin<AutoIntegrifyPluginConfig>
 
                 for (var x = 0;x < list.Count; x++) {
                     var t = list[x];
-                    if (t is MenuItem menuItem && menuItem.Header!.ToString() == "Force _recheck") {
+                    if (t is MenuItem menuItem && menuItem.Header!.ToString() == "Force _Recheck") {
                         list.Insert(x + 1, newMenuItem);
                         return newMenuItem;
                     }
@@ -61,7 +61,7 @@ public class Plugin : BasePlugin<AutoIntegrifyPluginConfig>
                 for (var x = 0;x < list.Count;x++) {
                     var t = list[x];
                     if (t is MenuItem menuItem) {
-                        if (menuItem.Header!.ToString() == "Align file integrity & recheck") {
+                        if (menuItem.Header!.ToString() == "Align File I_ntegrity & Recheck") {
                             list.RemoveAt(x);
                         }
                     }

@@ -200,7 +200,7 @@ public class DataProvider : IDataProvider
                         IsCancel = true
                     }
                 },
-                ContentTitle = "RT# - qbittorrent",
+                ContentTitle = "RT# - qBittorrent",
                 ContentMessage = $"There are insufficient permissions to delete {(onlySome ? "some " : "")}source files after move, how would you like to proceed?",
                 Icon = Icon.Warning,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner

@@ -127,7 +127,7 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
                 ButtonDefinitions = [ new ButtonDefinition() { Name = "OK", IsDefault = true } ],
                 ImageIcon = BuiltInIcon.Get(BuiltInIcons.DID_YOU_KNOW, Foreground: Window.Foreground),
                 WindowIcon = new Avalonia.Controls.WindowIcon(BuiltInIcon.Get(BuiltInIcons.RTSHARP)),
-                ContentTitle = "Auto integrify",
+                ContentTitle = "RT# - Auto Integrify",
                 ContentHeader = "Did you know...",
                 ContentMessage = "You can add additional search paths in plugin settings.\nBy default, only torrent current remote path is searched."
             });
@@ -189,18 +189,18 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
 
             if (Files.Any(x => x.Resolved != RESOLVE_STATE.RESOLVED && x.Resolved != RESOLVE_STATE.RESOLVED_HEURISTICS)) {
                 Dispatcher.UIThread.Invoke(() => {
-                    StatusText = "Failed to find files";
-                    ActionButtonText = "Retry";
+                    StatusText = "Unable to find all files";
+                    ActionButtonText = "_Retry";
                 });
             } else if (PendingLinks.Count == 0) {
                 Dispatcher.UIThread.Invoke(() => {
                     StatusText = "All files resolved";
-                    ActionButtonText = "Force recheck";
+                    ActionButtonText = "Force _Recheck";
                 });
             } else {
                 Dispatcher.UIThread.Invoke(() => {
                     StatusText = $"Ready to perform {PendingLinks.Count} hardlink{(PendingLinks.Count == 1 ? "" : "s")}";
-                    ActionButtonText = "Perform pending hardlinks";
+                    ActionButtonText = "_Perform Pending Hardlinks";
                 });
             }
 
@@ -337,10 +337,10 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
         if (dotTorrent.Single().Value.Length == 9 && Torrent.DataOwner.GUID == new Guid("E347109B-A06D-4894-9E3A-6FFF63411370") && dotTorrent.Single().Value.SequenceEqual("Not Found"u8)) {
             var msgbox = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
                 ButtonDefinitions = MsBox.Avalonia.Enums.ButtonEnum.Ok,
-                ContentTitle = "RT# - AutoIntegrify",
-                Icon = MsBox.Avalonia.Enums.Icon.Database,
+                ContentTitle = "RT# - Auto Integrify",
+                Icon = MsBox.Avalonia.Enums.Icon.Error,
                 WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterOwner,
-                ContentMessage = "You have most likely encountered a qBittorrent bug, which can make your torrent unrecheckable. To fix this, please remove the torrent, readd, and force recheck it yourself.\n\nAuto integrify process will now fail."
+                ContentMessage = "Unable to get the .torrent from qBittorrent. A qBittorrent bug can stop this torrent from being rechecked.\n\nTo fix this, remove the torrent, add it again and force a recheck."
             });
             _ = Dispatcher.UIThread.InvokeAsync(async () => {
                 await msgbox.ShowWindowDialogAsync(Window);

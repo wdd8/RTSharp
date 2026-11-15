@@ -26,46 +26,18 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
     public string[] AvailableServers { get; } = [..Core.Servers.All.Keys];
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(BeginConfigureNewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConfigureNewCommand))]
     public partial PluginManifest? SelectedAvailable { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteConfiguredCommand))]
-    [NotifyCanExecuteChangedFor(nameof(BeginEditConfiguredCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditConfiguredCommand))]
     public partial ConfiguredPlugin? SelectedConfigured { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsDialogOpen { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(DialogTitle))]
-    [NotifyPropertyChangedFor(nameof(DialogConfirmText))]
-    public partial bool IsDialogForNew { get; set; }
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ConfirmDialogCommand))]
-    public partial string DialogInstanceName { get; set; } = "";
-
-    [ObservableProperty]
-    public partial string? DialogServerId { get; set; }
-
-    [ObservableProperty]
-    public partial string DialogDataProviderName { get; set; } = "";
-
-    [ObservableProperty]
-    public partial bool DialogIsDataProvider { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(DialogColorBrush))]
-    public partial Color? DialogColor { get; set; }
-
-    public SolidColorBrush? DialogColorBrush => DialogColor != null ? new SolidColorBrush(DialogColor.Value) : null;
 
     [ObservableProperty]
     public partial bool HasChanges { get; set; }
 
-    public string DialogTitle => IsDialogForNew ? "Configure New Plugin" : "Configure Plugin";
-    public string DialogConfirmText => IsDialogForNew ? "Create" : "Save";
+    public Func<PluginDialogViewModel, Task<bool>> ShowPluginDialog { get; set; } = null!; // view set
 
     public ManagePluginsWindowViewModel()
     {
@@ -91,85 +63,49 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
         SelectedConfigured = ConfiguredPlugins.FirstOrDefault(x => x.InstanceName == selectedName);
     }
 
-    public bool CanBeginConfigureNew() => SelectedAvailable != null;
+    public bool CanConfigureNew() => SelectedAvailable != null;
 
-    [RelayCommand(CanExecute = nameof(CanBeginConfigureNew))]
-    public void BeginConfigureNew()
+    [RelayCommand(CanExecute = nameof(CanConfigureNew))]
+    public async Task ConfigureNew()
     {
-        IsDialogForNew = true;
-        DialogInstanceName = SelectedAvailable!.IsDataProvider ? "" : PathUtils.GetTopMostDirectoryName(SelectedAvailable!.ModuleDir);
-        DialogIsDataProvider = SelectedAvailable.IsDataProvider;
-        DialogServerId = AvailableServers.FirstOrDefault();
-        DialogDataProviderName = "";
-        DialogColor = null;
-        IsDialogOpen = true;
-    }
+        var module = SelectedAvailable!;
+        var dialog = new PluginDialogViewModel {
+            AvailableServers = AvailableServers,
+            IsDataProvider = module.IsDataProvider,
+            ModuleDir = module.ModuleDir,
+            InstanceName = module.IsDataProvider ? "" : PathUtils.GetTopMostDirectoryName(module.ModuleDir),
+            ServerId = AvailableServers.FirstOrDefault()
+        };
 
-    public bool CanBeginEditConfigured() => SelectedConfigured != null;
+        if (!await ShowPluginDialog(dialog))
+            return;
 
-    [RelayCommand(CanExecute = nameof(CanBeginEditConfigured))]
-    public void BeginEditConfigured()
-    {
-        var instance = SelectedConfigured!;
-        IsDialogForNew = false;
-        DialogInstanceName = instance.InstanceName;
-        DialogServerId = instance.ServerId;
-        DialogDataProviderName = instance.DataProviderName ?? "";
-        DialogIsDataProvider = instance.Manifest.IsDataProvider;
-        DialogColor = instance.Color != null ? Color.Parse(instance.Color) : null;
-        IsDialogOpen = true;
-    }
-
-    public bool CanConfirmDialog() => !string.IsNullOrWhiteSpace(DialogInstanceName);
-
-    [RelayCommand(CanExecute = nameof(CanConfirmDialog))]
-    public async Task ConfirmDialog()
-    {
-        if (IsDialogForNew)
-        {
-            if (SelectedAvailable == null)
-                return;
-
-            try {
-                await Plugins.CreatePluginConfig(
-                    SelectedAvailable.ModuleDir,
-                    DialogInstanceName.Trim(),
-                    SelectedAvailable.IsDataProvider,
-                    SelectedAvailable.IsDataProvider ? (DialogServerId ?? "") : null,
-                    SelectedAvailable.IsDataProvider ? DialogDataProviderName.Trim() : null,
-                    SelectedAvailable.IsDataProvider ? DialogColor : null
-                );
-            } catch (Exception ex) {
-                await MessageBoxManager.GetMessageBoxStandard("RT# - Manage Plugins", ex.Message, ButtonEnum.Ok, Icon.Stop).ShowWindowAsync();
-                return;
-            }
-        }
-        else
-        {
-            if (SelectedConfigured == null)
-                return;
-
-            try {
-                await Plugins.UpdatePluginConfig(
-                    SelectedConfigured.ConfigPath,
-                    DialogInstanceName.Trim(),
-                    DialogIsDataProvider ? DialogServerId : null,
-                    DialogIsDataProvider ? DialogDataProviderName.Trim() : null,
-                    DialogIsDataProvider ? DialogColor : null
-                );
-            } catch (Exception ex) {
-                await MessageBoxManager.GetMessageBoxStandard("RT# - Manage Plugins", ex.Message, ButtonEnum.Ok, Icon.Stop).ShowWindowAsync();
-                return;
-            }
-        }
-
-        IsDialogOpen = false;
         HasChanges = true;
         RefreshConfigured();
     }
 
-    [RelayCommand]
-    public void CancelDialog() => IsDialogOpen = false;
+    public bool CanEditConfigured() => SelectedConfigured != null;
+
+    [RelayCommand(CanExecute = nameof(CanEditConfigured))]
+    public async Task EditConfigured()
+    {
+        var instance = SelectedConfigured!;
+        var dialog = new PluginDialogViewModel {
+            AvailableServers = AvailableServers,
+            IsDataProvider = instance.Manifest.IsDataProvider,
+            ConfigPath = instance.ConfigPath,
+            InstanceName = instance.InstanceName,
+            ServerId = instance.ServerId,
+            DataProviderName = instance.DataProviderName ?? "",
+            DataProviderColor = instance.Color != null ? Color.Parse(instance.Color) : null
+        };
+
+        if (!await ShowPluginDialog(dialog))
+            return;
+
+        HasChanges = true;
+        RefreshConfigured();
+    }
 
     public bool CanDeleteConfigured() => SelectedConfigured != null;
 
@@ -177,7 +113,6 @@ public partial class ManagePluginsWindowViewModel : ObservableObject
     public async Task DeleteConfigured()
     {
         var instance = SelectedConfigured!;
-        IsDialogOpen = false;
 
         var box = MessageBoxManager.GetMessageBoxStandard(
             title: "RT# - Manage Plugins",

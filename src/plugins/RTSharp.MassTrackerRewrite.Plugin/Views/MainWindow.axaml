@@ -11,7 +11,8 @@
         x:Class="RTSharp.MassTrackerRewrite.Plugin.MainWindow"
 		x:DataType="vm:MainWindowViewModel"
 		Icon="avares://RTSharp/Assets/rtsharp.ico"
-        Title="Mass tracker rewrite">
+        WindowStartupLocation="CenterOwner"
+        Title="RT# - Mass Tracker Rewrite">
     <Window.Resources>
         <converters:MathConverter x:Key="MathConverter"/>
     </Window.Resources>
@@ -23,27 +24,28 @@
                 <TextBlock FontWeight="Bold" Text="Loading..." />
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
-		<Grid ColumnDefinitions="4*, 4, 8*" RowDefinitions="*">
-			<ListBox Grid.Column="0"
-				SelectionMode="Single"
-				Margin="4"
-				ItemsSource="{Binding Trackers}"
-				SelectedItem="{Binding SelectedTracker, Mode=TwoWay}"
-				VerticalAlignment="Stretch"
-				HorizontalAlignment="Stretch"
-				ScrollViewer.VerticalScrollBarVisibility="Auto"
-				IsEnabled="{Binding !IsBusy}" />
-			<GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>
+		<Grid ColumnDefinitions="4*, Auto, 8*" RowDefinitions="*" Margin="{DynamicResource DialogMargin}">
+			<GroupBox Grid.Column="0" Header="Trackers">
+				<ListBox
+					SelectionMode="Single"
+					ItemsSource="{Binding Trackers}"
+					SelectedItem="{Binding SelectedTracker, Mode=TwoWay}"
+					ScrollViewer.VerticalScrollBarVisibility="Auto"
+					IsEnabled="{Binding !IsBusy}" />
+			</GroupBox>
+			<GridSplitter Grid.Column="1" Width="{DynamicResource GroupSpacing}" Background="Transparent" ResizeDirection="Columns" />
 			<StackPanel Grid.Column="2"
-				Margin="10"
-				Spacing="8"
+				Spacing="{DynamicResource ControlSpacing}"
 				IsEnabled="{Binding !IsBusy}">
-					<TextBox Text="{Binding SelectedTracker.Uri}" IsReadOnly="True" />
-					<TextBlock Text="↓" />
-					<TextBox Text="{Binding UrlText, Mode=TwoWay}" PlaceholderText="Replacement..." />
-					<TextBlock Text="{Binding StatusText}" />
+					<Label Target="{Binding #CurrentBox}">_Selected tracker:</Label>
+					<TextBox Name="CurrentBox" Text="{Binding SelectedTracker.Uri}" IsReadOnly="True" />
+					<Label Target="{Binding #ReplacementBox}">Replace _with:</Label>
+					<TextBox Name="ReplacementBox" Text="{Binding UrlText, Mode=TwoWay}" />
+					<TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
 					<ProgressBar Minimum="0" Maximum="100" Height="16" Value="{Binding ProgressValue}" />
-					<Button Content="Go" Command="{Binding GoCommand}" />
+					<StackPanel Classes="DialogButtons">
+						<Button IsDefault="True" Command="{Binding GoCommand}">_Replace</Button>
+					</StackPanel>
 			</StackPanel>
 		</Grid>
 	</dialogHost:DialogHost>

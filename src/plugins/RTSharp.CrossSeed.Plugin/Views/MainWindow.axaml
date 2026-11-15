@@ -5,10 +5,11 @@
         x:DataType="vm:MainWindowViewModel"
         Width="1000" Height="560"
         MinWidth="600" MinHeight="300"
-        Title="Cross-seed">
-    <DockPanel Margin="16">
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-            <Button DockPanel.Dock="Right" Content="Stop" Command="{Binding StopCommand}" />
+        WindowStartupLocation="CenterOwner"
+        Title="RT# - Cross-Seed">
+    <DockPanel Margin="{DynamicResource DialogMargin}">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,11">
+            <Button DockPanel.Dock="Right" MinWidth="75" HorizontalContentAlignment="Center" Command="{Binding StopCommand}">S_top</Button>
             <TextBlock Text="{Binding ProgressText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
         </DockPanel>
         <DataGrid ItemsSource="{Binding Results}"
@@ -24,11 +25,11 @@
                 <DataGridTemplateColumn Width="170" CanUserResize="False" CanUserSort="False">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="vm:ResultRow">
-                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="4,2" IsVisible="{Binding CanAdd}">
-                                <Button Content="Add"
+                            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource ControlSpacing}" Margin="4,2" IsVisible="{Binding CanAdd}">
+                                <Button Content="Add..."
                                         Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).AddCommand}"
                                         CommandParameter="{Binding}" />
-                                <Button Content="Add default"
+                                <Button Content="Add Default"
                                         Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).AddDefaultCommand}"
                                         CommandParameter="{Binding}" />
                             </StackPanel>

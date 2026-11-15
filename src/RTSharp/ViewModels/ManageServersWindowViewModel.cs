@@ -1,17 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Google.Protobuf.WellKnownTypes;
-
-using Grpc.Net.Client;
-
 using Microsoft.Extensions.DependencyInjection;
 
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
 using RTSharp.Core.Services.Daemon;
-using RTSharp.Daemon.Protocols;
 
 using Serilog;
 
@@ -33,25 +28,13 @@ public partial class ManageServersWindowViewModel : ObservableObject
     public ObservableCollection<Server> ConfiguredServers { get; } = [];
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(BeginEditCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditCommand))]
     [NotifyCanExecuteChangedFor(nameof(DeleteCommand))]
     [NotifyCanExecuteChangedFor(nameof(TestConnectionCommand))]
     [NotifyCanExecuteChangedFor(nameof(BrowseFileSystemCommand))]
     public partial Server? SelectedServer { get; set; }
 
-    [ObservableProperty]
-    public partial bool IsDialogOpen { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(DialogTitle))]
-    [NotifyPropertyChangedFor(nameof(DialogConfirmText))]
-    public partial bool IsDialogForNew { get; set; }
-
-    [ObservableProperty]
-    public partial Server? DialogServer { get; set; }
-
-    public string DialogTitle => IsDialogForNew ? "Add Server" : "Edit Server";
-    public string DialogConfirmText => IsDialogForNew ? "Add" : "Save";
+    public Func<ServerDialogViewModel, Task<bool>> ShowServerDialog { get; set; } = null!; // view set
 
     public ManageServersWindowViewModel()
     {
@@ -91,60 +74,55 @@ public partial class ManageServersWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void BeginAdd()
+    public async Task Add()
     {
-        IsDialogForNew = true;
-        DialogServer = new Server { ServerId = "", Host = "", Port = 12345, CertThumbprint = "", ConnectionStatus = "" };
-        IsDialogOpen = true;
+        var dialog = new ServerDialogViewModel {
+            Server = new Server { ServerId = "", Host = "", Port = 12345, CertThumbprint = "", ConnectionStatus = "" }
+        };
+
+        if (await ShowServerDialog(dialog))
+            await Save(dialog);
     }
 
-    public bool CanBeginEdit() => SelectedServer != null;
+    public bool CanEdit() => SelectedServer != null;
 
-    [RelayCommand(CanExecute = nameof(CanBeginEdit))]
-    public void BeginEdit()
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    public async Task Edit()
     {
         var server = SelectedServer!;
-        IsDialogForNew = false;
 
-        using var scope = Core.ServiceProvider.CreateScope();
-        var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
-        var serverConfig = config.Servers.Value[server.ServerId];
+        string trustedThumbprint;
+        using (var scope = Core.ServiceProvider.CreateScope())
+            trustedThumbprint = scope.ServiceProvider.GetRequiredService<Core.Config>().Servers.Value[server.ServerId].TrustedThumbprint;
 
-        DialogServer = new Server {
-            ServerId = server.ServerId,
-            Host = server.Host,
-            Port = server.Port,
-            CertThumbprint = serverConfig.TrustedThumbprint,
-            ConnectionStatus = ""
+        var dialog = new ServerDialogViewModel {
+            OriginalServerId = server.ServerId,
+            Server = new Server {
+                ServerId = server.ServerId,
+                Host = server.Host,
+                Port = server.Port,
+                CertThumbprint = trustedThumbprint,
+                // What the daemon presented the last time the server was tested
+                CertNotBefore = server.CertNotBefore,
+                CertNotAfter = server.CertNotAfter,
+                CertAlgorithm = server.CertAlgorithm,
+                ConnectionStatus = server.ConnectionStatus,
+                Latency = server.Latency
+            }
         };
-        IsDialogOpen = true;
+
+        if (await ShowServerDialog(dialog))
+            await Save(dialog);
     }
 
-    [RelayCommand]
-    public async Task ConfirmDialog()
+    private async Task Save(ServerDialogViewModel Dialog)
     {
-        var ds = DialogServer!;
+        var ds = Dialog.Server;
         var serverId = ds.ServerId.Trim();
 
         using var scope = Core.ServiceProvider.CreateScope();
         var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
         var servers = config.Servers.Value;
-
-        if (IsDialogForNew && servers.ContainsKey(serverId)) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Manage Servers",
-                $"A server with ID \"{serverId}\" already exists.",
-                ButtonEnum.Ok, Icon.Stop).ShowWindowAsync();
-            return;
-        }
-
-        var oldServerId = !IsDialogForNew ? SelectedServer!.ServerId : null;
-
-        if (oldServerId != null && oldServerId != serverId && servers.ContainsKey(serverId)) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Manage Servers",
-                $"A server with ID \"{serverId}\" already exists.",
-                ButtonEnum.Ok, Icon.Stop).ShowWindowAsync();
-            return;
-        }
 
         var serverConfig = new Core.Config.Models.Server {
             Host = ds.Host.Trim(),
@@ -152,59 +130,17 @@ public partial class ManageServersWindowViewModel : ObservableObject
             TrustedThumbprint = ds.CertThumbprint!.Trim().ToUpperInvariant()
         };
 
-        if (oldServerId != null) {
-            Core.Servers.Remove(oldServerId);
-            servers.Remove(oldServerId);
+        if (Dialog.OriginalServerId != null) {
+            Core.Servers.Remove(Dialog.OriginalServerId);
+            servers.Remove(Dialog.OriginalServerId);
         }
 
         Core.Servers.AddActionQueue(Core.Servers.Connect(serverId, serverConfig));
         servers[serverId] = serverConfig;
 
-        IsDialogOpen = false;
         await config.Rewrite();
         Refresh();
     }
-
-    [RelayCommand]
-    public async Task TestDialogConnection()
-    {
-        var ds = DialogServer!;
-        if (String.IsNullOrWhiteSpace(ds.Host) || String.IsNullOrWhiteSpace(ds.CertThumbprint))
-            return;
-
-        ds.ConnectionStatus = "Testing...";
-        ds.Latency = null;
-
-        var temp = new Core.Config.Models.Server {
-            Host = ds.Host.Trim(),
-            DaemonPort = ds.Port,
-            TrustedThumbprint = ds.CertThumbprint.Trim().ToUpperInvariant()
-        };
-
-        GrpcChannel? channel = null;
-        try {
-            channel = ConfigureServices.CreateChannel("__dialog_test__", temp, cert => temp.TrustedThumbprint.Equals(cert.GetCertHashString(HashAlgorithmName.SHA256), StringComparison.OrdinalIgnoreCase));
-            var client = new GRPCServerService.GRPCServerServiceClient(channel);
-
-            var sw = Stopwatch.StartNew();
-            await client.TestAsync(new Empty());
-            sw.Stop();
-
-            ds.ConnectionStatus = "OK";
-            ds.Latency = Shared.Utils.Converters.ToAgoString(sw.Elapsed);
-        } catch (Exception ex) {
-            Log.Logger.Error(ex, "Test ping failed");
-            while (ex.InnerException != null)
-                ex = ex.InnerException;
-            ds.ConnectionStatus = ex.Message;
-            ds.Latency = null;
-        } finally {
-            channel?.Dispose();
-        }
-    }
-
-    [RelayCommand]
-    public void CancelDialog() => IsDialogOpen = false;
 
     public bool CanDelete() => SelectedServer != null;
 
@@ -212,7 +148,6 @@ public partial class ManageServersWindowViewModel : ObservableObject
     public async Task Delete()
     {
         var server = SelectedServer!;
-        IsDialogOpen = false;
 
         var box = MessageBoxManager.GetMessageBoxStandard(
             title: "RT# - Servers",

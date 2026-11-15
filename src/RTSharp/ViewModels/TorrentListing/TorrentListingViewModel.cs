@@ -458,7 +458,7 @@ public partial class TorrentListingViewModel : ObservableViewModel
 
         App.RegisterOnExit($"{nameof(TorrentListingView)}_{nameof(DataGrid)}_{nameof(SaveGridState)}", SaveGridState);
 
-        AddLabelMenuItem = new MenuItem { Command = ShowAddLabelCommand, Header = "Add..." };
+        AddLabelMenuItem = new MenuItem { Command = AddLabelCommand, Header = "_Add..." };
     }
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Torrent))]
@@ -469,12 +469,6 @@ public partial class TorrentListingViewModel : ObservableViewModel
         // A view made of torrents already polled makes the first one current, which the grid would select
         view.MoveCurrentToPosition(-1);
         View = view;
-    }
-
-    [RelayCommand]
-    public void ShowAddLabel()
-    {
-        ShowAddLabelDialog();
     }
 
     [RelayCommand]

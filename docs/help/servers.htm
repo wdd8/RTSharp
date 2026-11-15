@@ -22,22 +22,15 @@
 - Server ID: Unique name of the server, this is the name that you will select when you configure a data provider<br>
 - Host: Name or IP address of the server<br>
 - Port: The port that RTSharp.Daemon listens to, as set in its ListenAddress setting<br>
-- Trusted certificate thumbprint (SHA-256): The thumbprint of the server certificate (public.pem on the server)<br>
+- Thumbprint: The SHA-256 thumbprint of the server certificate (public.pem on the server)<br>
 </div>
 <p>Click on the "Test" button to check that everything is correct, you will get "OK" and the latency of the server, otherwise you will get the error message. Then click on "Add" to save the server. You don't need to restart RT#, the server is available immediately.</p>
 
-<p>The Server ID, the Host and the thumbprint are mandatory, the "Add" button stays disabled until they are filled in. If the certificate of the server does not match the trusted thumbprint when RT# connects, RT# will display the certificate of the server and ask you if you trust it. If you answer "Yes", the thumbprint is memorized and you won't be asked again. Be careful: if a server you were already connected to suddenly presents a different certificate, RT# displays a big "REMOTE HOST IDENTIFICATION HAS CHANGED" warning. It is possible that the certificate of the server has just been changed, but it is also possible that someone is doing something nasty, so never answer "Yes" without checking.</p>
+<p>The Server ID, the Host and the thumbprint are mandatory, clicking "Add" while one of them is empty tells you which fields to fill in. If the certificate of the server does not match the trusted thumbprint when RT# connects, RT# will display the certificate of the server and ask you if you trust it. If you answer "Yes", the thumbprint is memorized and you won't be asked again. Be careful: if a server you were already connected to suddenly presents a different certificate, RT# displays a big "REMOTE HOST IDENTIFICATION HAS CHANGED" warning. It is possible that the certificate of the server has just been changed, but it is also possible that someone is doing something nasty, so never answer "Yes" without checking.</p>
 
 <h3>3. Check the connection:</h3>
-<p>Select one server in the list and RT# automatically tests the connection. The right side of the window displays:</p>
-<div class="list">
-- Endpoint: The host and the port of the server<br>
-- Status: "OK" or the error message<br>
-- Latency: The time needed for a round trip to the server<br>
-- Thumbprint, Not before, Not after: Details about the certificate of the server<br>
-- TLS algorithm: The cipher suite negotiated with the server<br>
-</div>
-<p>You can test the connection again at any time with the "Test Connection" button. Use the "Edit..." button (or double click on a server) to modify it, and the "Delete" button to remove it. The "Browse File System" button opens the files of the server, as explained in the "Browsing the file system of a server" chapter.</p>
+<p>Select one server in the list and RT# automatically tests the connection. Below the host and port of the server, the list displays "OK" and the latency of the server, or the error message. You can test the connection again at any time with the "Test Connection" button.</p>
+<p>Use the "Edit..." button (or double click on a server) to modify it. Once the server has been tested, the Edit Server window also displays the certificate of the server: its validity dates (Not before, Not after) and the TLS algorithm negotiated with the server. The "Delete" button removes the server, and the "Browse File System" button opens the files of the server, as explained in the "Browsing the file system of a server" chapter.</p>
 
 </body>
 </html>

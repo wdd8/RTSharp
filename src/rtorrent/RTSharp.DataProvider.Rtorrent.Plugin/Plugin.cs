@@ -71,7 +71,7 @@ public class Plugin : BasePlugin<RtorrentDataProviderInstanceConfig>
             ViewModel = new MainWindowViewModel() {
                 PluginHost = Host,
                 ThisPlugin = this,
-                Title = Host.Config.Plugin.Name + " rtorrent settings",
+                Title = $"RT# - {Host.Config.Plugin.Name} rtorrent Settings",
                 Settings = SettingsMapper.MapFromProto(settings),
                 ListUpdateIntervalSeconds = Host.Config.ListUpdateInterval.TotalSeconds
             }

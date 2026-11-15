@@ -10,7 +10,6 @@
 			 xmlns:views="clr-namespace:RTSharp.Views.TorrentListing;assembly=RTSharp"
 			 xmlns:models="clr-namespace:RTSharp.Models"
 			 xmlns:abstractions="clr-namespace:RTSharp.Shared.Abstractions;assembly=RTSharp.Shared.Abstractions"
-			 xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
 			 xmlns:acol="clr-namespace:Avalonia.Collections;assembly=Avalonia.Base"
 			 xmlns:controls="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
 			 xmlns:filters="using:RTSharp.Shared.Controls.DataGridFilters"
@@ -28,7 +27,6 @@
 		<converters:SIDataSizeConverter x:Key="SIDataSizeConverter" />
 		<converters:SIDataSpeedConverter x:Key="SIDataSpeedConverter" />
 		<converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter" />
-		<converters:ItemsParamConverter x:Key="ItemsParamConverter" />
 		<sharedConverters:ToHexStringConverter x:Key="ToHexStringConverter" />
 
 		<converters:ValueConverterGroup x:Key="NotEnumValue">
@@ -37,27 +35,38 @@
 		</converters:ValueConverterGroup>
 
 		<acol:AvaloniaList x:Key="GridContextMenuItems" x:TypeArguments="Control">
+			<!-- Icons on the common commands, so they're found at a glance -->
 			<MenuItem
 				Header="_Start"
 				Command="{Binding StartTorrentsCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="START" Width="16" Height="16" /></MenuItem.Icon>
+			</MenuItem>
 			<MenuItem
 				Header="_Pause"
 				Command="{Binding PauseTorrentsCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="PAUSE" Width="16" Height="16" /></MenuItem.Icon>
+			</MenuItem>
 			<MenuItem
 				Header="S_top"
 				Command="{Binding StopTorrentsCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="STOP" Width="16" Height="16" /></MenuItem.Icon>
+			</MenuItem>
 			<Separator />
 			<MenuItem
 				Header="Force _Recheck"
 				Command="{Binding ForceRecheckTorrentsCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="STATE_HASHING" Width="16" Height="16" /></MenuItem.Icon>
+			</MenuItem>
 			<MenuItem
 				Header="Reannounce to _All Trackers"
 				Command="{Binding ReannounceToAllTrackersCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="WEB" Width="16" Height="16" /></MenuItem.Icon>
+			</MenuItem>
 			<Separator />
 			<MenuItem
 				Header="Set _Label"
@@ -71,32 +80,46 @@
 			<MenuItem
 				Header="_Move Download Directory..."
 				Command="{Binding MoveDownloadDirectoryCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="STATE_MOVING" Width="16" Height="16" /></MenuItem.Icon>
+			</MenuItem>
 			<MenuItem
 				Header="Download Se_quentially"
-				ToggleType="CheckBox"
-				IsChecked="{Binding SequentialDownloadChecked}"
 				Command="{Binding SetSequentialDownloadCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<!-- The check mark takes the icon column, as a toggle column would widen the whole menu -->
+				<MenuItem.Icon>
+					<Path Data="M3,8 L6.5,11.5 L13,4.5" Width="16" Height="16"
+						  Stroke="{Binding $parent[MenuItem].Foreground}" StrokeThickness="1.5"
+						  IsVisible="{Binding SequentialDownloadChecked}" />
+				</MenuItem.Icon>
+			</MenuItem>
 			<Separator />
 			<MenuItem
 				Header="Remo_ve Torrent"
 				Command="{Binding RemoveTorrentsCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="DELETE" Width="16" Height="16" /></MenuItem.Icon>
+			</MenuItem>
 			<MenuItem
 				Header="Remove Torrent &amp; _Data"
 				Command="{Binding RemoveTorrentsAndDataCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="DYNAMITE" Width="16" Height="16" /></MenuItem.Icon>
+			</MenuItem>
 			<Separator />
 			<MenuItem
 				Header="_Get .torrent"
 				Command="{Binding GetDotTorrentsCommand}"
-				CommandParameter="{Binding #grid.SelectedItems}" />
+				CommandParameter="{Binding #grid.SelectedItems}">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="DOWNLOAD" Width="16" Height="16" /></MenuItem.Icon>
+			</MenuItem>
 			<MenuItem
 				Header="_Edit Torrent..."
 				Command="{Binding EditTorrentCommand}"
 				CommandParameter="{Binding #grid.SelectedItems}" />
 			<MenuItem Name="DuplicateMenu" Header="D_uplicate">
+				<MenuItem.Icon><shared:BuiltInIconImage Value="COPY" Width="16" Height="16" /></MenuItem.Icon>
 				<MenuItem
 					Header="_Duplicate Torrent &amp; Data To..."
 					Command="{Binding DuplicateTorrentToCommand}"
@@ -187,26 +210,6 @@
             Content="{Binding TrackerFilter}"
             ContentTemplate="{StaticResource DataGridFilterTrackerEqualsTemplate}" />
 	</Control.Resources>
-
-	<dialogHost:DialogHost Name="AddLabelDialogHost" Identifier="AddLabelDialog" CloseOnClickAway="True">
-		<dialogHost:DialogHost.DialogContent>
-			<StackPanel>
-				<TextBlock FontWeight="Bold" Margin="0 0 0 10">Add Label</TextBlock>
-				<TextBox Name="LabelName" />
-				<Button
-					Margin="0 -6 0 -7"
-					Width="0"
-					IsDefault="True"
-					Command="{Binding AddLabelCommand}">
-					<Button.CommandParameter>
-						<MultiBinding Converter="{StaticResource ItemsParamConverter}">
-							<Binding Path="#grid.SelectedItems" />
-							<Binding Path="#LabelName.Text" />
-						</MultiBinding>
-					</Button.CommandParameter>
-				</Button>
-			</StackPanel>
-		</dialogHost:DialogHost.DialogContent>
 
 		<Grid Name="ContentGrid" RowDefinitions="Auto,*,4,*">
 			<DockPanel>
@@ -400,5 +403,4 @@
 				</TabItem>
 			</TabControl>
 		</Grid>
-	</dialogHost:DialogHost>
 </UserControl>

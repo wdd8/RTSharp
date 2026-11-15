@@ -179,14 +179,14 @@ namespace RTSharp.ViewModels.Tools
                 var msgBox = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
                     ButtonDefinitions = MsBox.Avalonia.Enums.ButtonEnum.Ok,
                     ContentTitle = "RT# - Torrent Creator",
-                    ContentMessage = "Invalid source path",
+                    ContentMessage = "The source path is not valid. Choose an existing file or folder.",
                     Icon = MsBox.Avalonia.Enums.Icon.Error
                 });
                 await msgBox.ShowWindowAsync();
                 return;
             }
 
-            var res = await SelectFileDestDialog(Path.GetFileName(SourcePath));
+            var res = await SelectFileDestDialog(Path.GetFileName(SourcePath) + ".torrent");
 
             if (res == null)
                 return;
@@ -198,7 +198,7 @@ namespace RTSharp.ViewModels.Tools
                 var msgBox = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
                     ButtonDefinitions = MsBox.Avalonia.Enums.ButtonEnum.Ok,
                     ContentTitle = "RT# - Torrent Creator",
-                    ContentMessage = "Invalid tracker URL",
+                    ContentMessage = "A tracker URL is not valid. Enter absolute URLs, one per line.",
                     Icon = MsBox.Avalonia.Enums.Icon.Error
                 });
                 await msgBox.ShowWindowAsync();
@@ -212,7 +212,7 @@ namespace RTSharp.ViewModels.Tools
                 var msgBox = MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
                     ButtonDefinitions = MsBox.Avalonia.Enums.ButtonEnum.Ok,
                     ContentTitle = "RT# - Torrent Creator",
-                    ContentMessage = "Invalid web seed URL",
+                    ContentMessage = "A web seed URL is not valid. Enter absolute URLs, one per line.",
                     Icon = MsBox.Avalonia.Enums.Icon.Error
                 });
                 await msgBox.ShowWindowAsync();

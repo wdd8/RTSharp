@@ -178,7 +178,7 @@ public class DataProvider : IDataProvider
         if (existsCount == reply.Count) {
             // All exist
             var msgbox = await MessageBoxManager.GetMessageBoxStandard(
-                title: "RT# - transmission", 
+                title: "RT# - Transmission", 
                 text: "All of the file names exist in destination directory, do you want to proceed without moving the files?", 
                 @enum: ButtonEnum.YesNo, 
                 icon: Icon.Info, 
@@ -203,7 +203,7 @@ public class DataProvider : IDataProvider
                         IsCancel = true
                     }
                 },
-                ContentTitle = "RT# - transmission",
+                ContentTitle = "RT# - Transmission",
                 ContentMessage = "Some of the files exist in destination directory, how would you like to proceed?",
                 Icon = Icon.Warning,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -231,7 +231,7 @@ public class DataProvider : IDataProvider
                                 IsCancel = true
                             }
                         },
-                        ContentTitle = "RT# - transmission",
+                        ContentTitle = "RT# - Transmission",
                         ContentMessage = $"There are insufficient permissions to overwrite {(onlySome ? "some of " : "")}target files, how would you like to proceed?",
                         Icon = Icon.Warning,
                         WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -266,7 +266,7 @@ public class DataProvider : IDataProvider
                         IsCancel = true
                     }
                 },
-                ContentTitle = "RT# - transmission",
+                ContentTitle = "RT# - Transmission",
                 ContentMessage = $"There are insufficient permissions to read one or more source files, how would you like to proceed?",
                 Icon = Icon.Warning,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
@@ -282,7 +282,7 @@ public class DataProvider : IDataProvider
 
         if (err != null) {
             await MessageBoxManager.GetMessageBoxStandard(new MsBox.Avalonia.Dto.MessageBoxStandardParams {
-                ContentTitle = "RT# - transmission",
+                ContentTitle = "RT# - Transmission",
                 ContentMessage = err,
                 Icon = Icon.Error,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner

@@ -171,7 +171,7 @@ public partial class MainWindowViewModel : ObservableObject
             : "Generate an API key?";
 
         var result = await MessageBoxManager.GetMessageBoxStandard(
-            title: "RT# - qbittorrent",
+            title: "RT# - qBittorrent",
             text: message,
             @enum: ButtonEnum.YesNo,
             icon: Icon.Question,
@@ -186,7 +186,7 @@ public partial class MainWindowViewModel : ObservableObject
             Settings.WebUI.WebUIApiKey = response.Value;
         } catch (RpcException ex) {
             await MessageBoxManager.GetMessageBoxStandard(
-                title: "RT# - qbittorrent",
+                title: "RT# - qBittorrent",
                 text: ex.Message,
                 @enum: ButtonEnum.Ok,
                 icon: Icon.Error,
@@ -198,7 +198,7 @@ public partial class MainWindowViewModel : ObservableObject
     public async Task DeleteApiKey()
     {
         var result = await MessageBoxManager.GetMessageBoxStandard(
-            title: "RT# - qbittorrent",
+            title: "RT# - qBittorrent",
             text: "Delete this API key? The current key will immediately stop working.",
             @enum: ButtonEnum.YesNo,
             icon: Icon.Question,
@@ -213,7 +213,7 @@ public partial class MainWindowViewModel : ObservableObject
             Settings.WebUI.WebUIApiKey = null;
         } catch (RpcException ex) {
             await MessageBoxManager.GetMessageBoxStandard(
-                title: "RT# - qbittorrent",
+                title: "RT# - qBittorrent",
                 text: ex.Message,
                 @enum: ButtonEnum.Ok,
                 icon: Icon.Error,

@@ -18,7 +18,7 @@ namespace RTSharp.ServerScriptPlayground.Plugin.ViewModels;
 public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, PlaygroundWindow Window, Guid OwnerId) : ObservableObject
 {
     [ObservableProperty]
-    public partial string RunButtonText { get; set; } = "Run";
+    public partial string RunButtonText { get; set; } = "R_un";
 
     [ObservableProperty]
     public partial string[] Servers { get; set; } = Host.GetDaemonServices().Select(x => x.Id).ToArray();
@@ -53,7 +53,7 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
 
         if (CurrentScriptId != null) {
             try { await server.QueueScriptCancellation(CurrentScriptId.Value); } catch { }
-            RunButtonText = "Run";
+            RunButtonText = "R_un";
             CurrentScriptId = null;
             return;
         }
@@ -61,11 +61,11 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
         try {
             CurrentScriptId = await server.RunCustomScript(Script, $"PlaygroundScript_{DateTime.UtcNow.Ticks}", []);
         } catch (Exception ex) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Script Playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
 
             return;
         }
-        RunButtonText = "Stop";
+        RunButtonText = "S_top";
     }
 
     [RelayCommand]
@@ -75,14 +75,14 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
             return;
 
         if (String.IsNullOrWhiteSpace(ServiceId)) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", "Enter a service id to install under.", ButtonEnum.Ok, Icon.Warning).ShowWindowDialogAsync(Window);
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Script Playground", "Enter a service id to install under.", ButtonEnum.Ok, Icon.Warning).ShowWindowDialogAsync(Window);
             return;
         }
 
         try {
             await Host.GetDaemonService(SelectedServer)!.InstallScript(ServiceId, ServiceId, OwnerId, Script, []);
         } catch (Exception ex) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Script Playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
             return;
         }
 
@@ -98,7 +98,7 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
         try {
             await Host.GetDaemonService(SelectedServer)!.UninstallScript(Script.Id);
         } catch (Exception ex) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Script Playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
             return;
         }
 
@@ -114,7 +114,7 @@ public partial class PlaygroundWindowViewModel(IPluginHost<PluginConfigContainer
         try {
             await Host.GetDaemonService(SelectedServer)!.SetOrphanAcknowledged(Script.Id, false);
         } catch (Exception ex) {
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Script playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Script Playground", ex.ToString(), ButtonEnum.Ok, Icon.Stop).ShowWindowDialogAsync(Window);
             return;
         }
 

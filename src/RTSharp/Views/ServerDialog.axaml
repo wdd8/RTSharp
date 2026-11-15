@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:RTSharp.ViewModels"
+        xmlns:sc="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+        mc:Ignorable="d" d:DesignWidth="440"
+        Width="440"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        x:Class="RTSharp.Views.ServerDialog"
+        x:DataType="vm:ServerDialogViewModel"
+        Icon="/Assets/rtsharp.ico"
+        Title="{Binding Title}">
+    <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource GroupSpacing}">
+            <sc:BuiltInIconImage Grid.Column="0" Value="SERVER" Width="32" Height="32" />
+            <TextBlock Grid.Column="1" Classes="MainInstruction">Enter the address of an RT# daemon</TextBlock>
+        </Grid>
+
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}" RowSpacing="{StaticResource ControlSpacing}">
+            <Label Grid.Column="0" Grid.Row="0" Target="{Binding #ServerIdBox}">Server _ID:</Label>
+            <TextBox Grid.Column="1" Grid.Row="0" Name="ServerIdBox" Text="{Binding Server.ServerId}" />
+
+            <Label Grid.Column="0" Grid.Row="1" Target="{Binding #HostBox}">_Host:</Label>
+            <TextBox Grid.Column="1" Grid.Row="1" Name="HostBox" Text="{Binding Server.Host}" />
+
+            <Label Grid.Column="0" Grid.Row="2" Target="{Binding #PortBox}">_Port:</Label>
+            <NumericUpDown Grid.Column="1" Grid.Row="2" Name="PortBox" HorizontalAlignment="Left" MinWidth="120"
+                           Value="{Binding Server.Port}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" />
+
+            <Label Grid.Column="0" Grid.Row="3" Target="{Binding #ThumbprintBox}">_Thumbprint:</Label>
+            <TextBox Grid.Column="1" Grid.Row="3" Name="ThumbprintBox" Text="{Binding Server.CertThumbprint}"
+                     Watermark="SHA-256 of the trusted daemon certificate" />
+        </Grid>
+
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource ControlSpacing}">
+            <Button Grid.Column="0" Command="{Binding TestCommand}">Te_st</Button>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                       Text="{Binding Server.ConnectionStatus}" ToolTip.Tip="{Binding Server.ConnectionStatus}" />
+            <TextBlock Grid.Column="2" VerticalAlignment="Center" Opacity="0.6" Text="{Binding Server.Latency}" />
+        </Grid>
+
+        <GroupBox Header="Certificate" IsVisible="{Binding HasCertificateDetails}">
+            <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}" RowSpacing="4">
+                <sc:BuiltInIconImage Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" Value="CERTIFICATE" Width="32" Height="32" VerticalAlignment="Top" Margin="0,0,4,0" />
+                <TextBlock Grid.Column="1" Grid.Row="0">Not before:</TextBlock>
+                <SelectableTextBlock Grid.Column="2" Grid.Row="0" Text="{Binding Server.CertNotBefore}" />
+                <TextBlock Grid.Column="1" Grid.Row="1">Not after:</TextBlock>
+                <SelectableTextBlock Grid.Column="2" Grid.Row="1" Text="{Binding Server.CertNotAfter}" />
+                <TextBlock Grid.Column="1" Grid.Row="2">TLS algorithm:</TextBlock>
+                <SelectableTextBlock Grid.Column="2" Grid.Row="2" Text="{Binding Server.CertAlgorithm}" />
+            </Grid>
+        </GroupBox>
+
+        <StackPanel Classes="DialogButtons">
+            <Button IsDefault="True" Command="{Binding ConfirmCommand}" Content="{Binding ConfirmText}" />
+            <Button IsCancel="True" Command="{Binding CancelCommand}">Cancel</Button>
+        </StackPanel>
+    </StackPanel>
+</Window>

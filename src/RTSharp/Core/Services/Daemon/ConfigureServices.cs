@@ -49,7 +49,7 @@ public static class ConfigureServices
                 title: "RT#",
                 text: "No client certificate exists for server daemon, do you wish to generate a new one?",
                 @enum: ButtonEnum.YesNo,
-                icon: Icon.Warning,
+                icon: Icon.None,
                 windowStartupLocation: WindowStartupLocation.CenterScreen);
 
                 return await wnd.ShowWindowAsync();

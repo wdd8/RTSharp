@@ -1,22 +1,23 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
+        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
         xmlns:vm="clr-namespace:RTSharp.CrossSeed.Plugin.ViewModels"
         xmlns:abstractions="clr-namespace:RTSharp.Shared.Abstractions;assembly=RTSharp.Shared.Abstractions"
         xmlns:search="clr-namespace:RTSharp.Scripts.CrossSeedSearch"
         x:Class="RTSharp.CrossSeed.Plugin.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
-        Title="Settings"
+        Title="RT# - Cross-Seed Settings"
         SizeToContent="WidthAndHeight"
-        Padding="12">
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
   <Window.Resources>
     <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
   </Window.Resources>
 
-
-  <StackPanel Spacing="8" MinWidth="600">
+  <StackPanel Margin="{DynamicResource DialogMargin}" Spacing="{DynamicResource GroupSpacing}" MinWidth="600">
     <GroupBox Header="Torznab indexers, as seen from the server">
-      <Grid RowDefinitions="Auto,Auto">
+      <StackPanel Spacing="{DynamicResource ControlSpacing}">
         <ListBox
             Name="list"
             Height="160"
@@ -26,42 +27,49 @@
             SelectedItem="{Binding SelectedIndexer, Mode=TwoWay}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="search:CrossSeedIndexer">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button
-                    Content="X"
-                    Command="{Binding #list.((vm:SettingsWindowViewModel)DataContext).RemoveCommand}"
-                    CommandParameter="{Binding}" />
-                <TextBlock VerticalAlignment="Center" FontWeight="Bold" Text="{Binding Name}" />
+              <StackPanel Orientation="Horizontal" Spacing="{DynamicResource ControlSpacing}">
+                <Button ToolTip.Tip="Remove"
+                        Command="{Binding #list.((vm:SettingsWindowViewModel)DataContext).RemoveCommand}"
+                        CommandParameter="{Binding}">
+                  <views:BuiltInIconImage Value="DELETE" Width="16" Height="16" />
+                </Button>
+                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Name}" />
                 <TextBlock VerticalAlignment="Center" Text="{Binding Url}" />
               </StackPanel>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
 
-        <Grid Grid.Row="1" ColumnDefinitions="160,*,Auto">
-          <TextBox Watermark="Name" Text="{Binding NewName}" />
-          <TextBox Grid.Column="1" HorizontalAlignment="Stretch" Watermark="http://localhost:9696/1/api?apikey=..." Text="{Binding NewUrl}" />
-          <Button Grid.Column="2" Content="Add" Command="{Binding AddCommand}" />
+        <!-- Selecting an indexer fills these in; adding one with the same name replaces it -->
+        <Grid ColumnDefinitions="Auto,160,Auto,*,Auto" ColumnSpacing="{DynamicResource ControlSpacing}">
+          <Label Grid.Column="0" Target="{Binding #NewNameBox}">_Name:</Label>
+          <TextBox Grid.Column="1" Name="NewNameBox" Text="{Binding NewName}" />
+          <Label Grid.Column="2" Target="{Binding #NewUrlBox}">_URL:</Label>
+          <TextBox Grid.Column="3" Name="NewUrlBox" Watermark="http://localhost:9696/1/api?apikey=..." Text="{Binding NewUrl}" />
+          <Button Grid.Column="4" MinWidth="75" HorizontalContentAlignment="Center" Command="{Binding AddCommand}">A_dd</Button>
         </Grid>
-      </Grid>
+      </StackPanel>
     </GroupBox>
 
     <GroupBox Header="Candidates with a different file layout">
-      <StackPanel Spacing="4">
-        <RadioButton GroupName="LinkGroup" Content="Reflink with hardlink fallback"
+      <StackPanel>
+        <RadioButton GroupName="LinkGroup" Content="Re_flink with hardlink fallback"
             IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.ReflinkWithHardlinkFallback}}" />
-        <RadioButton GroupName="LinkGroup" Content="Reflink"
+        <RadioButton GroupName="LinkGroup" Content="R_eflink"
             IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Reflink}}" />
-        <RadioButton GroupName="LinkGroup" Content="Hardlink"
+        <RadioButton GroupName="LinkGroup" Content="_Hardlink"
             IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Hardlink}}" />
       </StackPanel>
     </GroupBox>
 
-    <StackPanel Orientation="Horizontal" Spacing="8">
-      <TextBlock Text="Seconds between torrents:" VerticalAlignment="Center" />
-      <NumericUpDown Width="120" Minimum="0" Increment="1" Value="{Binding SearchDelaySeconds}" />
+    <StackPanel Orientation="Horizontal" Spacing="{DynamicResource ControlSpacing}">
+      <Label Target="{Binding #DelayBox}">_Seconds between torrents:</Label>
+      <NumericUpDown Name="DelayBox" Width="120" Minimum="0" Increment="1" Value="{Binding SearchDelaySeconds}" />
     </StackPanel>
 
-    <Button Content="Save" IsDefault="True" Command="{Binding SaveCommand}" />
+    <StackPanel Classes="DialogButtons">
+      <Button IsDefault="True" Command="{Binding OkCommand}">OK</Button>
+      <Button IsCancel="True" Command="{Binding CancelCommand}">Cancel</Button>
+    </StackPanel>
   </StackPanel>
 </Window>

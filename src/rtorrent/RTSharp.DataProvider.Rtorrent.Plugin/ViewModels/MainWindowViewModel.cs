@@ -22,7 +22,17 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public async Task SaveSettingsClick()
+    public async Task Ok()
+    {
+        await Apply();
+        ThisWindow.Close();
+    }
+
+    [RelayCommand]
+    public void Cancel() => ThisWindow.Close();
+
+    [RelayCommand]
+    public async Task Apply()
     {
         SavingSettings = true;
         var client = PluginHost.AttachedDaemonService!.GetGrpcService<GRPCRtorrentSettingsService.GRPCRtorrentSettingsServiceClient>();

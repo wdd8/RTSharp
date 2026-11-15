@@ -96,7 +96,7 @@ public partial class MainWindowViewModel(IPluginHost<PluginConfigContainer<Plugi
                 await torrent.DataOwner.Tracker.ReplaceTracker(torrent, SelectedTracker.Uri, UrlText);
             } catch (Exception ex) {
                 Host.Logger.Error(ex, "Failed to replace tracker for torrent " + torrent.Name);
-                StatusText = "Failed to replace tracker for torrent " + torrent.Name;
+                StatusText = "Unable to replace the tracker of " + torrent.Name;
             }
 
             ProgressValue = (double)x / affectedTorrents.Count * 100;

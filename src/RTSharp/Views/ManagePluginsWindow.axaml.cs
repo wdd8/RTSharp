@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
@@ -17,6 +18,10 @@ public partial class ManagePluginsWindow : VmWindow<ManagePluginsWindowViewModel
     {
         InitializeComponent();
         Closing += EvClosing;
+
+        BindViewModelActions(vm => {
+            vm!.ShowPluginDialog = async dialog => await new Views.PluginDialog { ViewModel = dialog }.ShowDialog<bool>(this);
+        });
     }
 
     private async void EvClosing(object? sender, WindowClosingEventArgs e)
@@ -40,6 +45,8 @@ public partial class ManagePluginsWindow : VmWindow<ManagePluginsWindowViewModel
     private void EvDoubleTapped(object sender, TappedEventArgs e)
     {
         if (ViewModel!.SelectedConfigured != null)
-            ViewModel.BeginEditConfiguredCommand.Execute(null);
+            ViewModel.EditConfiguredCommand.Execute(null);
     }
+
+    private void EvClose(object? sender, RoutedEventArgs e) => Close();
 }

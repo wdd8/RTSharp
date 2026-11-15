@@ -3,10 +3,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:options="clr-namespace:RTSharp.ViewModels.Options"
-        xmlns:sc="using:RTSharp.Shared.Controls.Views"
         xmlns:util="using:RTSharp.Views.Util"
-        mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
-        Width="700" Height="500"
+        mc:Ignorable="d" d:DesignWidth="460" d:DesignHeight="490"
+        Width="460" Height="490"
+        CanResize="False"
         WindowStartupLocation="CenterOwner"
         util:WindowPlacement.Remember="True"
         util:WindowPlacement.Page="{Binding CurrentPage}"
@@ -27,34 +27,26 @@
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="*,Auto">
-        <Grid Grid.Row="0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" MinWidth="100" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <TreeView Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" ItemsSource="{Binding Items, Mode=OneWay}" SelectedItem="{Binding CurrentlySelectedItem}">
-                <TreeView.ItemTemplate>
-                    <TreeDataTemplate x:DataType="options:OptionsItem" ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal" MinWidth="150">
-                            <sc:BuiltInPathIcon Width="16" Height="16" Value="{Binding Icon}" Margin="0 0 20 0" />
-                            <TextBlock TextWrapping="NoWrap" VerticalAlignment="Center" Text="{Binding Text}"/>
-                        </StackPanel>
-                    </TreeDataTemplate>
-                </TreeView.ItemTemplate>
-            </TreeView>
-            <GridSplitter Grid.Column="1" ResizeDirection="Columns" Margin="0,0,4,0" MinWidth="4" />
-            <ScrollViewer Grid.Column="2" VerticalAlignment="Top">
-                <ContentControl Content="{Binding SettingsContent}" />
-            </ScrollViewer>
-        </Grid>
-        <Border Grid.Row="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="{StaticResource DialogMargin}">
-            <StackPanel Classes="DialogButtons">
-                <Button IsDefault="True" Command="{Binding OkCommand}">OK</Button>
-                <Button IsCancel="True" Command="{Binding CancelCommand}">Cancel</Button>
-                <Button Command="{Binding ApplyCommand}">_Apply</Button>
-            </StackPanel>
-        </Border>
-    </Grid>
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Bottom" Classes="DialogButtons" Margin="{StaticResource DialogMargin}">
+            <Button IsDefault="True" Command="{Binding OkCommand}">OK</Button>
+            <Button IsCancel="True" Command="{Binding CancelCommand}">Cancel</Button>
+            <Button Command="{Binding ApplyCommand}">_Apply</Button>
+        </StackPanel>
+
+        <TabControl Margin="11,11,11,0" ItemsSource="{Binding Items, Mode=OneWay}" SelectedItem="{Binding CurrentlySelectedItem}">
+            <TabControl.ItemTemplate>
+                <DataTemplate x:DataType="options:OptionsItem">
+                    <TextBlock Text="{Binding Text}" />
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+            <TabControl.ContentTemplate>
+                <DataTemplate x:DataType="options:OptionsItem">
+                    <ScrollViewer>
+                        <ContentControl Content="{Binding $parent[Window].((options:OptionsWindowViewModel)DataContext).SettingsContent}" />
+                    </ScrollViewer>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+    </DockPanel>
 </Window>

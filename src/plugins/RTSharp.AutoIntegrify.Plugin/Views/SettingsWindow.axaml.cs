@@ -8,6 +8,8 @@ public partial class SettingsWindow : VmWindow<SettingsWindowViewModel>
     public SettingsWindow()
     {
         InitializeComponent();
-        this.BindViewModelActions(vm => { });
+        this.BindViewModelActions(vm => {
+            vm!.FxClose = Close;
+        });
     }
 }

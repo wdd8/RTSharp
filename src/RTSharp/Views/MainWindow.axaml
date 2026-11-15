@@ -9,6 +9,7 @@
         xmlns:vmTorrentListing="using:RTSharp.ViewModels.TorrentListing"
         xmlns:torrentListing="using:RTSharp.Views.TorrentListing"
         xmlns:sharedControls="using:RTSharp.Shared.Controls"
+        xmlns:sc="using:RTSharp.Shared.Controls.Views"
         xmlns:dockModel="using:Dock.Model.Controls"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -28,24 +29,34 @@
 
     <Window.Resources>
         <MenuItem x:Key="FileMenu" Header="_File">
-            <MenuItem Header="_Add Torrent..." Command="{Binding AddTorrentClickCommand}" />
+            <MenuItem Header="_Add Torrent..." Command="{Binding AddTorrentClickCommand}">
+                <MenuItem.Icon><sc:BuiltInIconImage Value="DOWNLOAD" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
             <Separator />
             <MenuItem Header="E_xit" Command="{Binding #Root.ExitCommand}" />
         </MenuItem>
         <MenuItem x:Key="ViewMenu" Header="_View">
-            <MenuItem Header="_Statistics" Command="{Binding ShowStatisticsWindowCommand}" />
+            <MenuItem Header="_Statistics" Command="{Binding ShowStatisticsWindowCommand}">
+                <MenuItem.Icon><sc:BuiltInIconImage Value="SPEED" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
         </MenuItem>
         <MenuItem x:Key="ToolsMenu" Name="ToolsMenu" Header="_Tools">
-            <MenuItem Header="Torrent _Creator" Command="{Binding TorrentCreatorClickCommand}" />
+            <MenuItem Header="Torrent _Creator" Command="{Binding TorrentCreatorClickCommand}">
+                <MenuItem.Icon><sc:BuiltInIconImage Value="BITTORRENT" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
             <Separator />
-            <MenuItem Header="_Options..." Command="{Binding OptionsClickCommand}" />
+            <MenuItem Header="_Options..." Command="{Binding OptionsClickCommand}">
+                <MenuItem.Icon><sc:BuiltInIconImage Value="SETTINGS" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
         </MenuItem>
         <MenuItem x:Key="ServersMenu" Header="_Servers" Command="{Binding ServersClickCommand}" />
         <MenuItem x:Key="PluginsMenu" Header="_Plugins" Command="{Binding PluginsClickCommand}" />
         <MenuItem x:Key="HelpMenu" Header="_Help">
             <MenuItem Header="_Contents" InputGesture="F1" Command="{Binding #Root.OpenHelpCommand}" />
             <Separator />
-            <MenuItem Header="_About RT#" Command="{Binding AboutClickCommand}" />
+            <MenuItem Header="_About RT#" Command="{Binding AboutClickCommand}">
+                <MenuItem.Icon><sc:BuiltInIconImage Value="RTSHARP" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="About _Avalonia" Command="{Binding AboutFrameworkClickCommand}" />
         </MenuItem>
     </Window.Resources>

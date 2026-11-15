@@ -38,9 +38,11 @@ public partial class SettingsWindowViewModel(IPluginHost<AutoIntegrifyPluginConf
         Items.Add(NewPath);
     }
 
+    public Action FxClose { get; set; } = null!; // view set
+
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(LinkOptions))]
     [RelayCommand]
-    public async Task Save()
+    public async Task Ok()
     {
         await PluginHost.SavePluginConfig(settings => {
             settings.SearchPaths = [.. Items];
@@ -48,7 +50,11 @@ public partial class SettingsWindowViewModel(IPluginHost<AutoIntegrifyPluginConf
             settings.SearchRecursionLimit = SearchRecursionLimit;
             settings.LinkOptions = LinkOptions;
         });
+        FxClose();
     }
+
+    [RelayCommand]
+    public void Cancel() => FxClose();
 
     public override void OnContextPopulated()
     {

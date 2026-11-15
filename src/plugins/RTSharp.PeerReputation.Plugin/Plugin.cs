@@ -81,14 +81,14 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
                                 await daemon.InstallScript(scriptId, "Peer Reputation", GUID, script, []);
                             } catch (Exception ex) {
                                 this.Host.Logger.Error(ex, "Could not install the Peer Reputation script on {Server}", daemon.Id);
-                                await Dispatcher.UIThread.InvokeAsync(() => MessageBoxManager.GetMessageBoxStandard("Peer Reputation", $"Could not install the script on {daemon.Id}:\n{ex.Message}", ButtonEnum.Ok, Icon.Error).ShowAsync());
+                                await Dispatcher.UIThread.InvokeAsync(() => MessageBoxManager.GetMessageBoxStandard("RT# - Peer Reputation", $"Unable to install the Peer Reputation script on {daemon.Id}:\n{ex.Message}", ButtonEnum.Ok, Icon.Error).ShowAsync());
                             }
                         }));
                     }
                 }
 
                 Hook = this.Host.RegisterToolsMenuItem(new MenuItem() {
-                    Header = "Peer Reputation",
+                    Header = "Peer _Reputation...",
                     Command = new RelayCommand(() => {
                         var wnd = new MainWindow();
                         wnd.ViewModel = new ViewModels.MainWindowViewModel(this.Host.GetDaemonServices(), GUID);

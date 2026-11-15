@@ -3,17 +3,16 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
-        xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
         xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
         xmlns:vm="using:RTSharp.ViewModels.Tools"
         xmlns:util="using:RTSharp.Views.Util"
-        mc:Ignorable="d" d:DesignWidth="592" d:DesignHeight="750"
+        mc:Ignorable="d" d:DesignWidth="440" d:DesignHeight="410"
         Name="window"
-        MinWidth="592"
+        Width="440" Height="410"
+        CanResize="False"
         x:Class="RTSharp.Views.Tools.TorrentCreatorWindow"
 		x:DataType="vm:TorrentCreatorWindowViewModel"
         Title="RT# - Torrent Creator"
-        SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner"
         util:WindowPlacement.Remember="True">
 
@@ -24,6 +23,17 @@
     <Window.Resources>
         <converters:MathConverter x:Key="MathConverter"/>
     </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="TabItem Grid.Fields">
+            <Setter Property="ColumnSpacing" Value="{StaticResource ControlSpacing}" />
+            <Setter Property="RowSpacing" Value="{StaticResource ControlSpacing}" />
+        </Style>
+        <Style Selector="TabItem Grid.Fields > Label.Top">
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Margin" Value="0 4 0 0" />
+        </Style>
+    </Window.Styles>
 
     <dialogHost:DialogHost Name="ProgressDialog" DisableOpeningAnimation="True" IsOpen="{Binding ProgressInfoInstance.Shown}">
         <dialogHost:DialogHost.DialogContent>
@@ -37,7 +47,7 @@
                         <Setter Property="Height" Value="15"/>
                     </Style>
                 </StackPanel.Styles>
-                
+
                 <TextBlock FontWeight="Bold" Text="{Binding ProgressInfoInstance.CurrentFile}" TextTrimming="WordEllipsis" />
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*">
                     <TextBlock Grid.Column="0" Grid.Row="0">File:</TextBlock>
@@ -53,28 +63,41 @@
                 <Button HorizontalAlignment="Center" Command="{Binding CancelHashingClick}">Cancel</Button>
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
-        <StackPanel Margin="{StaticResource DialogMargin}">
-            <GroupBox Header="Select file/folder">
-                <StackPanel Spacing="{StaticResource ControlSpacing}">
-                    <TextBox Text="{Binding SourcePath}" />
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}">
-                        <Panel Grid.Column="0" DragDrop.AllowDrop="True" Name="DragDropPanel">
+
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Bottom" Classes="DialogButtons" Margin="{StaticResource DialogMargin}">
+                <Button IsDefault="True" Command="{Binding CreateTorrentClickCommand}">Create Torrent</Button>
+                <Button IsCancel="True" Command="{Binding CancelClickCommand}">Cancel</Button>
+            </StackPanel>
+
+            <TabControl Margin="11,11,11,0">
+                <TabItem Header="Source">
+                    <DockPanel Margin="{StaticResource DialogMargin}">
+                        <Label DockPanel.Dock="Top" Margin="0 0 0 4" Target="{Binding #SourcePathBox}">_File or folder:</Label>
+                        <TextBox DockPanel.Dock="Top" Name="SourcePathBox" Text="{Binding SourcePath}" />
+                        <StackPanel DockPanel.Dock="Bottom" Classes="DialogButtons">
+                            <Button Command="{Binding SelectFileClick}">Select F_ile...</Button>
+                            <Button Command="{Binding SelectFolderClick}">Select Fo_lder...</Button>
+                        </StackPanel>
+                        <Border Name="DragDropPanel"
+                                DragDrop.AllowDrop="True"
+                                Background="Transparent"
+                                BorderBrush="Gray"
+                                BorderThickness="1"
+                                Margin="0 11 0 11">
                             <TextBlock
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"
                                 Foreground="Gray"
-                                Text="[Drag and drop area]" />
-                        </Panel>
-                        <Button Grid.Column="1" Command="{Binding SelectFileClick}">Select _File...</Button>
-                        <Button Grid.Column="2" Command="{Binding SelectFolderClick}">Select Fo_lder...</Button>
-                    </Grid>
-                </StackPanel>
-            </GroupBox>
-            <GroupBox Header="Settings">
-                <StackPanel Orientation="Vertical" Spacing="{StaticResource ControlSpacing}">
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource ControlSpacing}">
-                        <Label Target="{Binding #CmbPieceLength}">_Piece size:</Label>
-                        <ComboBox Name="CmbPieceLength" VerticalAlignment="Center" Width="125" SelectedIndex="0" SelectedItem="{Binding StrPieceLength}">
+                                Text="Drop a file or folder here" />
+                        </Border>
+                    </DockPanel>
+                </TabItem>
+
+                <TabItem Header="Settings">
+                    <Grid Classes="Fields" ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="{StaticResource DialogMargin}">
+                        <Label Grid.Column="0" Grid.Row="0" Target="{Binding #CmbPieceLength}">_Piece size:</Label>
+                        <ComboBox Grid.Column="1" Grid.Row="0" Name="CmbPieceLength" Width="125" SelectedIndex="0" SelectedItem="{Binding StrPieceLength}">
                             <ComboBoxItem>Auto</ComboBoxItem>
                             <ComboBoxItem>16 KiB</ComboBoxItem>
                             <ComboBoxItem>32 KiB</ComboBoxItem>
@@ -89,57 +112,41 @@
                             <ComboBoxItem>16 MiB</ComboBoxItem>
                             <ComboBoxItem>32 MiB</ComboBoxItem>
                         </ComboBox>
-                        <Button Command="{Binding CalculateNumberOfPiecesClickCommand}">_Calculate Number of Pieces:</Button>
-                        <TextBlock VerticalAlignment="Center" Text="{Binding NumberOfPieces}" />
-                    </StackPanel>
-                    <CheckBox IsChecked="{Binding PrivateTorrent}">Pri_vate torrent (won't distribute on DHT network)</CheckBox>
-                    <CheckBox IsChecked="{Binding Entropy}">Add _entropy (makes torrent unique)</CheckBox>
-                    <CheckBox IsChecked="{Binding EmitCreationDate}">Emit creation _date</CheckBox>
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource ControlSpacing}">
-                        <Label Target="{Binding #CmbVersion}">Ve_rsion:</Label>
-                        <ComboBox Name="CmbVersion" VerticalAlignment="Center" Width="125" SelectedIndex="0" SelectedItem="{Binding StrVersion}">
+
+                        <StackPanel Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource ControlSpacing}">
+                            <Button Command="{Binding CalculateNumberOfPiecesClickCommand}">_Calculate Number of Pieces</Button>
+                            <TextBlock VerticalAlignment="Center" Text="{Binding NumberOfPieces}" />
+                        </StackPanel>
+
+                        <Label Grid.Column="0" Grid.Row="2" Target="{Binding #CmbVersion}">Ve_rsion:</Label>
+                        <ComboBox Grid.Column="1" Grid.Row="2" Name="CmbVersion" Width="125" SelectedIndex="0" SelectedItem="{Binding StrVersion}">
                             <ComboBoxItem>V1</ComboBoxItem>
                             <ComboBoxItem>V2</ComboBoxItem>
                             <ComboBoxItem>Hybrid</ComboBoxItem>
                         </ComboBox>
-                    </StackPanel>
-                    <!--<GroupBox IsEnabled="False">
-                        <GroupBox.Header>
-                            <CheckBox Classes="GroupBoxHeader" IsChecked="{Binding OptimiseAlignment}">Optimise alignment</CheckBox>
-                        </GroupBox.Header>
-                        <StackPanel Orientation="Horizontal" Margin="4" IsEnabled="{Binding OptimiseAlignment}">
-                            <TextBlock VerticalAlignment="Center">Align to piece boundary for files larger than:</TextBlock>
-                            <NumericUpDown Margin="4 0 0 0" Value="0" Increment="1" />
-                        </StackPanel>
-                    </GroupBox>-->
-                </StackPanel>
-            </GroupBox>
-            <GroupBox Header="Fields">
-                <!-- Labels sit at the top of the tall text boxes, beside their first line -->
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*" ColumnSpacing="{StaticResource ControlSpacing}" RowSpacing="{StaticResource ControlSpacing}">
-                    <Grid.Styles>
-                        <Style Selector="Label">
-                            <Setter Property="VerticalAlignment" Value="Top" />
-                            <Setter Property="Margin" Value="0 4 0 0" />
-                        </Style>
-                    </Grid.Styles>
-                    <Label Grid.Column="0" Grid.Row="0" Target="{Binding #TrackerUrlsBox}">_Tracker URLs:</Label>
-                    <TextBox Grid.Column="1" Grid.Row="0" Name="TrackerUrlsBox" AcceptsReturn="True" Height="125" Text="{Binding TrackerUrls}" />
 
-                    <Label Grid.Column="0" Grid.Row="1" Target="{Binding #WebSeedUrlsBox}">_Web seed URLs:</Label>
-                    <TextBox Grid.Column="1" Grid.Row="1" Name="WebSeedUrlsBox" AcceptsReturn="True" Height="125" Text="{Binding WebSeedUrls}" />
+                        <CheckBox Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="3" Margin="0 4 0 0" IsChecked="{Binding PrivateTorrent}">Pri_vate torrent (won't distribute on DHT network)</CheckBox>
+                        <CheckBox Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="4" IsChecked="{Binding Entropy}">Add _entropy (makes torrent unique)</CheckBox>
+                        <CheckBox Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="5" IsChecked="{Binding EmitCreationDate}">Emit creation _date</CheckBox>
+                    </Grid>
+                </TabItem>
 
-                    <Label Grid.Column="0" Grid.Row="2" Target="{Binding #CommentsBox}">Co_mments:</Label>
-                    <TextBox Grid.Column="1" Grid.Row="2" Name="CommentsBox" AcceptsReturn="True" Height="125" Text="{Binding Comments}" />
+                <TabItem Header="Fields">
+                    <Grid Classes="Fields" ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,Auto" Margin="{StaticResource DialogMargin}">
+                        <Label Grid.Column="0" Grid.Row="0" Classes="Top" Target="{Binding #TrackerUrlsBox}">_Tracker URLs:</Label>
+                        <TextBox Grid.Column="1" Grid.Row="0" Name="TrackerUrlsBox" AcceptsReturn="True" Text="{Binding TrackerUrls}" />
 
-                    <Label Grid.Column="0" Grid.Row="3" Target="{Binding #SourceBox}">So_urce:</Label>
-                    <TextBox Grid.Column="1" Grid.Row="3" Name="SourceBox" Text="{Binding Source}" />
-                </Grid>
-            </GroupBox>
-            <StackPanel Classes="DialogButtons" Margin="0 11 0 0">
-                <Button IsDefault="True" Command="{Binding CreateTorrentClickCommand}">Create Torrent</Button>
-                <Button IsCancel="True" Command="{Binding CancelClickCommand}">Cancel</Button>
-            </StackPanel>
-        </StackPanel>
+                        <Label Grid.Column="0" Grid.Row="1" Classes="Top" Target="{Binding #WebSeedUrlsBox}">_Web seed URLs:</Label>
+                        <TextBox Grid.Column="1" Grid.Row="1" Name="WebSeedUrlsBox" AcceptsReturn="True" Text="{Binding WebSeedUrls}" />
+
+                        <Label Grid.Column="0" Grid.Row="2" Classes="Top" Target="{Binding #CommentsBox}">Co_mments:</Label>
+                        <TextBox Grid.Column="1" Grid.Row="2" Name="CommentsBox" AcceptsReturn="True" Text="{Binding Comments}" />
+
+                        <Label Grid.Column="0" Grid.Row="3" Target="{Binding #SourceBox}">So_urce:</Label>
+                        <TextBox Grid.Column="1" Grid.Row="3" Name="SourceBox" Text="{Binding Source}" />
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </DockPanel>
     </dialogHost:DialogHost>
 </Window>

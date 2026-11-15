@@ -183,12 +183,12 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void OptionsClick()
+    public async Task OptionsClick()
     {
         var optionsWindow = new OptionsWindow() {
             ViewModel = new()
         };
-        optionsWindow.Show(App.MainWindow);
+        await optionsWindow.ShowDialog(App.MainWindow);
     }
 
     [RelayCommand]

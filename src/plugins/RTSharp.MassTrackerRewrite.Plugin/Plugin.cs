@@ -35,7 +35,7 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 
         Dispatcher.UIThread.Invoke(() => {
             Hook = this.Host.RegisterToolsMenuItem(new MenuItem() {
-                Header = "Mass tracker rewrite",
+                Header = "_Mass Tracker Rewrite...",
                 Command = new RelayCommand(() => {
                     var wnd = new MainWindow();
                     wnd.ViewModel = new ViewModels.MainWindowViewModel(this.Host, wnd);

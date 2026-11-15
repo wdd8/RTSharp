@@ -73,7 +73,7 @@ public class Plugin : BasePlugin<QbittorrentDataProviderInstanceConfig>
         var settingsWindow = new MainWindow {
             ViewModel = new MainWindowViewModel() {
                 ThisPlugin = this,
-                Title = Host.Config.Plugin.Name + " qbittorrent settings",
+                Title = $"RT# - {Host.Config.Plugin.Name} qBittorrent Settings",
                 Settings = SettingsMapper.MapFromProto(settings),
                 ListUpdateIntervalSeconds = Host.Config.ListUpdateInterval.TotalSeconds
             }

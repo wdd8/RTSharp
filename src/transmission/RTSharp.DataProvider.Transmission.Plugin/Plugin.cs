@@ -61,7 +61,7 @@ public class Plugin : BasePlugin<TransmissionDataProviderInstanceConfig>
         var settingsWindow = new MainWindow {
             ViewModel = new MainWindowViewModel() {
                 ThisPlugin = this,
-                Title = Host.Config.Plugin.Name + " transmission settings",
+                Title = $"RT# - {Host.Config.Plugin.Name} Transmission Settings",
                 Settings = SettingsMapper.MapFromProto(settings),
                 ListUpdateIntervalSeconds = Host.Config.ListUpdateInterval.TotalSeconds
             }

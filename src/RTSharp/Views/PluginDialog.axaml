@@ -1,0 +1,58 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:RTSharp.ViewModels"
+        xmlns:sc="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+        mc:Ignorable="d" d:DesignWidth="400"
+        Width="400"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        x:Class="RTSharp.Views.PluginDialog"
+        x:DataType="vm:PluginDialogViewModel"
+        Icon="/Assets/rtsharp.ico"
+        Title="{Binding Title}">
+    <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource GroupSpacing}">
+            <sc:BuiltInIconImage Grid.Column="0" Value="SETTINGS" Width="32" Height="32" />
+            <TextBlock Grid.Column="1" Classes="MainInstruction" Text="Name this plugin instance" IsVisible="{Binding !IsDataProvider}" />
+            <TextBlock Grid.Column="1" Classes="MainInstruction" Text="Choose the daemon this plugin instance controls" IsVisible="{Binding IsDataProvider}" />
+        </Grid>
+
+        <!-- Data provider fields hide as one block; the shared label column keeps both grids aligned -->
+        <StackPanel Grid.IsSharedSizeScope="True" Spacing="{StaticResource ControlSpacing}">
+            <Grid ColumnSpacing="{StaticResource ControlSpacing}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="Labels" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0" Target="{Binding #InstanceNameBox}">_Instance name:</Label>
+                <TextBox Grid.Column="1" Name="InstanceNameBox" Text="{Binding InstanceName}" />
+            </Grid>
+
+            <Grid RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource ControlSpacing}" RowSpacing="{StaticResource ControlSpacing}" IsVisible="{Binding IsDataProvider}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="Labels" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0" Grid.Row="0" Target="{Binding #ServerBox}">_Server:</Label>
+                <ComboBox Grid.Column="1" Grid.Row="0" Name="ServerBox" HorizontalAlignment="Stretch"
+                          ItemsSource="{Binding AvailableServers}" SelectedItem="{Binding ServerId}" />
+
+                <Label Grid.Column="0" Grid.Row="1" Target="{Binding #DataProviderNameBox}">_Data provider:</Label>
+                <TextBox Grid.Column="1" Grid.Row="1" Name="DataProviderNameBox"
+                         Text="{Binding DataProviderName}" Watermark="Name on the daemon" />
+
+                <Label Grid.Column="0" Grid.Row="2" Target="{Binding #ColorBox}">_Color:</Label>
+                <ColorPicker Grid.Column="1" Grid.Row="2" Name="ColorBox" HorizontalAlignment="Left"
+                             Color="{Binding DataProviderColor, Mode=TwoWay}" IsAlphaEnabled="False" />
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Classes="DialogButtons">
+            <Button IsDefault="True" Command="{Binding ConfirmCommand}" Content="{Binding ConfirmText}" />
+            <Button IsCancel="True" Command="{Binding CancelCommand}">Cancel</Button>
+        </StackPanel>
+    </StackPanel>
+</Window>

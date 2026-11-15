@@ -4,88 +4,70 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:vm="using:RTSharp.ViewModels"
 		xmlns:plugin="clr-namespace:RTSharp.Plugin"
-		xmlns:converters="clr-namespace:RTSharp.Shared.Controls.Converters;assembly=RTSharp.Shared.Controls"
 		xmlns:sc="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
-		xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
 		xmlns:util="using:RTSharp.Views.Util"
-        mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="440"
-		x:Name="window"
-        Width="640"
-        Height="440"
+        mc:Ignorable="d" d:DesignWidth="760" d:DesignHeight="460"
+        Width="760" Height="460"
+        MinWidth="560" MinHeight="300"
         WindowStartupLocation="CenterOwner"
         util:WindowPlacement.Remember="True"
         x:Class="RTSharp.ManagePluginsWindow"
 		x:DataType="vm:ManagePluginsWindowViewModel"
         Title="RT# - Manage Plugins">
-    <Window.Resources>
-        <converters:MathConverter x:Key="MathConverter"/>
-    </Window.Resources>
 
-    <dialogHost:DialogHost IsOpen="{Binding IsDialogOpen, Mode=TwoWay}" CloseOnClickAway="True">
-        <dialogHost:DialogHost.DialogContent>
-            <StackPanel Spacing="6" Width="{Binding #window.Width, Converter={StaticResource MathConverter}, ConverterParameter=(@VALUE*0.75)}">
-                <TextBlock Text="{Binding DialogTitle}" FontWeight="SemiBold" Margin="0,0,0,4" />
+    <Window.Styles>
+        <!-- Commands stacked between the lists, as wide as the widest -->
+        <Style Selector="StackPanel.Commands > Button">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+    </Window.Styles>
 
-                <Label Opacity="0.6" FontSize="11" Target="{Binding #InstanceNameBox}">_Instance name</Label>
-                <TextBox Name="InstanceNameBox" Text="{Binding DialogInstanceName}" />
+    <Grid ColumnDefinitions="*,Auto,*" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource ControlSpacing}" RowSpacing="{StaticResource GroupSpacing}" Margin="{StaticResource DialogMargin}">
+        <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1" Classes="DialogButtons">
+            <Button IsCancel="True" Click="EvClose">Close</Button>
+        </StackPanel>
 
-                <StackPanel Spacing="6" IsVisible="{Binding DialogIsDataProvider}">
-                    <Label Opacity="0.6" FontSize="11" Margin="0,4,0,0" Target="{Binding #ServerBox}">_Server</Label>
-                    <ComboBox HorizontalAlignment="Stretch"
-                              Name="ServerBox"
-                              ItemsSource="{Binding AvailableServers}"
-                              SelectedItem="{Binding DialogServerId}" />
-                    <Label Opacity="0.6" FontSize="11" Margin="0,4,0,0" Target="{Binding #DataProviderNameBox}">_Data provider name (on daemon)</Label>
-                    <TextBox Name="DataProviderNameBox" Text="{Binding DialogDataProviderName}" />
-                    <Label Opacity="0.6" FontSize="11" Margin="0,4,0,0" Target="{Binding #ColorBox}">_Color</Label>
-                    <ColorPicker Name="ColorBox" Color="{Binding DialogColor, Mode=TwoWay}" IsAlphaEnabled="False" HorizontalAlignment="Left" />
-                </StackPanel>
-
-                <StackPanel Classes="DialogButtons" Margin="0,11,0,0">
-                    <Button Content="{Binding DialogConfirmText}" Command="{Binding ConfirmDialogCommand}" />
-                    <Button Content="Cancel" Command="{Binding CancelDialogCommand}" />
-                </StackPanel>
-            </StackPanel>
-        </dialogHost:DialogHost.DialogContent>
-
-        <Grid ColumnDefinitions="*,Auto,*" Margin="{StaticResource DialogMargin}">
-            <GroupBox Grid.Column="0" Header="Available plugins">
-                <ListBox ItemsSource="{Binding AvailablePlugins}" SelectedItem="{Binding SelectedAvailable}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="plugin:PluginManifest">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                    <sc:BuiltInIconImage Value="LINK_OK" Width="14" Height="14" VerticalAlignment="Center" IsVisible="{Binding IsDataProvider}" />
-                                </StackPanel>
-                                <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.6" />
+        <GroupBox Grid.Column="0" Header="Available plugins">
+            <ListBox ItemsSource="{Binding AvailablePlugins}" SelectedItem="{Binding SelectedAvailable}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="plugin:PluginManifest">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <sc:BuiltInIconImage Value="LINK_OK" Width="14" Height="14" VerticalAlignment="Center" IsVisible="{Binding IsDataProvider}" />
                             </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </GroupBox>
+                            <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </GroupBox>
 
-            <StackPanel Grid.Column="1" Margin="6,0" Spacing="4" VerticalAlignment="Center">
-                <Button Content="&gt;" Command="{Binding BeginConfigureNewCommand}" HorizontalContentAlignment="Center" Width="28" />
-                <Button Content="&lt;" Command="{Binding DeleteConfiguredCommand}" HorizontalContentAlignment="Center" Width="28" />
-            </StackPanel>
+        <StackPanel Grid.Column="1" Classes="Commands" Spacing="{StaticResource ControlSpacing}" VerticalAlignment="Center" MinWidth="75">
+            <Button Command="{Binding ConfigureNewCommand}">_Add &gt;</Button>
+            <Button Command="{Binding EditConfiguredCommand}">_Edit...</Button>
+            <Button Command="{Binding DeleteConfiguredCommand}">&lt; _Remove</Button>
+        </StackPanel>
 
-            <GroupBox Grid.Column="2" Header="Configured plugins">
-                <ListBox ItemsSource="{Binding ConfiguredPlugins}" SelectedItem="{Binding SelectedConfigured}"
-                         DoubleTapped="EvDoubleTapped">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="plugin:ConfiguredPlugin">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <TextBlock Text="{Binding InstanceName}" FontWeight="SemiBold" />
-                                    <sc:BuiltInIconImage Value="LINK_OK" Width="14" Height="14" VerticalAlignment="Center" IsVisible="{Binding Manifest.IsDataProvider}" />
-                                </StackPanel>
-                                <TextBlock FontSize="11" Opacity="0.6" Text="{Binding Manifest.Name}" />
+        <GroupBox Grid.Column="2" Header="Configured plugins">
+            <ListBox ItemsSource="{Binding ConfiguredPlugins}" SelectedItem="{Binding SelectedConfigured}"
+                     DoubleTapped="EvDoubleTapped">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="plugin:ConfiguredPlugin">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="{Binding InstanceName}" FontWeight="SemiBold" />
+                                <sc:BuiltInIconImage Value="LINK_OK" Width="14" Height="14" VerticalAlignment="Center" IsVisible="{Binding Manifest.IsDataProvider}" />
                             </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </GroupBox>
-        </Grid>
-    </dialogHost:DialogHost>
+                            <TextBlock FontSize="11" Opacity="0.6" Text="{Binding Manifest.Name}" />
+                            <TextBlock FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis" IsVisible="{Binding Manifest.IsDataProvider}">
+                                <Run Text="{Binding ServerId}" /><Run Text=" · " /><Run Text="{Binding DataProviderName}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </GroupBox>
+    </Grid>
 </Window>

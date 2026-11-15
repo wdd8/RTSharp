@@ -568,7 +568,7 @@ public static class Plugins
                 await Dispatcher.UIThread.InvokeAsync(() =>
                     MessageBoxManager.GetMessageBoxStandard(
                         title: "RT# - Plugins",
-                        text: $"Failed to load plugin {plugin.ModulePath}\n{ex}",
+                        text: $"Unable to load plugin {plugin.ModulePath}\n{ex}",
                         @enum: ButtonEnum.Ok,
                         icon: Icon.Error,
                         windowStartupLocation: WindowStartupLocation.CenterOwner

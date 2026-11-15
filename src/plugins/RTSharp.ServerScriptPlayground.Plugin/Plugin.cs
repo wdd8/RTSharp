@@ -39,7 +39,7 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 
         Dispatcher.UIThread.Invoke(() => {
             RootMenuItem = this.Host.RegisterRootMenuItem(new MenuItem() {
-                Header = "Server scripting",
+                Header = "Server Sc_ripting",
                 Command = new RelayCommand(() => {
                     var wnd = new PlaygroundWindow();
                     wnd.ViewModel = new ViewModels.PlaygroundWindowViewModel(this.Host, wnd, GUID);

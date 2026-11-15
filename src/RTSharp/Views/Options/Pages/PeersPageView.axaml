@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:RTSharp.ViewModels.Options.Pages"
+             xmlns:views="clr-namespace:RTSharp.Shared.Controls.Views;assembly=RTSharp.Shared.Controls"
+             mc:Ignorable="d" d:DesignWidth="440" d:DesignHeight="380"
+             x:Class="RTSharp.Views.Options.Pages.PeersPageView"
+             x:DataType="pages:PeersPageViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}">
+        <GroupBox>
+            <GroupBox.Header>
+                <Label Target="{Binding #WhoisProviderBox}">Peer origin _lookup</Label>
+            </GroupBox.Header>
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource ControlSpacing}">
+                <ComboBox Name="WhoisProviderBox"
+                          ItemsSource="{Binding WhoisProviders}"
+                          SelectedItem="{Binding SelectedWhoisProvider}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="pages:WhoisProviderItem">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <views:BuiltInIconImage Value="QUESTION" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
+                       ToolTip.Tip="{Binding PeerOriginLookupMethodHelpText}" />
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Header="Peer origin replacements">
+            <StackPanel Spacing="{StaticResource ControlSpacing}">
+                <DataGrid ItemsSource="{Binding PeerOriginReplacements}"
+                          SelectedItem="{Binding SelectedPeerOriginReplacement}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserReorderColumns="False"
+                          CanUserResizeColumns="True"
+                          GridLinesVisibility="Horizontal"
+                          Height="150">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Pattern" Binding="{Binding Pattern}" Width="*" />
+                        <DataGridTextColumn Header="Replacement" Binding="{Binding Replacement}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel Classes="DialogButtons" HorizontalAlignment="Left">
+                    <Button Command="{Binding AddReplacementCommand}">A_dd...</Button>
+                    <Button Command="{Binding RemoveReplacementCommand}"
+                            CommandParameter="{Binding SelectedPeerOriginReplacement}"
+                            IsEnabled="{Binding SelectedPeerOriginReplacement, Converter={x:Static ObjectConverters.IsNotNull}}">Re_move</Button>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
+</UserControl>

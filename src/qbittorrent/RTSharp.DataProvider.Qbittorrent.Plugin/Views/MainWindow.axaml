@@ -8,6 +8,7 @@
         xmlns:models="clr-namespace:RTSharp.DataProvider.Qbittorrent.Plugin.Models"
         mc:Ignorable="d"
         Width="820" Height="600"
+        WindowStartupLocation="CenterOwner"
         x:DataType="vm:MainWindowViewModel"
         ClipToBounds="True"
         Title="{Binding Title}">

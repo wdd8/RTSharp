@@ -9,7 +9,7 @@
 
 <p>Is the torrent you are seeding also available on your other trackers? The cross-seed plugin searches your indexers for the same content and lets you add the matching torrents, so you can seed them on the other trackers right away.</p>
 
-<p>To start, select one or more torrents in the listing, right click on them and select "Find cross-seeds". A new Cross-seed window will open and display one line for each candidate found, with the indexer and the outcome. Click on "Stop" or close the window to cancel the search.</p>
+<p>To start, select one or more torrents in the listing, right click on them and select "Find Cross-Seeds". A new Cross-Seed window will open and display one line for each candidate found, with the indexer and the outcome. Click on "Stop" or close the window to cancel the search.</p>
 
 <h2>Searching for a season</h2>
 <p>When you select several single-file video torrents that are episodes of the same season of a TV show, the plugin asks if you want to search for the season instead of each episode. If you click on "Yes", the episodes are searched together as one line named after the season, and you get the season packs made of exactly these episodes. The pack is added by linking the files of your episodes into a new folder named after the pack, in the folder of the first episode. If you click on "No", each episode is searched by itself. You are asked once for each season in your selection.</p>
@@ -17,8 +17,8 @@
 <h2>Adding a match</h2>
 <p>Each line with the "Match" outcome has two buttons:</p>
 <div class="list">
-- Add default: Adds the match to the same data provider as your torrent<br>
-- Add: Asks which data provider to add the match to. The files of a data provider on another server are transferred there first, into the remote directory you select, like when duplicating a torrent<br>
+- Add Default: Adds the match to the same data provider as your torrent<br>
+- Add...: Asks which data provider to add the match to. The files of a data provider on another server are transferred there first, into the remote directory you select, like when duplicating a torrent<br>
 </div>
 <p>The torrent is started as soon as the daemon reports it as complete.</p>
 
@@ -33,7 +33,7 @@
 <p>When a match on the same server has the same name and layout as your torrent, it is added to the same folder, and any of its files with a different name are linked next to yours when you add it. When the layout is different, for example with another folder name, the files are linked next to your torrent when you add it, into a folder named after the candidate.</p>
 
 <h2>Settings</h2>
-<p>Select the cross-seed instance in the Plugins window and click on the settings button. The settings are shared by all the servers:</p>
+<p>Select the cross-seed instance in the Plugins window and click on the settings button. The settings are shared by all the servers and saved when you click on "OK":</p>
 <div class="list">
 - Torznab indexers: The name displayed in the results and the Torznab feed URL of each indexer, ending in /api and followed by the API key. For example http://localhost:9696/1/api?apikey=... . The URLs are requested by the RT# daemon, so "localhost" means the server.<br>
 - Links: "Reflink with hardlink fallback", "Reflink" or "Hardlink", see the auto integrify chapter<br>

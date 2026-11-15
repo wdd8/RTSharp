@@ -35,7 +35,7 @@
                 <TabItem.Header>
                     <TextBlock>Source</TextBlock>
                 </TabItem.Header>
-                <StackPanel Name="sourcePage">
+                <StackPanel>
                     <GroupBox Header="Data provider">
                         <views:DataProviderSelection DataProviders="{Binding DataProviders}" SelectedProvider="{Binding SelectedProvider}" />
                     </GroupBox>
@@ -68,7 +68,7 @@
                     </GroupBox>
                     <GroupBox>
                         <GroupBox.Header>
-                            <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromClipboardSelected}">From _clipboard (URI's)</RadioButton>
+                            <RadioButton Classes="GroupBoxHeader" GroupName="main" IsChecked="{Binding FromClipboardSelected}">From _clipboard (URIs)</RadioButton>
                         </GroupBox.Header>
                         <Button IsEnabled="{Binding FromClipboardSelected}"
                                 HorizontalAlignment="Stretch"
@@ -81,7 +81,7 @@
                 <TabItem.Header>
                     <TextBlock>Duplication</TextBlock>
                 </TabItem.Header>
-                <DockPanel Height="{Binding #sourcePage.Bounds.Height}">
+                <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="{StaticResource DialogMargin}" Spacing="{StaticResource ControlSpacing}">
                         <local:DuplicationTargetSelectorControl DataContext="{Binding DuplicationTargetSelector}" />
                         <Button HorizontalAlignment="Stretch"

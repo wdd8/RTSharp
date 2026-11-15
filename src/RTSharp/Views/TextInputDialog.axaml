@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:RTSharp.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="360"
+        Width="360"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        x:Class="RTSharp.Views.TextInputDialog"
+        x:DataType="vm:TextInputDialogViewModel"
+        Icon="/Assets/rtsharp.ico">
+    <StackPanel Margin="{StaticResource DialogMargin}" Spacing="{StaticResource GroupSpacing}">
+        <ItemsControl ItemsSource="{Binding Fields}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="{StaticResource ControlSpacing}" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TextInputField">
+                    <StackPanel Spacing="4">
+                        <Label Target="{Binding #InputBox}" Content="{Binding Caption}" />
+                        <TextBox Name="InputBox" Text="{Binding Text}" />
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Classes="DialogButtons">
+            <Button IsDefault="True" Command="{Binding OkCommand}">OK</Button>
+            <Button IsCancel="True" Command="{Binding CancelCommand}">Cancel</Button>
+        </StackPanel>
+    </StackPanel>
+</Window>

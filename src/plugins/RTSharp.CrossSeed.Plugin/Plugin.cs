@@ -29,7 +29,7 @@ public class Plugin : BasePlugin<CrossSeedPluginConfig>
 
     IDisposable? MenuItem;
 
-    const string MenuHeader = "Find cross-seeds";
+    const string MenuHeader = "_Find Cross-Seeds";
 
     public override Task Init(IPluginHost<CrossSeedPluginConfig> Host, Action<(string Status, float Percentage)> Progress)
     {

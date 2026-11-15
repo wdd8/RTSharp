@@ -35,7 +35,7 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 
     IDisposable? MenuItem;
 
-    const string MenuHeader = "Fast verify";
+    const string MenuHeader = "Fast Verif_y";
 
     public override Task Init(IPluginHost<PluginConfigContainer<PluginInstanceConfig>> Host, Action<(string Status, float Percentage)> Progress)
     {
@@ -97,7 +97,7 @@ public class Plugin : BasePlugin<PluginConfigContainer<PluginInstanceConfig>>
 
         var msgbox = MessageBoxManager.GetMessageBoxStandard(new MessageBoxStandardParams {
             ButtonDefinitions = ButtonEnum.Ok,
-            ContentTitle = "RT# - Fast verify",
+            ContentTitle = "RT# - Fast Verify",
             ContentMessage = message,
             Icon = icon,
             SizeToContent = SizeToContent.WidthAndHeight,

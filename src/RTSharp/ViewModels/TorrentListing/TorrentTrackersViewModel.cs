@@ -4,8 +4,6 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using DialogHostAvalonia;
-
 using Microsoft.Extensions.DependencyInjection;
 
 using RTSharp.Core.Services.Cache.Images;
@@ -74,17 +72,20 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public bool CanExecuteAddNewTracker() => CanExecuteAction("Add new tracker");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddNewTracker))]
-        public async Task AddNewTracker(string Text)
+        public async Task AddNewTracker()
         {
-            if (Torrent == null)
+            var torrent = Torrent;
+            if (torrent == null)
+                return;
+
+            var url = (await Views.TextInputDialog.Prompt(App.MainWindow, "RT# - Add a New Tracker", ("Tracker _URL:", "")))?[0];
+            if (String.IsNullOrWhiteSpace(url))
                 return;
 
             try {
-                await Torrent.DataOwner.Instance.Tracker.AddNewTracker(Torrent.ToPluginModel(), Text);
+                await torrent.DataOwner.Instance.Tracker.AddNewTracker(torrent.ToPluginModel(), url);
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Adding new tracker failed");
-            } finally {
-                DialogHost.GetDialogSession("AddNewTrackerHost")!.Close(false);
             }
         }
 
@@ -131,28 +132,30 @@ namespace RTSharp.ViewModels.TorrentListing
         }
 
         [RelayCommand]
-        public async Task SetName((object SelectedItems, string Text) In)
+        public async Task SetName(IList In)
         {
-            var trackers = ((IList)In.SelectedItems).Cast<Models.Tracker>().ToArray();
+            var trackers = In.Cast<Models.Tracker>().ToArray();
 
             if (trackers.Length != 1)
+                return;
+
+            var name = (await Views.TextInputDialog.Prompt(App.MainWindow, "RT# - Set Name", ($"_Name for {trackers[0].Domain}:", trackers[0].DisplayName ?? "")))?[0];
+            if (name == null)
                 return;
 
             using var scope = Core.ServiceProvider.CreateScope();
             var trackerDb = scope.ServiceProvider.GetRequiredService<TrackerDb>();
 
-            trackers[0].DisplayName = In.Text;
+            trackers[0].DisplayName = name;
             trackers[0].UpdateDisplay();
             TrackersView.Refresh();
 
             try {
                 var trackerInfo = trackerDb.GetTrackerInfo(trackers[0].Domain);
-                await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, new TrackerInfo(trackers[0].Domain, In.Text, trackerInfo?.ImageHash));
+                await trackerDb.AddOrUpdateTrackerInfo(trackers[0].Domain, new TrackerInfo(trackers[0].Domain, name, trackerInfo?.ImageHash));
                 await TorrentListingViewModel.UpdateTrackersInTorrents();
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Setting tracker name failed");
-            } finally {
-                DialogHost.GetDialogSession("SetNameHost")!.Close(false);
             }
         }
 
@@ -249,24 +252,27 @@ namespace RTSharp.ViewModels.TorrentListing
 
         public bool CanExecuteReplaceTracker() => CanExecuteAction("Replace");
         [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteReplaceTracker))]
-        public async Task ReplaceTracker((object SelectedItems, string Text) In)
+        public async Task ReplaceTracker(IList In)
         {
-            if (Torrent == null)
+            var torrent = Torrent;
+            if (torrent == null)
                 return;
 
-            var trackers = ((IList)In.SelectedItems).Cast<Models.Tracker>().ToArray();
+            var trackers = In.Cast<Models.Tracker>().ToArray();
 
             if (trackers.Length != 1)
                 return;
 
             var oldTracker = trackers[0].Uri;
 
+            var newTracker = (await Views.TextInputDialog.Prompt(App.MainWindow, "RT# - Replace Tracker", ("_New tracker URL:", oldTracker)))?[0];
+            if (String.IsNullOrWhiteSpace(newTracker) || newTracker == oldTracker)
+                return;
+
             try {
-                await Torrent.DataOwner.Instance.Tracker.ReplaceTracker(Torrent.ToPluginModel(), oldTracker, In.Text);
+                await torrent.DataOwner.Instance.Tracker.ReplaceTracker(torrent.ToPluginModel(), oldTracker, newTracker);
             } catch (Exception ex) {
                 Log.Logger.Error(ex, "Replacing tracker failed");
-            } finally {
-                DialogHost.GetDialogSession("ReplaceTrackerHost")!.Close(false);
             }
         }
     }

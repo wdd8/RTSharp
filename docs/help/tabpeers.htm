@@ -21,12 +21,12 @@
 </div>
 
 <h3>Peer origin:</h3>
-<p>Each time a new peer appears, RT# looks up the owner of its IP address. While the lookup is in progress or is not needed, the origin is displayed as "Loading...", and if nothing can be found it is displayed as "Unknown". There are two lookup methods that you can select in the Behavior options:</p>
+<p>Each time a new peer appears, RT# looks up the owner of its IP address. While the lookup is in progress or is not needed, the origin is displayed as "Loading...", and if nothing can be found it is displayed as "Unknown". There are two lookup methods that you can select in the Peers options:</p>
 <div class="list">
 - RDAP (via ARIN): A direct query that returns whois data. The name is then resolved from the whois data, which can lead to some inaccuracies<br>
 - CAIDA + Team Cymru: Maps the IP to its network (ASN) via whois.cymru.com, then resolves the network to a company name using the CAIDA dataset. This produces more accurate company names but requires a dataset download and queries an API for every lookup<br>
 </div>
-<p>The results are saved in the AS cache, so a network is only looked up once. Some domains are not very meaningful, you can replace them with your own text with the peer origin replacements of the Behavior options.</p>
+<p>The results are saved in the AS cache, so a network is only looked up once. Some domains are not very meaningful, you can replace them with your own text with the peer origin replacements of the Peers options.</p>
 
 <h3>Peers menu:</h3>
 <div class="list">

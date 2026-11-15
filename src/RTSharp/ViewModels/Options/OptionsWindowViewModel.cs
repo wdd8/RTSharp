@@ -10,12 +10,11 @@ using Microsoft.Extensions.DependencyInjection;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
-using RTSharp.Shared.Controls;
 using RTSharp.ViewModels.Options.Pages;
 
 namespace RTSharp.ViewModels.Options;
 
-public record OptionsItem(BuiltInIcons Icon, string Path, string Text, IList<OptionsItem> Children);
+public record OptionsItem(string Path, string Text);
 
 public partial class OptionsWindowViewModel : ObservableObject
 {
@@ -40,14 +39,16 @@ public partial class OptionsWindowViewModel : ObservableObject
     public OptionsWindowViewModel()
     {
         Items = [
-            new OptionsItem(BuiltInIcons.BEHAVIOR, "Behavior", "Behavior", Array.Empty<OptionsItem>()),
-            new OptionsItem(BuiltInIcons.CACHING, "Caching", "Caching", Array.Empty<OptionsItem>()),
-            new OptionsItem(BuiltInIcons.LOOK, "Look", "Look", Array.Empty<OptionsItem>()),
-            new OptionsItem(BuiltInIcons.NETWORK, "Network", "Network", Array.Empty<OptionsItem>()),
+            new OptionsItem("Behavior", "Behavior"),
+            new OptionsItem("Peers", "Peers"),
+            new OptionsItem("Caching", "Caching"),
+            new OptionsItem("Look", "Look"),
+            new OptionsItem("Network", "Network"),
         ];
 
         Pages = new Dictionary<string, ISettingsLoadable> {
             { "Behavior", new BehaviorPageViewModel() },
+            { "Peers", new PeersPageViewModel() },
             { "Caching", new CachingPageViewModel() },
             { "Look", new LookPageViewModel() },
             { "Network", new NetworkPageViewModel() },
@@ -86,7 +87,7 @@ public partial class OptionsWindowViewModel : ObservableObject
 
         Core.GlobalProxy.Instance.Apply(config.Proxy.Value);
 
-        await MessageBoxManager.GetMessageBoxStandard("RT# - Options", "Some changes may require a restart of RTSharp to take effect.", ButtonEnum.Ok, Icon.Warning).ShowAsync();
+        await MessageBoxManager.GetMessageBoxStandard("RT# - Options", "Some changes may require a restart of RTSharp to take effect.", ButtonEnum.Ok, Icon.Info).ShowAsync();
     }
 
     [RelayCommand]

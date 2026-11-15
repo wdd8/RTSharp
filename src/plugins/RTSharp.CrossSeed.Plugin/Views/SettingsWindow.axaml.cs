@@ -9,7 +9,8 @@ public partial class SettingsWindow : VmWindow<SettingsWindowViewModel>
     {
         InitializeComponent();
 
-        // For OnContextPopulated
-        BindViewModelActions(vm => { });
+        BindViewModelActions(vm => {
+            vm!.FxClose = Close;
+        });
     }
 }

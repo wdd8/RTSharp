@@ -5,7 +5,6 @@
              xmlns:converters="clr-namespace:RTSharp.ViewModels.Converters;assembly=RTSharp"
              xmlns:models="clr-namespace:RTSharp.Models"
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
-             xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              xmlns:s="clr-namespace:System;assembly=System.Runtime"
              xmlns:sc="using:RTSharp.Shared.Controls.Views"
              d:DesignWidth="1100" d:DesignHeight="450"
@@ -13,69 +12,10 @@
 
     <Control.Resources>
         <converters:ETATimeSpanConverter x:Key="ETATimeSpanConverter"/>
-        <converters:ItemsParamConverter x:Key="ItemsParamConverter"/>
     </Control.Resources>
     <Design.DataContext>
         <torrentListing:TorrentTrackersViewModel />
     </Design.DataContext>
-
-    <dialogHost:DialogHost Name="DialogHost" Identifier="SetNameHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
-        <dialogHost:DialogHost.DialogContent>
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
-                    <TextBlock FontWeight="Bold">Set Name for</TextBlock>
-                    <TextBlock FontWeight="Bold" Margin="4 0 0 0" Text="{Binding #MainGrid.((models:Tracker)SelectedItem).Domain}" />
-                </StackPanel>
-                <TextBox Name="TrackerName" Text="{Binding #MainGrid.((models:Tracker)SelectedItem).DisplayName, Mode=OneTime}" />
-                <Button
-                    Margin="0 -6 0 -7"
-                    Width="0"
-                    IsDefault="True"
-                    Command="{Binding SetNameCommand}"
-                >
-                    <Button.CommandParameter>
-                        <MultiBinding Converter="{StaticResource ItemsParamConverter}">
-                            <Binding Path="#MainGrid.SelectedItems" />
-                            <Binding Path="#TrackerName.Text" />
-                        </MultiBinding>
-                    </Button.CommandParameter>
-                </Button>
-            </StackPanel>
-        </dialogHost:DialogHost.DialogContent>
-	<dialogHost:DialogHost Name="DialogHostReplace" Identifier="ReplaceTrackerHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
-        <dialogHost:DialogHost.DialogContent>
-            <StackPanel>
-                <TextBlock FontWeight="Bold">Replace Tracker With</TextBlock>
-                <TextBox Name="NewTracker" Text="{Binding #MainGrid.((models:Tracker)SelectedItem).Uri, Mode=OneTime}" />
-                <Button
-                    Margin="0 -6 0 -7"
-                    Width="0"
-                    IsDefault="True"
-                    Command="{Binding ReplaceTrackerCommand}"
-                >
-                    <Button.CommandParameter>
-                        <MultiBinding Converter="{StaticResource ItemsParamConverter}">
-                            <Binding Path="#MainGrid.SelectedItems" />
-                            <Binding Path="#NewTracker.Text" />
-                        </MultiBinding>
-                    </Button.CommandParameter>
-                </Button>
-            </StackPanel>
-        </dialogHost:DialogHost.DialogContent>
-	<dialogHost:DialogHost Name="DialogHostAddNew" Identifier="AddNewTrackerHost" CloseOnClickAway="True" MaxWidth="1.7976931348623157E+308" MaxHeight="1.7976931348623157E+308">
-        <dialogHost:DialogHost.DialogContent>
-            <StackPanel>
-                <TextBlock FontWeight="Bold">Add a New Tracker</TextBlock>
-                <TextBox Name="AddNewTrackerText" />
-                <Button
-                    Margin="0 -6 0 -7"
-                    Width="0"
-                    IsDefault="True"
-                    Command="{Binding AddNewTrackerCommand}"
-                    CommandParameter="{Binding #AddNewTrackerText.Text}"
-                />
-            </StackPanel>
-        </dialogHost:DialogHost.DialogContent>
 
         <DataGrid Name="MainGrid"
                       ItemsSource="{Binding TrackersView}"
@@ -91,7 +31,7 @@
             <DataGrid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="_Add a New Tracker..."
-                              Command="{Binding #DialogHostAddNew.OpenDialogCommand}"
+                              Command="{Binding AddNewTrackerCommand}"
                     />
                     <Separator />
                     <MenuItem Header="_Enable"
@@ -107,8 +47,8 @@
                               CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
                     <MenuItem Header="Re_place..."
-                              Command="{Binding #DialogHostReplace.OpenDialogCommand}"
-                              IsEnabled="{Binding HasSelectedItem}"
+                              Command="{Binding ReplaceTrackerCommand}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
                     <Separator />
                     <MenuItem Header="Rea_nnounce"
@@ -117,7 +57,8 @@
                     />
                     <Separator />
                     <MenuItem Header="Set _Name..."
-                              Command="{Binding #DialogHost.OpenDialogCommand}"
+                              Command="{Binding SetNameCommand}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
                               IsEnabled="{Binding HasSelectedItem}"
                     />
                     <MenuItem Header="Set _Icon..."
@@ -160,7 +101,4 @@
                 <DataGridTextColumn Header="Message" ColumnKey="Message" x:DataType="models:Tracker" Binding="{Binding Message, Mode=OneWay}" SortMemberPath="Message" Width="300" />
             </DataGrid.Columns>
         </DataGrid>
-    </dialogHost:DialogHost>
-    </dialogHost:DialogHost>
-    </dialogHost:DialogHost>
 </UserControl>

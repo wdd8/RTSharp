@@ -17,16 +17,8 @@
 <p>A plugin can be loaded several times, each loaded plugin is called an instance and has its own configuration file. For example you will have one instance of the rtorrent data provider for each rtorrent daemon you want to control. The configuration of the instances is explained in the "Adding a data provider" chapter.</p>
 
 <h2>The Plugins window</h2>
-<p>Click on the "Plugins" menu to display all the loaded plugin instances. When you select one instance, RT# displays its information:</p>
-<div class="list">
-- Instance GUID: Unique identifier of this instance<br>
-- Display name: Name of the instance<br>
-- Description: Description of the plugin<br>
-- Author: Author of the plugin<br>
-- Version: Version of the plugin<br>
-- Guid: Unique identifier of the plugin itself, it is the same for all the instances of a plugin<br>
-</div>
-<p>Some plugins have their own settings, in this case the settings button is enabled and opens the settings window of the plugin. Click on "Manage..." to add, edit or remove plugin instances.</p>
+<p>Click on the "Plugins" menu to display all the loaded plugin instances, one per line, with the name of the instance, the version, the author and the description of the plugin. Click on a column header to sort the list, and point to a description to read all of it.</p>
+<p>Some plugins have their own settings, in this case the "Settings" button is enabled and opens the settings window of the plugin; double clicking on the plugin does the same. Right click on a plugin to copy its Instance GUID, the unique identifier of this instance, or its Plugin GUID, the identifier of the plugin itself, which is the same for all the instances of a plugin. Click on "Manage..." to add, edit or remove plugin instances.</p>
 
 <h2>Plugin compatibility</h2>
 <p>Each plugin declares the major version of RT# it has been made for. If you load a plugin that has been made for a different major version, RT# tells you that the plugin is incompatible and asks you if you want to load it anyway. Answering "Yes" may work, but the plugin can also crash or behave in a strange way, so we recommend you to get an updated version of the plugin instead.</p>

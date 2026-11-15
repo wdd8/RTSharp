@@ -35,7 +35,7 @@ public class RTSharpPlugin : IPluginHost
 {
     internal PluginAssemblyLoadContext AssemblyLoadContext { get; private set; }
     internal Assembly? Assembly { get; private set; }
-    internal IPlugin Instance { get; set; } = null!; // Set by LoadPlugin
+    public IPlugin Instance { get; internal set; } = null!; // Set by LoadPlugin
     internal IPluginInit? PluginInit { get; set; }
     public IPluginConfigContainer<PluginInstanceConfig> Config { get; private set; }
 

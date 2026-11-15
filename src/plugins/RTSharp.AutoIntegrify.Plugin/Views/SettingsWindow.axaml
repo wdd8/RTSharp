@@ -10,71 +10,72 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="RTSharp.AutoIntegrify.Plugin.SettingsWindow"
 		x:DataType="vm:SettingsWindowViewModel"
-        Title="Settings"
+        Title="RT# - Auto Integrify Settings"
 		SizeToContent="WidthAndHeight"
-        Padding="12">
+		CanResize="False"
+		WindowStartupLocation="CenterOwner">
   <Window.Resources>
     <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
   </Window.Resources>
 
+  <StackPanel Margin="{DynamicResource DialogMargin}" Spacing="{DynamicResource GroupSpacing}">
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource GroupSpacing}">
+      <GroupBox Grid.Column="0" Header="Search paths">
+        <StackPanel Spacing="{DynamicResource ControlSpacing}">
+          <ListBox
+              Name="list"
+              Height="230"
+              MinWidth="500"
+              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+              ScrollViewer.VerticalScrollBarVisibility="Visible"
+              ItemsSource="{Binding Items}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="sys:String">
+                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource ControlSpacing}">
+                  <Button ToolTip.Tip="Remove"
+                          Command="{Binding #list.((vm:SettingsWindowViewModel)DataContext).RemoveCommand}"
+                          CommandParameter="{Binding}">
+                    <views:BuiltInIconImage Value="DELETE" Width="16" Height="16" />
+                  </Button>
+                  <TextBlock VerticalAlignment="Center" Text="{Binding}" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
 
-  <Grid RowDefinitions="Auto" ColumnDefinitions="*,Auto">
-	<GroupBox Header="Search paths" Grid.RowSpan="2" Grid.Column="0">
-      <Grid RowDefinitions="Auto,Auto">
-        <ListBox
-			Name="list"
-			Grid.Row="0"
-			Height="230"
-			MinWidth="500"
-			ScrollViewer.HorizontalScrollBarVisibility="Auto"
-			ScrollViewer.VerticalScrollBarVisibility="Visible"
-			ItemsSource="{Binding Items}">
-          <ListBox.ItemTemplate>
-			<DataTemplate x:DataType="sys:String">
-			  <StackPanel Orientation="Horizontal">
-			    <Button
-					Content="X"
-					Command="{Binding #list.((vm:SettingsWindowViewModel)DataContext).RemoveCommand}"
-					CommandParameter="{Binding}"
-					/>
-			    <TextBlock VerticalAlignment="Center" Text="{Binding}" />
-			  </StackPanel>
-			</DataTemplate>
-		  </ListBox.ItemTemplate>
-        </ListBox>
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{DynamicResource ControlSpacing}">
+            <Label Grid.Column="0" Target="{Binding #NewPathBox}">_Path:</Label>
+            <TextBox Grid.Column="1" Name="NewPathBox" Text="{Binding NewPath}" />
+            <Button Grid.Column="2" MinWidth="75" HorizontalContentAlignment="Center" Command="{Binding AddCommand}">A_dd</Button>
+          </Grid>
+        </StackPanel>
+      </GroupBox>
 
-		<Grid Grid.Row="1" ColumnDefinitions="*,Auto">
-          <TextBox Grid.Column="0" HorizontalAlignment="Stretch" Text="{Binding NewPath}" />
-		  <Button Grid.Column="1" HorizontalAlignment="Left" Content="Add" Command="{Binding AddCommand}" />
-		</Grid>
-      </Grid>
-    </GroupBox>
+      <GroupBox Grid.Column="1" VerticalAlignment="Top" Header="Checking">
+        <StackPanel Spacing="{DynamicResource ControlSpacing}">
+          <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{DynamicResource ControlSpacing}" RowSpacing="{DynamicResource ControlSpacing}">
+            <Label Grid.Column="0" Grid.Row="0" Target="{Binding #RandomPiecesBox}">_Random pieces to check:</Label>
+            <NumericUpDown Grid.Column="1" Grid.Row="0" Name="RandomPiecesBox" Width="100" Minimum="0" Increment="1" Value="{Binding RandomPiecesToCheck}" />
+            <Label Grid.Column="0" Grid.Row="1" Target="{Binding #RecursionLimitBox}">Search recursion _limit:</Label>
+            <NumericUpDown Grid.Column="1" Grid.Row="1" Name="RecursionLimitBox" Width="100" Minimum="0" Increment="1" Value="{Binding SearchRecursionLimit}" />
+          </Grid>
+          <GroupBox Header="Links">
+            <StackPanel>
+              <RadioButton GroupName="LinkGroup" Content="Re_flink with hardlink fallback"
+                  IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.ReflinkWithHardlinkFallback}}" />
+              <RadioButton GroupName="LinkGroup" Content="R_eflink"
+                  IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Reflink}}" />
+              <RadioButton GroupName="LinkGroup" Content="_Hardlink"
+                  IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Hardlink}}" />
+            </StackPanel>
+          </GroupBox>
+        </StackPanel>
+      </GroupBox>
+    </Grid>
 
-	<StackPanel Grid.Column="1">
-	  <GroupBox VerticalAlignment="Top" Header="Other settings">
-		<StackPanel Orientation="Vertical">
-		  <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-		    <TextBlock Text="Random pieces to check:" VerticalAlignment="Center"/>
-            <NumericUpDown Width="100" Minimum="0" Increment="1" Value="{Binding RandomPiecesToCheck}" />
-		  </StackPanel>
-		  <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-		    <TextBlock Text="Search recursion limit:" VerticalAlignment="Center"/>
-            <NumericUpDown Width="100" Minimum="0" Increment="1" Value="{Binding SearchRecursionLimit}" />
-		  </StackPanel>
-		  <GroupBox Header="Links">
-			  <StackPanel Orientation="Vertical">
-			    <RadioButton GroupName="LinkGroup" Content="Reflink with hardlink fallback"
-					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.ReflinkWithHardlinkFallback}}" />
-			    <RadioButton GroupName="LinkGroup" Content="Reflink" 
-					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Reflink}}" />
-			    <RadioButton GroupName="LinkGroup" Content="Hardlink"
-					IsChecked="{Binding LinkOptions, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static abstractions:LinkOptions.Hardlink}}" />
-              </StackPanel>
-		  </GroupBox>
-		</StackPanel>
-	  </GroupBox>
-
-	  <Button Content="Save" IsDefault="True" Command="{Binding SaveCommand}" />
-	</StackPanel>
-  </Grid>
+    <StackPanel Classes="DialogButtons">
+      <Button IsDefault="True" Command="{Binding OkCommand}">OK</Button>
+      <Button IsCancel="True" Command="{Binding CancelCommand}">Cancel</Button>
+    </StackPanel>
+  </StackPanel>
 </Window>

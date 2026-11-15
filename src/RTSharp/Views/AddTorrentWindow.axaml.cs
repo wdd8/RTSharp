@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 
@@ -23,6 +25,12 @@ namespace RTSharp.Views
                 vm!.GetClipboard = GetClipboardAsync;
                 vm!.DuplicationTargetSelector.SelectRemoteDirectoryDialog = SelectDuplicationTargetRemoteDirectoryDialogAsync;
             });
+        }
+
+        protected override void OnOpened(EventArgs e)
+        {
+            SizeToContent = SizeToContent.Manual;
+            base.OnOpened(e);
         }
 
         private Task<string?> SelectDuplicationTargetRemoteDirectoryDialogAsync(string? Input) =>

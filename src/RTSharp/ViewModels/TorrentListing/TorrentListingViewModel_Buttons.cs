@@ -41,10 +41,6 @@ public partial class TorrentListingViewModel
 
     public Func<Window, ulong, int, bool, Task<bool>> DeleteTorrentsConfirmationDialog { get; set; } = null!; // view set
 
-    public Action ShowAddLabelDialog { get; set; } = null!; // view set
-
-    public Action CloseAddLabelDialog { get; set; } = null!; // view set
-
     private static async Task ActionForMulti(IReadOnlyList<Torrent> In, string ActionName, Func<RTSharpDataProvider, IList<Torrent>, Task<TorrentStatuses>> Fx)
     {
         In = [.. In]; // cp
@@ -382,7 +378,7 @@ public partial class TorrentListingViewModel
             viewModel = new TorrentEditorWindowViewModel(torrent, dotTorrent);
         } catch (Exception ex) {
             Log.Logger.Error(ex, "Failed to load .torrent for editing");
-            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit Torrent","Failed to load .torrent:\n" + ex.Message, MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error).ShowWindowAsync();
+            await MessageBoxManager.GetMessageBoxStandard("RT# - Edit Torrent","Unable to load the .torrent:\n" + ex.Message, MsBox.Avalonia.Enums.ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error).ShowWindowAsync();
             return;
         }
 
@@ -393,21 +389,22 @@ public partial class TorrentListingViewModel
 
     public bool CanExecuteAddLabel() => CanExecuteAction("Add label");
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddLabel))]
-    private async Task AddLabel((object SelectedItems, string Text) In)
+    private async Task AddLabel()
     {
-        var selectedItems = ((IReadOnlyList<Torrent>)In.SelectedItems).ToArray();
-        try {
-            await ActionForMulti(selectedItems, "Set labels", (dp, torrents) =>
-                dp.Instance.SetLabels(torrents
-                    .Where(x => !x.Labels.Contains(In.Text))
-                    .Select(torrent => (
-                        torrent.Hash,
-                        torrent.Labels.Append(In.Text).ToArray()
-                    )).ToList())
-            );
-        } finally {
-            CloseAddLabelDialog();
-        }
+        var selectedItems = SelectedItems.ToArray();
+
+        var label = (await Views.TextInputDialog.Prompt(App.MainWindow, "RT# - Add Label", ("_Label:", "")))?[0];
+        if (String.IsNullOrWhiteSpace(label))
+            return;
+
+        await ActionForMulti(selectedItems, "Set labels", (dp, torrents) =>
+            dp.Instance.SetLabels(torrents
+                .Where(x => !x.Labels.Contains(label))
+                .Select(torrent => (
+                    torrent.Hash,
+                    torrent.Labels.Append(label).ToArray()
+                )).ToList())
+        );
     }
 
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddLabel))]

@@ -8,7 +8,6 @@ using Avalonia.VisualTree;
 
 using CommunityToolkit.Mvvm.Input;
 
-using DialogHostAvalonia;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -66,8 +65,6 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             vm!.SelectDirectoryDialog = ShowSelectDirectoryDialog;
             vm!.DeleteTorrentsConfirmationDialog = ShowDeleteTorrentsConfirmationDialog;
             vm!.SelectRemoteDirectoryDialog = ShowSelectRemoteDirectoryDialog;
-            vm!.ShowAddLabelDialog = ShowAddLabelDialog;
-            vm!.CloseAddLabelDialog = CloseAddLabelDialog;
             vm!.CaptureGridState = CaptureGridState;
             vm!.CaptureDetailsGridStates = CaptureDetailsGridStates;
             vm!.CaptureGridRowHeights = CaptureGridRowHeights;
@@ -305,16 +302,6 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
     public TorrentListingViewModel? TypedContext => (TorrentListingViewModel?)DataContext;
 
-    public void ShowAddLabelDialog()
-    {
-        AddLabelDialogHost.OpenDialogCommand.Execute(null);
-    }
-
-    public void CloseAddLabelDialog()
-    {
-        DialogHost.GetDialogSession(AddLabelDialogHost.Identifier)!.Close(false);
-    }
-
     public void EvLoadingRow(object sender, DataGridRowEventArgs e)
     {
         var torrent = (Torrent)e.Row.DataContext!;
@@ -380,7 +367,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             ContentMessage = $"Are you sure you want to recheck {Count} torrent{(Count == 1 ? "" : "s")} ({Shared.Utils.Converters.GetSIDataSize(Size)})?",
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Icon = Icon.Warning
+            Icon = Icon.None
         });
 
         return (await window.ShowWindowDialogAsync(BaseWindow)) == ButtonResult.Yes;

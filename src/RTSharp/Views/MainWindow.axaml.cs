@@ -119,7 +119,7 @@ public partial class MainWindow : VmWindow<MainWindowViewModel>
         if (!File.Exists(HelpFile)) {
             var msgbox = MessageBoxManager.GetMessageBoxStandard(
                 title: "RT#",
-                text: $"Help file not found at {HelpFile}",
+                text: $"Unable to find the help file at {HelpFile}",
                 @enum: MsBox.Avalonia.Enums.ButtonEnum.Ok,
                 icon: MsBox.Avalonia.Enums.Icon.Error);
             await msgbox.ShowAsync();

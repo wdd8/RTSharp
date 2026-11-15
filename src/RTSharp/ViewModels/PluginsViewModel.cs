@@ -21,38 +21,10 @@ namespace RTSharp.ViewModels
         [NotifyCanExecuteChangedFor(nameof(PluginsSettingsClickCommand))]
         public partial RTSharpPlugin? CurrentlySelectedPlugin { get; set; }
 
-        partial void OnCurrentlySelectedPluginChanged(RTSharpPlugin? value)
-        {
-            if (value == null) {
-                PluginInfo = null;
-                return;
-            }
-
-            PluginInfo = new Models.PluginInfo() {
-                InstanceGuid = value.InstanceId.ToString(),
-                DisplayName = value.Config.Plugin.Name,
-                Description = value.Instance.Description,
-                Author = value.Instance.Author,
-                Version = value.PluginVersion,
-                PluginGuid = value.Instance.GUID.ToString()
-            };
-        }
-
-        [ObservableProperty]
-        public partial Models.PluginInfo? PluginInfo { get; set; }
         public required Window ThisWindow { get; set; }
 
         public PluginsViewModel()
         {
-            PluginInfo = new Models.PluginInfo() {
-                InstanceGuid = "N/A",
-                DisplayName = "N/A",
-                Description = "N/A",
-                Author = "N/A",
-                Version = "N/A",
-                PluginGuid = "N/A"
-            };
-
             if (Plugins.Count > 0)
                 CurrentlySelectedPlugin = Plugins[0];
         }
@@ -66,7 +38,7 @@ namespace RTSharp.ViewModels
             } catch (Exception ex) {
                 var msgBox = MessageBoxManager.GetMessageBoxStandard(
                     title: "RT# - Plugins",
-                    text: $"Failed to show plugin settings:\n{ex}",
+                    text: $"Unable to show plugin settings:\n{ex}",
                     @enum: ButtonEnum.Ok,
                     icon: Icon.Error,
                     windowStartupLocation: WindowStartupLocation.CenterOwner);
