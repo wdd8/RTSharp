@@ -71,7 +71,12 @@ namespace RTSharp.ViewModels
                                 continue;
                             }
 
+                            var wasInactive = item.DataProvider.State == Shared.Abstractions.DataProviderState.INACTIVE;
                             item.DataProvider.State = change.Current.State.Value;
+
+                            if (wasInactive && item.DataProvider.State != Shared.Abstractions.DataProviderState.INACTIVE)
+                                item.BreakSpeedChartLine();
+
                             if (item.DataProvider.State != Shared.Abstractions.DataProviderState.INACTIVE)
                                 item.DataProvider.Latency = Shared.Utils.Converters.ToAgoString(change.Current.AttachedDaemonService.Latency.Value);
                             else
@@ -387,6 +392,19 @@ namespace RTSharp.ViewModels
             CurrentSpeedChartMode = chartMode;
             RemoveOldChartValues(now);
             UpdateYAxisScale();
+        }
+
+        public void BreakSpeedChartLine()
+        {
+            if (!SpeedChartEnabled || DLSpeedChartValues.Count == 0)
+                return;
+
+            var now = DateTime.Now;
+            DLSpeedChartValues.Add(new DateTimePoint(now, null));
+            UPSpeedChartValues.Add(new DateTimePoint(now, null));
+
+            CurrentSpeedChartMode = null;
+            SpeedChartWasIdle = false;
         }
 
         private void FillSwitchPoint(SPEED_CHART_MODE Mode)
