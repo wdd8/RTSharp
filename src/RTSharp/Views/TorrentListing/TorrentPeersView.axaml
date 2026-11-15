@@ -32,7 +32,7 @@
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
 
-    <DataGrid Name="grid"
+    <DataGrid Name="MainGrid"
                   ItemsSource="{Binding PeersView}"
                   CanUserReorderColumns="True"
                   CanUserResizeColumns="True"
@@ -51,12 +51,12 @@
                 <Separator />
                 <MenuItem Header="Ban peer"
                           Command="{Binding BanPeerCommand}"
-                          CommandParameter="{Binding #grid.SelectedItems}"
+                          CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
             </ContextMenu>
         </DataGrid.ContextMenu>
         <DataGrid.Columns>
-            <DataGridTemplateColumn Header="Icon" CanUserSort="False">
+            <DataGridTemplateColumn Header="Icon" ColumnKey="Icon" CanUserSort="False">
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="models:Peer">
                         <Panel>
@@ -66,12 +66,12 @@
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="Origin" x:DataType="models:Peer" Binding="{Binding Origin, Mode=OneWay}" SortMemberPath="Origin" />
-            
-            <DataGridTextColumn Header="IP:Port" x:DataType="models:Peer" Binding="{Binding IPPortDisplay, Mode=OneWay}" SortMemberPath="IPPortDisplay" />
-            <DataGridTextColumn Header="Client" x:DataType="models:Peer" Binding="{Binding Client, Mode=OneWay}" SortMemberPath="Client" />
-            <DataGridTextColumn Header="Flags" x:DataType="models:Peer" Binding="{Binding Flags, Mode=OneWay}" SortMemberPath="Flags" />
-            <DataGridTemplateColumn Header="Done" SortMemberPath="Done">
+            <DataGridTextColumn Header="Origin" ColumnKey="Origin" x:DataType="models:Peer" Binding="{Binding Origin, Mode=OneWay}" SortMemberPath="Origin" />
+
+            <DataGridTextColumn Header="IP:Port" ColumnKey="IPPort" x:DataType="models:Peer" Binding="{Binding IPPortDisplay, Mode=OneWay}" SortMemberPath="IPPortDisplay" />
+            <DataGridTextColumn Header="Client" ColumnKey="Client" x:DataType="models:Peer" Binding="{Binding Client, Mode=OneWay}" SortMemberPath="Client" />
+            <DataGridTextColumn Header="Flags" ColumnKey="Flags" x:DataType="models:Peer" Binding="{Binding Flags, Mode=OneWay}" SortMemberPath="Flags" />
+            <DataGridTemplateColumn Header="Done" ColumnKey="Done" SortMemberPath="Done">
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="models:Peer">
                         <Grid>
@@ -81,11 +81,11 @@
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="DL Speed" x:DataType="models:Peer" Binding="{Binding DLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="DLSpeed" />
-            <DataGridTextColumn Header="UP Speed" x:DataType="models:Peer" Binding="{Binding UPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="UPSpeed" />
-            <DataGridTextColumn Header="Downloaded" x:DataType="models:Peer" Binding="{Binding Downloaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" SortMemberPath="Downloaded" />
-            <DataGridTextColumn Header="Uploaded" x:DataType="models:Peer" Binding="{Binding Uploaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" SortMemberPath="Uploaded" />
-            <DataGridTextColumn Header="Peer DL Speed" x:DataType="models:Peer" Binding="{Binding PeerDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="PeerDLSpeed" />
+            <DataGridTextColumn Header="DL Speed" ColumnKey="DLSpeed" x:DataType="models:Peer" Binding="{Binding DLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="DLSpeed" />
+            <DataGridTextColumn Header="UP Speed" ColumnKey="UPSpeed" x:DataType="models:Peer" Binding="{Binding UPSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="UPSpeed" />
+            <DataGridTextColumn Header="Downloaded" ColumnKey="Downloaded" x:DataType="models:Peer" Binding="{Binding Downloaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" SortMemberPath="Downloaded" />
+            <DataGridTextColumn Header="Uploaded" ColumnKey="Uploaded" x:DataType="models:Peer" Binding="{Binding Uploaded, Mode=OneWay, Converter={StaticResource SIDataSizeConverter}}" SortMemberPath="Uploaded" />
+            <DataGridTextColumn Header="Peer DL Speed" ColumnKey="PeerDLSpeed" x:DataType="models:Peer" Binding="{Binding PeerDLSpeed, Mode=OneWay, Converter={StaticResource SIDataSpeedConverter}}" SortMemberPath="PeerDLSpeed" />
         </DataGrid.Columns>
     </DataGrid>
     </dialogHost:DialogHost>

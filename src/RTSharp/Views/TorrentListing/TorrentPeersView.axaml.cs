@@ -13,7 +13,7 @@ public partial class TorrentPeersView : VmUserControl<TorrentPeersViewModel>
     public TorrentPeersView()
     {
         InitializeComponent();
-        grid.PointerPressed += EvGridPointerPressedClearSelection;
+        MainGrid.PointerPressed += EvGridPointerPressedClearSelection;
     }
 
     private void EvGridPointerPressedClearSelection(object? sender, PointerPressedEventArgs e)
@@ -26,6 +26,6 @@ public partial class TorrentPeersView : VmUserControl<TorrentPeersViewModel>
             return;
         if (source is DataGridColumnHeader || source.FindAncestorOfType<DataGridColumnHeader>() != null)
             return;
-        grid.SelectedItems.Clear();
+        MainGrid.SelectedItems.Clear();
     }
 }

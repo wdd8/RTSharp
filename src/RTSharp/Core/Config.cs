@@ -63,6 +63,8 @@ public class Config
         {
             public string? TorrentGridState { get; set; }
 
+            public Dictionary<string, string> TorrentDetailsGridStates { get; set; } = new();
+
             public string? DockState { get; set; }
 
             public int? LastPosX { get; set; }
@@ -239,6 +241,7 @@ public class Config
   },
   "UIState": {
     "TorrentGridState": null,
+    "TorrentDetailsGridStates": {},
     "DockState": null,
     "LastPosX": null,
     "LastPosY": null,

@@ -47,6 +47,14 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     public static ObservableCollection<Func<System.Collections.IList, MenuItem>> MenuItemInserts = new();
     public static ObservableCollection<Action<System.Collections.IList>> MenuItemRemoves = new();
 
+    private (string Key, DataGrid Grid)[] DetailsGrids => [
+        (nameof(TorrentFilesView), FilesView.MainGrid),
+        (nameof(TorrentPeersView), PeersView.MainGrid),
+        (nameof(TorrentTrackersView), TrackersView.MainGrid)
+    ];
+
+    private readonly HashSet<DataGrid> RestoredDetailsGrids = new();
+
     public TorrentListingView()
     {
         InitializeComponent();
@@ -60,6 +68,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
             vm!.ShowAddLabelDialog = ShowAddLabelDialog;
             vm!.CloseAddLabelDialog = CloseAddLabelDialog;
             vm!.CaptureGridState = CaptureGridState;
+            vm!.CaptureDetailsGridStates = CaptureDetailsGridStates;
             vm!.CaptureGridRowHeights = CaptureGridRowHeights;
             vm!.ScrollToItem = grid_ScrollToItem;
 
@@ -86,6 +95,10 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         grid.CopyingRowClipboardContent += (_, e) => ViewModel!.EvCopyingRowClipboardContent(e);
         grid.PointerPressed += EvGridPointerPressedClearSelection;
         grid.AddHandler(KeyDownEvent, (_, e) => ViewModel!.EvGridKeyDown(e), Avalonia.Interactivity.RoutingStrategies.Tunnel);
+
+        // A tab's content joins the visual tree when the tab is first shown, with its columns and items in place
+        foreach (var (key, detailsGrid) in DetailsGrids)
+            detailsGrid.AttachedToVisualTree += (_, _) => RestoreDetailsGridState(key, detailsGrid);
 
         RowHeight = config.Look.Value.TorrentListing?.RowHeight ?? 20;
         grid.RowHeight = RowHeight;
@@ -179,6 +192,50 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
         }
     }
 
+    private static DataGridStateOptions DetailsGridStateOptions(DataGrid Grid) => new() {
+        ColumnKeySelector = column => column.ColumnKey,
+        ColumnKeyResolver = key => Grid.Columns.FirstOrDefault(column => Equals(column.ColumnKey, key))
+    };
+
+    private void RestoreDetailsGridState(string Key, DataGrid Grid)
+    {
+        if (!RestoredDetailsGrids.Add(Grid))
+            return;
+
+        using var scope = Core.ServiceProvider.CreateScope();
+        if (!scope.ServiceProvider.GetRequiredService<Core.Config>().UIState.Value.TorrentDetailsGridStates.TryGetValue(Key, out var serialized))
+            return;
+
+        try {
+            DataGridStatePersistence.RestoreStateFromString(Grid, serialized, DataGridStateSections.Columns | DataGridStateSections.Sorting, DetailsGridStateOptions(Grid), new SystemTextJsonDataGridStateSerializer());
+        } catch {
+#if DEBUG
+            throw;
+#endif
+            // probe point
+        }
+    }
+
+    private Dictionary<string, string> CaptureDetailsGridStates()
+    {
+        var states = new Dictionary<string, string>();
+
+        Dispatcher.UIThread.Invoke(() => {
+            foreach (var (key, detailsGrid) in DetailsGrids.Where(x => RestoredDetailsGrids.Contains(x.Grid))) {
+                try {
+                    states[key] = DataGridStatePersistence.SerializeStateToString(detailsGrid, DataGridStateSections.Columns | DataGridStateSections.Sorting, DetailsGridStateOptions(detailsGrid), new SystemTextJsonDataGridStateSerializer());
+                } catch {
+#if DEBUG
+                    throw;
+#endif
+                    // probe point
+                }
+            }
+        });
+
+        return states;
+    }
+
     public void StateFilterFlyoutOpening(object? sender, EventArgs e) => ViewModel!.StateFilterFlyoutOpening();
 
     public void LabelsFilterFlyoutOpening(object? sender, EventArgs e) => ViewModel!.LabelsFilterFlyoutOpening();
@@ -229,6 +286,7 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
     {
         base.OnDetachedFromVisualTree(e);
         var gridState = CaptureGridState();
+        var detailsStates = CaptureDetailsGridStates();
         var heights = ContentGrid.RowDefinitions.Select(r => r.ActualHeight).ToArray();
 
         using var scope = Core.ServiceProvider.CreateScope();
@@ -236,6 +294,8 @@ public partial class TorrentListingView : VmUserControl<TorrentListingViewModel>
 
         if (gridState != null)
             config.UIState.Value.TorrentGridState = gridState;
+        foreach (var (key, detailsState) in detailsStates)
+            config.UIState.Value.TorrentDetailsGridStates[key] = detailsState;
 
         config.UIState.Value.TorrentListingGridRowHeights = heights;
     }

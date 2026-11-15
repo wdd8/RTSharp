@@ -22,7 +22,7 @@ public partial class TorrentTrackersView : VmUserControl<TorrentTrackersViewMode
             vm!.BrowseForIconDialog = ShowBrowserForIconDialog;
         });
 
-        grid.PointerPressed += EvGridPointerPressedClearSelection;
+        MainGrid.PointerPressed += EvGridPointerPressedClearSelection;
     }
 
     private void EvGridPointerPressedClearSelection(object? sender, PointerPressedEventArgs e)
@@ -35,7 +35,7 @@ public partial class TorrentTrackersView : VmUserControl<TorrentTrackersViewMode
             return;
         if (source is DataGridColumnHeader || source.FindAncestorOfType<DataGridColumnHeader>() != null)
             return;
-        grid.SelectedItems.Clear();
+        MainGrid.SelectedItems.Clear();
     }
 
     private async Task<string?> ShowBrowserForIconDialog(Window Input)

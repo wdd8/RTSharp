@@ -24,9 +24,9 @@
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
                     <TextBlock FontWeight="Bold">Set a new name for tracker</TextBlock>
-                    <TextBlock FontWeight="Bold" Margin="4 0 0 0" Text="{Binding #grid.((models:Tracker)SelectedItem).Domain}" />
+                    <TextBlock FontWeight="Bold" Margin="4 0 0 0" Text="{Binding #MainGrid.((models:Tracker)SelectedItem).Domain}" />
                 </StackPanel>
-                <TextBox Name="TrackerName" Text="{Binding #grid.((models:Tracker)SelectedItem).DisplayName, Mode=OneTime}" />
+                <TextBox Name="TrackerName" Text="{Binding #MainGrid.((models:Tracker)SelectedItem).DisplayName, Mode=OneTime}" />
                 <Button
                     Margin="0 -6 0 -7"
                     Width="0"
@@ -35,7 +35,7 @@
                 >
                     <Button.CommandParameter>
                         <MultiBinding Converter="{StaticResource ItemsParamConverter}">
-                            <Binding Path="#grid.SelectedItems" />
+                            <Binding Path="#MainGrid.SelectedItems" />
                             <Binding Path="#TrackerName.Text" />
                         </MultiBinding>
                     </Button.CommandParameter>
@@ -46,7 +46,7 @@
         <dialogHost:DialogHost.DialogContent>
             <StackPanel>
                 <TextBlock FontWeight="Bold">Replace tracker to</TextBlock>
-                <TextBox Name="NewTracker" Text="{Binding #grid.((models:Tracker)SelectedItem).Uri, Mode=OneTime}" />
+                <TextBox Name="NewTracker" Text="{Binding #MainGrid.((models:Tracker)SelectedItem).Uri, Mode=OneTime}" />
                 <Button
                     Margin="0 -6 0 -7"
                     Width="0"
@@ -55,7 +55,7 @@
                 >
                     <Button.CommandParameter>
                         <MultiBinding Converter="{StaticResource ItemsParamConverter}">
-                            <Binding Path="#grid.SelectedItems" />
+                            <Binding Path="#MainGrid.SelectedItems" />
                             <Binding Path="#NewTracker.Text" />
                         </MultiBinding>
                     </Button.CommandParameter>
@@ -77,7 +77,7 @@
             </StackPanel>
         </dialogHost:DialogHost.DialogContent>
 
-        <DataGrid Name="grid"
+        <DataGrid Name="MainGrid"
                       ItemsSource="{Binding TrackersView}"
                       SelectedItem="{Binding SelectedItem}"
                       CanUserReorderColumns="True"
@@ -96,15 +96,15 @@
                     <Separator />
                     <MenuItem Header="Enable"
                               Command="{Binding EnableCommand}"
-                              CommandParameter="{Binding #grid.SelectedItems}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
                     <MenuItem Header="Disable"
                               Command="{Binding DisableCommand}"
-                              CommandParameter="{Binding #grid.SelectedItems}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
                     <MenuItem Header="Remove"
                               Command="{Binding RemoveCommand}"
-                              CommandParameter="{Binding #grid.SelectedItems}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
                     <MenuItem Header="Replace"
                               Command="{Binding #DialogHostReplace.OpenDialogCommand}"
@@ -113,7 +113,7 @@
                     <Separator />
                     <MenuItem Header="Reannounce"
                               Command="{Binding ReannounceCommand}"
-                              CommandParameter="{Binding #grid.SelectedItems}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
                     <Separator />
                     <MenuItem Header="Set name..."
@@ -122,16 +122,16 @@
                     />
                     <MenuItem Header="Set icon..."
                               Command="{Binding SetIconCommand}"
-                              CommandParameter="{Binding #grid.SelectedItems}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
                     <MenuItem Header="Fetch icon"
                               Command="{Binding FetchIconCommand}"
-                              CommandParameter="{Binding #grid.SelectedItems}"
+                              CommandParameter="{Binding #MainGrid.SelectedItems}"
                     />
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.Columns>
-                <DataGridTemplateColumn Header="Icon" CanUserSort="False" Width="50">
+                <DataGridTemplateColumn Header="Icon" ColumnKey="Icon" CanUserSort="False" Width="50">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:Tracker">
                             <Panel>
@@ -141,7 +141,7 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="" SortMemberPath="Display" Width="300">
+                <DataGridTemplateColumn Header="" ColumnKey="Display" SortMemberPath="Display" Width="300">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:Tracker">
                             <Border ToolTip.Tip="{Binding Uri, Mode=OneWay}">
@@ -150,14 +150,14 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Status" x:DataType="models:Tracker" Binding="{Binding Status, Mode=OneWay}" SortMemberPath="Status" Width="170" />
-                <DataGridTextColumn Header="Seeders" x:DataType="models:Tracker" Binding="{Binding Seeders, Mode=OneWay}" SortMemberPath="Seeders" Width="90" />
-                <DataGridTextColumn Header="Peers" x:DataType="models:Tracker" Binding="{Binding Peers, Mode=OneWay}" SortMemberPath="Peers" Width="80" />
-                <DataGridTextColumn Header="Downloaded" x:DataType="models:Tracker" Binding="{Binding Downloaded, Mode=OneWay}" SortMemberPath="Downloaded" Width="120" />
-                <DataGridTextColumn Header="Last updated" x:DataType="models:Tracker" Binding="{Binding LastUpdatedDate, Mode=OneWay}" SortMemberPath="LastUpdatedDate" Width="170" />
-                <DataGridTextColumn Header="Interval" x:DataType="models:Tracker" Binding="{Binding Interval, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" SortMemberPath="Interval" Width="100" />
-                <DataGridTextColumn Header="Next announce" x:DataType="models:Tracker" Binding="{Binding NextAnnounceDate, Mode=OneWay}" SortMemberPath="NextAnnounceDate" Width="170" />
-                <DataGridTextColumn Header="Message" x:DataType="models:Tracker" Binding="{Binding Message, Mode=OneWay}" SortMemberPath="Message" Width="300" />
+                <DataGridTextColumn Header="Status" ColumnKey="Status" x:DataType="models:Tracker" Binding="{Binding Status, Mode=OneWay}" SortMemberPath="Status" Width="170" />
+                <DataGridTextColumn Header="Seeders" ColumnKey="Seeders" x:DataType="models:Tracker" Binding="{Binding Seeders, Mode=OneWay}" SortMemberPath="Seeders" Width="90" />
+                <DataGridTextColumn Header="Peers" ColumnKey="Peers" x:DataType="models:Tracker" Binding="{Binding Peers, Mode=OneWay}" SortMemberPath="Peers" Width="80" />
+                <DataGridTextColumn Header="Downloaded" ColumnKey="Downloaded" x:DataType="models:Tracker" Binding="{Binding Downloaded, Mode=OneWay}" SortMemberPath="Downloaded" Width="120" />
+                <DataGridTextColumn Header="Last updated" ColumnKey="LastUpdatedDate" x:DataType="models:Tracker" Binding="{Binding LastUpdatedDate, Mode=OneWay}" SortMemberPath="LastUpdatedDate" Width="170" />
+                <DataGridTextColumn Header="Interval" ColumnKey="Interval" x:DataType="models:Tracker" Binding="{Binding Interval, Mode=OneWay, Converter={StaticResource ETATimeSpanConverter}}" SortMemberPath="Interval" Width="100" />
+                <DataGridTextColumn Header="Next announce" ColumnKey="NextAnnounceDate" x:DataType="models:Tracker" Binding="{Binding NextAnnounceDate, Mode=OneWay}" SortMemberPath="NextAnnounceDate" Width="170" />
+                <DataGridTextColumn Header="Message" ColumnKey="Message" x:DataType="models:Tracker" Binding="{Binding Message, Mode=OneWay}" SortMemberPath="Message" Width="300" />
             </DataGrid.Columns>
         </DataGrid>
     </dialogHost:DialogHost>

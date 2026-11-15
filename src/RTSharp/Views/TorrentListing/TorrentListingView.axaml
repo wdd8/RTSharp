@@ -386,15 +386,15 @@
 				</TabItem>
 
 				<TabItem Header="Files" VerticalContentAlignment="Center">
-					<views:TorrentFilesView DataContext="{Binding FilesViewModel}" />
+					<views:TorrentFilesView Name="FilesView" DataContext="{Binding FilesViewModel}" />
 				</TabItem>
 
 				<TabItem Header="Peers" VerticalContentAlignment="Center">
-					<views:TorrentPeersView DataContext="{Binding PeersViewModel}" />
+					<views:TorrentPeersView Name="PeersView" DataContext="{Binding PeersViewModel}" />
 				</TabItem>
 
 				<TabItem Header="Trackers" VerticalContentAlignment="Center">
-					<views:TorrentTrackersView DataContext="{Binding TrackersViewModel}" />
+					<views:TorrentTrackersView Name="TrackersView" DataContext="{Binding TrackersViewModel}" />
 				</TabItem>
 			</TabControl>
 		</Grid>

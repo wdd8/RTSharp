@@ -381,13 +381,16 @@ public partial class TorrentListingViewModel
     {
         try {
             string? state = CaptureGridState?.Invoke();
+            var detailsStates = CaptureDetailsGridStates?.Invoke() ?? [];
             double[]? rowHeights = CaptureGridRowHeights?.Invoke();
 
-            if (state != null || rowHeights != null) {
+            if (state != null || detailsStates.Count > 0 || rowHeights != null) {
                 using var scope = Core.ServiceProvider.CreateScope();
                 var config = scope.ServiceProvider.GetRequiredService<Core.Config>();
                 if (state != null)
                     config.UIState.Value.TorrentGridState = state;
+                foreach (var (key, detailsState) in detailsStates)
+                    config.UIState.Value.TorrentDetailsGridStates[key] = detailsState;
                 if (rowHeights != null)
                     config.UIState.Value.TorrentListingGridRowHeights = rowHeights;
                 await config.Rewrite();
