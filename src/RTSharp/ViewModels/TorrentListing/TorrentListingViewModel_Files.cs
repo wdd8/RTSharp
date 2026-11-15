@@ -17,7 +17,11 @@ namespace RTSharp.ViewModels.TorrentListing
 {
     public partial class TorrentListingViewModel
     {
-        private sealed record FilesUpdate(Models.Torrent FetchedFor, (Models.File Root, Models.File[] Leaves)? FullUpdate, IList<FileDelta>? Deltas, bool? MultiFile);
+        private sealed record FilesSnapshot((Models.File Root, Models.File[] Leaves) Tree, bool MultiFile);
+
+        private union FilesChange(FilesSnapshot, IList<FileDelta>);
+
+        private sealed record FilesUpdate(Models.Torrent FetchedFor, FilesChange Change);
 
         private async Task FilesTasks(Models.Torrent Torrent, CancellationToken SelectionChange)
         {
@@ -65,23 +69,24 @@ namespace RTSharp.ViewModels.TorrentListing
                     leaves = null;
                 }
 
-                if (update.MultiFile != null)
-                    FilesViewModel.MultiFile = update.MultiFile.Value;
-
-                if (update.FullUpdate != null) {
-                    FilesViewModel.SetRoot(update.FullUpdate.Value.Root);
-                    leaves = update.FullUpdate.Value.Leaves;
-                } else if (update.Deltas != null && leaves != null && update.Deltas.Count > 0) {
-                    foreach (var delta in update.Deltas) {
-                        if (delta.Index < 0 || delta.Index >= leaves.Length) {
-                            // TODO: force full update?
-                            continue;
+                switch (update.Change) {
+                    case FilesSnapshot snapshot:
+                        FilesViewModel.MultiFile = snapshot.MultiFile;
+                        FilesViewModel.SetRoot(snapshot.Tree.Root);
+                        leaves = snapshot.Tree.Leaves;
+                        break;
+                    case IList<FileDelta> deltas when leaves != null && deltas.Count > 0:
+                        foreach (var delta in deltas) {
+                            if (delta.Index < 0 || delta.Index >= leaves.Length) {
+                                // TODO: force full update?
+                                continue;
+                            }
+                            leaves[delta.Index]?.ApplyDelta(delta);
                         }
-                        leaves[delta.Index]?.ApplyDelta(delta);
-                    }
 
-                    if (FilesViewModel.File != null)
-                        Models.File.RecomputeFolders(FilesViewModel.File);
+                        if (FilesViewModel.File != null)
+                            Models.File.RecomputeFolders(FilesViewModel.File);
+                        break;
                 }
 
                 lastFetchedFor = update.FetchedFor;
@@ -120,7 +125,7 @@ namespace RTSharp.ViewModels.TorrentListing
 
                         if (cachedFiles.Any() && cachedProps != null) {
                             var built = Models.File.FromCache(current, cachedProps.IsMultiFile, cachedFiles, current.IsCompleted);
-                            FilesChanges.Writer.TryWrite(new FilesUpdate(current, built, null, cachedProps.IsMultiFile));
+                            FilesChanges.Writer.TryWrite(new FilesUpdate(current, new FilesSnapshot(built, cachedProps.IsMultiFile)));
 
                             await WaitForCancellation(cachedView.Token);
 
@@ -165,7 +170,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         var fullUpdate = update.FullUpdate.Value;
 
                         var domain = Models.File.FromPluginModel(current.Name, fullUpdate);
-                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, domain, null, fullUpdate.MultiFile));
+                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, new FilesSnapshot(domain, fullUpdate.MultiFile)));
 
                         if (firstFull && canUseCached) {
                             firstFull = false;
@@ -175,7 +180,7 @@ namespace RTSharp.ViewModels.TorrentListing
                             );
                         }
                     } else {
-                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, null, update.Changes, null));
+                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, update.Changes));
                     }
                 }
             } catch (Exception ex) {
@@ -197,7 +202,7 @@ namespace RTSharp.ViewModels.TorrentListing
                         goto end;
 
                     if (files.Files.Any())
-                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, Models.File.FromPluginModel(current.Name, files), null, files.MultiFile));
+                        FilesChanges.Writer.TryWrite(new FilesUpdate(current, new FilesSnapshot(Models.File.FromPluginModel(current.Name, files), files.MultiFile)));
                 } catch {
                     return;
                 }

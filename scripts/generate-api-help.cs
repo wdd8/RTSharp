@@ -1,4 +1,4 @@
-#:package Microsoft.CodeAnalysis.CSharp@5.6.0
+#:package Microsoft.CodeAnalysis.CSharp@5.12.0
 
 using System.Net;
 using System.Text;
@@ -475,18 +475,19 @@ static string KindOf(MemberDeclarationSyntax Decl) => Decl switch {
     InterfaceDeclarationSyntax => "interface",
     RecordDeclarationSyntax r => r.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword) ? "record struct" : "record",
     StructDeclarationSyntax => "struct",
+    UnionDeclarationSyntax => "union",
     EnumDeclarationSyntax => "enum",
     DelegateDeclarationSyntax => "delegate",
     _ => "class"
 };
 
 static int KindOrder(string Kind) => Kind switch {
-    "interface" => 0, "class" => 1, "record" => 2, "struct" => 3, "record struct" => 4, "enum" => 5, _ => 6
+    "interface" => 0, "class" => 1, "record" => 2, "struct" => 3, "record struct" => 4, "union" => 5, "enum" => 6, _ => 7
 };
 
 static string KindPlural(string Kind) => Kind switch {
     "interface" => "Interfaces", "class" => "Classes", "record" => "Records", "struct" => "Structures",
-    "record struct" => "Record structures", "enum" => "Enumerations", _ => "Delegates"
+    "record struct" => "Record structures", "union" => "Unions", "enum" => "Enumerations", _ => "Delegates"
 };
 
 static int MemberKindOrder(string Kind) => Kind switch {
