@@ -270,11 +270,13 @@ public static class Plugins
             throw new DuplicatePluginInstanceNameException($"Instance name {InstanceName} is already used by a different plugin configuration");
         }
 
+        var modulePath = Path.GetRelativePath(Consts.PLUGINS_PATH, ModuleDir);
+
         if (IsDataProvider) {
             section = new DataProviderInstanceConfig {
                 InstanceId = Guid.NewGuid(),
                 Name = InstanceName,
-                Path = ModuleDir,
+                Path = modulePath,
                 Color = Color.HasValue ? $"#{Color.Value.ToUInt32().ToString("x8", CultureInfo.InvariantCulture)}" : null, // dup from .ToString() without named colors
                 ServerId = ServerId ?? "",
                 ProviderName = DataProviderName ?? ""
@@ -284,7 +286,7 @@ public static class Plugins
             section = new PluginInstanceConfig {
                 InstanceId = Guid.NewGuid(),
                 Name = InstanceName,
-                Path = ModuleDir
+                Path = modulePath
             };
             type = typeof(PluginInstanceConfig);
         }
