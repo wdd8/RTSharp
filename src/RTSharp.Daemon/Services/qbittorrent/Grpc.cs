@@ -724,6 +724,7 @@ namespace RTSharp.Daemon.Services.qbittorrent
         public async Task<TorrentsReply> SetLabels(SetLabelsArgs Req)
         {
             var client = await Client.Init();
+            var polling = ServiceProvider.GetRequiredKeyedService<TorrentPolling>(InstanceKey);
 
             var tasks = new List<Task<TorrentsReply.Types.TorrentReply>>();
             foreach (var pair in Req.In) {
@@ -733,8 +734,10 @@ namespace RTSharp.Daemon.Services.qbittorrent
                     Exception? exception = null;
 
                     try {
-                        await client.ClearTorrentTagsAsync(ToNativeHex(hash.Span));
-                        await client.AddTorrentTagsAsync(ToNativeHex(hash.Span), labels);
+                        var current = polling.GetLatestTorrent(hash.Span)?.Labels ?? throw new RpcException(new global::Grpc.Core.Status(StatusCode.NotFound, "Torrent not found"));
+                        var nativeHash = ToNativeHex(hash.Span);
+                        await client.DeleteTorrentTagsAsync(nativeHash, current.Except(labels));
+                        await client.AddTorrentTagsAsync(nativeHash, labels.Except(current));
                     } catch (Exception ex) {
                         exception = ex;
                     }

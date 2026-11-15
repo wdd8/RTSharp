@@ -413,6 +413,11 @@ public partial class TorrentListingViewModel
     [RelayCommand(AllowConcurrentExecutions = true, CanExecute = nameof(CanExecuteAddLabel))]
     private async Task ToggleLabel((Torrent[] SelectedItems, string Text, bool CurrentValue) In)
     {
+        if (LabelControlCache.TryGetValue(In.Text, out var controls)) {
+            controls.Icon.IsChecked = !In.CurrentValue;
+            controls.Icon.CommandParameter = In with { CurrentValue = !In.CurrentValue };
+        }
+
         await ActionForMulti(In.SelectedItems.ToArray(), "Set labels", (dp, torrents) =>
             dp.Instance.SetLabels(torrents
                 .Select(torrent => {

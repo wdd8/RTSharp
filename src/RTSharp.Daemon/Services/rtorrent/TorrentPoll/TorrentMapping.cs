@@ -23,16 +23,18 @@ namespace RTSharp.Daemon.Services.rtorrent.TorrentPoll
 
         private static void ParseLabels(string Label, Google.Protobuf.Collections.RepeatedField<string> Labels)
         {
+            void add(string Part) => Labels.Add(XMLUtils.Decode(Part.Replace("\\,", ",")));
+
             var start = 0;
             for (var x = 0; x < Label.Length; x++) {
                 if (Label[x] == ',' && (x == 0 || Label[x - 1] != '\\')) {
                     if (x > start)
-                        Labels.Add(XMLUtils.Decode(Label[start..x]));
+                        add(Label[start..x]);
                     start = x + 1;
                 }
             }
             if (start < Label.Length)
-                Labels.Add(XMLUtils.Decode(Label[start..]));
+                add(Label[start..]);
         }
 
         public static TorrentTracker MapFromRaw(string Url, bool IsEnabled, bool IsBusy, bool IsRunning, uint Seeders, uint Peers, uint Downloaded,

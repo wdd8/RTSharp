@@ -83,18 +83,14 @@ namespace RTSharp.Core.Services.Cache.Images
 
                 if (Images.Count > maxCacheImages)
                 {
-                    var toRemove = new List<byte[]>();
                     foreach (var img in Images)
                     {
                         if (!img.Value.TryGetTarget(out _))
-                            toRemove.Add(img.Key);
+                            Images.Remove(img.Key);
 
-                        if (Images.Count - toRemove.Count <= maxCacheImages)
+                        if (Images.Count <= maxCacheImages)
                             break;
                     }
-
-                    foreach (var item in toRemove)
-                        Images.Remove(item);
 
                     while (Images.Count != 0 && Images.Count > maxCacheImages)
                         Images.Remove(Images.First().Key);
