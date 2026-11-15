@@ -7,6 +7,7 @@
              xmlns:torrentListing="clr-namespace:RTSharp.ViewModels.TorrentListing"
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              xmlns:sc="using:RTSharp.Shared.Controls.Views"
+             xmlns:dataGridEx="using:RTSharp.Views.DataGridEx"
              d:DesignWidth="1100" d:DesignHeight="450"
 			 x:DataType="torrentListing:TorrentPeersViewModel">
 
@@ -74,10 +75,10 @@
             <DataGridTemplateColumn Header="Done" ColumnKey="Done" SortMemberPath="Done">
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="models:Peer">
-                        <Grid>
-                            <ProgressBar Value="{Binding Done, Mode=OneWay}" Minimum="0" Maximum="100" VerticalAlignment="Stretch" DockPanel.Dock="Left" Name="TorrentProgressBar" />
-                            <TextBlock Text="{Binding Done, Mode=OneWay, StringFormat=\{0:0.00\} %}" HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left" />
-                        </Grid>
+                        <dataGridEx:ProgressCell Value="{Binding Done, Mode=OneWay}" MinWidth="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                            FontSize="{DynamicResource ControlContentThemeFontSize}"
+                            FillBrush="{DynamicResource SystemControlHighlightAccentBrush}"
+                            TrackBrush="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
