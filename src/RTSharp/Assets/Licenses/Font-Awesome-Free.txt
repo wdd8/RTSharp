@@ -1,7 +1,7 @@
 Font Awesome Free License
 -------------------------
 
-The SVG icons of the built-in "Standard" theme are from Font Awesome Free 7 by Fonticons, Inc.
+The SVG icons of the built-in "Fluent" theme are from Font Awesome Free 7 by Fonticons, Inc.
 https://fontawesome.com
 
 Full Font Awesome Free license: https://fontawesome.com/license/free

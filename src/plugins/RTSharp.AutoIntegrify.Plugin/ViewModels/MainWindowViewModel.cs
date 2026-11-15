@@ -125,7 +125,7 @@ public partial class MainWindowViewModel(IPluginHost<AutoIntegrifyPluginConfig> 
         if (AdditionalPaths.Count == 0) {
             var msgbox = MessageBoxManager.GetMessageBoxCustom(new MsBox.Avalonia.Dto.MessageBoxCustomParams {
                 ButtonDefinitions = [ new ButtonDefinition() { Name = "OK", IsDefault = true } ],
-                ImageIcon = BuiltInIcon.Get(BuiltInIcons.DID_YOU_KNOW),
+                ImageIcon = BuiltInIcon.Get(BuiltInIcons.DID_YOU_KNOW, Foreground: Window.Foreground),
                 WindowIcon = new Avalonia.Controls.WindowIcon(BuiltInIcon.Get(BuiltInIcons.RTSHARP)),
                 ContentTitle = "Auto integrify",
                 ContentHeader = "Did you know...",

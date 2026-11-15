@@ -95,6 +95,8 @@ public static class BuiltInIcon
 
     private static readonly ConcurrentDictionary<BuiltInIcons, Geometry> GeometryCache = new();
 
+    private static readonly ConcurrentDictionary<(BuiltInIcons Icon, int Size, IBrush Foreground), Bitmap> SvgCache = new();
+
     private static FrozenDictionary<BuiltInIcons, string> Icons = new Dictionary<BuiltInIcons, string>() {
         { BuiltInIcons.RTSHARP, "rtsharp" },
         { BuiltInIcons.CRASH, "crash" },
@@ -192,6 +194,7 @@ public static class BuiltInIcon
         Cache.Clear();
         IcoCache.Clear();
         GeometryCache.Clear();
+        SvgCache.Clear();
         Generation++;
     }
 
@@ -209,9 +212,30 @@ public static class BuiltInIcon
         return files.TryGetValue(Icons[Icon], out var uri) ? uri : throw new FileNotFoundException($"The theme has no icon {Icons[Icon]} in its Icons folder");
     }
 
-    public static Bitmap Get(BuiltInIcons Icon, int Size = Int32.MaxValue)
+    /// <param name="Foreground">Fill of an svg icon, the text color it is shown with</param>
+    public static Bitmap Get(BuiltInIcons Icon, int Size = Int32.MaxValue, IBrush? Foreground = null)
     {
         var uri = Find(Icon);
+        if (uri.AbsolutePath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)) {
+            var brush = Foreground ?? Brushes.Black;
+            return SvgCache.GetOrAdd((Icon, Size, brush), _ => {
+                var geometry = GetGeometry(Icon);
+                var bounds = geometry.Bounds;
+                var extent = Math.Max(bounds.Width, bounds.Height);
+                var pixels = Size == Int32.MaxValue ? (int)Math.Ceiling(extent) : Math.Max(Size, 1);
+                var scale = pixels / extent;
+
+                var bitmap = new RenderTargetBitmap(new PixelSize(pixels, pixels), new Vector(96, 96));
+                using (var context = bitmap.CreateDrawingContext())
+                using (context.PushTransform(
+                    Matrix.CreateTranslation(-bounds.X, -bounds.Y) *
+                    Matrix.CreateScale(scale, scale) *
+                    Matrix.CreateTranslation((pixels - bounds.Width * scale) / 2, (pixels - bounds.Height * scale) / 2)))
+                    context.DrawGeometry(brush, null, geometry);
+                return bitmap;
+            });
+        }
+
         if (!uri.AbsolutePath.EndsWith(".ico", StringComparison.OrdinalIgnoreCase)) {
             return Cache.GetOrAdd((Icon, 0), _ => {
                 using var stream = AssetLoader.Open(uri);
@@ -248,6 +272,8 @@ public static class BuiltInIcon
     public static IGifSource GetGif(BuiltInIcons Icon) => GifStreamSource.FromUri(Find(Icon));
 
     public static bool IsSvg(BuiltInIcons Icon) => Find(Icon).AbsolutePath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsGif(BuiltInIcons Icon) => Find(Icon).AbsolutePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
 
     public static bool IsMask(BuiltInIcons Icon) => Path.GetFileNameWithoutExtension(Find(Icon).AbsolutePath).EndsWith(MaskSuffix, StringComparison.Ordinal);
 
