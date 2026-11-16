@@ -61,7 +61,7 @@ jobs:
         if: matrix.rid == 'linux-x64' && matrix.self_contained == false
         run: |
           for PROJ in src/*.Tests/*.Tests.csproj; do
-            dotnet test "$PROJ" -c Release -r linux-x64 --no-self-contained
+            dotnet test "$PROJ" -c Release -r linux-x64 -p:SelfContained=false
           done
       - name: Upload build ${{ matrix.rid }}${{ matrix.self_contained == true && '-self-contained' || '' }}
         uses: actions/upload-artifact@v4
