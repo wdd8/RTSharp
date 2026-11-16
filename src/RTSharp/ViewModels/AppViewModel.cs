@@ -1,3 +1,5 @@
+using Avalonia.Threading;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -35,10 +37,13 @@ namespace RTSharp.ViewModels
             });
             this.TrayIconVisible = uiStateMonitor.CurrentValue.TrayIconVisible;
 
-            TorrentPolling.Torrents.Changed += TorrentPolling_TorrentBatchChange;
+            DisplayTimer.Tick += (_, _) => ShowTotalSpeeds();
+            DisplayTimer.Start();
         }
 
-        private void TorrentPolling_TorrentBatchChange(object? sender, TorrentStoreChangeSet e)
+        public DispatcherTimer DisplayTimer { get; } = new() { Interval = TimeSpan.FromSeconds(1) };
+
+        private void ShowTotalSpeeds()
         {
             if (Plugins.DataProviders.Count == 0) {
                 TrayIconText = "RT#";

@@ -39,8 +39,6 @@ namespace RTSharp.ViewModels
     {
         private readonly bool SpeedChartEnabled;
 
-        private readonly DispatcherTimer? SpeedChartTimer;
-
         public ObservableCollection<DataProviderItemViewModel> Items { get; } = new();
 
         public string HeaderName => "Data providers";
@@ -55,7 +53,6 @@ namespace RTSharp.ViewModels
             AddDisposable(Plugins.DataProviders
                 .Connect()
                 .AutoRefreshOnObservable(x => x.State)
-                .AutoRefreshOnObservable(x => x.AttachedDaemonService.Latency)
                 .ObserveOn(AvaloniaSynchronizationContext.Current!)
                 .Subscribe((Action<IChangeSet<RTSharpDataProvider>>)(x => {
                     // Data providers listed before this subscribes arrive as one range
@@ -92,19 +89,19 @@ namespace RTSharp.ViewModels
                     item.Dispose();
             }));
 
-            if (SpeedChartEnabled) {
-                SpeedChartTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-                SpeedChartTimer.Tick += (_, _) => {
-                    if (!Items.Any(i => i.DataProvider.State != Shared.Abstractions.DataProviderState.INACTIVE))
-                        return;
+            void showPendingChanges(object? sender, EventArgs e)
+            {
+                if (!Items.Any(i => i.DataProvider.State != Shared.Abstractions.DataProviderState.INACTIVE))
+                    return;
 
-                    var now = DateTime.Now;
-                    foreach (var item in Items)
-                        item.AdvanceXAxisWindow(now);
-                };
-                SpeedChartTimer.Start();
-                AddDisposable(Disposable.Create(() => SpeedChartTimer.Stop()));
+                var now = DateTime.Now;
+                foreach (var item in Items)
+                    item.ShowPendingChanges(now);
             }
+
+            var displayTimer = ((AppViewModel)Avalonia.Application.Current!.DataContext!).DisplayTimer;
+            displayTimer.Tick += showPendingChanges;
+            AddDisposable(Disposable.Create(() => displayTimer.Tick -= showPendingChanges));
         }
 
         private DataProviderItemViewModel AddItem(RTSharpDataProvider DataProvider)
@@ -158,6 +155,8 @@ namespace RTSharp.ViewModels
         private ulong DLSpeed;
         private ulong UPSpeed;
         private uint ActiveTorrentCount;
+
+        private readonly List<(DateTime When, ulong DLSpeed, ulong UPSpeed)> PendingSpeedChartSamples = new();
 
         private SPEED_CHART_MODE? CurrentSpeedChartMode;
         private bool SpeedChartWasIdle = true;
@@ -291,17 +290,36 @@ namespace RTSharp.ViewModels
             foreach (var torrent in e.Refreshed)
                 ApplyTorrentChanges(torrent);
 
-            DataProvider.TotalDLSpeed = DLSpeed;
-            DataProvider.TotalUPSpeed = UPSpeed;
-            DataProvider.ActiveTorrentCount = ActiveTorrentCount;
-
 #if DEBUG
             VerifyAgainstSnapshot();
 #endif
 
             if (SpeedChartEnabled) {
-                AddSpeedChartSample(DLSpeed, UPSpeed);
+                PendingSpeedChartSamples.Add((DateTime.Now, DLSpeed, UPSpeed));
             }
+        }
+
+        public void ShowPendingChanges(DateTime When)
+        {
+            DataProvider.TotalDLSpeed = DLSpeed;
+            DataProvider.TotalUPSpeed = UPSpeed;
+            DataProvider.ActiveTorrentCount = ActiveTorrentCount;
+
+            if (DataProvider.State != Shared.Abstractions.DataProviderState.INACTIVE)
+                DataProvider.Latency = Shared.Utils.Converters.ToAgoString(DpInstance.AttachedDaemonService.Latency.Value);
+
+            if (SpeedChartEnabled) {
+                AddPendingSpeedChartSamples();
+                AdvanceXAxisWindow(When);
+            }
+        }
+
+        private void AddPendingSpeedChartSamples()
+        {
+            foreach (var (when, dlSpeed, upSpeed) in PendingSpeedChartSamples)
+                AddSpeedChartSample(when, dlSpeed, upSpeed);
+
+            PendingSpeedChartSamples.Clear();
         }
 
 #if DEBUG
@@ -350,14 +368,12 @@ namespace RTSharp.ViewModels
             prev = new TorrentStats(In.DLSpeed, In.UPSpeed, active);
         }
 
-        public void AddSpeedChartSample(ulong DLSpeed, ulong UPSpeed)
+        private void AddSpeedChartSample(DateTime When, ulong DLSpeed, ulong UPSpeed)
         {
-            var now = DateTime.Now;
-
             var isActive = DLSpeed > 0 || UPSpeed > 0;
 
             if (isActive && SpeedChartWasIdle) {
-                var sampleBefore = now - TimeSpan.FromMilliseconds(1);
+                var sampleBefore = When - TimeSpan.FromMilliseconds(1);
 
                 DLSpeedChartValues.Add(new DateTimePoint(sampleBefore, 0));
                 UPSpeedChartValues.Add(new DateTimePoint(sampleBefore, 0));
@@ -382,21 +398,25 @@ namespace RTSharp.ViewModels
             }
 
             if (chartMode == SPEED_CHART_MODE.DOWNLOAD) {
-                DLSpeedChartValues.Add(new DateTimePoint(now, value));
-                UPSpeedChartValues.Add(new DateTimePoint(now, null));
+                DLSpeedChartValues.Add(new DateTimePoint(When, value));
+                UPSpeedChartValues.Add(new DateTimePoint(When, null));
             } else {
-                DLSpeedChartValues.Add(new DateTimePoint(now, null));
-                UPSpeedChartValues.Add(new DateTimePoint(now, value));
+                DLSpeedChartValues.Add(new DateTimePoint(When, null));
+                UPSpeedChartValues.Add(new DateTimePoint(When, value));
             }
 
             CurrentSpeedChartMode = chartMode;
-            RemoveOldChartValues(now);
+            RemoveOldChartValues(When);
             UpdateYAxisScale();
         }
 
         public void BreakSpeedChartLine()
         {
-            if (!SpeedChartEnabled || DLSpeedChartValues.Count == 0)
+            if (!SpeedChartEnabled)
+                return;
+
+            AddPendingSpeedChartSamples();
+            if (DLSpeedChartValues.Count == 0)
                 return;
 
             var now = DateTime.Now;
