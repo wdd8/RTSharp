@@ -406,4 +406,5 @@ FodyWeavers.xsd
 *.sqlite3
 .vscode/
 src/private
+private
 docs/help/api/
